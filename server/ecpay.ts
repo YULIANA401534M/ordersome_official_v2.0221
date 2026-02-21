@@ -19,12 +19,13 @@ const ECPAY_CONFIG = {
 };
 
 // 取得當前環境設定
+// 只要正式環境金鑰已設定，就使用正式環境（不依賴 NODE_ENV）
 const getConfig = () => {
-  const isProduction = process.env.NODE_ENV === "production" && 
+  const hasProductionKeys = 
     process.env.ECPAY_MERCHANT_ID && 
     process.env.ECPAY_HASH_KEY && 
     process.env.ECPAY_HASH_IV;
-  return isProduction ? ECPAY_CONFIG.production : ECPAY_CONFIG.stage;
+  return hasProductionKeys ? ECPAY_CONFIG.production : ECPAY_CONFIG.stage;
 };
 
 // URL Encode（符合綠界規範）

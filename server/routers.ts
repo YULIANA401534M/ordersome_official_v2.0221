@@ -491,7 +491,7 @@ export const appRouter = router({
   // Payment
   payment: router({
     createPayment: protectedProcedure
-      .input(z.object({ orderId: z.number() }))
+      .input(z.object({ orderId: z.number(), testAmount: z.number().optional() }))
       .mutation(async ({ input }) => {
         const order = await db.getOrderById(input.orderId);
         if (!order) {
@@ -501,11 +501,13 @@ export const appRouter = router({
         const itemName = items.map(i => `${i.productName} x${i.quantity}`).join('#');
         
         const baseUrl = process.env.VITE_APP_URL || 'https://example.com';
+        // testAmount: 強制覆蓋金額（用於 1 元 E2E 測試）
+        const totalAmount = input.testAmount ?? Math.round(parseFloat(order.total));
         const paymentData = createPaymentOrder({
           orderNumber: order.orderNumber,
-          totalAmount: Math.round(parseFloat(order.total)),
-          itemName,
-          tradeDesc: '宇聯國際線上商城訂單',
+          totalAmount,
+          itemName: input.testAmount ? `[測試] ${itemName}` : itemName,
+          tradeDesc: input.testAmount ? '[E2E測試] 宇聯國際線上商城訂單' : '宇聯國際線上商城訂單',
           returnUrl: `${baseUrl}/api/payment/callback`,
           clientBackUrl: `${baseUrl}/member/orders`,
           orderResultUrl: `${baseUrl}/shop/order-complete/${order.orderNumber}`,

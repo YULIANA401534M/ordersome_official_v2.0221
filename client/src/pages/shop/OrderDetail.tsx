@@ -1,10 +1,12 @@
+import { useRef, useEffect, useState } from "react";
 import { useParams, Link } from "wouter";
-import { ArrowLeft, Package, CheckCircle, Clock, Truck, CreditCard } from "lucide-react";
+import { ArrowLeft, Package, CheckCircle, Clock, Truck, CreditCard, FlaskConical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import CorporateLayout from "@/components/layout/CorporateLayout";
 import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 const statusMap: Record<string, { label: string; color: string; icon: any }> = {
   pending: { label: "待付款", color: "bg-yellow-100 text-yellow-800", icon: Clock },
@@ -18,7 +20,31 @@ const statusMap: Record<string, { label: string; color: string; icon: any }> = {
 
 export default function OrderDetail() {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
   const { data: order, isLoading } = trpc.order.getById.useQuery({ id: parseInt(id || "0") });
+
+  // 1 元測試付款用的隱藏表單
+  const testFormRef = useRef<HTMLFormElement>(null);
+  const [testPaymentData, setTestPaymentData] = useState<{ apiUrl: string; params: Record<string, string | number> } | null>(null);
+  const createPayment = trpc.payment.createPayment.useMutation({
+    onSuccess: (data) => {
+      setTestPaymentData(data);
+    },
+  });
+
+  // 當 testPaymentData 更新後自動提交表單
+  useEffect(() => {
+    if (testPaymentData && testFormRef.current) {
+      testFormRef.current.submit();
+    }
+  }, [testPaymentData]);
+
+  const handleTestPayment = () => {
+    if (!order) return;
+    createPayment.mutate({ orderId: order.id, testAmount: 1 });
+  };
+
+  const isAdmin = user?.role === "super_admin" || user?.role === "manager";
 
   if (isLoading) return <CorporateLayout><div className="container py-20 text-center">載入中...</div></CorporateLayout>;
   if (!order) return <CorporateLayout><div className="container py-20 text-center">找不到訂單</div></CorporateLayout>;
@@ -85,6 +111,22 @@ export default function OrderDetail() {
                       </Button>
                     </Link>
                   )}
+                  {/* 1 元 E2E 測試按鈕（僅 super_admin / manager 可見） */}
+                  {isAdmin && order.status === "pending" && (
+                    <div className="mt-3 pt-3 border-t border-dashed border-orange-300">
+                      <p className="text-xs text-orange-600 mb-2 font-medium">🔬 管理員測試工具</p>
+                      <Button
+                        variant="outline"
+                        className="w-full gap-2 border-orange-400 text-orange-600 hover:bg-orange-50"
+                        onClick={handleTestPayment}
+                        disabled={createPayment.isPending}
+                      >
+                        <FlaskConical className="h-4 w-4" />
+                        {createPayment.isPending ? "準備中..." : "1 元 E2E 測試付款"}
+                      </Button>
+                      <p className="text-xs text-gray-400 mt-1">強制金額 NT$1，使用正式環境綠界</p>
+                    </div>
+                  )}
                   <div className="mt-6 pt-6 border-t">
                     <h3 className="font-bold mb-2">收件資訊</h3>
                     <p className="text-gray-600">{order.recipientName}</p>
@@ -97,6 +139,20 @@ export default function OrderDetail() {
           </div>
         </div>
       </section>
+
+      {/* 隱藏的 ECPay 測試表單 */}
+      {testPaymentData && (
+        <form
+          ref={testFormRef}
+          method="POST"
+          action={testPaymentData.apiUrl}
+          className="hidden"
+        >
+          {Object.entries(testPaymentData.params).map(([key, value]) => (
+            <input key={key} type="hidden" name={key} value={String(value)} />
+          ))}
+        </form>
+      )}
     </CorporateLayout>
   );
 }
