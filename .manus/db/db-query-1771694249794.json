@@ -1,0 +1,26 @@
+{
+  "query": "SELECT id, orderNumber, userId, status, paymentStatus, total FROM orders ORDER BY id DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user AKK2AjLXvjySfzt.defe7b7a87b6 --database gjTAhmM88fiEhPinRVjKbV --execute SELECT id, orderNumber, userId, status, paymentStatus, total FROM orders ORDER BY id DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "2",
+      "orderNumber": "ORD2602211813WE",
+      "userId": "90156",
+      "status": "pending",
+      "paymentStatus": "pending",
+      "total": "101.00"
+    },
+    {
+      "id": "1",
+      "orderNumber": "ORD260221FG8Q1W",
+      "userId": "120047",
+      "status": "pending",
+      "paymentStatus": "pending",
+      "total": "101.00"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\torderNumber\tuserId\tstatus\tpaymentStatus\ttotal\n2\tORD2602211813WE\t90156\tpending\tpending\t101.00\n1\tORD260221FG8Q1W\t120047\tpending\tpending\t101.00\n",
+  "stderr": "",
+  "execution_time_ms": 1511
+}

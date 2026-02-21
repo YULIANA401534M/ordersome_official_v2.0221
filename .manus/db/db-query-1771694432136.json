@@ -1,0 +1,9 @@
+{
+  "query": "\nINSERT INTO order_items (orderId, productId, productName, productImage, price, quantity, subtotal, createdAt)\nVALUES (3, 3, '系統連線測試專用 (勿出貨)', NULL, '1.00', 1, '1.00', NOW());\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user AKK2AjLXvjySfzt.defe7b7a87b6 --database gjTAhmM88fiEhPinRVjKbV --execute \nINSERT INTO order_items (orderId, productId, productName, productImage, price, quantity, subtotal, createdAt)\nVALUES (3, 3, '系統連線測試專用 (勿出貨)', NULL, '1.00', 1, '1.00', NOW());\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1517
+}

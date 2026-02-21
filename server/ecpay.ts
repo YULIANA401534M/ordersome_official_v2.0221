@@ -28,35 +28,37 @@ const getConfig = () => {
   return hasProductionKeys ? ECPAY_CONFIG.production : ECPAY_CONFIG.stage;
 };
 
-// URL Encode（符合綠界規範）
-const urlEncode = (str: string): string => {
+// 綠界官方規範：對整個字串做 URL Encode，再還原 .NET 規範不應被 encode 的字元
+const ecpayUrlEncode = (str: string): string => {
   return encodeURIComponent(str)
-    .replace(/%20/g, "+")
-    .replace(/!/g, "%21")
-    .replace(/\*/g, "%2A")
-    .replace(/\(/g, "%28")
-    .replace(/\)/g, "%29")
-    .replace(/'/g, "%27");
+    .replace(/%20/g, "+")      // 空格轉 +
+    .replace(/%21/g, "!")      // ! 不 encode
+    .replace(/%2A/gi, "*")     // * 不 encode
+    .replace(/%28/g, "(")      // ( 不 encode
+    .replace(/%29/g, ")")      // ) 不 encode
+    .replace(/%2D/gi, "-")     // - 不 encode
+    .replace(/%5F/gi, "_")     // _ 不 encode
+    .replace(/%2E/gi, ".");    // . 不 encode
 };
 
 // 產生 CheckMacValue
 export const generateCheckMacValue = (params: Record<string, string | number>): string => {
   const config = getConfig();
   
-  // 1. 排序參數
+  // 1. 排序參數（字母排序，不區分大小寫）
   const sortedKeys = Object.keys(params).sort((a, b) => 
     a.toLowerCase().localeCompare(b.toLowerCase())
   );
   
-  // 2. 組合字串
-  let checkStr = `HashKey=${config.hashKey}`;
+  // 2. 組合字串（綠界官方規範：先組合原始字串，再對整個字串做 URL Encode）
+  let rawStr = `HashKey=${config.hashKey}`;
   for (const key of sortedKeys) {
-    checkStr += `&${key}=${params[key]}`;
+    rawStr += `&${key}=${params[key]}`;
   }
-  checkStr += `&HashIV=${config.hashIV}`;
+  rawStr += `&HashIV=${config.hashIV}`;
   
-  // 3. URL Encode
-  checkStr = urlEncode(checkStr);
+  // 3. 對整個字串做 URL Encode（符合 .NET 編碼規範）
+  let checkStr = ecpayUrlEncode(rawStr);
   
   // 4. 轉小寫
   checkStr = checkStr.toLowerCase();
@@ -94,7 +96,8 @@ export const createPaymentOrder = (params: CreatePaymentParams) => {
   
   const orderParams: Record<string, string | number> = {
     MerchantID: config.merchantId,
-    MerchantTradeNo: params.orderNumber.substring(0, 20), // 最多 20 字元
+    // 綠界規範：MerchantTradeNo 只允許英數字，最多 20 字元
+    MerchantTradeNo: params.orderNumber.replace(/[^A-Za-z0-9]/g, "").substring(0, 20),
     MerchantTradeDate: tradeDate,
     PaymentType: "aio",
     TotalAmount: params.totalAmount,

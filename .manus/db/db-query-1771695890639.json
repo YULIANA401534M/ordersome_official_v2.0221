@@ -1,0 +1,16 @@
+{
+  "query": "\nINSERT INTO order_items (orderId, productId, productName, productImage, price, quantity, subtotal, createdAt)\nSELECT 4, id, name, imageUrl, '1.00', 1, '1.00', NOW()\nFROM products WHERE name LIKE '%測試%' OR name LIKE '%連線%'\nLIMIT 1;\n\n-- 確認插入成功\nSELECT oi.orderId, oi.productName, oi.price, o.orderNumber \nFROM order_items oi \nJOIN orders o ON o.id = oi.orderId \nWHERE oi.orderId = 4;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user AKK2AjLXvjySfzt.defe7b7a87b6 --database gjTAhmM88fiEhPinRVjKbV --execute \nINSERT INTO order_items (orderId, productId, productName, productImage, price, quantity, subtotal, createdAt)\nSELECT 4, id, name, imageUrl, '1.00', 1, '1.00', NOW()\nFROM products WHERE name LIKE '%測試%' OR name LIKE '%連線%'\nLIMIT 1;\n\n-- 確認插入成功\nSELECT oi.orderId, oi.productName, oi.price, o.orderNumber \nFROM order_items oi \nJOIN orders o ON o.id = oi.orderId \nWHERE oi.orderId = 4;\n",
+  "rows": [
+    {
+      "orderId": "4",
+      "productName": "系統連線測試專用 (勿出貨)",
+      "price": "1.00",
+      "orderNumber": "E2E0221174427"
+    }
+  ],
+  "messages": [],
+  "stdout": "orderId\tproductName\tprice\torderNumber\n4\t系統連線測試專用 (勿出貨)\t1.00\tE2E0221174427\n",
+  "stderr": "",
+  "execution_time_ms": 1798
+}

@@ -1,0 +1,14 @@
+{
+  "query": "\nSELECT id, orderNumber FROM orders WHERE userId = 120047 ORDER BY id DESC LIMIT 1;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user AKK2AjLXvjySfzt.defe7b7a87b6 --database gjTAhmM88fiEhPinRVjKbV --execute \nSELECT id, orderNumber FROM orders WHERE userId = 120047 ORDER BY id DESC LIMIT 1;\n",
+  "rows": [
+    {
+      "id": "4",
+      "orderNumber": "E2E0221174427"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\torderNumber\n4\tE2E0221174427\n",
+  "stderr": "",
+  "execution_time_ms": 1538
+}

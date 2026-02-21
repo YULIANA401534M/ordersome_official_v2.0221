@@ -1,0 +1,25 @@
+{
+  "query": "SELECT id, name, price FROM products WHERE isActive = 1 LIMIT 3;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user AKK2AjLXvjySfzt.defe7b7a87b6 --database gjTAhmM88fiEhPinRVjKbV --execute SELECT id, name, price FROM products WHERE isActive = 1 LIMIT 3;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "台韓辣椒醬（單瓶）",
+      "price": "180.00"
+    },
+    {
+      "id": "2",
+      "name": "台韓辣椒醬（兩入組）",
+      "price": "320.00"
+    },
+    {
+      "id": "3",
+      "name": "系統連線測試專用 (勿出貨)",
+      "price": "1.00"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tprice\n1\t台韓辣椒醬（單瓶）\t180.00\n2\t台韓辣椒醬（兩入組）\t320.00\n3\t系統連線測試專用 (勿出貨)\t1.00\n",
+  "stderr": "",
+  "execution_time_ms": 1507
+}

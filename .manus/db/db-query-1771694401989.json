@@ -1,0 +1,17 @@
+{
+  "query": "SELECT id, orderNumber, userId, status, total FROM orders WHERE userId = 120047 ORDER BY id DESC LIMIT 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user AKK2AjLXvjySfzt.defe7b7a87b6 --database gjTAhmM88fiEhPinRVjKbV --execute SELECT id, orderNumber, userId, status, total FROM orders WHERE userId = 120047 ORDER BY id DESC LIMIT 1;",
+  "rows": [
+    {
+      "id": "3",
+      "orderNumber": "TEST-20260221-E2E",
+      "userId": "120047",
+      "status": "pending",
+      "total": "1.00"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\torderNumber\tuserId\tstatus\ttotal\n3\tTEST-20260221-E2E\t120047\tpending\t1.00\n",
+  "stderr": "",
+  "execution_time_ms": 1519
+}

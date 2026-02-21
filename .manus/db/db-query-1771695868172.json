@@ -1,0 +1,14 @@
+{
+  "query": "\n-- 建立新的測試訂單（使用時間戳確保唯一）\nINSERT INTO orders (\n  userId, orderNumber, status, paymentMethod, paymentStatus,\n  subtotal, shippingFee, total,\n  recipientName, recipientPhone, recipientEmail,\n  shippingAddress, note, createdAt, updatedAt\n) VALUES (\n  120047,\n  CONCAT('E2E', DATE_FORMAT(NOW(), '%m%d%H%i%S')),\n  'pending', 'credit_card', 'pending',\n  '1.00', '0.00', '1.00',\n  'LEO 測試', '0912345678', 'test@ordersome.com',\n  '台北市測試地址', '[E2E 1元測試訂單]',\n  NOW(), NOW()\n);\nSELECT id, orderNumber FROM orders ORDER BY id DESC LIMIT 1;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user AKK2AjLXvjySfzt.defe7b7a87b6 --database gjTAhmM88fiEhPinRVjKbV --execute \n-- 建立新的測試訂單（使用時間戳確保唯一）\nINSERT INTO orders (\n  userId, orderNumber, status, paymentMethod, paymentStatus,\n  subtotal, shippingFee, total,\n  recipientName, recipientPhone, recipientEmail,\n  shippingAddress, note, createdAt, updatedAt\n) VALUES (\n  120047,\n  CONCAT('E2E', DATE_FORMAT(NOW(), '%m%d%H%i%S')),\n  'pending', 'credit_card', 'pending',\n  '1.00', '0.00', '1.00',\n  'LEO 測試', '0912345678', 'test@ordersome.com',\n  '台北市測試地址', '[E2E 1元測試訂單]',\n  NOW(), NOW()\n);\nSELECT id, orderNumber FROM orders ORDER BY id DESC LIMIT 1;\n",
+  "rows": [
+    {
+      "id": "4",
+      "orderNumber": "E2E0221174427"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\torderNumber\n4\tE2E0221174427\n",
+  "stderr": "",
+  "execution_time_ms": 1754
+}

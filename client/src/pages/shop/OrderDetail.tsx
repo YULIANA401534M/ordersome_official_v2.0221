@@ -41,7 +41,7 @@ export default function OrderDetail() {
 
   const handleTestPayment = () => {
     if (!order) return;
-    createPayment.mutate({ orderId: order.id, testAmount: 1 });
+    createPayment.mutate({ orderId: order.id, testAmount: 10 });
   };
 
   const isAdmin = user?.role === "super_admin" || user?.role === "manager";
@@ -122,9 +122,9 @@ export default function OrderDetail() {
                         disabled={createPayment.isPending}
                       >
                         <FlaskConical className="h-4 w-4" />
-                        {createPayment.isPending ? "準備中..." : "1 元 E2E 測試付款"}
+                        {createPayment.isPending ? "準備中..." : "10 元 E2E 測試付款"}
                       </Button>
-                      <p className="text-xs text-gray-400 mt-1">強制金額 NT$1，使用正式環境綠界</p>
+                      <p className="text-xs text-gray-400 mt-1">強制金額 NT$10，使用正式環境綠界</p>
                     </div>
                   )}
                   <div className="mt-6 pt-6 border-t">

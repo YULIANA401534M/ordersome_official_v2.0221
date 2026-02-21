@@ -511,6 +511,8 @@ export const appRouter = router({
           returnUrl: `${baseUrl}/api/payment/callback`,
           clientBackUrl: `${baseUrl}/member/orders`,
           orderResultUrl: `${baseUrl}/shop/order-complete/${order.orderNumber}`,
+          // 1 元 E2E 測試強制使用信用卡一次付清，跳過付款方式選擇頁
+          paymentMethod: input.testAmount ? 'Credit' : 'ALL',
         });
         
         return paymentData;

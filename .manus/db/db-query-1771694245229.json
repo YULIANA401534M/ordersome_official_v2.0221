@@ -1,0 +1,194 @@
+{
+  "query": "DESCRIBE orders; SELECT id, orderNumber, userId, status, paymentStatus, total FROM orders ORDER BY id DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user AKK2AjLXvjySfzt.defe7b7a87b6 --database gjTAhmM88fiEhPinRVjKbV --execute DESCRIBE orders; SELECT id, orderNumber, userId, status, paymentStatus, total FROM orders ORDER BY id DESC LIMIT 5;",
+  "rows": [
+    {
+      "Field": "id",
+      "Type": "int(11)",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": "NULL",
+      "Extra": "auto_increment"
+    },
+    {
+      "Field": "userId",
+      "Type": "int(11)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "orderNumber",
+      "Type": "varchar(50)",
+      "Null": "NO",
+      "Key": "UNI",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "status",
+      "Type": "enum('pending','paid','processing','shipped','delivered','cancelled','refunded')",
+      "Null": "NO",
+      "Key": "",
+      "Default": "pending",
+      "Extra": ""
+    },
+    {
+      "Field": "paymentMethod",
+      "Type": "varchar(50)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "paymentStatus",
+      "Type": "enum('pending','paid','failed','refunded')",
+      "Null": "NO",
+      "Key": "",
+      "Default": "pending",
+      "Extra": ""
+    },
+    {
+      "Field": "subtotal",
+      "Type": "decimal(10,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "shippingFee",
+      "Type": "decimal(10,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "total",
+      "Type": "decimal(10,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "recipientName",
+      "Type": "varchar(100)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "recipientPhone",
+      "Type": "varchar(20)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "recipientEmail",
+      "Type": "varchar(320)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "shippingAddress",
+      "Type": "text",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "note",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "paidAt",
+      "Type": "timestamp",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "shippedAt",
+      "Type": "timestamp",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "deliveredAt",
+      "Type": "timestamp",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "ecpayTradeNo",
+      "Type": "varchar(50)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "createdAt",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": ""
+    },
+    {
+      "Field": "updatedAt",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": "DEFAULT_GENERATED on update CURRENT_TIMESTAMP"
+    },
+    {
+      "Field": "id",
+      "Type": "orderNumber",
+      "Null": "userId",
+      "Key": "status",
+      "Default": "paymentStatus",
+      "Extra": "total"
+    },
+    {
+      "Field": "2",
+      "Type": "ORD2602211813WE",
+      "Null": "90156",
+      "Key": "pending",
+      "Default": "pending",
+      "Extra": "101.00"
+    },
+    {
+      "Field": "1",
+      "Type": "ORD260221FG8Q1W",
+      "Null": "120047",
+      "Key": "pending",
+      "Default": "pending",
+      "Extra": "101.00"
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\nid\tint(11)\tNO\tPRI\tNULL\tauto_increment\nuserId\tint(11)\tNO\t\tNULL\t\norderNumber\tvarchar(50)\tNO\tUNI\tNULL\t\nstatus\tenum('pending','paid','processing','shipped','delivered','cancelled','refunded')\tNO\t\tpending\t\npaymentMethod\tvarchar(50)\tYES\t\tNULL\t\npaymentStatus\tenum('pending','paid','failed','refunded')\tNO\t\tpending\t\nsubtotal\tdecimal(10,2)\tNO\t\tNULL\t\nshippingFee\tdecimal(10,2)\tNO\t\t0\t\ntotal\tdecimal(10,2)\tNO\t\tNULL\t\nrecipientName\tvarchar(100)\tNO\t\tNULL\t\nrecipientPhone\tvarchar(20)\tNO\t\tNULL\t\nrecipientEmail\tvarchar(320)\tYES\t\tNULL\t\nshippingAddress\ttext\tNO\t\tNULL\t\nnote\ttext\tYES\t\tNULL\t\npaidAt\ttimestamp\tYES\t\tNULL\t\nshippedAt\ttimestamp\tYES\t\tNULL\t\ndeliveredAt\ttimestamp\tYES\t\tNULL\t\necpayTradeNo\tvarchar(50)\tYES\t\tNULL\t\ncreatedAt\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\t\nupdatedAt\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\tDEFAULT_GENERATED on update CURRENT_TIMESTAMP\nid\torderNumber\tuserId\tstatus\tpaymentStatus\ttotal\n2\tORD2602211813WE\t90156\tpending\tpending\t101.00\n1\tORD260221FG8Q1W\t120047\tpending\tpending\t101.00\n",
+  "stderr": "",
+  "execution_time_ms": 1789
+}

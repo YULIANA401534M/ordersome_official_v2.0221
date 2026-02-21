@@ -1,0 +1,15 @@
+{
+  "query": "SELECT id, name, price FROM products WHERE isActive = 1 ORDER BY id LIMIT 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user AKK2AjLXvjySfzt.defe7b7a87b6 --database gjTAhmM88fiEhPinRVjKbV --execute SELECT id, name, price FROM products WHERE isActive = 1 ORDER BY id LIMIT 1;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "台韓辣椒醬（單瓶）",
+      "price": "180.00"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tprice\n1\t台韓辣椒醬（單瓶）\t180.00\n",
+  "stderr": "",
+  "execution_time_ms": 1534
+}
