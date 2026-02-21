@@ -6,11 +6,13 @@ import {
   sopCategories,
   sopDocuments,
   sopReadReceipts,
+  sopPermissions,
   equipmentRepairs,
   dailyChecklists,
   dailyChecklistItems,
+  users,
 } from "../../drizzle/schema";
-import { eq, and, desc, or } from "drizzle-orm";
+import { eq, and, desc, or, inArray } from "drizzle-orm";
 
 const MAKE_WEBHOOK_URL = "https://hook.us2.make.com/9lru5kvflpvyglz9dtpe9b02v97wkdd9";
 
@@ -381,4 +383,104 @@ export const sopRouter = router({
       await db.update(dailyChecklistItems).set(data).where(eq(dailyChecklistItems.id, id));
       return { success: true };
     }),
+
+  // ===== SOP 權限管理 =====
+  /** 取得所有權限設定（管理員專用） */
+  getSopPermissions: managerProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+    const perms = await db.select().from(sopPermissions);
+    const allUsers = await db
+      .select({ id: users.id, name: users.name, email: users.email, role: users.role })
+      .from(users);
+    const cats = await db.select().from(sopCategories).orderBy(sopCategories.displayOrder);
+    const docs = await db
+      .select({ id: sopDocuments.id, title: sopDocuments.title, categoryId: sopDocuments.categoryId })
+      .from(sopDocuments);
+    return { permissions: perms, users: allUsers, categories: cats, documents: docs };
+  }),
+
+  /** 更新權限：先刪除目標的所有權限，再批次寫入 */
+  updateSopPermissions: managerProcedure
+    .input(z.object({
+      targetType: z.enum(["role", "user"]),
+      targetRole: z.string().optional(),
+      targetUserId: z.number().optional(),
+      grants: z.array(z.object({
+        scopeType: z.enum(["category", "document"]),
+        categoryId: z.number().optional(),
+        documentId: z.number().optional(),
+        isGranted: z.boolean(),
+      })),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      if (input.targetType === "role" && input.targetRole) {
+        await db.delete(sopPermissions).where(
+          and(
+            eq(sopPermissions.targetType, "role"),
+            eq(sopPermissions.targetRole, input.targetRole)
+          )
+        );
+      } else if (input.targetType === "user" && input.targetUserId) {
+        await db.delete(sopPermissions).where(
+          and(
+            eq(sopPermissions.targetType, "user"),
+            eq(sopPermissions.targetUserId, input.targetUserId)
+          )
+        );
+      }
+      if (input.grants.length > 0) {
+        await db.insert(sopPermissions).values(
+          input.grants.map((g) => ({
+            targetType: input.targetType,
+            targetRole: input.targetRole ?? null,
+            targetUserId: input.targetUserId ?? null,
+            scopeType: g.scopeType,
+            categoryId: g.categoryId ?? null,
+            documentId: g.documentId ?? null,
+            isGranted: g.isGranted,
+          }))
+        );
+      }
+      return { success: true };
+    }),
+
+  /** 取得當前登入用戶可存取的 SOP 分類（權限控制） */
+  getAccessibleCategories: protectedProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+    const isManager = ctx.user.role === "super_admin" || ctx.user.role === "manager";
+    if (isManager) {
+      return db.select().from(sopCategories).orderBy(sopCategories.displayOrder);
+    }
+    // 查詢角色權限 + 用戶權限
+    const rolePerms = await db.select().from(sopPermissions).where(
+      and(
+        eq(sopPermissions.targetType, "role"),
+        eq(sopPermissions.targetRole, ctx.user.role),
+        eq(sopPermissions.scopeType, "category"),
+        eq(sopPermissions.isGranted, true)
+      )
+    );
+    const userPerms = await db.select().from(sopPermissions).where(
+      and(
+        eq(sopPermissions.targetType, "user"),
+        eq(sopPermissions.targetUserId, ctx.user.id),
+        eq(sopPermissions.scopeType, "category"),
+        eq(sopPermissions.isGranted, true)
+      )
+    );
+    const allPerms = [...rolePerms, ...userPerms];
+    // 權限表為空時，預設返回所有分類
+    if (allPerms.length === 0) {
+      return db.select().from(sopCategories).orderBy(sopCategories.displayOrder);
+    }
+    const catIds = Array.from(new Set(allPerms.map((p) => p.categoryId).filter(Boolean) as number[]));
+    if (catIds.length === 0) return [];
+    return db.select().from(sopCategories)
+      .where(inArray(sopCategories.id, catIds))
+      .orderBy(sopCategories.displayOrder);
+  }),
 });

@@ -349,3 +349,26 @@ export const dailyChecklistItems = mysqlTable("daily_checklist_items", {
   notes: text("notes"),
 });
 export type DailyChecklistItem = typeof dailyChecklistItems.$inferSelect;
+
+/** SOP 權限關聯表：控制特定角色或特定用戶可見哪些 SOP 分類與文件 */
+export const sopPermissions = mysqlTable("sop_permissions", {
+  id: int("id").autoincrement().primaryKey(),
+  /** 目標類型：role（角色）或 user（特定用戶） */
+  targetType: mysqlEnum("target_type", ["role", "user"]).notNull(),
+  /** 角色名稱（當 targetType = 'role' 時使用）*/
+  targetRole: varchar("target_role", { length: 50 }),
+  /** 用戶 ID（當 targetType = 'user' 時使用）*/
+  targetUserId: int("target_user_id"),
+  /** 授權範圍：category（分類）或 document（文件）*/
+  scopeType: mysqlEnum("scope_type", ["category", "document"]).notNull(),
+  /** 分類 ID（當 scopeType = 'category' 時使用）*/
+  categoryId: int("category_id"),
+  /** 文件 ID（當 scopeType = 'document' 時使用）*/
+  documentId: int("document_id"),
+  /** 是否授予存取權限（true = 允許，false = 拒絕）*/
+  isGranted: boolean("is_granted").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+export type SopPermission = typeof sopPermissions.$inferSelect;
+export type InsertSopPermission = typeof sopPermissions.$inferInsert;

@@ -859,3 +859,38 @@
 - [x] EquipmentRepairs.tsx 重寫：FAB 按鈕 + Bottom Sheet 表單 + Make Webhook 串接 + 手機優先設計
 - [x] DailyChecklist.tsx 重寫：基於《營運手冊》真實開閉店流程 + 防呆提交 + 記錄查詢
 - [x] 全部 32/32 測試通過
+
+## 系統導航整合、權限控制與動態路由（2026-02-22）
+
+### Module 1：UI & Routing 整合
+- [x] StaffDashboardLayout Sidebar 新增 SOP 知識庫、設備報修、每日檢查表選項（BookOpen、Wrench、ClipboardList）
+- [x] FranchiseeDashboardLayout Sidebar 修正 SOP 路由為 /dashboard/sop，新增設備報修和每日檢查表
+- [x] StaffDashboard 快捷卡片：新增 SOP 知識庫、設備報修、每日檢查表卡片，使用 Link 取代 a 標籤
+- [x] FranchiseDashboard 快捷卡片：新增 SOP 知識庫、設備報修、每日檢查表卡片
+- [x] Sidebar isActive 判斷改用 location.startsWith(item.path)，支援子路由高亮
+
+### Module 2：動態返回導航
+- [x] 建立 BackButton 元件（client/src/components/BackButton.tsx）
+- [x] 使用 useLocation + history.back() 實作動態返回
+- [x] 防呆機制：歷史紀錄為空時依角色 fallback（staff→/dashboard/staff，franchisee→/dashboard/franchise，其他→/dashboard）
+- [x] 整合 BackButton 到 SOPKnowledgeBase 列表視圖 header
+- [x] 整合 BackButton 到 EquipmentRepairs header
+- [x] 整合 BackButton 到 DailyChecklist header
+
+### Module 3：角色權限系統
+- [x] sop router 新增 getSopPermissions endpoint（管理員用）
+- [x] sop router 新增 updateSopPermissions endpoint（批次寫入 sop_permissions 表）
+- [x] sop router 新增 getAccessibleCategories endpoint（依用戶角色/權限表過濾分類）
+- [x] SOPKnowledgeBase 改用 getAccessibleCategories 取代 getCategories（動態分類渲染）
+- [x] 建立 AdminSopPermissions.tsx：Super Admin 可依角色或特定用戶勾選可存取的 SOP 分類
+- [x] AdminDashboardLayout Sidebar 新增「SOP 存取權限」入口（BookOpen icon）
+- [x] App.tsx 新增 /dashboard/admin/sop-permissions 路由
+
+### Module 4：閱讀簽收強化
+- [x] markAsRead onSuccess 加入 refetchReadStatus（確保按鈕狀態即時鎖定）
+- [x] 閱讀狀態查詢在 selectedDocId 變更時自動觸發（enabled: !!selectedDocId）
+- [x] 已閱讀按鈕呈現 disabled + 打勾狀態，嚴禁重複點擊
+
+### 技術品質
+- [x] TypeScript 編譯 0 errors（npx tsc --noEmit）
+- [x] 所有 32 個 vitest 測試通過

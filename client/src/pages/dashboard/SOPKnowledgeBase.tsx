@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import BackButton from "@/components/BackButton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -36,7 +37,8 @@ export default function SOPKnowledgeBase() {
   const [isUploadingPdf, setIsUploadingPdf] = useState(false);
 
   // tRPC queries
-  const { data: categories = [] } = trpc.sop.getCategories.useQuery();
+  // 使用 getAccessibleCategories 根據權限動態渲染分類（管理員可看全部，其他角色依權限表顯示）
+  const { data: categories = [] } = trpc.sop.getAccessibleCategories.useQuery();
   const { data: documents = [], refetch: refetchDocs } = trpc.sop.getDocuments.useQuery({
     categoryId: selectedCategoryId ?? undefined,
   });
@@ -48,7 +50,7 @@ export default function SOPKnowledgeBase() {
     { id: selectedDocId! },
     { enabled: selectedDocId !== null }
   );
-  const { data: readStatus } = trpc.sop.getReadStatus.useQuery(
+  const { data: readStatus, refetch: refetchReadStatus } = trpc.sop.getReadStatus.useQuery(
     { documentId: selectedDocId! },
     { enabled: selectedDocId !== null }
   );
@@ -57,6 +59,7 @@ export default function SOPKnowledgeBase() {
     onSuccess: () => {
       toast.success("已標記為已讀！");
       refetchDoc();
+      refetchReadStatus();
     },
   });
 
@@ -406,6 +409,7 @@ export default function SOPKnowledgeBase() {
         <div className="max-w-3xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
+              <BackButton className="-ml-2" />
               <BookOpen className="w-6 h-6 text-purple-600" />
               <h1 className="text-xl font-bold text-gray-900">SOP 知識庫</h1>
             </div>

@@ -4,9 +4,11 @@ import { trpc } from "../lib/trpc";
 import {
   Home,
   Store,
-  FileText,
   BarChart3,
   Package,
+  BookOpen,
+  Wrench,
+  ClipboardList,
   ChevronLeft,
   ChevronRight,
   LayoutDashboard,
@@ -45,7 +47,9 @@ export default function FranchiseeDashboardLayout({ children }: FranchiseeDashbo
     { icon: LayoutDashboard, label: "返回儀表板", path: "/dashboard", isDashboardLink: true },
     { icon: Home, label: "返回首頁", path: "/brand/ordersome" },
     { icon: Store, label: "門市管理", path: "/dashboard/franchise/stores" },
-    { icon: FileText, label: "SOP 文件", path: "/dashboard/franchise/sop" },
+    { icon: BookOpen, label: "SOP 知識庫", path: "/dashboard/sop" },
+    { icon: Wrench, label: "設備報修", path: "/dashboard/repairs" },
+    { icon: ClipboardList, label: "每日檢查表", path: "/dashboard/checklist" },
     { icon: BarChart3, label: "營運報表", path: "/dashboard/franchise/reports" },
     { icon: Package, label: "庫存管理", path: "/dashboard/franchise/inventory" },
   ];
@@ -108,8 +112,8 @@ export default function FranchiseeDashboardLayout({ children }: FranchiseeDashbo
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const isActive = item.path === location;
             const isDashboard = (item as any).isDashboardLink;
+            const isActive = item.path === location || (!isDashboard && item.path !== "/brand/ordersome" && location.startsWith(item.path + "/"));
 
             return (
               <Link

@@ -30,7 +30,8 @@ import {
   FileText, 
   BarChart3,
   Home,
-  Handshake
+  Handshake,
+  BookOpen
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -163,6 +164,7 @@ function AdminDashboardLayoutContent({
     { icon: Home, label: "返回首頁", path: "/corporate", requiredPermission: null },
     { icon: Users, label: "用戶管理", path: "/dashboard/admin/users", requiredPermission: "manage_users" },
     { icon: Shield, label: "權限管理", path: "/dashboard/admin/permissions", requiredPermission: "manage_users" },
+    { icon: BookOpen, label: "SOP 存取權限", path: "/dashboard/admin/sop-permissions", requiredPermission: "manage_users" },
     { icon: FileText, label: "內容管理", path: "/dashboard/content", requiredPermission: "publish_content" },
     { icon: Handshake, label: "加盟諮詢", path: "/dashboard/franchise-inquiries", requiredPermission: "manage_franchise" },
     { icon: BarChart3, label: "流量分析", path: "/dashboard/admin/analytics", requiredPermission: "view_finance" },

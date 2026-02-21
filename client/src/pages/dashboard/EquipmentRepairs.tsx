@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import BackButton from "@/components/BackButton";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -117,6 +118,7 @@ export default function EquipmentRepairs() {
       {/* Header */}
       <div className="bg-white border-b sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
+          <BackButton className="-ml-2" />
           <Wrench className="w-6 h-6 text-orange-500" />
           <h1 className="text-xl font-bold text-gray-900">設備報修</h1>
         </div>

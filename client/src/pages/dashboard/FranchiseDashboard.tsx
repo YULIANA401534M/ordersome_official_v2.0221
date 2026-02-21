@@ -1,5 +1,6 @@
+import { Link } from "wouter";
 import FranchiseeDashboardLayout from "@/components/FranchiseeDashboardLayout";
-import { Store, FileText, BarChart3, Package } from "lucide-react";
+import { Store, BarChart3, Package, BookOpen, Wrench, ClipboardList, FileText } from "lucide-react";
 
 export default function FranchiseDashboard() {
   return (
@@ -12,37 +13,62 @@ export default function FranchiseDashboard() {
             <p className="text-green-100">管理您的門市、查看營運報表、下載 SOP 文件</p>
           </div>
 
-          {/* Quick Access Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <a
-              href="/dashboard/franchise/stores"
-              className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all border-2 border-transparent hover:border-green-500"
+          {/* Quick Access Cards - Core Operations */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+            <Link
+              to="/dashboard/sop"
+              className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all border-2 border-transparent hover:border-green-500 block"
             >
               <div className="flex items-center gap-4 mb-4">
                 <div className="p-3 bg-green-100 rounded-lg">
-                  <Store className="h-6 w-6 text-green-600" />
+                  <BookOpen className="h-6 w-6 text-green-600" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900">SOP 知識庫</h3>
+              </div>
+              <p className="text-sm text-gray-600">查閱標準作業流程、訓練手冊與操作指引</p>
+            </Link>
+            <Link
+              to="/dashboard/repairs"
+              className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all border-2 border-transparent hover:border-green-500 block"
+            >
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-orange-100 rounded-lg">
+                  <Wrench className="h-6 w-6 text-orange-600" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900">設備報修</h3>
+              </div>
+              <p className="text-sm text-gray-600">提交設備維修申請、查看維修進度</p>
+            </Link>
+            <Link
+              to="/dashboard/checklist"
+              className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all border-2 border-transparent hover:border-green-500 block"
+            >
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-blue-100 rounded-lg">
+                  <ClipboardList className="h-6 w-6 text-blue-600" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900">每日檢查表</h3>
+              </div>
+              <p className="text-sm text-gray-600">填寫開店/閉店檢查表、查看歷史記錄</p>
+            </Link>
+          </div>
+          {/* Secondary Cards - Franchise Management */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Link
+              to="/dashboard/franchise/stores"
+              className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all border-2 border-transparent hover:border-gray-300 block"
+            >
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-teal-100 rounded-lg">
+                  <Store className="h-6 w-6 text-teal-600" />
                 </div>
                 <h3 className="text-lg font-bold text-gray-900">門市管理</h3>
               </div>
               <p className="text-sm text-gray-600">查看門市資訊、營業時間、聯絡方式</p>
-            </a>
-
-            <a
-              href="/dashboard/franchise/sop"
-              className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all border-2 border-transparent hover:border-green-500"
-            >
-              <div className="flex items-center gap-4 mb-4">
-                <div className="p-3 bg-blue-100 rounded-lg">
-                  <FileText className="h-6 w-6 text-blue-600" />
-                </div>
-                <h3 className="text-lg font-bold text-gray-900">SOP 文件</h3>
-              </div>
-              <p className="text-sm text-gray-600">下載標準作業流程文件、訓練手冊</p>
-            </a>
-
-            <a
-              href="/dashboard/franchise/reports"
-              className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all border-2 border-transparent hover:border-green-500"
+            </Link>
+            <Link
+              to="/dashboard/franchise/reports"
+              className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all border-2 border-transparent hover:border-gray-300 block"
             >
               <div className="flex items-center gap-4 mb-4">
                 <div className="p-3 bg-purple-100 rounded-lg">
@@ -51,11 +77,10 @@ export default function FranchiseDashboard() {
                 <h3 className="text-lg font-bold text-gray-900">營運報表</h3>
               </div>
               <p className="text-sm text-gray-600">查看營收、成本、利潤等營運數據</p>
-            </a>
-
-            <a
-              href="/dashboard/franchise/inventory"
-              className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all border-2 border-transparent hover:border-green-500"
+            </Link>
+            <Link
+              to="/dashboard/franchise/inventory"
+              className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all border-2 border-transparent hover:border-gray-300 block"
             >
               <div className="flex items-center gap-4 mb-4">
                 <div className="p-3 bg-amber-100 rounded-lg">
@@ -64,7 +89,7 @@ export default function FranchiseDashboard() {
                 <h3 className="text-lg font-bold text-gray-900">庫存管理</h3>
               </div>
               <p className="text-sm text-gray-600">查看庫存狀況、進貨記錄、盤點表單</p>
-            </a>
+            </Link>
           </div>
 
           {/* Recent Activity */}

@@ -57,6 +57,7 @@ import AdminOrders from "./pages/admin/AdminOrders";
 import AdminCategories from "./pages/admin/AdminCategories";
 import AdminUsers from "./pages/dashboard/AdminUsers";
 import AdminPermissions from "./pages/dashboard/AdminPermissions";
+import AdminSopPermissions from "./pages/dashboard/AdminSopPermissions";
 import ContentManagement from "./pages/dashboard/ContentManagement";
 import ContentEditor from "./pages/dashboard/ContentEditor";
 import FranchiseInquiries from "./pages/dashboard/FranchiseInquiries";
@@ -148,6 +149,7 @@ function Router() {
       <Route path="/admin/categories" component={AdminCategories} />
       <Route path="/dashboard/admin/users" component={AdminUsers} />
       <Route path="/dashboard/admin/permissions" component={AdminPermissions} />
+      <Route path="/dashboard/admin/sop-permissions" component={AdminSopPermissions} />
       <Route path="/dashboard/content" component={ContentManagement} />
       <Route path="/dashboard/content/new" component={ContentEditor} />
       <Route path="/dashboard/content/edit/:id" component={ContentEditor} />

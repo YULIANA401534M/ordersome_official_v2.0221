@@ -7,6 +7,7 @@ import {
   ClipboardList,
   Calendar,
   Bell,
+  BookOpen,
   ChevronLeft,
   ChevronRight,
   LayoutDashboard,
@@ -44,8 +45,9 @@ export default function StaffDashboardLayout({ children }: StaffDashboardLayoutP
   const menuItems = [
     { icon: LayoutDashboard, label: "返回儀表板", path: "/dashboard", isDashboardLink: true },
     { icon: Home, label: "返回首頁", path: "/brand/ordersome" },
-    { icon: Wrench, label: "設備維修", path: "/dashboard/repairs" },
-    { icon: ClipboardList, label: "工作表單", path: "/dashboard/checklist" },
+    { icon: BookOpen, label: "SOP 知識庫", path: "/dashboard/sop" },
+    { icon: Wrench, label: "設備報修", path: "/dashboard/repairs" },
+    { icon: ClipboardList, label: "每日檢查表", path: "/dashboard/checklist" },
     { icon: Calendar, label: "排班系統", path: "/dashboard/staff/schedule" },
     { icon: Bell, label: "公告事項", path: "/dashboard/staff/announcements" },
   ];
@@ -108,8 +110,8 @@ export default function StaffDashboardLayout({ children }: StaffDashboardLayoutP
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const isActive = item.path === location;
             const isDashboard = (item as any).isDashboardLink;
+            const isActive = item.path === location || (!isDashboard && item.path !== "/brand/ordersome" && location.startsWith(item.path + "/"));
 
             return (
               <Link

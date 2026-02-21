@@ -1,5 +1,6 @@
+import { Link } from "wouter";
 import StaffDashboardLayout from "@/components/StaffDashboardLayout";
-import { Wrench, ClipboardList, Calendar, Bell } from "lucide-react";
+import { Wrench, ClipboardList, BookOpen, Calendar, Bell } from "lucide-react";
 
 export default function StaffDashboard() {
   return (
@@ -13,36 +14,49 @@ export default function StaffDashboard() {
           </div>
 
           {/* Quick Access Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <a
-              href="/dashboard/repairs"
-              className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all border-2 border-transparent hover:border-purple-500"
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            <Link
+              to="/dashboard/sop"
+              className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all border-2 border-transparent hover:border-purple-500 block"
             >
               <div className="flex items-center gap-4 mb-4">
                 <div className="p-3 bg-purple-100 rounded-lg">
-                  <Wrench className="h-6 w-6 text-purple-600" />
+                  <BookOpen className="h-6 w-6 text-purple-600" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-900">設備維修</h3>
+                <h3 className="text-lg font-bold text-gray-900">SOP 知識庫</h3>
+              </div>
+              <p className="text-sm text-gray-600">查閱標準作業流程、訓練手冊與操作指引</p>
+            </Link>
+            <Link
+              to="/dashboard/repairs"
+              className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all border-2 border-transparent hover:border-purple-500 block"
+            >
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-orange-100 rounded-lg">
+                  <Wrench className="h-6 w-6 text-orange-600" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900">設備報修</h3>
               </div>
               <p className="text-sm text-gray-600">提交設備維修申請、查看維修進度</p>
-            </a>
-
-            <a
-              href="/dashboard/checklist"
-              className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all border-2 border-transparent hover:border-purple-500"
+            </Link>
+            <Link
+              to="/dashboard/checklist"
+              className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all border-2 border-transparent hover:border-purple-500 block"
             >
               <div className="flex items-center gap-4 mb-4">
                 <div className="p-3 bg-blue-100 rounded-lg">
                   <ClipboardList className="h-6 w-6 text-blue-600" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-900">工作表單</h3>
+                <h3 className="text-lg font-bold text-gray-900">每日檢查表</h3>
               </div>
-              <p className="text-sm text-gray-600">填寫日常工作表單、查看歷史記錄</p>
-            </a>
-
-            <a
-              href="/dashboard/sop"
-              className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all border-2 border-transparent hover:border-purple-500"
+              <p className="text-sm text-gray-600">填寫開店/閉店檢查表、查看歷史記錄</p>
+            </Link>
+          </div>
+          {/* Secondary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <Link
+              to="/dashboard/staff/schedule"
+              className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all border-2 border-transparent hover:border-gray-300 block"
             >
               <div className="flex items-center gap-4 mb-4">
                 <div className="p-3 bg-green-100 rounded-lg">
@@ -51,11 +65,10 @@ export default function StaffDashboard() {
                 <h3 className="text-lg font-bold text-gray-900">排班系統</h3>
               </div>
               <p className="text-sm text-gray-600">查看本週排班、申請調班、請假</p>
-            </a>
-
-            <a
-              href="/dashboard/sop"
-              className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all border-2 border-transparent hover:border-purple-500"
+            </Link>
+            <Link
+              to="/dashboard/staff/announcements"
+              className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all border-2 border-transparent hover:border-gray-300 block"
             >
               <div className="flex items-center gap-4 mb-4">
                 <div className="p-3 bg-amber-100 rounded-lg">
@@ -64,7 +77,7 @@ export default function StaffDashboard() {
                 <h3 className="text-lg font-bold text-gray-900">公告事項</h3>
               </div>
               <p className="text-sm text-gray-600">查看最新公告、重要通知、活動資訊</p>
-            </a>
+            </Link>
           </div>
 
           {/* Recent Activity */}

@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE `sop_permissions` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`target_type` enum('role','user') NOT NULL,\n\t`target_role` varchar(50),\n\t`target_user_id` int,\n\t`scope_type` enum('category','document') NOT NULL,\n\t`category_id` int,\n\t`document_id` int,\n\t`is_granted` boolean NOT NULL DEFAULT true,\n\t`created_at` timestamp NOT NULL DEFAULT (now()),\n\t`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `sop_permissions_id` PRIMARY KEY(`id`)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user AKK2AjLXvjySfzt.defe7b7a87b6 --database gjTAhmM88fiEhPinRVjKbV --execute CREATE TABLE `sop_permissions` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`target_type` enum('role','user') NOT NULL,\n\t`target_role` varchar(50),\n\t`target_user_id` int,\n\t`scope_type` enum('category','document') NOT NULL,\n\t`category_id` int,\n\t`document_id` int,\n\t`is_granted` boolean NOT NULL DEFAULT true,\n\t`created_at` timestamp NOT NULL DEFAULT (now()),\n\t`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `sop_permissions_id` PRIMARY KEY(`id`)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1689
+}
