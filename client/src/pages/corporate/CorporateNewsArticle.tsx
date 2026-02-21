@@ -1,22 +1,75 @@
+import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "wouter";
-import { ArrowLeft, Calendar, User, ChevronLeft } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, Share2, Link as LinkIcon, Facebook, Twitter } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import CorporateLayout from "@/components/layout/CorporateLayout";
 import { trpc } from "@/lib/trpc";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { Streamdown } from "streamdown";
+
+function calcReadingTime(content: string): number {
+  const text = content.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+  return Math.max(1, Math.ceil(text.length / 500));
+}
+
+function formatDate(date: Date | string) {
+  return new Date(date).toLocaleDateString("zh-TW", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
 
 export default function CorporateNewsArticle() {
   const { slug } = useParams<{ slug: string }>();
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [showShareToast, setShowShareToast] = useState(false);
+  const articleRef = useRef<HTMLDivElement>(null);
+
   const { data: post, isLoading } = trpc.content.getPostBySlug.useQuery({ slug: slug || "" });
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const article = articleRef.current;
+      if (!article) return;
+      const articleTop = article.offsetTop;
+      const articleHeight = article.offsetHeight;
+      const windowHeight = window.innerHeight;
+      const scrollTop = window.scrollY;
+      const progress = Math.min(
+        100,
+        Math.max(
+          0,
+          ((scrollTop - articleTop + windowHeight * 0.3) / (articleHeight - windowHeight * 0.5)) * 100
+        )
+      );
+      setScrollProgress(progress);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const handleShare = (platform?: string) => {
+    const url = window.location.href;
+    const title = post?.title || "";
+    if (platform === "facebook") {
+      window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, "_blank");
+    } else if (platform === "twitter") {
+      window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(title)}`, "_blank");
+    } else {
+      navigator.clipboard.writeText(url).then(() => {
+        setShowShareToast(true);
+        setTimeout(() => setShowShareToast(false), 2000);
+      });
+    }
+  };
 
   if (isLoading) {
     return (
       <CorporateLayout>
         <div className="container py-20">
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600"></div>
+          <div className="flex items-center justify-center gap-4">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-600" />
+            <p className="text-gray-500">載入文章中...</p>
           </div>
         </div>
       </CorporateLayout>
@@ -42,106 +95,146 @@ export default function CorporateNewsArticle() {
     );
   }
 
+  const readingTime = calcReadingTime(post.content);
+  const isHtml = post.content.trim().startsWith("<");
+
   return (
     <CorporateLayout>
-      {/* Breadcrumb */}
-      <section className="bg-gray-50 py-8 border-b">
-        <div className="container">
-          <Link href="/corporate/news">
-            <Button variant="ghost" size="sm" className="gap-2 hover:bg-white">
-              <ChevronLeft className="h-4 w-4" />
-              返回新聞列表
-            </Button>
-          </Link>
-        </div>
-      </section>
+      {/* 閱讀進度條 */}
+      <div className="fixed top-0 left-0 right-0 z-50 h-1 bg-gray-200">
+        <div
+          className="h-full bg-gradient-to-r from-amber-600 to-yellow-500 transition-all duration-150"
+          style={{ width: `${scrollProgress}%` }}
+        />
+      </div>
 
-      {/* Article Content */}
-      <article className="py-16">
-        <div className="container max-w-4xl">
-          {/* Cover Image */}
-          {post.coverImage && (
-            <div className="mb-8 rounded-xl overflow-hidden shadow-lg aspect-video">
+      {/* Hero Section */}
+      <section className="relative bg-gray-900 text-white overflow-hidden">
+        {post.coverImage ? (
+          <>
+            <div className="absolute inset-0">
               <img
                 src={post.coverImage}
                 alt={post.title}
-                className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                className="w-full h-full object-cover opacity-30"
               />
+              <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/70 to-gray-900/40" />
             </div>
-          )}
-
-          {/* Title */}
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
-            {post.title}
-          </h1>
-
-          {/* Meta Info */}
-          <div className="flex flex-wrap items-center gap-6 text-gray-600 mb-8 pb-8 border-b">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-amber-600" />
-              <span>{new Date(post.publishedAt || post.createdAt).toLocaleDateString('zh-TW', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              })}</span>
+            <div className="relative z-10 container py-24 md:py-32">
+              <Link href="/corporate/news">
+                <button className="inline-flex items-center gap-2 text-gray-300 hover:text-white mb-8 transition-colors">
+                  <ArrowLeft className="w-4 h-4" />
+                  返回新聞中心
+                </button>
+              </Link>
+              <div className="max-w-3xl">
+                <h1 className="text-3xl md:text-5xl font-black leading-tight mb-6">{post.title}</h1>
+                {post.excerpt && (
+                  <p className="text-lg text-gray-300 mb-8 leading-relaxed">{post.excerpt}</p>
+                )}
+                <div className="flex flex-wrap items-center gap-5 text-sm text-gray-400">
+                  <span className="flex items-center gap-1.5">
+                    <Calendar className="w-4 h-4" />
+                    {formatDate(post.publishedAt || post.createdAt)}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <Clock className="w-4 h-4" />
+                    約 {readingTime} 分鐘閱讀
+                  </span>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <User className="h-5 w-5 text-amber-600" />
-              <span>宇聯國際</span>
+          </>
+        ) : (
+          <div className="relative z-10 container py-20">
+            <Link href="/corporate/news">
+              <button className="inline-flex items-center gap-2 text-gray-300 hover:text-white mb-8 transition-colors">
+                <ArrowLeft className="w-4 h-4" />
+                返回新聞中心
+              </button>
+            </Link>
+            <div className="max-w-3xl">
+              <h1 className="text-3xl md:text-5xl font-black leading-tight mb-6">{post.title}</h1>
+              {post.excerpt && (
+                <p className="text-lg text-gray-300 mb-8 leading-relaxed">{post.excerpt}</p>
+              )}
+              <div className="flex flex-wrap items-center gap-5 text-sm text-gray-400">
+                <span className="flex items-center gap-1.5">
+                  <Calendar className="w-4 h-4" />
+                  {formatDate(post.publishedAt || post.createdAt)}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Clock className="w-4 h-4" />
+                  約 {readingTime} 分鐘閱讀
+                </span>
+              </div>
             </div>
           </div>
+        )}
+      </section>
 
-          {/* Excerpt */}
-          {post.excerpt && (
-            <div className="bg-amber-50 border-l-4 border-amber-600 p-6 mb-8 rounded-r-lg">
-              <p className="text-lg text-gray-700 leading-relaxed italic">
-                {post.excerpt}
-              </p>
+      {/* Article Content */}
+      <div className="container py-12">
+        <div className="max-w-3xl mx-auto">
+          <article
+            ref={articleRef}
+            className="prose prose-lg max-w-none prose-headings:font-bold prose-headings:text-gray-900 prose-p:text-gray-700 prose-p:leading-relaxed prose-img:rounded-xl prose-img:shadow-lg prose-a:text-amber-600 prose-a:no-underline hover:prose-a:underline"
+          >
+            {isHtml ? (
+              <div dangerouslySetInnerHTML={{ __html: post.content }} />
+            ) : (
+              <Streamdown>{post.content}</Streamdown>
+            )}
+          </article>
+
+          {/* Share Section */}
+          <div className="mt-12 pt-8 border-t border-gray-100">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <p className="text-sm font-medium text-gray-500">分享這篇文章</p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleShare("facebook")}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition"
+                >
+                  <Facebook className="w-4 h-4" />
+                  Facebook
+                </button>
+                <button
+                  onClick={() => handleShare("twitter")}
+                  className="flex items-center gap-2 px-4 py-2 bg-sky-500 text-white rounded-lg text-sm font-medium hover:bg-sky-600 transition"
+                >
+                  <Twitter className="w-4 h-4" />
+                  Twitter
+                </button>
+                <button
+                  onClick={() => handleShare()}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition"
+                >
+                  <LinkIcon className="w-4 h-4" />
+                  複製連結
+                </button>
+              </div>
             </div>
-          )}
-
-          {/* Content */}
-          <div className="prose prose-lg max-w-none">
-            <ReactMarkdown 
-              remarkPlugins={[remarkGfm]}
-              components={{
-                h1: ({node, ...props}) => <h1 className="text-3xl font-bold text-gray-900 mt-8 mb-4" {...props} />,
-                h2: ({node, ...props}) => <h2 className="text-2xl font-bold text-gray-900 mt-6 mb-3" {...props} />,
-                h3: ({node, ...props}) => <h3 className="text-xl font-bold text-gray-900 mt-4 mb-2" {...props} />,
-                p: ({node, ...props}) => <p className="text-gray-700 leading-relaxed mb-4" {...props} />,
-                ul: ({node, ...props}) => <ul className="list-disc list-inside mb-4 space-y-2" {...props} />,
-                ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-4 space-y-2" {...props} />,
-                li: ({node, ...props}) => <li className="text-gray-700" {...props} />,
-                a: ({node, ...props}) => <a className="text-amber-600 hover:text-amber-700 underline" {...props} />,
-                blockquote: ({node, ...props}) => (
-                  <blockquote className="border-l-4 border-gray-300 pl-4 italic text-gray-600 my-4" {...props} />
-                ),
-                code: ({node, inline, ...props}: any) => 
-                  inline ? (
-                    <code className="bg-gray-100 px-2 py-1 rounded text-sm font-mono text-amber-600" {...props} />
-                  ) : (
-                    <code className="block bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto my-4 font-mono text-sm" {...props} />
-                  ),
-                img: ({node, ...props}) => (
-                  <img className="rounded-lg shadow-md my-6 w-full" {...props} />
-                ),
-              }}
-            >
-              {post.content}
-            </ReactMarkdown>
           </div>
 
           {/* Back Button */}
-          <div className="mt-12 pt-8 border-t">
+          <div className="mt-8">
             <Link href="/corporate/news">
-              <Button variant="outline" size="lg" className="gap-2">
-                <ArrowLeft className="h-5 w-5" />
-                返回新聞列表
-              </Button>
+              <button className="inline-flex items-center gap-2 text-amber-600 hover:text-amber-700 font-medium transition-colors">
+                <ArrowLeft className="w-4 h-4" />
+                返回新聞中心列表
+              </button>
             </Link>
           </div>
         </div>
-      </article>
+      </div>
+
+      {/* Copy Link Toast */}
+      {showShareToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-5 py-3 rounded-xl shadow-lg text-sm font-medium z-50">
+          連結已複製到剪貼簿！
+        </div>
+      )}
     </CorporateLayout>
   );
 }

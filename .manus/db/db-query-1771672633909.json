@@ -1,0 +1,9 @@
+{
+  "query": "INSERT INTO sop_categories (name, description, icon, display_order) VALUES\n('開店作業', '每日開店前的標準作業流程', 'Sun', 1),\n('閉店作業', '每日閉店時的標準作業流程', 'Moon', 2),\n('食品安全', '食材處理、儲存、烹調的衛生標準', 'Shield', 3),\n('設備維護', '廚房設備、機器的保養與維修流程', 'Wrench', 4),\n('顧客服務', '接待、點餐、送餐、結帳的服務標準', 'Users', 5),\n('緊急應變', '火災、停電、食安事件等緊急狀況處理', 'AlertTriangle', 6);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user AKK2AjLXvjySfzt.defe7b7a87b6 --database gjTAhmM88fiEhPinRVjKbV --execute INSERT INTO sop_categories (name, description, icon, display_order) VALUES\n('開店作業', '每日開店前的標準作業流程', 'Sun', 1),\n('閉店作業', '每日閉店時的標準作業流程', 'Moon', 2),\n('食品安全', '食材處理、儲存、烹調的衛生標準', 'Shield', 3),\n('設備維護', '廚房設備、機器的保養與維修流程', 'Wrench', 4),\n('顧客服務', '接待、點餐、送餐、結帳的服務標準', 'Users', 5),\n('緊急應變', '火災、停電、食安事件等緊急狀況處理', 'AlertTriangle', 6);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1593
+}

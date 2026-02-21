@@ -270,3 +270,80 @@ export const franchiseInquiries = mysqlTable("franchise_inquiries", {
 
 export type FranchiseInquiry = typeof franchiseInquiries.$inferSelect;
 export type InsertFranchiseInquiry = typeof franchiseInquiries.$inferInsert;
+
+// ===== SOP 知識庫系統 =====
+
+/** SOP 分類表 */
+export const sopCategories = mysqlTable("sop_categories", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  icon: varchar("icon", { length: 50 }),
+  displayOrder: int("display_order").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+export type SopCategory = typeof sopCategories.$inferSelect;
+
+/** SOP 文件表 */
+export const sopDocuments = mysqlTable("sop_documents", {
+  id: int("id").autoincrement().primaryKey(),
+  categoryId: int("category_id").notNull(),
+  title: varchar("title", { length: 200 }).notNull(),
+  content: text("content").notNull(),
+  pdfUrl: text("pdf_url"),
+  version: varchar("version", { length: 20 }).default("1.0"),
+  status: mysqlEnum("status", ["draft", "published", "archived"]).default("draft").notNull(),
+  authorId: int("author_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+export type SopDocument = typeof sopDocuments.$inferSelect;
+
+/** SOP 閱讀簽收表 */
+export const sopReadReceipts = mysqlTable("sop_read_receipts", {
+  id: int("id").autoincrement().primaryKey(),
+  documentId: int("document_id").notNull(),
+  userId: int("user_id").notNull(),
+  readAt: timestamp("read_at").defaultNow().notNull(),
+  acknowledged: boolean("acknowledged").default(false),
+});
+export type SopReadReceipt = typeof sopReadReceipts.$inferSelect;
+
+/** 設備報修表 */
+export const equipmentRepairs = mysqlTable("equipment_repairs", {
+  id: int("id").autoincrement().primaryKey(),
+  storeId: int("store_id").notNull(),
+  equipmentName: varchar("equipment_name", { length: 100 }).notNull(),
+  issueDescription: text("issue_description").notNull(),
+  urgency: mysqlEnum("urgency", ["low", "medium", "high", "critical"]).default("medium").notNull(),
+  imageUrl: text("image_url"),
+  reportedBy: int("reported_by").notNull(),
+  status: mysqlEnum("status", ["pending", "in_progress", "resolved", "cancelled"]).default("pending").notNull(),
+  resolvedAt: timestamp("resolved_at"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+export type EquipmentRepair = typeof equipmentRepairs.$inferSelect;
+
+/** 每日檢查表 */
+export const dailyChecklists = mysqlTable("daily_checklists", {
+  id: int("id").autoincrement().primaryKey(),
+  storeId: int("store_id").notNull(),
+  checklistType: mysqlEnum("checklist_type", ["opening", "closing"]).notNull(),
+  checkedBy: int("checked_by").notNull(),
+  checkDate: date("check_date").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+export type DailyChecklist = typeof dailyChecklists.$inferSelect;
+
+/** 每日檢查項目表 */
+export const dailyChecklistItems = mysqlTable("daily_checklist_items", {
+  id: int("id").autoincrement().primaryKey(),
+  checklistId: int("checklist_id").notNull(),
+  itemName: varchar("item_name", { length: 100 }).notNull(),
+  isChecked: boolean("is_checked").default(false).notNull(),
+  notes: text("notes"),
+});
+export type DailyChecklistItem = typeof dailyChecklistItems.$inferSelect;

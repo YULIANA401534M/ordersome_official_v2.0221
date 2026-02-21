@@ -15,7 +15,7 @@ export default function StaffDashboard() {
           {/* Quick Access Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <a
-              href="/dashboard/staff/maintenance"
+              href="/dashboard/repairs"
               className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all border-2 border-transparent hover:border-purple-500"
             >
               <div className="flex items-center gap-4 mb-4">
@@ -28,7 +28,7 @@ export default function StaffDashboard() {
             </a>
 
             <a
-              href="/dashboard/staff/forms"
+              href="/dashboard/checklist"
               className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all border-2 border-transparent hover:border-purple-500"
             >
               <div className="flex items-center gap-4 mb-4">
@@ -41,7 +41,7 @@ export default function StaffDashboard() {
             </a>
 
             <a
-              href="/dashboard/staff/schedule"
+              href="/dashboard/sop"
               className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all border-2 border-transparent hover:border-purple-500"
             >
               <div className="flex items-center gap-4 mb-4">
@@ -54,7 +54,7 @@ export default function StaffDashboard() {
             </a>
 
             <a
-              href="/dashboard/staff/announcements"
+              href="/dashboard/sop"
               className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all border-2 border-transparent hover:border-purple-500"
             >
               <div className="flex items-center gap-4 mb-4">

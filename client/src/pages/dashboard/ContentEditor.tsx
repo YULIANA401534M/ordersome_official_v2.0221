@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { trpc } from "../../lib/trpc";
+import RichTextEditor from "@/components/RichTextEditor";
 import { Save, ArrowLeft, Eye } from "lucide-react";
 import { useLocation, useRoute } from "wouter";
 
@@ -279,14 +280,12 @@ export default function ContentEditor() {
           {/* Content */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">內容 *</label>
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="撰寫文章內容... (支援 Markdown 格式)"
-              rows={20}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+            <RichTextEditor
+              content={content}
+              onChange={(html) => setContent(html)}
+              placeholder="撰寫文章內容..."
             />
-            <p className="mt-1 text-xs text-gray-500">支援 Markdown 格式</p>
+            <p className="mt-1 text-xs text-gray-500">支援富文本格式（粗體、標題、列表、圖片、連結等）</p>
           </div>
 
           {/* Publish Targets (Multiple Selection) */}

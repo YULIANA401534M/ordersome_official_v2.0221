@@ -62,6 +62,10 @@ import ContentEditor from "./pages/dashboard/ContentEditor";
 import FranchiseInquiries from "./pages/dashboard/FranchiseInquiries";
 import News from "./pages/News";
 import NewsArticle from "./pages/NewsArticle";
+import SOPKnowledgeBase from "./pages/dashboard/SOPKnowledgeBase";
+import EquipmentRepairs from "./pages/dashboard/EquipmentRepairs";
+import DailyChecklist from "./pages/dashboard/DailyChecklist";
+import Dashboard from "./pages/Dashboard";
 
 // Landing Page
 import Home from "./pages/Home";
@@ -154,6 +158,13 @@ function Router() {
       
       {/* Staff Routes */}
       <Route path="/dashboard/staff" component={StaffDashboardPage} />
+
+      {/* SOP & Operations Routes */}
+      <Route path="/dashboard/sop" component={SOPKnowledgeBase} />
+      <Route path="/dashboard/repairs" component={EquipmentRepairs} />
+      <Route path="/dashboard/checklist" component={DailyChecklist} />
+      {/* Smart Dashboard Entry */}
+      <Route path="/dashboard" component={Dashboard} />
       
       {/* News Routes */}
       <Route path="/news" component={News} />

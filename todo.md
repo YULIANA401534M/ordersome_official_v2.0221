@@ -790,3 +790,33 @@
 - [x] 所有 32 個測試通過
 - [x] 開發伺服器正常運作
 - [x] GitHub remote 已設定（github remote）
+
+## 缺失功能補充（2026-02-21 第二批）
+- [ ] 第零階段：12 間門市資料匯入資料庫
+- [ ] 第零階段：門市據點頁面升級（互動地圖 + 導航功能）
+- [ ] 第零點五階段：辣椒醬系列商品分類匯入
+- [ ] 第零點五階段：2 個商品資料匯入（單瓶、兩入組）
+- [ ] 第一階段：安裝 Tiptap 依賴套件
+- [ ] 第一階段：建立 RichTextEditor 組件
+- [ ] 第一階段：ContentEditor 使用 RichTextEditor
+- [ ] 第二階段：NewsArticle.tsx 雜誌級閱讀體驗（進度條 + Hero + 閱讀時間）
+- [ ] 第二階段：CorporateNewsArticle.tsx 升級
+- [ ] 第三階段：SOP 知識庫 5 個資料表建立（sop_categories, sop_documents, sop_read_receipts, equipment_repairs, daily_checklists, daily_checklist_items）
+- [ ] 第三階段：SOP 分類初始資料（6 個分類）
+- [ ] 第三階段：SOP Router 建立
+- [ ] 第三階段：SOP 管理頁面
+- [ ] 第三階段：設備報修系統
+- [ ] 第三階段：每日檢查表系統
+- [ ] 第四階段：智慧中控台分流導向
+
+## 缺失功能補充（2026-02-21 第二批）
+- [x] 門市系統升級（12 間門市資料匯入 + 互動地圖 + 導航功能）
+- [x] 商品資料匯入（辣椒醬系列分類 + 2 個商品）
+- [x] Tiptap 富文本編輯器整合到 ContentEditor
+- [x] 雜誌級閱讀體驗（閱讀進度條、Hero Section、閱讀時間）
+- [x] SOP 知識庫系統（6 個資料表 + 完整 CMS + 閱讀簽收）
+- [x] 設備報修系統（前端頁面 + 後端 API）
+- [x] 每日檢查表系統（開店/閉店 + 手機優先設計）
+- [x] 智慧中控台分流導向（/dashboard 依角色自動分流）
+- [x] SOP 路由整合到 App.tsx（/dashboard/sop、/dashboard/repairs、/dashboard/checklist）
+- [x] 修復 StaffDashboard 快捷連結指向新路由

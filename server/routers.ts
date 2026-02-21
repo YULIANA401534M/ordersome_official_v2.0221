@@ -10,6 +10,7 @@ import { createPaymentOrder, parsePaymentResult, verifyCheckMacValue } from "./e
 import { adminRouter } from "./routers/admin";
 import { contentRouter } from "./routers/content";
 import { storageRouter } from "./routers/storage";
+import { sopRouter } from "./routers/sop";
 
 // Admin procedure
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -620,6 +621,8 @@ export const appRouter = router({
   // Content Management System
   content: contentRouter,
   storage: storageRouter,
+  // SOP 知識庫系統
+  sop: sopRouter,
 });
 
 export type AppRouter = typeof appRouter;
