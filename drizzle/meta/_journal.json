@@ -71,6 +71,13 @@
       "when": 1771672609291,
       "tag": "0009_fresh_pepper_potts",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1771688018681,
+      "tag": "0010_careful_wolverine",
+      "breakpoints": true
     }
   ]
 }

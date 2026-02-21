@@ -1,0 +1,9 @@
+{
+  "query": "-- 清除舊分類，重新插入符合《營運手冊》的 6 大章節\nDELETE FROM sop_categories;\n\nINSERT INTO sop_categories (name, description, icon, display_order) VALUES\n('Ch01 品牌理念與規範', '品牌核心價值、服務精神、儀容儀表與行為準則', '🏆', 1),\n('Ch02 食品安全與衛生', 'HACCP 原則、食材保存溫度、個人衛生、清潔消毒標準', '🛡️', 2),\n('Ch03 產品製作標準', '各品項製作 SOP、份量標準、擺盤規範、品質控管', '🍱', 3),\n('Ch04 開店與閉店流程', '開店前準備、POS 系統操作、閉店清潔、交接班程序', '🔑', 4),\n('Ch05 設備維護與報修', '設備操作規範、日常保養、故障排除、報修流程', '🔧', 5),\n('Ch06 客訴與緊急應變', '客訴處理 SOP、緊急事故應變、食安事件處理程序', '🆘', 6);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user AKK2AjLXvjySfzt.defe7b7a87b6 --database gjTAhmM88fiEhPinRVjKbV --execute -- 清除舊分類，重新插入符合《營運手冊》的 6 大章節\nDELETE FROM sop_categories;\n\nINSERT INTO sop_categories (name, description, icon, display_order) VALUES\n('Ch01 品牌理念與規範', '品牌核心價值、服務精神、儀容儀表與行為準則', '🏆', 1),\n('Ch02 食品安全與衛生', 'HACCP 原則、食材保存溫度、個人衛生、清潔消毒標準', '🛡️', 2),\n('Ch03 產品製作標準', '各品項製作 SOP、份量標準、擺盤規範、品質控管', '🍱', 3),\n('Ch04 開店與閉店流程', '開店前準備、POS 系統操作、閉店清潔、交接班程序', '🔑', 4),\n('Ch05 設備維護與報修', '設備操作規範、日常保養、故障排除、報修流程', '🔧', 5),\n('Ch06 客訴與緊急應變', '客訴處理 SOP、緊急事故應變、食安事件處理程序', '🆘', 6);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1762
+}

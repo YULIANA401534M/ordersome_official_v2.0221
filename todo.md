@@ -835,3 +835,27 @@
 - [x] Email/Password 登入成功後依角色智慧導向
 - [x] Admin/Franchise/Staff Sidebar 加入「返回儀表板」按鈕
 - [x] 商城 CorporateHeader 加入「會員中心」按鈕（連結至 /dashboard）
+
+## SOP 系統完整建置（2026-02-21）
+
+- [ ] 讀取《營運手冊》PDF 並分析 6 大章節結構
+- [ ] 資料庫 Schema 擴充：sop_categories、sop_articles（含 is_visible_to_staff）、sop_read_records、equipment_repairs、daily_checklists、checklist_submissions
+- [ ] 後端 Router：SOP CRUD（RBAC 權限）、PDF 上傳、閱讀簽收
+- [ ] 後端 Router：設備報修 CRUD + Make Webhook 串接
+- [ ] 後端 Router：每日檢查表提交與記錄
+- [ ] 前端：SOP 知識庫頁面（員工瀏覽 + 管理員 CMS 編輯器 + Tiptap）
+- [ ] 前端：設備報修系統（FAB 按鈕 + 手機優先 + Make Webhook）
+- [ ] 前端：每日開閉店檢查表（大按鈕 Checkbox + 防呆提交）
+- [ ] 整合 SOP 入口卡片到員工專區（/dashboard/staff）
+- [ ] 整合 SOP 入口卡片到加盟專區（/dashboard/franchise）
+- [ ] 匯入《營運手冊》6 大章節初始資料到資料庫
+
+## SOP 系統完整建置（2026-02-21）
+
+- [x] Schema 擴充：sopDocuments 加入 isVisibleToStaff 欄位，equipmentRepairs 加入 category 欄位
+- [x] SOP Router 升級：RBAC 過濾、Make Webhook 串接、PDF 上傳功能
+- [x] 匯入《營運手冊》6 大章節分類（Ch01-Ch06）
+- [x] SOPKnowledgeBase.tsx 重寫：員工瀏覽 + 管理員 CMS 編輯器 + PDF 上傳 + isVisibleToStaff 開關 + 閱讀簽收
+- [x] EquipmentRepairs.tsx 重寫：FAB 按鈕 + Bottom Sheet 表單 + Make Webhook 串接 + 手機優先設計
+- [x] DailyChecklist.tsx 重寫：基於《營運手冊》真實開閉店流程 + 防呆提交 + 記錄查詢
+- [x] 全部 32/32 測試通過

@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE `equipment_repairs` ADD `category` varchar(50) DEFAULT '其他' NOT NULL;\nALTER TABLE `sop_documents` ADD `is_visible_to_staff` boolean DEFAULT true NOT NULL;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user AKK2AjLXvjySfzt.defe7b7a87b6 --database gjTAhmM88fiEhPinRVjKbV --execute ALTER TABLE `equipment_repairs` ADD `category` varchar(50) DEFAULT '其他' NOT NULL;\nALTER TABLE `sop_documents` ADD `is_visible_to_staff` boolean DEFAULT true NOT NULL;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 2507
+}

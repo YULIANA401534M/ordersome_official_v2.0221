@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
+import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import {
   sopCategories,
@@ -10,7 +10,9 @@ import {
   dailyChecklists,
   dailyChecklistItems,
 } from "../../drizzle/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, or } from "drizzle-orm";
+
+const MAKE_WEBHOOK_URL = "https://hook.us2.make.com/9lru5kvflpvyglz9dtpe9b02v97wkdd9";
 
 // 管理員 Procedure（super_admin 或 manager）
 const managerProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -42,32 +44,53 @@ export const sopRouter = router({
       return { success: true };
     }),
 
-  // ===== SOP 文件 =====
-  getDocuments: protectedProcedure
-    .input(z.object({ categoryId: z.number().optional() }))
-    .query(async ({ input }) => {
+  updateCategory: managerProcedure
+    .input(z.object({
+      id: z.number(),
+      name: z.string().min(1).optional(),
+      description: z.string().optional(),
+      icon: z.string().optional(),
+      displayOrder: z.number().optional(),
+    }))
+    .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-      const query = db.select().from(sopDocuments).orderBy(desc(sopDocuments.createdAt));
+      const { id, ...data } = input;
+      await db.update(sopCategories).set(data).where(eq(sopCategories.id, id));
+      return { success: true };
+    }),
+
+  // ===== SOP 文件 =====
+  // 員工查詢：只看 published + isVisibleToStaff=true
+  // 管理員查詢：看全部 published（含隱藏的）
+  getDocuments: protectedProcedure
+    .input(z.object({ categoryId: z.number().optional() }))
+    .query(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      const isManager = ctx.user.role === "super_admin" || ctx.user.role === "manager";
+
+      // 管理員可看所有 published，員工只看 isVisibleToStaff=true
+      const baseConditions = isManager
+        ? [eq(sopDocuments.status, "published")]
+        : [eq(sopDocuments.status, "published"), eq(sopDocuments.isVisibleToStaff, true)];
+
       if (input.categoryId) {
         return db
           .select()
           .from(sopDocuments)
-          .where(
-            and(
-              eq(sopDocuments.categoryId, input.categoryId),
-              eq(sopDocuments.status, "published")
-            )
-          )
+          .where(and(eq(sopDocuments.categoryId, input.categoryId), ...baseConditions))
           .orderBy(desc(sopDocuments.createdAt));
       }
       return db
         .select()
         .from(sopDocuments)
-        .where(eq(sopDocuments.status, "published"))
+        .where(and(...baseConditions))
         .orderBy(desc(sopDocuments.createdAt));
     }),
 
+  // 管理員：查看所有文件（包含 draft/archived）
   getAllDocuments: managerProcedure.query(async () => {
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
@@ -76,7 +99,7 @@ export const sopRouter = router({
 
   getDocumentById: protectedProcedure
     .input(z.object({ id: z.number() }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       const results = await db
@@ -85,7 +108,14 @@ export const sopRouter = router({
         .where(eq(sopDocuments.id, input.id))
         .limit(1);
       if (!results[0]) throw new TRPCError({ code: "NOT_FOUND" });
-      return results[0];
+
+      // 員工不能看隱藏文件
+      const doc = results[0];
+      const isManager = ctx.user.role === "super_admin" || ctx.user.role === "manager";
+      if (!isManager && !doc.isVisibleToStaff) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "此文件目前不對員工開放" });
+      }
+      return doc;
     }),
 
   createDocument: managerProcedure
@@ -96,6 +126,7 @@ export const sopRouter = router({
       pdfUrl: z.string().optional(),
       version: z.string().default("1.0"),
       status: z.enum(["draft", "published", "archived"]).default("draft"),
+      isVisibleToStaff: z.boolean().default(true),
     }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
@@ -112,6 +143,8 @@ export const sopRouter = router({
       pdfUrl: z.string().optional(),
       version: z.string().optional(),
       status: z.enum(["draft", "published", "archived"]).optional(),
+      isVisibleToStaff: z.boolean().optional(),
+      categoryId: z.number().optional(),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -138,7 +171,6 @@ export const sopRouter = router({
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-      // 檢查是否已簽收
       const existing = await db
         .select()
         .from(sopReadReceipts)
@@ -182,11 +214,23 @@ export const sopRouter = router({
       return { isRead: !!result[0]?.acknowledged };
     }),
 
+  // 管理員：查看某文件的所有閱讀記錄
+  getDocumentReadReceipts: managerProcedure
+    .input(z.object({ documentId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      return db
+        .select()
+        .from(sopReadReceipts)
+        .where(eq(sopReadReceipts.documentId, input.documentId))
+        .orderBy(desc(sopReadReceipts.readAt));
+    }),
+
   // ===== 設備報修 =====
   getRepairs: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-    // 管理員看全部，員工看自己的
     if (ctx.user.role === "super_admin" || ctx.user.role === "manager") {
       return db.select().from(equipmentRepairs).orderBy(desc(equipmentRepairs.createdAt));
     }
@@ -201,14 +245,41 @@ export const sopRouter = router({
     .input(z.object({
       storeId: z.number(),
       equipmentName: z.string().min(1),
+      category: z.string().default("其他"),
       issueDescription: z.string().min(1),
       urgency: z.enum(["low", "medium", "high", "critical"]).default("medium"),
       imageUrl: z.string().optional(),
+      storeName: z.string().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-      await db.insert(equipmentRepairs).values({ ...input, reportedBy: ctx.user.id });
+
+      const { storeName, ...dbInput } = input;
+
+      // 寫入資料庫
+      await db.insert(equipmentRepairs).values({ ...dbInput, reportedBy: ctx.user.id });
+
+      // 串接 Make Webhook（非同步，不影響主流程）
+      const webhookPayload = {
+        event_type: "repair_report",
+        store_name: storeName || `門市 #${input.storeId}`,
+        reporter_name: ctx.user.name || ctx.user.email || `用戶 #${ctx.user.id}`,
+        category: input.category,
+        urgency: input.urgency,
+        issue_description: input.issueDescription,
+        image_url: input.imageUrl || "",
+      };
+
+      // 非同步觸發 Webhook，不等待結果
+      fetch(MAKE_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(webhookPayload),
+      }).catch((err) => {
+        console.error("[Make Webhook] Failed to send repair report:", err);
+      });
+
       return { success: true };
     }),
 
@@ -236,17 +307,26 @@ export const sopRouter = router({
       storeId: z.number().optional(),
       checklistType: z.enum(["opening", "closing"]).optional(),
     }))
-    .query(async ({ input, ctx }) => {
+    .query(async ({ ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-      return db.select().from(dailyChecklists).orderBy(desc(dailyChecklists.createdAt)).limit(50);
+      const isManager = ctx.user.role === "super_admin" || ctx.user.role === "manager";
+      if (isManager) {
+        return db.select().from(dailyChecklists).orderBy(desc(dailyChecklists.createdAt)).limit(100);
+      }
+      return db
+        .select()
+        .from(dailyChecklists)
+        .where(eq(dailyChecklists.checkedBy, ctx.user.id))
+        .orderBy(desc(dailyChecklists.createdAt))
+        .limit(30);
     }),
 
   createChecklist: protectedProcedure
     .input(z.object({
       storeId: z.number(),
       checklistType: z.enum(["opening", "closing"]),
-      checkDate: z.string(), // YYYY-MM-DD
+      checkDate: z.string(),
       notes: z.string().optional(),
       items: z.array(z.object({
         itemName: z.string(),
@@ -264,7 +344,6 @@ export const sopRouter = router({
         checkDate: new Date(input.checkDate),
         notes: input.notes,
       });
-      // 插入 items（MySQL 不支援 returning，需要另外查詢）
       const inserted = await db
         .select()
         .from(dailyChecklists)

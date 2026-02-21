@@ -1,370 +1,496 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import {
-  Sun, Moon, Shield, Wrench, Users, AlertTriangle,
-  BookOpen, ChevronRight, CheckCircle, Clock, Search,
-  Plus, Edit, Trash2, Eye, X
-} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import RichTextEditor from "@/components/RichTextEditor";
+import { toast } from "sonner";
+import {
+  BookOpen, Edit2, Plus, CheckCircle, Eye, EyeOff,
+  FileText, Download, Upload, ChevronLeft, Search, Save, Loader2
+} from "lucide-react";
 
-const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
-  Sun, Moon, Shield, Wrench, Users, AlertTriangle, BookOpen,
-};
-
-function CategoryIcon({ icon, className }: { icon?: string | null; className?: string }) {
-  const Icon = icon ? (ICON_MAP[icon] || BookOpen) : BookOpen;
-  return <Icon className={className} />;
-}
+type ViewMode = "list" | "read" | "edit" | "create";
 
 export default function SOPKnowledgeBase() {
   const { user } = useAuth();
   const isManager = user?.role === "super_admin" || user?.role === "manager";
 
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
-  const [selectedDoc, setSelectedDoc] = useState<number | null>(null);
+  const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [showCreateDoc, setShowCreateDoc] = useState(false);
-  const [editingDoc, setEditingDoc] = useState<number | null>(null);
 
-  // Form state
-  const [docTitle, setDocTitle] = useState("");
-  const [docContent, setDocContent] = useState("");
-  const [docStatus, setDocStatus] = useState<"draft" | "published">("published");
+  // Edit form state
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [editCategoryId, setEditCategoryId] = useState<number>(0);
+  const [editStatus, setEditStatus] = useState<"draft" | "published">("published");
+  const [editIsVisible, setEditIsVisible] = useState(true);
+  const [editVersion, setEditVersion] = useState("1.0");
+  const [editPdfUrl, setEditPdfUrl] = useState("");
+  const [isUploadingPdf, setIsUploadingPdf] = useState(false);
 
-  const { data: categories } = trpc.sop.getCategories.useQuery();
-  const { data: documents, refetch: refetchDocs } = trpc.sop.getDocuments.useQuery(
-    { categoryId: selectedCategoryId ?? undefined }
-  );
-  const { data: allDocuments } = trpc.sop.getAllDocuments.useQuery(undefined, {
-    enabled: isManager,
+  // tRPC queries
+  const { data: categories = [] } = trpc.sop.getCategories.useQuery();
+  const { data: documents = [], refetch: refetchDocs } = trpc.sop.getDocuments.useQuery({
+    categoryId: selectedCategoryId ?? undefined,
   });
-  const { data: selectedDocument } = trpc.sop.getDocumentById.useQuery(
-    { id: selectedDoc! },
-    { enabled: !!selectedDoc }
+  const { data: allDocuments = [], refetch: refetchAllDocs } = trpc.sop.getAllDocuments.useQuery(
+    undefined,
+    { enabled: isManager }
   );
-  const { data: readStatus, refetch: refetchRead } = trpc.sop.getReadStatus.useQuery(
-    { documentId: selectedDoc! },
-    { enabled: !!selectedDoc }
+  const { data: currentDoc, refetch: refetchDoc } = trpc.sop.getDocumentById.useQuery(
+    { id: selectedDocId! },
+    { enabled: selectedDocId !== null }
+  );
+  const { data: readStatus } = trpc.sop.getReadStatus.useQuery(
+    { documentId: selectedDocId! },
+    { enabled: selectedDocId !== null }
   );
 
   const markAsRead = trpc.sop.markAsRead.useMutation({
     onSuccess: () => {
-      toast.success("已標記為已讀");
-      refetchRead();
+      toast.success("已標記為已讀！");
+      refetchDoc();
     },
   });
 
   const createDoc = trpc.sop.createDocument.useMutation({
     onSuccess: () => {
-      toast.success("SOP 文件已建立");
-      setShowCreateDoc(false);
-      setDocTitle("");
-      setDocContent("");
+      toast.success("文件已建立！");
       refetchDocs();
+      refetchAllDocs();
+      setViewMode("list");
     },
+    onError: (err) => toast.error(err.message),
   });
 
   const updateDoc = trpc.sop.updateDocument.useMutation({
     onSuccess: () => {
-      toast.success("SOP 文件已更新");
-      setEditingDoc(null);
+      toast.success("文件已更新！");
       refetchDocs();
+      refetchAllDocs();
+      refetchDoc();
+      setViewMode("read");
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const uploadPdf = trpc.storage.uploadPdf.useMutation({
+    onSuccess: (data) => {
+      setEditPdfUrl(data.url);
+      toast.success("PDF 上傳成功！");
+      setIsUploadingPdf(false);
+    },
+    onError: (err) => {
+      toast.error("PDF 上傳失敗：" + err.message);
+      setIsUploadingPdf(false);
     },
   });
 
-  const deleteDoc = trpc.sop.deleteDocument.useMutation({
-    onSuccess: () => {
-      toast.success("SOP 文件已封存");
-      setSelectedDoc(null);
-      refetchDocs();
-    },
-  });
-
+  // 顯示的文件列表
   const displayDocs = isManager ? allDocuments : documents;
-  const filteredDocs = displayDocs?.filter((doc) =>
-    doc.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredDocs = displayDocs.filter((doc) => {
+    const matchCategory = selectedCategoryId ? doc.categoryId === selectedCategoryId : true;
+    const matchSearch = searchQuery
+      ? doc.title.toLowerCase().includes(searchQuery.toLowerCase())
+      : true;
+    return matchCategory && matchSearch;
+  });
 
-  const handleCreateDoc = () => {
-    if (!docTitle.trim() || !docContent.trim()) {
-      toast.error("請填寫標題和內容");
+  const getCategoryName = (id: number) =>
+    categories.find((c) => c.id === id)?.name ?? "未分類";
+
+  const handleOpenDoc = (docId: number) => {
+    setSelectedDocId(docId);
+    setViewMode("read");
+  };
+
+  const handleEditDoc = () => {
+    if (!currentDoc) return;
+    setEditTitle(currentDoc.title);
+    setEditContent(currentDoc.content);
+    setEditCategoryId(currentDoc.categoryId);
+    setEditStatus(currentDoc.status as "draft" | "published");
+    setEditIsVisible(currentDoc.isVisibleToStaff);
+    setEditVersion(currentDoc.version ?? "1.0");
+    setEditPdfUrl(currentDoc.pdfUrl ?? "");
+    setViewMode("edit");
+  };
+
+  const handleCreateNew = () => {
+    setEditTitle("");
+    setEditContent("");
+    setEditCategoryId(categories[0]?.id ?? 0);
+    setEditStatus("published");
+    setEditIsVisible(true);
+    setEditVersion("1.0");
+    setEditPdfUrl("");
+    setViewMode("create");
+  };
+
+  const handleSave = () => {
+    if (!editTitle.trim()) {
+      toast.error("標題不能為空");
       return;
     }
-    createDoc.mutate({
-      categoryId: selectedCategoryId || 1,
-      title: docTitle,
-      content: docContent,
-      status: docStatus,
-    });
+    if (viewMode === "create") {
+      createDoc.mutate({
+        categoryId: editCategoryId || (categories[0]?.id ?? 1),
+        title: editTitle,
+        content: editContent,
+        pdfUrl: editPdfUrl || undefined,
+        version: editVersion,
+        status: editStatus,
+        isVisibleToStaff: editIsVisible,
+      });
+    } else if (viewMode === "edit" && selectedDocId) {
+      updateDoc.mutate({
+        id: selectedDocId,
+        title: editTitle,
+        content: editContent,
+        pdfUrl: editPdfUrl || undefined,
+        version: editVersion,
+        status: editStatus,
+        isVisibleToStaff: editIsVisible,
+        categoryId: editCategoryId,
+      });
+    }
   };
 
-  const handleUpdateDoc = () => {
-    if (!editingDoc) return;
-    updateDoc.mutate({
-      id: editingDoc,
-      title: docTitle,
-      content: docContent,
-      status: docStatus,
-    });
+  const handlePdfUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 16 * 1024 * 1024) {
+      toast.error("PDF 檔案不能超過 16MB");
+      return;
+    }
+    setIsUploadingPdf(true);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const base64 = ev.target?.result as string;
+      uploadPdf.mutate({ fileName: file.name, fileData: base64 });
+    };
+    reader.readAsDataURL(file);
   };
 
-  const startEdit = (doc: NonNullable<typeof selectedDocument>) => {
-    setEditingDoc(doc.id);
-    setDocTitle(doc.title);
-    setDocContent(doc.content);
-    setDocStatus(doc.status as "draft" | "published");
-    setShowCreateDoc(false);
-  };
-
-  return (
-    <div className="flex h-full min-h-screen bg-gray-50">
-      {/* 左側：分類列表 */}
-      <aside className="w-64 bg-white border-r border-gray-200 flex-shrink-0">
-        <div className="p-4 border-b border-gray-200">
-          <h2 className="font-bold text-gray-900 flex items-center gap-2">
-            <BookOpen className="w-5 h-5 text-amber-500" />
-            SOP 知識庫
-          </h2>
-        </div>
-        <nav className="p-3 space-y-1">
-          <button
-            onClick={() => setSelectedCategoryId(null)}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              selectedCategoryId === null
-                ? "bg-amber-50 text-amber-700"
-                : "text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            <BookOpen className="w-4 h-4" />
-            全部文件
-          </button>
-          {categories?.map((cat) => (
+  // ===== 閱讀視圖 =====
+  if (viewMode === "read" && currentDoc) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white border-b sticky top-0 z-10">
+          <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
             <button
-              key={cat.id}
-              onClick={() => setSelectedCategoryId(cat.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                selectedCategoryId === cat.id
-                  ? "bg-amber-50 text-amber-700"
-                  : "text-gray-600 hover:bg-gray-50"
-              }`}
+              onClick={() => setViewMode("list")}
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
             >
-              <CategoryIcon icon={cat.icon} className="w-4 h-4" />
-              {cat.name}
+              <ChevronLeft className="w-5 h-5" />
+              <span className="text-sm">返回列表</span>
             </button>
-          ))}
-        </nav>
-      </aside>
+            <div className="flex items-center gap-2">
+              {!currentDoc.isVisibleToStaff && isManager && (
+                <Badge variant="outline" className="text-orange-600 border-orange-300 text-xs">
+                  <EyeOff className="w-3 h-3 mr-1" />員工隱藏
+                </Badge>
+              )}
+              <Badge variant="outline" className="text-xs">v{currentDoc.version}</Badge>
+              {isManager && (
+                <Button size="sm" variant="outline" onClick={handleEditDoc} className="flex items-center gap-1">
+                  <Edit2 className="w-4 h-4" />
+                  ✏️ 編輯
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
 
-      {/* 中間：文件列表 */}
-      <div className="w-80 bg-white border-r border-gray-200 flex-shrink-0 flex flex-col">
-        <div className="p-4 border-b border-gray-200">
+        <div className="max-w-3xl mx-auto px-4 py-6">
+          <div className="bg-white rounded-2xl shadow-sm p-6 mb-4">
+            <span className="text-xs text-purple-600 font-medium bg-purple-50 px-2 py-1 rounded-full">
+              {getCategoryName(currentDoc.categoryId)}
+            </span>
+            <h1 className="text-2xl font-bold text-gray-900 mt-3 mb-4">{currentDoc.title}</h1>
+
+            {currentDoc.pdfUrl && (
+              <div className="mb-6 p-4 bg-blue-50 rounded-xl flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <FileText className="w-8 h-8 text-blue-600" />
+                  <div>
+                    <p className="font-medium text-blue-900 text-sm">PDF 附件</p>
+                    <p className="text-xs text-blue-600">點擊下載或線上預覽</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <a href={currentDoc.pdfUrl} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-sm text-blue-700 bg-blue-100 hover:bg-blue-200 px-3 py-2 rounded-lg transition-colors">
+                    <Eye className="w-4 h-4" />預覽
+                  </a>
+                  <a href={currentDoc.pdfUrl} download
+                    className="flex items-center gap-1 text-sm text-white bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded-lg transition-colors">
+                    <Download className="w-4 h-4" />下載
+                  </a>
+                </div>
+              </div>
+            )}
+
+            <div
+              className="prose prose-sm max-w-none text-gray-700 leading-relaxed"
+              dangerouslySetInnerHTML={{ __html: currentDoc.content }}
+            />
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm p-6">
+            {readStatus?.isRead ? (
+              <div className="flex items-center gap-3 text-green-600">
+                <CheckCircle className="w-6 h-6" />
+                <div>
+                  <p className="font-semibold">已完成閱讀簽收</p>
+                  <p className="text-sm text-gray-500">感謝你確認已閱讀此文件</p>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <p className="text-sm text-gray-600 mb-3">閱讀完畢後，請點擊下方按鈕確認已閱讀此文件。</p>
+                <Button
+                  onClick={() => markAsRead.mutate({ documentId: currentDoc.id })}
+                  disabled={markAsRead.isPending}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white py-4 text-base font-semibold rounded-xl"
+                >
+                  {markAsRead.isPending ? (
+                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                  ) : (
+                    <CheckCircle className="w-5 h-5 mr-2" />
+                  )}
+                  ✅ 我已閱讀此文件
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ===== 編輯 / 新增視圖 =====
+  if ((viewMode === "edit" || viewMode === "create") && isManager) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white border-b sticky top-0 z-10">
+          <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
+            <button
+              onClick={() => setViewMode(selectedDocId && viewMode === "edit" ? "read" : "list")}
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+            >
+              <ChevronLeft className="w-5 h-5" />
+              <span className="text-sm">取消</span>
+            </button>
+            <h2 className="font-semibold text-gray-900">
+              {viewMode === "create" ? "新增文件" : "編輯文件"}
+            </h2>
+            <Button
+              size="sm"
+              onClick={handleSave}
+              disabled={createDoc.isPending || updateDoc.isPending}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              {(createDoc.isPending || updateDoc.isPending) ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-1" />
+              ) : (
+                <Save className="w-4 h-4 mr-1" />
+              )}
+              發佈
+            </Button>
+          </div>
+        </div>
+
+        <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
+          <div className="bg-white rounded-2xl shadow-sm p-5 space-y-4">
+            <h3 className="font-semibold text-gray-900 text-sm">基本設定</h3>
+            <div>
+              <Label className="text-sm font-medium text-gray-700 mb-1 block">文件標題</Label>
+              <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder="輸入文件標題..." className="text-base" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-sm font-medium text-gray-700 mb-1 block">所屬章節</Label>
+                <Select value={editCategoryId.toString()} onValueChange={(v) => setEditCategoryId(Number(v))}>
+                  <SelectTrigger><SelectValue placeholder="選擇章節" /></SelectTrigger>
+                  <SelectContent>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id.toString()}>{cat.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-gray-700 mb-1 block">版本號</Label>
+                <Input value={editVersion} onChange={(e) => setEditVersion(e.target.value)} placeholder="1.0" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-sm font-medium text-gray-700 mb-1 block">發佈狀態</Label>
+                <Select value={editStatus} onValueChange={(v) => setEditStatus(v as "draft" | "published")}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">草稿（不公開）</SelectItem>
+                    <SelectItem value="published">發佈（公開）</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-gray-700 mb-1 block">員工可見</Label>
+                <div className="flex items-center gap-3 mt-2">
+                  <Switch checked={editIsVisible} onCheckedChange={setEditIsVisible} />
+                  <span className="text-sm text-gray-600">
+                    {editIsVisible ? (
+                      <span className="flex items-center gap-1 text-green-600"><Eye className="w-4 h-4" />開放員工閱覽</span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-orange-600"><EyeOff className="w-4 h-4" />僅管理員可見</span>
+                    )}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm p-5">
+            <h3 className="font-semibold text-gray-900 text-sm mb-3">PDF 附件（選填）</h3>
+            {editPdfUrl ? (
+              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-xl">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-blue-600" />
+                  <span className="text-sm text-blue-700">PDF 已上傳</span>
+                </div>
+                <div className="flex gap-2">
+                  <a href={editPdfUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">預覽</a>
+                  <button onClick={() => setEditPdfUrl("")} className="text-xs text-red-500 hover:underline">移除</button>
+                </div>
+              </div>
+            ) : (
+              <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-purple-400 hover:bg-purple-50 transition-colors">
+                {isUploadingPdf ? (
+                  <div className="flex items-center gap-2 text-purple-600">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span className="text-sm">上傳中...</span>
+                  </div>
+                ) : (
+                  <>
+                    <Upload className="w-6 h-6 text-gray-400 mb-1" />
+                    <span className="text-sm text-gray-500">點擊上傳 PDF（最大 16MB）</span>
+                  </>
+                )}
+                <input type="file" accept=".pdf" className="hidden" onChange={handlePdfUpload} disabled={isUploadingPdf} />
+              </label>
+            )}
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm p-5">
+            <h3 className="font-semibold text-gray-900 text-sm mb-3">文件內容（WYSIWYG 編輯器）</h3>
+            <RichTextEditor content={editContent} onChange={setEditContent} placeholder="在此輸入 SOP 內容..." />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ===== 列表視圖 =====
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="bg-white border-b sticky top-0 z-10">
+        <div className="max-w-3xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-gray-900 text-sm">
-              {categories?.find((c) => c.id === selectedCategoryId)?.name || "全部文件"}
-            </h3>
+            <div className="flex items-center gap-2">
+              <BookOpen className="w-6 h-6 text-purple-600" />
+              <h1 className="text-xl font-bold text-gray-900">SOP 知識庫</h1>
+            </div>
             {isManager && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setShowCreateDoc(true);
-                  setEditingDoc(null);
-                  setDocTitle("");
-                  setDocContent("");
-                  setDocStatus("published");
-                }}
-                className="h-7 text-xs"
-              >
-                <Plus className="w-3 h-3 mr-1" />
-                新增
+              <Button onClick={handleCreateNew} size="sm" className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-1">
+                <Plus className="w-4 h-4" />新增文件
               </Button>
             )}
           </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input
-              placeholder="搜尋文件..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-8 text-sm"
-            />
+            <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="搜尋 SOP 文件..." className="pl-9 bg-gray-50" />
           </div>
-        </div>
-        <div className="flex-1 overflow-y-auto p-2 space-y-1">
-          {filteredDocs?.length === 0 && (
-            <div className="text-center py-8 text-gray-400 text-sm">
-              <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              暫無文件
-            </div>
-          )}
-          {filteredDocs?.map((doc) => (
-            <button
-              key={doc.id}
-              onClick={() => setSelectedDoc(doc.id)}
-              className={`w-full text-left px-3 py-3 rounded-lg transition-colors ${
-                selectedDoc === doc.id
-                  ? "bg-amber-50 border border-amber-200"
-                  : "hover:bg-gray-50"
-              }`}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <p className="text-sm font-medium text-gray-900 line-clamp-2">{doc.title}</p>
-                <Badge
-                  variant={doc.status === "published" ? "default" : "secondary"}
-                  className="text-xs flex-shrink-0"
-                >
-                  {doc.status === "published" ? "已發布" : doc.status === "draft" ? "草稿" : "已封存"}
-                </Badge>
-              </div>
-              <p className="text-xs text-gray-400 mt-1">
-                v{doc.version} · {new Date(doc.createdAt).toLocaleDateString("zh-TW")}
-              </p>
-            </button>
-          ))}
         </div>
       </div>
 
-      {/* 右側：文件內容 / 編輯器 */}
-      <main className="flex-1 overflow-y-auto">
-        {/* 新增/編輯表單 */}
-        {(showCreateDoc || editingDoc) && isManager && (
-          <div className="p-6">
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-gray-900">
-                  {editingDoc ? "編輯 SOP 文件" : "新增 SOP 文件"}
-                </h3>
-                <button
-                  onClick={() => { setShowCreateDoc(false); setEditingDoc(null); }}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">標題 *</label>
-                  <Input
-                    value={docTitle}
-                    onChange={(e) => setDocTitle(e.target.value)}
-                    placeholder="SOP 文件標題"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">狀態</label>
-                  <select
-                    value={docStatus}
-                    onChange={(e) => setDocStatus(e.target.value as "draft" | "published")}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                  >
-                    <option value="published">立即發布</option>
-                    <option value="draft">儲存草稿</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">內容 *</label>
-                  <RichTextEditor
-                    content={docContent}
-                    onChange={setDocContent}
-                    placeholder="撰寫 SOP 內容..."
-                  />
-                </div>
-                <div className="flex gap-3 justify-end">
-                  <Button variant="outline" onClick={() => { setShowCreateDoc(false); setEditingDoc(null); }}>
-                    取消
-                  </Button>
-                  <Button
-                    onClick={editingDoc ? handleUpdateDoc : handleCreateDoc}
-                    disabled={createDoc.isPending || updateDoc.isPending}
-                    className="bg-amber-500 hover:bg-amber-600 text-white"
-                  >
-                    {editingDoc ? "儲存更新" : "建立文件"}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+      <div className="max-w-3xl mx-auto px-4 py-4">
+        <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
+          <button
+            onClick={() => setSelectedCategoryId(null)}
+            className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${selectedCategoryId === null ? "bg-purple-600 text-white" : "bg-white text-gray-600 border hover:bg-gray-50"}`}
+          >
+            全部
+          </button>
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setSelectedCategoryId(cat.id)}
+              className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${selectedCategoryId === cat.id ? "bg-purple-600 text-white" : "bg-white text-gray-600 border hover:bg-gray-50"}`}
+            >
+              {cat.icon} {cat.name.replace(/^Ch\d+ /, "")}
+            </button>
+          ))}
+        </div>
 
-        {/* 文件閱讀視圖 */}
-        {selectedDoc && selectedDocument && !showCreateDoc && !editingDoc && (
-          <div className="p-6">
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <div className="flex items-start justify-between mb-6">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">{selectedDocument.title}</h2>
-                  <div className="flex items-center gap-3 mt-2 text-sm text-gray-500">
-                    <span>版本 {selectedDocument.version}</span>
-                    <span>·</span>
-                    <span>更新於 {new Date(selectedDocument.updatedAt).toLocaleDateString("zh-TW")}</span>
-                    <Badge variant={selectedDocument.status === "published" ? "default" : "secondary"}>
-                      {selectedDocument.status === "published" ? "已發布" : "草稿"}
-                    </Badge>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {isManager && (
-                    <>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => startEdit(selectedDocument)}
-                      >
-                        <Edit className="w-4 h-4 mr-1" />
-                        編輯
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-red-600 border-red-200 hover:bg-red-50"
-                        onClick={() => deleteDoc.mutate({ id: selectedDoc })}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </>
-                  )}
-                  {!readStatus?.isRead ? (
-                    <Button
-                      size="sm"
-                      className="bg-green-500 hover:bg-green-600 text-white"
-                      onClick={() => markAsRead.mutate({ documentId: selectedDoc })}
-                      disabled={markAsRead.isPending}
-                    >
-                      <CheckCircle className="w-4 h-4 mr-1" />
-                      標記已讀
-                    </Button>
-                  ) : (
-                    <div className="flex items-center gap-1 text-green-600 text-sm font-medium">
-                      <CheckCircle className="w-4 h-4" />
-                      已讀
+        {filteredDocs.length === 0 ? (
+          <div className="text-center py-16">
+            <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500">{searchQuery ? "找不到符合的文件" : "此分類尚無文件"}</p>
+            {isManager && (
+              <Button onClick={handleCreateNew} variant="outline" className="mt-3">
+                <Plus className="w-4 h-4 mr-1" />新增第一篇文件
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredDocs.map((doc) => (
+              <div
+                key={doc.id}
+                onClick={() => handleOpenDoc(doc.id)}
+                className="bg-white rounded-2xl shadow-sm p-4 cursor-pointer hover:shadow-md transition-shadow active:scale-[0.99]"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className="text-xs text-purple-600 font-medium bg-purple-50 px-2 py-0.5 rounded-full">
+                        {getCategoryName(doc.categoryId)}
+                      </span>
+                      {isManager && !doc.isVisibleToStaff && (
+                        <span className="text-xs text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <EyeOff className="w-3 h-3" />員工隱藏
+                        </span>
+                      )}
+                      {isManager && doc.status === "draft" && (
+                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">草稿</span>
+                      )}
                     </div>
-                  )}
+                    <h3 className="font-semibold text-gray-900 text-base leading-tight">{doc.title}</h3>
+                    <div className="flex items-center gap-3 mt-1.5">
+                      <span className="text-xs text-gray-400">v{doc.version}</span>
+                      {doc.pdfUrl && (
+                        <span className="text-xs text-blue-500 flex items-center gap-1">
+                          <FileText className="w-3 h-3" />PDF
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <ChevronLeft className="w-5 h-5 text-gray-400 rotate-180 flex-shrink-0" />
                 </div>
               </div>
-              <article
-                className="prose prose-sm max-w-none prose-headings:font-bold prose-p:text-gray-700"
-                dangerouslySetInnerHTML={{ __html: selectedDocument.content }}
-              />
-            </div>
+            ))}
           </div>
         )}
-
-        {/* 空狀態 */}
-        {!selectedDoc && !showCreateDoc && !editingDoc && (
-          <div className="flex items-center justify-center h-full min-h-96">
-            <div className="text-center text-gray-400">
-              <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-40" />
-              <p className="font-medium">選擇左側文件開始閱讀</p>
-              <p className="text-sm mt-1">或從分類中篩選您需要的 SOP 文件</p>
-            </div>
-          </div>
-        )}
-      </main>
+      </div>
     </div>
   );
 }
