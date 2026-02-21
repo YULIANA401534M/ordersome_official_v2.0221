@@ -9,6 +9,31 @@ function getQueryParam(req: Request, key: string): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
+/**
+ * Smart redirect logic after OAuth login:
+ * 1. If state URL contains ?redirect=..., use that (highest priority, e.g. from checkout)
+ * 2. customer role → /shop
+ * 3. All internal roles (super_admin, manager, franchisee, staff) → /dashboard
+ */
+function getSmartRedirectUrl(role: string, stateParam: string): string {
+  try {
+    const decodedState = Buffer.from(stateParam, "base64").toString("utf-8");
+    const stateUrl = new URL(decodedState);
+    const redirectParam = stateUrl.searchParams.get("redirect");
+    if (redirectParam) {
+      return redirectParam;
+    }
+  } catch {
+    // ignore parse errors
+  }
+
+  if (role === "customer") {
+    return "/shop";
+  }
+  // super_admin, manager, franchisee, staff → dashboard
+  return "/dashboard";
+}
+
 export function registerOAuthRoutes(app: Express) {
   app.get("/api/oauth/callback", async (req: Request, res: Response) => {
     const code = getQueryParam(req, "code");
@@ -44,7 +69,12 @@ export function registerOAuthRoutes(app: Express) {
       const cookieOptions = getSessionCookieOptions(req);
       res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
 
-      res.redirect(302, "/");
+      // Smart redirect based on role
+      const savedUser = await db.getUserByOpenId(userInfo.openId);
+      const role = savedUser?.role ?? "customer";
+      const redirectUrl = getSmartRedirectUrl(role, state);
+
+      res.redirect(302, redirectUrl);
     } catch (error) {
       console.error("[OAuth] Callback failed", error);
       res.status(500).json({ error: "OAuth callback failed" });

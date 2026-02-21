@@ -159,6 +159,7 @@ function AdminDashboardLayoutContent({
 
   // Build menu items based on user role and permissions
   const allMenuItems = [
+    { icon: LayoutDashboard, label: "返回儀表板", path: "/dashboard", requiredPermission: null },
     { icon: Home, label: "返回首頁", path: "/corporate", requiredPermission: null },
     { icon: Users, label: "用戶管理", path: "/dashboard/admin/users", requiredPermission: "manage_users" },
     { icon: Shield, label: "權限管理", path: "/dashboard/admin/permissions", requiredPermission: "manage_users" },

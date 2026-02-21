@@ -7,10 +7,10 @@ import {
   ClipboardList,
   Calendar,
   Bell,
-  Menu,
-  X,
   ChevronLeft,
   ChevronRight,
+  LayoutDashboard,
+  User,
 } from "lucide-react";
 
 interface StaffDashboardLayoutProps {
@@ -23,17 +23,12 @@ const DEFAULT_WIDTH = 256;
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
-
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
-
   return isMobile;
 }
 
@@ -47,9 +42,10 @@ export default function StaffDashboardLayout({ children }: StaffDashboardLayoutP
   const isMobile = useIsMobile();
 
   const menuItems = [
+    { icon: LayoutDashboard, label: "返回儀表板", path: "/dashboard", isDashboardLink: true },
     { icon: Home, label: "返回首頁", path: "/brand/ordersome" },
-    { icon: Wrench, label: "設備維修", path: "/dashboard/staff/maintenance" },
-    { icon: ClipboardList, label: "工作表單", path: "/dashboard/staff/forms" },
+    { icon: Wrench, label: "設備維修", path: "/dashboard/repairs" },
+    { icon: ClipboardList, label: "工作表單", path: "/dashboard/checklist" },
     { icon: Calendar, label: "排班系統", path: "/dashboard/staff/schedule" },
     { icon: Bell, label: "公告事項", path: "/dashboard/staff/announcements" },
   ];
@@ -57,33 +53,23 @@ export default function StaffDashboardLayout({ children }: StaffDashboardLayoutP
   const activeMenuItem = menuItems.find(item => item.path === location);
 
   useEffect(() => {
-    if (isCollapsed) {
-      setIsResizing(false);
-    }
+    if (isCollapsed) setIsResizing(false);
   }, [isCollapsed]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing) return;
-
       const sidebarLeft = sidebarRef.current?.getBoundingClientRect().left ?? 0;
       const newWidth = e.clientX - sidebarLeft;
-      if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) {
-        setSidebarWidth(newWidth);
-      }
+      if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) setSidebarWidth(newWidth);
     };
-
-    const handleMouseUp = () => {
-      setIsResizing(false);
-    };
-
+    const handleMouseUp = () => setIsResizing(false);
     if (isResizing) {
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
       document.body.style.cursor = "col-resize";
       document.body.style.userSelect = "none";
     }
-
     return () => {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
@@ -123,13 +109,16 @@ export default function StaffDashboardLayout({ children }: StaffDashboardLayoutP
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = item.path === location;
+            const isDashboard = (item as any).isDashboardLink;
 
             return (
               <Link
                 key={item.path}
                 to={item.path}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                  isActive
+                  isDashboard
+                    ? "bg-white/20 hover:bg-white/30 text-white font-semibold border border-white/30"
+                    : isActive
                     ? "bg-white text-purple-700 shadow-lg"
                     : "hover:bg-purple-500/20 text-white"
                 } ${isCollapsed ? "justify-center" : ""}`}
@@ -160,15 +149,25 @@ export default function StaffDashboardLayout({ children }: StaffDashboardLayoutP
               {activeMenuItem?.label || "員工專區"}
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-              {user?.role === "staff" && user?.storeId && `門市編號：${user.storeId}`}
+              {user?.role === "staff" && (user as any)?.storeId && `門市編號：${(user as any).storeId}`}
             </p>
           </div>
-          <Link
-            to="/profile"
-            className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-          >
-            <span className="text-sm font-medium text-gray-700">個人中心</span>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/dashboard"
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm font-medium"
+            >
+              <LayoutDashboard className="h-4 w-4" />
+              返回管理後台
+            </Link>
+            <Link
+              to="/member/profile"
+              className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+            >
+              <User className="h-4 w-4 text-gray-600" />
+              <span className="text-sm font-medium text-gray-700">個人中心</span>
+            </Link>
+          </div>
         </div>
 
         {/* Content Area */}

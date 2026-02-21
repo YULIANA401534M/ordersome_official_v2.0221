@@ -77,12 +77,12 @@ export default function CorporateHeader() {
 
           {/* Right Actions */}
           <div className="flex items-center gap-3">
-            {/* Dashboard Link (for non-customer roles) */}
-            {dashboardUrl && (
-              <Link href={dashboardUrl}>
+            {/* Member Center (for all authenticated users) */}
+            {isAuthenticated && (
+              <Link href="/dashboard">
                 <Button size="sm" variant="outline" className="hidden sm:flex gap-2">
-                  <LayoutDashboard className="h-4 w-4" />
-                  後台
+                  <User className="h-4 w-4" />
+                  會員中心
                 </Button>
               </Link>
             )}

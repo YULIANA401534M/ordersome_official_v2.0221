@@ -7,10 +7,10 @@ import {
   FileText,
   BarChart3,
   Package,
-  Menu,
-  X,
   ChevronLeft,
   ChevronRight,
+  LayoutDashboard,
+  User,
 } from "lucide-react";
 
 interface FranchiseeDashboardLayoutProps {
@@ -23,17 +23,12 @@ const DEFAULT_WIDTH = 256;
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
-
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
-
   return isMobile;
 }
 
@@ -47,6 +42,7 @@ export default function FranchiseeDashboardLayout({ children }: FranchiseeDashbo
   const isMobile = useIsMobile();
 
   const menuItems = [
+    { icon: LayoutDashboard, label: "返回儀表板", path: "/dashboard", isDashboardLink: true },
     { icon: Home, label: "返回首頁", path: "/brand/ordersome" },
     { icon: Store, label: "門市管理", path: "/dashboard/franchise/stores" },
     { icon: FileText, label: "SOP 文件", path: "/dashboard/franchise/sop" },
@@ -57,33 +53,23 @@ export default function FranchiseeDashboardLayout({ children }: FranchiseeDashbo
   const activeMenuItem = menuItems.find(item => item.path === location);
 
   useEffect(() => {
-    if (isCollapsed) {
-      setIsResizing(false);
-    }
+    if (isCollapsed) setIsResizing(false);
   }, [isCollapsed]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing) return;
-
       const sidebarLeft = sidebarRef.current?.getBoundingClientRect().left ?? 0;
       const newWidth = e.clientX - sidebarLeft;
-      if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) {
-        setSidebarWidth(newWidth);
-      }
+      if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) setSidebarWidth(newWidth);
     };
-
-    const handleMouseUp = () => {
-      setIsResizing(false);
-    };
-
+    const handleMouseUp = () => setIsResizing(false);
     if (isResizing) {
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
       document.body.style.cursor = "col-resize";
       document.body.style.userSelect = "none";
     }
-
     return () => {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
@@ -123,13 +109,16 @@ export default function FranchiseeDashboardLayout({ children }: FranchiseeDashbo
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = item.path === location;
+            const isDashboard = (item as any).isDashboardLink;
 
             return (
               <Link
                 key={item.path}
                 to={item.path}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                  isActive
+                  isDashboard
+                    ? "bg-white/20 hover:bg-white/30 text-white font-semibold border border-white/30"
+                    : isActive
                     ? "bg-white text-green-700 shadow-lg"
                     : "hover:bg-green-500/20 text-white"
                 } ${isCollapsed ? "justify-center" : ""}`}
@@ -160,15 +149,25 @@ export default function FranchiseeDashboardLayout({ children }: FranchiseeDashbo
               {activeMenuItem?.label || "加盟主專區"}
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-              {user?.role === "franchisee" && user?.storeId && `門市編號：${user.storeId}`}
+              {user?.role === "franchisee" && (user as any)?.storeId && `門市編號：${(user as any).storeId}`}
             </p>
           </div>
-          <Link
-            to="/profile"
-            className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-          >
-            <span className="text-sm font-medium text-gray-700">個人中心</span>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/dashboard"
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm font-medium"
+            >
+              <LayoutDashboard className="h-4 w-4" />
+              返回儀表板
+            </Link>
+            <Link
+              to="/member/profile"
+              className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+            >
+              <User className="h-4 w-4 text-gray-600" />
+              <span className="text-sm font-medium text-gray-700">個人中心</span>
+            </Link>
+          </div>
         </div>
 
         {/* Content Area */}

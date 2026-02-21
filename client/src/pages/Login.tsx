@@ -30,8 +30,18 @@ export default function Login() {
         });
       }
       
-      // Redirect to franchise dashboard or profile
-      window.location.href = "/dashboard/franchise";
+      // Smart redirect: customer → /shop, internal roles → /dashboard
+      const role = result?.user?.role ?? "customer";
+      const searchParams = new URLSearchParams(window.location.search);
+      const redirectParam = searchParams.get("redirect");
+      if (redirectParam) {
+        window.location.href = redirectParam;
+      } else if (role === "customer") {
+        window.location.href = "/shop";
+      } else {
+        // super_admin, manager, franchisee, staff → dashboard
+        window.location.href = "/dashboard";
+      }
     } catch (err: any) {
       setError(err.message || "登入失敗，請檢查帳號密碼");
     } finally {

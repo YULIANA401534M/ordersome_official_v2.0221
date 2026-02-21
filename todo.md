@@ -820,3 +820,18 @@
 - [x] 智慧中控台分流導向（/dashboard 依角色自動分流）
 - [x] SOP 路由整合到 App.tsx（/dashboard/sop、/dashboard/repairs、/dashboard/checklist）
 - [x] 修復 StaffDashboard 快捷連結指向新路由
+
+## 智慧中控台與分流導向系統（2026-02-21 第三批）
+- [ ] 重建 /dashboard 中控台頁面（6 張角色白名單卡片：營運總部/加盟專區/員工專區/線上商城/我的訂單/個人中心）
+- [ ] 實作智慧登入導向（customer→?redirect或/shop、內部人員→/dashboard）
+- [ ] 全站導航優化：Admin/Franchise/Staff Sidebar 加入「返回儀表板」按鈕
+- [ ] 商城 Header 加入「會員中心」按鈕連結至 /dashboard
+
+## 智慧中控台與分流導向系統（2026-02-21）
+
+- [x] 重建 /dashboard 中控台頁面（6 張角色白名單卡片：營運總部、加盟專區、員工專區、線上商城、我的訂單、個人中心）
+- [x] 實作智慧登入導向（customer→/shop、內部人員→/dashboard）
+- [x] OAuth callback 加入角色導向邏輯（依 role 跳轉）
+- [x] Email/Password 登入成功後依角色智慧導向
+- [x] Admin/Franchise/Staff Sidebar 加入「返回儀表板」按鈕
+- [x] 商城 CorporateHeader 加入「會員中心」按鈕（連結至 /dashboard）
