@@ -5,6 +5,9 @@ import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
+import { parsePaymentResult, verifyCheckMacValue } from "../ecpay";
+import * as db from "../db";
+import { notifyOwner } from "./notification";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 
@@ -35,6 +38,42 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+
+  // ECPay payment callback
+  app.post("/api/payment/callback", async (req, res) => {
+    try {
+      const data = req.body;
+      console.log("[ECPay Callback]", data);
+      
+      // Verify CheckMacValue
+      if (!verifyCheckMacValue(data, data.CheckMacValue)) {
+        console.error("[ECPay] CheckMacValue verification failed");
+        return res.send("0|CheckMacValue Error");
+      }
+      
+      const result = parsePaymentResult(data);
+      
+      if (result.success) {
+        // Update order status
+        const order = await db.getOrderByNumber(result.orderNumber);
+        if (order) {
+          await db.updateOrderPayment(order.orderNumber, 'paid', result.tradeNo);
+          await db.updateOrderStatus(order.id, 'paid');
+          
+          // Notify owner
+          await notifyOwner({
+            title: `訂單付款成功 - ${result.orderNumber}`,
+            content: `訂單 ${result.orderNumber} 已完成付款\n金額：NT$ ${result.amount}\n付款方式：${result.paymentType}\n綠界交易號：${result.tradeNo}`,
+          });
+        }
+      }
+      
+      res.send("1|OK");
+    } catch (error) {
+      console.error("[ECPay Callback Error]", error);
+      res.send("0|Error");
+    }
+  });
   // tRPC API
   app.use(
     "/api/trpc",

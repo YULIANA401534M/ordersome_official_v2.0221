@@ -1,5 +1,69 @@
 {
   "version": "7",
   "dialect": "mysql",
-  "entries": []
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1767877008166,
+      "tag": "0000_high_lyja",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1767877256862,
+      "tag": "0001_exotic_johnny_blaze",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1768798325184,
+      "tag": "0002_sour_millenium_guard",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1768834591596,
+      "tag": "0003_absent_krista_starr",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1768836884331,
+      "tag": "0004_low_stardust",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1768848228270,
+      "tag": "0005_military_storm",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1768982017682,
+      "tag": "0006_hesitant_stature",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1768983326213,
+      "tag": "0007_huge_aaron_stack",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1768984387323,
+      "tag": "0008_minor_mandroid",
+      "breakpoints": true
+    }
+  ]
 }

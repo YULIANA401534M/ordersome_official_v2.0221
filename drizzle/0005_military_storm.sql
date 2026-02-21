@@ -1,0 +1,1 @@
+ALTER TABLE `posts` ADD `publishTarget` enum('corporate','brand') DEFAULT 'brand' NOT NULL;

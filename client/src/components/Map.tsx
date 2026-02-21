@@ -92,21 +92,45 @@ const FORGE_BASE_URL =
   "https://forge.butterfly-effect.dev";
 const MAPS_PROXY_URL = `${FORGE_BASE_URL}/v1/maps/proxy`;
 
-function loadMapScript() {
-  return new Promise(resolve => {
+// Global state to prevent multiple script loads
+let isScriptLoading = false;
+let isScriptLoaded = false;
+const scriptLoadPromises: Promise<void>[] = [];
+
+function loadMapScript(): Promise<void> {
+  // If already loaded, return immediately
+  if (isScriptLoaded || window.google?.maps) {
+    return Promise.resolve();
+  }
+
+  // If currently loading, return the existing promise
+  if (isScriptLoading && scriptLoadPromises.length > 0) {
+    return scriptLoadPromises[0];
+  }
+
+  // Start loading
+  isScriptLoading = true;
+  const promise = new Promise<void>((resolve, reject) => {
     const script = document.createElement("script");
     script.src = `${MAPS_PROXY_URL}/maps/api/js?key=${API_KEY}&v=weekly&libraries=marker,places,geocoding,geometry`;
     script.async = true;
     script.crossOrigin = "anonymous";
     script.onload = () => {
-      resolve(null);
-      script.remove(); // Clean up immediately
+      isScriptLoaded = true;
+      isScriptLoading = false;
+      resolve();
+      // Don't remove the script - keep it for reuse
     };
     script.onerror = () => {
+      isScriptLoading = false;
       console.error("Failed to load Google Maps script");
+      reject(new Error("Failed to load Google Maps script"));
     };
     document.head.appendChild(script);
   });
+
+  scriptLoadPromises.push(promise);
+  return promise;
 }
 
 interface MapViewProps {
@@ -126,11 +150,33 @@ export function MapView({
   const map = useRef<google.maps.Map | null>(null);
 
   const init = usePersistFn(async () => {
-    await loadMapScript();
+    // Wait for next tick to ensure DOM is fully rendered
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     if (!mapContainer.current) {
       console.error("Map container not found");
       return;
     }
+    
+    try {
+      await loadMapScript();
+    } catch (error) {
+      console.error("Failed to initialize map:", error);
+      return;
+    }
+    
+    // Double check container still exists after script load
+    if (!mapContainer.current) {
+      console.error("Map container lost during script load");
+      return;
+    }
+    
+    // Ensure google.maps is available
+    if (!window.google?.maps) {
+      console.error("Google Maps API not available after script load");
+      return;
+    }
+    
     map.current = new window.google.maps.Map(mapContainer.current, {
       zoom: initialZoom,
       center: initialCenter,

@@ -1,0 +1,1 @@
+ALTER TABLE `franchise_inquiries` ADD `notes` text;

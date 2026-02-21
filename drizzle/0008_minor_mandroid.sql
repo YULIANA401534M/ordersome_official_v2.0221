@@ -1,0 +1,1 @@
+ALTER TABLE `franchise_inquiries` MODIFY COLUMN `email` varchar(320);

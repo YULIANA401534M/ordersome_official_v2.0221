@@ -1,0 +1,294 @@
+import { useState } from "react";
+import { trpc } from "../../lib/trpc";
+import { Shield, Search, X, Check } from "lucide-react";
+import AdminDashboardLayout from "@/components/AdminDashboardLayout";
+
+// Available permissions
+const AVAILABLE_PERMISSIONS = [
+  { id: "view_finance", label: "查看財務報表", description: "可查看營收、成本等財務數據" },
+  { id: "manage_users", label: "管理用戶", description: "可編輯用戶資料、角色、權限" },
+  { id: "manage_franchise", label: "管理加盟主", description: "可管理加盟門市資料" },
+  { id: "publish_content", label: "發布內容", description: "可建立和發布新聞文章" },
+];
+
+export default function AdminPermissions() {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
+
+  const utils = trpc.useUtils();
+  const { data: users, isLoading, refetch } = trpc.admin.listUsers.useQuery();
+  const updateUserMutation = trpc.admin.updateUser.useMutation({
+    onSuccess: () => {
+      refetch();
+      // Invalidate auth.me query to refresh current user's permissions
+      utils.auth.me.invalidate();
+      setEditingUser(null);
+    },
+  });
+
+  const filteredUsers = users?.filter((user) => {
+    const matchesSearch =
+      user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRole = roleFilter === "all" || user.role === roleFilter;
+    return matchesSearch && matchesRole;
+  });
+
+  const handleEditPermissions = (user: any) => {
+    setEditingUser(user);
+    // Parse permissions (handle both string and array formats)
+    let permissions: string[] = [];
+    if (typeof user.permissions === 'string') {
+      try {
+        permissions = JSON.parse(user.permissions);
+      } catch (e) {
+        permissions = [];
+      }
+    } else if (Array.isArray(user.permissions)) {
+      permissions = user.permissions;
+    }
+    setSelectedPermissions(permissions);
+  };
+
+  const handleTogglePermission = (permissionId: string) => {
+    setSelectedPermissions((prev) =>
+      prev.includes(permissionId)
+        ? prev.filter((p) => p !== permissionId)
+        : [...prev, permissionId]
+    );
+  };
+
+  const handleSavePermissions = async () => {
+    if (!editingUser) return;
+
+    try {
+      await updateUserMutation.mutateAsync({
+        userId: editingUser.id,
+        permissions: selectedPermissions,
+      });
+      await refetch();
+      setEditingUser(null);
+      setSelectedPermissions([]);
+    } catch (error: any) {
+      alert(error.message || "更新權限失敗");
+    }
+  };
+
+  const getPermissionBadges = (permissions: any) => {
+    let permissionList: string[] = [];
+    if (typeof permissions === 'string') {
+      try {
+        permissionList = JSON.parse(permissions);
+      } catch (e) {
+        permissionList = [];
+      }
+    } else if (Array.isArray(permissions)) {
+      permissionList = permissions;
+    }
+
+    if (permissionList.length === 0) {
+      return <span className="text-gray-400 text-sm">無特殊權限</span>;
+    }
+
+    return (
+      <div className="flex flex-wrap gap-2">
+        {permissionList.map((perm) => {
+          const permInfo = AVAILABLE_PERMISSIONS.find((p) => p.id === perm);
+          return (
+            <span
+              key={perm}
+              className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full"
+            >
+              {permInfo?.label || perm}
+            </span>
+          );
+        })}
+      </div>
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-600">載入中...</div>
+      </div>
+    );
+  }
+
+  return (
+    <AdminDashboardLayout>
+    <div className="py-4">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <Shield className="h-8 w-8 text-blue-600" />
+            <h1 className="text-3xl font-bold text-gray-900">權限管理</h1>
+          </div>
+          <p className="text-gray-600">管理所有用戶的細緻權限設定</p>
+        </div>
+
+        {/* Filters */}
+        <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="搜尋姓名或 Email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            {/* Role Filter */}
+            <select
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="all">所有角色</option>
+              <option value="super_admin">超級管理員</option>
+              <option value="manager">經理</option>
+              <option value="franchisee">加盟主</option>
+              <option value="staff">員工</option>
+              <option value="customer">一般會員</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Users Table */}
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    用戶
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    角色
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    權限
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    操作
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {filteredUsers?.map((user) => (
+                  <tr key={user.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <div>
+                        <div className="font-medium text-gray-900">{user.name || "未設定"}</div>
+                        <div className="text-sm text-gray-500">{user.email}</div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full">
+                        {user.role === "super_admin" && "超級管理員"}
+                        {user.role === "manager" && "經理"}
+                        {user.role === "franchisee" && "加盟主"}
+                        {user.role === "staff" && "員工"}
+                        {user.role === "customer" && "一般會員"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {getPermissionBadges(user.permissions)}
+                    </td>
+                    <td className="px-6 py-4">
+                      <button
+                        onClick={() => handleEditPermissions(user)}
+                        className="text-blue-600 hover:text-blue-800 font-medium text-sm"
+                      >
+                        編輯權限
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Edit Permissions Modal */}
+        {editingUser && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">編輯權限</h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {editingUser.name} ({editingUser.email})
+                  </p>
+                </div>
+                <button
+                  onClick={() => setEditingUser(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6">
+                <div className="space-y-4">
+                  {AVAILABLE_PERMISSIONS.map((permission) => (
+                    <div
+                      key={permission.id}
+                      className="flex items-start gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+                      onClick={() => handleTogglePermission(permission.id)}
+                    >
+                      <div className="flex-shrink-0 mt-1">
+                        <div
+                          className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                            selectedPermissions.includes(permission.id)
+                              ? "bg-blue-600 border-blue-600"
+                              : "border-gray-300"
+                          }`}
+                        >
+                          {selectedPermissions.includes(permission.id) && (
+                            <Check className="h-4 w-4 text-white" />
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-900">{permission.label}</div>
+                        <div className="text-sm text-gray-600">{permission.description}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
+                <button
+                  onClick={() => setEditingUser(null)}
+                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleSavePermissions}
+                  disabled={updateUserMutation.isPending}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+                >
+                  {updateUserMutation.isPending ? "儲存中..." : "儲存"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+    </AdminDashboardLayout>
+  );
+}
