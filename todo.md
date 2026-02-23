@@ -910,3 +910,17 @@
 - [ ] 測試完整結帳流程（包含發票資料）
 - [ ] 測試 ECPay 金流與發票資料同步
 - [ ] 儲存 checkpoint
+
+## Phase 4：B2B2C OAuth 整合與 RBAC 防禦（2026-02-23）
+
+- [x] 資料庫 Migration：users 表新增 lineId、googleId 欄位
+- [x] 環境變數：LINE_CLIENT_ID、LINE_CLIENT_SECRET、GOOGLE_CLIENT_ID、GOOGLE_CLIENT_SECRET
+- [x] server/_core/env.ts 新增 LINE/Google 金鑰變數
+- [x] db.ts 新增 getUserByEmail 與 linkOAuthProvider 函式
+- [x] oauth.ts RBAC 防禦：既有帳號綁定、新帳號預設 customer
+- [x] oauth.ts 新增 LINE/Google 直連 Callback 路由
+- [x] const.ts getLoginUrl 支援 returnPath 參數（checkout 回跳）
+- [x] Checkout.tsx 登入按鈕加入 redirect=/shop/checkout 參數
+- [x] Checkout.tsx useEffect 自動帶入用戶資料（OAuth 回跳後自動填充）
+- [x] oauth.rbac.test.ts 新增 10 個測試（RBAC 防禦、智慧路由、Provider 偵測）
+- [x] 所有 42 個 vitest 測試通過，TypeScript 0 errors

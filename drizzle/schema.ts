@@ -17,6 +17,10 @@ export const users = mysqlTable("users", {
   fullName: text("fullName"),
   shippingAddress: text("shippingAddress"),
   avatarUrl: text("avatarUrl"),
+  // Third-party OAuth provider IDs for account linking (RBAC-safe binding, never overwrites role)
+  lineId: varchar("lineId", { length: 128 }),
+  googleId: varchar("googleId", { length: 128 }),
+
   // Password hash for email/password authentication (franchisee & admin only)
   passwordHash: varchar("passwordHash", { length: 255 }),
   // Password reset token and expiry

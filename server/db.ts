@@ -111,6 +111,35 @@ export async function getUserByEmailWithPassword(email: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+/**
+ * Get user by email (for RBAC-safe OAuth account linking)
+ * Returns user without requiring password - used for OAuth provider binding
+ */
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+/**
+ * Link a third-party OAuth provider ID to an existing user account.
+ * RBAC SAFETY: Only updates lineId/googleId and lastSignedIn.
+ * NEVER modifies role, status, or permissions.
+ */
+export async function linkOAuthProvider(
+  userId: number,
+  provider: 'line' | 'google',
+  providerId: string
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  const updateData: Record<string, unknown> = { lastSignedIn: new Date() };
+  if (provider === 'line') updateData.lineId = providerId;
+  if (provider === 'google') updateData.googleId = providerId;
+  await db.update(users).set(updateData).where(eq(users.id, userId));
+}
+
 export async function updateUserLastSignedIn(userId: number) {
   const db = await getDb();
   if (!db) return;

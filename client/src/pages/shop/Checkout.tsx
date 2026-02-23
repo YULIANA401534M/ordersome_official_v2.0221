@@ -1,5 +1,5 @@
 "use client";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import {
   ArrowLeft, CreditCard, Building, Store, FileText,
@@ -69,12 +69,12 @@ export default function Checkout() {
   // ─── 表單狀態 ─────────────────────────────────────────────
   const [form, setForm] = useState({
     // Block 2
-    guestEmail: user?.email ?? "",
+    guestEmail: "",
     guestPhone: "",
     // Block 3
-    recipientName: user?.name ?? "",
+    recipientName: "",
     recipientPhone: "",
-    recipientEmail: user?.email ?? "",
+    recipientEmail: "",
     shippingAddress: "",
     note: "",
     paymentMethod: "credit_card",
@@ -82,6 +82,21 @@ export default function Checkout() {
     companyTaxId: "",
     companyName: "",
   });
+
+  // 登入狀態自動帶入用戶資料（OAuth 回跳後自動填充）
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      setForm(prev => ({
+        ...prev,
+        guestEmail: prev.guestEmail || (user as any).email || "",
+        recipientName: prev.recipientName || (user as any).name || (user as any).fullName || "",
+        recipientEmail: prev.recipientEmail || (user as any).email || "",
+        recipientPhone: prev.recipientPhone || (user as any).phone || "",
+        shippingAddress: prev.shippingAddress || (user as any).shippingAddress || (user as any).address || "",
+      }));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, (user as any)?.id]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -385,7 +400,7 @@ export default function Checkout() {
                           已登入：{user?.name ?? user?.email}
                         </div>
                       ) : (
-                        <a href={getLoginUrl()} className="block">
+                        <a href={getLoginUrl("/shop/checkout")} className="block">
                           <button
                             type="button"
                             className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl
