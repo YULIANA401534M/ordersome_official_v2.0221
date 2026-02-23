@@ -321,11 +321,16 @@ export const appRouter = router({
           throw new TRPCError({ code: 'BAD_REQUEST', message: '購物車是空的' });
         }
 
+        // Fetch store settings for dynamic shipping calculation
+        const storeSettings = await db.getStoreSettings();
+        const baseShippingFee = storeSettings?.baseShippingFee ?? 100;
+        const freeShippingThreshold = storeSettings?.freeShippingThreshold ?? 1000;
+        
         // Calculate totals
         const subtotal = cartItems.reduce((sum, item) => {
           return sum + (item.price * item.quantity);
         }, 0);
-        const shippingFee = subtotal >= 1000 ? 0 : 100; // Free shipping over 1000
+        const shippingFee = subtotal >= freeShippingThreshold ? 0 : baseShippingFee;
         const total = subtotal + shippingFee;
 
         // Create order
