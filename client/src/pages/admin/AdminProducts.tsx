@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter, DrawerClose } from "@/components/ui/drawer";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Plus, Pencil, Trash2, Search, Package, ArrowLeft, X, ImagePlus, Loader2, GripVertical } from "lucide-react";
@@ -25,13 +25,15 @@ interface FormState {
   categoryId: number; stock: number;
   imageUrl: string; images: string[];
   specifications: SpecEntry[];
+  specDetails: string; shippingDetails: string;
   isActive: boolean; isFeatured: boolean; sortOrder: number;
 }
 
 const EMPTY_FORM: FormState = {
   name: "", slug: "", description: "", price: "", originalPrice: "",
   categoryId: 0, stock: 100, imageUrl: "", images: [],
-  specifications: [], isActive: true, isFeatured: false, sortOrder: 0,
+  specifications: [], specDetails: "", shippingDetails: "",
+  isActive: true, isFeatured: false, sortOrder: 0,
 };
 
 function specsToJson(specs: SpecEntry[]): string {
@@ -110,7 +112,14 @@ function SpecEditor({ specs, onChange }: { specs: SpecEntry[]; onChange: (s: Spe
 export default function AdminProducts() {
   const { user, isAuthenticated } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const { data: storeSettingsData } = trpc.storeSettings.get.useQuery();
+  const updateStoreSettingsMutation = trpc.storeSettings.update.useMutation({
+    onSuccess: () => { toast.success("運費設定已更新"); utils.storeSettings.get.invalidate(); },
+    onError: () => toast.error("更新失敗"),
+  });
+  const [shippingFeeInput, setShippingFeeInput] = useState("");
+  const [freeShippingInput, setFreeShippingInput] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [isUploading, setIsUploading] = useState(false);
@@ -122,11 +131,11 @@ export default function AdminProducts() {
   const uploadImage = trpc.storage.uploadImage.useMutation();
 
   const createMutation = trpc.product.create.useMutation({
-    onSuccess: () => { toast.success("商品新增成功"); setDrawerOpen(false); utils.product.listAll.invalidate(); },
+    onSuccess: () => { toast.success("商品新增成功"); setDialogOpen(false); utils.product.listAll.invalidate(); },
     onError: (e) => toast.error("新增失敗：" + e.message),
   });
   const updateMutation = trpc.product.update.useMutation({
-    onSuccess: () => { toast.success("商品更新成功"); setDrawerOpen(false); utils.product.listAll.invalidate(); },
+    onSuccess: () => { toast.success("商品更新成功"); setDialogOpen(false); utils.product.listAll.invalidate(); },
     onError: (e) => toast.error("更新失敗：" + e.message),
   });
   const deleteMutation = trpc.product.delete.useMutation({
@@ -178,7 +187,7 @@ export default function AdminProducts() {
   };
 
   // ── Open drawer ──
-  const openAdd = () => { setEditingId(null); setForm(EMPTY_FORM); setDrawerOpen(true); };
+  const openAdd = () => { setEditingId(null); setForm(EMPTY_FORM); setDialogOpen(true); };
   const openEdit = (p: any) => {
     setEditingId(p.id);
     const imgs: string[] = (() => { try { return JSON.parse(p.images || "[]"); } catch { return p.imageUrl ? [p.imageUrl] : []; } })();
@@ -188,9 +197,11 @@ export default function AdminProducts() {
       categoryId: p.categoryId, stock: p.stock ?? 0,
       imageUrl: p.imageUrl || "", images: imgs,
       specifications: jsonToSpecs(p.specifications),
+      specDetails: (p as any).specDetails || "",
+      shippingDetails: (p as any).shippingDetails || "",
       isActive: p.isActive, isFeatured: p.isFeatured, sortOrder: p.sortOrder ?? 0,
     });
-    setDrawerOpen(true);
+    setDialogOpen(true);
   };
 
   // ── Submit ──
@@ -205,6 +216,8 @@ export default function AdminProducts() {
     imageUrl: form.images[0] || form.imageUrl,
     images: JSON.stringify(form.images),
     specifications: form.specifications.length ? specsToJson(form.specifications) : undefined,
+    specDetails: form.specDetails || undefined,
+    shippingDetails: form.shippingDetails || undefined,
     isActive: form.isActive,
     isFeatured: form.isFeatured,
     sortOrder: form.sortOrder,
@@ -335,12 +348,36 @@ export default function AdminProducts() {
         <p className="text-xs text-gray-400 mt-2 text-right">共 {filtered?.length ?? 0} 件商品</p>
       </div>
 
-      {/* ── Drawer Form ── */}
-      <Drawer open={drawerOpen} onOpenChange={setDrawerOpen} direction="right">
-        <DrawerContent className="h-full w-full max-w-2xl ml-auto rounded-none overflow-y-auto">
-          <DrawerHeader className="border-b sticky top-0 bg-white z-10">
-            <DrawerTitle>{editingId !== null ? "編輯商品" : "新增商品"}</DrawerTitle>
-          </DrawerHeader>
+      {/* ── Store Settings ── */}
+      <div className="bg-white rounded-xl border shadow-sm p-6">
+        <h2 className="text-lg font-semibold mb-4">商店運費設定</h2>
+        <div className="grid grid-cols-2 gap-6">
+          <div className="space-y-1.5">
+            <Label>基本運費（NT$）</Label>
+            <div className="flex gap-2">
+              <Input type="number" placeholder={storeSettingsData?.baseShippingFee?.toString() ?? "100"}
+                value={shippingFeeInput} onChange={(e) => setShippingFeeInput(e.target.value)} className="w-32" />
+              <Button size="sm" variant="outline" onClick={() => updateStoreSettingsMutation.mutate({ baseShippingFee: Number(shippingFeeInput) })} disabled={!shippingFeeInput || updateStoreSettingsMutation.isPending}>儲存</Button>
+            </div>
+            <p className="text-xs text-gray-400">目前設定：NT$ {storeSettingsData?.baseShippingFee ?? 100}</p>
+          </div>
+          <div className="space-y-1.5">
+            <Label>免運门滝（NT$）</Label>
+            <div className="flex gap-2">
+              <Input type="number" placeholder={storeSettingsData?.freeShippingThreshold?.toString() ?? "1000"}
+                value={freeShippingInput} onChange={(e) => setFreeShippingInput(e.target.value)} className="w-32" />
+              <Button size="sm" variant="outline" onClick={() => updateStoreSettingsMutation.mutate({ freeShippingThreshold: Number(freeShippingInput) })} disabled={!freeShippingInput || updateStoreSettingsMutation.isPending}>儲存</Button>
+            </div>
+            <p className="text-xs text-gray-400">目前設定：NT$ {storeSettingsData?.freeShippingThreshold ?? 1000}</p>
+          </div>
+        </div>
+      </div>
+      {/* ── Dialog Form ── */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingId !== null ? "編輯商品" : "新增商品"}</DialogTitle>
+          </DialogHeader>
 
           <div className="p-6 space-y-6">
             {/* 基本資訊 */}
@@ -425,12 +462,25 @@ export default function AdminProducts() {
 
             <Separator />
 
-            {/* 規格 */}
+             {/* 規格 */}
             <section>
               <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">商品規格</h3>
               <SpecEditor specs={form.specifications} onChange={(s) => setForm(p => ({ ...p, specifications: s }))} />
             </section>
-
+            <Separator />
+            {/* 規格說明 Tab */}
+            <section>
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">規格說明（前台 Tab 顯示）</h3>
+              <Textarea value={form.specDetails} onChange={(e) => setForm(p => ({ ...p, specDetails: e.target.value }))}
+                placeholder="輸入規格說明內容（支援 Markdown 語法）" rows={4} className="font-mono text-sm" />
+            </section>
+            <Separator />
+            {/* 運送方式 Tab */}
+            <section>
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">運送方式（前台 Tab 顯示）</h3>
+              <Textarea value={form.shippingDetails} onChange={(e) => setForm(p => ({ ...p, shippingDetails: e.target.value }))}
+                placeholder="輸入運送方式說明（支援 Markdown 語法）" rows={4} className="font-mono text-sm" />
+            </section>
             <Separator />
 
             {/* 顯示設定 */}
@@ -453,18 +503,14 @@ export default function AdminProducts() {
             </section>
           </div>
 
-          <DrawerFooter className="border-t sticky bottom-0 bg-white">
-            <div className="flex gap-3 justify-end">
-              <DrawerClose asChild>
-                <Button variant="outline">取消</Button>
-              </DrawerClose>
-              <Button onClick={handleSubmit} disabled={isBusy || isUploading} className="bg-amber-600 hover:bg-amber-700 min-w-[100px]">
-                {isBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : editingId !== null ? "儲存變更" : "新增商品"}
-              </Button>
-            </div>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
+          <DialogFooter className="border-t pt-4">
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>取消</Button>
+            <Button onClick={handleSubmit} disabled={isBusy || isUploading} className="bg-amber-600 hover:bg-amber-700 min-w-[100px]">
+              {isBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : editingId !== null ? "儲存變更" : "新增商品"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       </div>
     </AdminDashboardLayout>
   );

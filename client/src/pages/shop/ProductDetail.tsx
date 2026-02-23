@@ -238,8 +238,8 @@ export default function ProductDetail() {
           </TabsContent>
 
           <TabsContent value="specs" className="mt-6">
-            {specKeys.length > 0 ? (
-              <div className="overflow-hidden rounded-xl border border-gray-200">
+            {specKeys.length > 0 && (
+              <div className="overflow-hidden rounded-xl border border-gray-200 mb-6">
                 <table className="w-full text-sm">
                   <tbody>
                     {specKeys.map((key, idx) => (
@@ -251,28 +251,39 @@ export default function ProductDetail() {
                   </tbody>
                 </table>
               </div>
-            ) : (
-              <p className="text-gray-400 text-center py-8">無規格資料</p>
             )}
+            {(product as any).specDetails ? (
+              <div className="prose prose-sm max-w-none text-gray-700">
+                <ReactMarkdown>{(product as any).specDetails}</ReactMarkdown>
+              </div>
+            ) : specKeys.length === 0 ? (
+              <p className="text-gray-400 text-center py-8">無規格資料</p>
+            ) : null}
           </TabsContent>
 
           <TabsContent value="shipping" className="mt-6">
-            <div className="space-y-4 text-sm text-gray-700">
-              <div className="flex items-start gap-3 p-4 bg-amber-50 rounded-xl border border-amber-100">
-                <Truck className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="font-semibold text-gray-900 mb-1">宅配到府</p>
-                  <p>消費滿 NT$1,000 免運費，未滿酌收 NT$100 運費。預計 3-5 個工作天到貨。</p>
+            {(product as any).shippingDetails ? (
+              <div className="prose prose-sm max-w-none text-gray-700">
+                <ReactMarkdown>{(product as any).shippingDetails}</ReactMarkdown>
+              </div>
+            ) : (
+              <div className="space-y-4 text-sm text-gray-700">
+                <div className="flex items-start gap-3 p-4 bg-amber-50 rounded-xl border border-amber-100">
+                  <Truck className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-semibold text-gray-900 mb-1">宅配到府</p>
+                    <p>消費滿 NT$1,000 免運費，未滿酢收 NT$100 運費。預計 3-5 個工作天到貨。</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                  <Package className="h-5 w-5 text-gray-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-semibold text-gray-900 mb-1">門市自取</p>
+                    <p>可至各門市自取，無需運費。請於結帳備註欄填寫自取門市。</p>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                <Package className="h-5 w-5 text-gray-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="font-semibold text-gray-900 mb-1">門市自取</p>
-                  <p>可至各門市自取，無需運費。請於結帳備註欄填寫自取門市。</p>
-                </div>
-              </div>
-            </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>

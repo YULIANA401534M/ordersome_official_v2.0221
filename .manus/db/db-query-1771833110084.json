@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE `store_settings` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`baseShippingFee` int NOT NULL DEFAULT 100,\n\t`freeShippingThreshold` int NOT NULL DEFAULT 1000,\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `store_settings_id` PRIMARY KEY(`id`)\n);\nALTER TABLE `products` ADD `specDetails` text;\nALTER TABLE `products` ADD `shippingDetails` text;\nINSERT INTO `store_settings` (`id`, `baseShippingFee`, `freeShippingThreshold`) VALUES (1, 100, 1000);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user AKK2AjLXvjySfzt.defe7b7a87b6 --database gjTAhmM88fiEhPinRVjKbV --execute CREATE TABLE `store_settings` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`baseShippingFee` int NOT NULL DEFAULT 100,\n\t`freeShippingThreshold` int NOT NULL DEFAULT 1000,\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `store_settings_id` PRIMARY KEY(`id`)\n);\nALTER TABLE `products` ADD `specDetails` text;\nALTER TABLE `products` ADD `shippingDetails` text;\nINSERT INTO `store_settings` (`id`, `baseShippingFee`, `freeShippingThreshold`) VALUES (1, 100, 1000);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 3227
+}

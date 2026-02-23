@@ -4,10 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import CorporateLayout from "@/components/layout/CorporateLayout";
 import { useCartStore } from "@/stores/cartStore";
+import { trpc } from "@/lib/trpc";
 
 export default function Cart() {
   const { items, removeItem, updateQuantity, clearCart } = useCartStore();
+  const { data: storeSettings } = trpc.storeSettings.get.useQuery();
+  const baseShippingFee = storeSettings?.baseShippingFee ?? 100;
+  const freeShippingThreshold = storeSettings?.freeShippingThreshold ?? 1000;
   const totalPrice = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const shippingFee = totalPrice >= freeShippingThreshold ? 0 : baseShippingFee;
+  const grandTotal = totalPrice + shippingFee;
 
   return (
     <CorporateLayout>
@@ -91,16 +97,16 @@ export default function Cart() {
                       </div>
                       <div className="flex justify-between text-gray-600">
                         <span>運費</span>
-                        <span>{totalPrice >= 1000 ? "免運費" : "NT$ 100"}</span>
+                        <span>{shippingFee === 0 ? "免運費" : `NT$ ${baseShippingFee}`}</span>
                       </div>
                       <div className="border-t pt-3">
                         <div className="flex justify-between text-lg font-bold text-gray-900">
                           <span>總計</span>
-                          <span>NT$ {totalPrice >= 1000 ? totalPrice : totalPrice + 100}</span>
+                          <span>NT$ {grandTotal.toLocaleString()}</span>
                         </div>
                       </div>
                     </div>
-                    <p className="text-xs text-gray-500 mb-4">滿 NT$ 1,000 免運費</p>
+                    <p className="text-xs text-gray-500 mb-4">滿 NT$ {freeShippingThreshold.toLocaleString()} 免運費</p>
                     <Link href="/shop/checkout">
                       <Button className="w-full bg-amber-600 hover:bg-amber-700" size="lg">
                         前往結帳

@@ -77,6 +77,8 @@ export const products = mysqlTable("products", {
   imageUrl: text("imageUrl"),
   images: text("images"), // JSON array of image URLs
   specifications: text("specifications"), // JSON object for specs
+  specDetails: text("specDetails"), // Markdown for spec details tab
+  shippingDetails: text("shippingDetails"), // Markdown for shipping details tab
   stock: int("stock").default(0).notNull(),
   isActive: boolean("isActive").default(true).notNull(),
   isFeatured: boolean("isFeatured").default(false).notNull(),
@@ -372,3 +374,15 @@ export const sopPermissions = mysqlTable("sop_permissions", {
 });
 export type SopPermission = typeof sopPermissions.$inferSelect;
 export type InsertSopPermission = typeof sopPermissions.$inferInsert;
+
+/**
+ * Store global settings (singleton row, id=1)
+ */
+export const storeSettings = mysqlTable("store_settings", {
+  id: int("id").autoincrement().primaryKey(),
+  baseShippingFee: int("baseShippingFee").default(100).notNull(),
+  freeShippingThreshold: int("freeShippingThreshold").default(1000).notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type StoreSettings = typeof storeSettings.$inferSelect;
+export type InsertStoreSettings = typeof storeSettings.$inferInsert;

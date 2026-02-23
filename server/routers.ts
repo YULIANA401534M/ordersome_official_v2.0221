@@ -217,6 +217,8 @@ export const appRouter = router({
         imageUrl: z.string().optional(),
         images: z.string().optional(),
         specifications: z.string().optional(),
+        specDetails: z.string().optional(),
+        shippingDetails: z.string().optional(),
         stock: z.number().optional(),
         isActive: z.boolean().optional(),
         isFeatured: z.boolean().optional(),
@@ -235,6 +237,8 @@ export const appRouter = router({
         imageUrl: z.string().optional(),
         images: z.string().optional(),
         specifications: z.string().optional(),
+        specDetails: z.string().optional(),
+        shippingDetails: z.string().optional(),
         stock: z.number().optional(),
         isActive: z.boolean().optional(),
         isFeatured: z.boolean().optional(),
@@ -619,6 +623,16 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         return await db.updateFranchiseInquiryNotes(input.id, input.notes);
       }),
+  }),
+  // Store Settings
+  storeSettings: router({
+    get: publicProcedure.query(() => db.getStoreSettings()),
+    update: adminProcedure
+      .input(z.object({
+        baseShippingFee: z.number().min(0).optional(),
+        freeShippingThreshold: z.number().min(0).optional(),
+      }))
+      .mutation(({ input }) => db.updateStoreSettings(input)),
   }),
   // Admin Dashboard
   admin: adminRouter,

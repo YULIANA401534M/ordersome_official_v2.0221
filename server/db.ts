@@ -11,7 +11,8 @@ import {
   news, InsertNews,
   menuItems, InsertMenuItem,
   contactSubmissions, InsertContactSubmission,
-  franchiseInquiries, InsertFranchiseInquiry
+  franchiseInquiries, InsertFranchiseInquiry,
+  storeSettings, StoreSettings
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -557,6 +558,20 @@ export async function updateFranchiseInquiryStatus(id: number, status: string) {
   await db.update(franchiseInquiries)
     .set({ status: status as any })
     .where(eq(franchiseInquiries.id, id));
+}
+
+// ============ STORE SETTINGS FUNCTIONS ============
+export async function getStoreSettings(): Promise<StoreSettings> {
+  const db = await getDb();
+  const defaultSettings: StoreSettings = { id: 1, baseShippingFee: 100, freeShippingThreshold: 1000, updatedAt: new Date() };
+  if (!db) return defaultSettings;
+  const rows = await db.select().from(storeSettings).where(eq(storeSettings.id, 1)).limit(1);
+  return rows.length > 0 ? rows[0] : defaultSettings;
+}
+export async function updateStoreSettings(data: { baseShippingFee?: number; freeShippingThreshold?: number }) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(storeSettings).set(data).where(eq(storeSettings.id, 1));
 }
 
 export async function updateFranchiseInquiryNotes(id: number, notes: string) {
