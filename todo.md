@@ -905,7 +905,8 @@
 - [x] 修復 TypeScript 類型錯誤（z.enum default、z.record 語法）
 - [x] 修復 vitest 測試（getStoreSettings mock）
 - [x] 所有 32 個測試通過，TypeScript 0 errors
-- [ ] 完成結帳表單驗證（電話、稅號正則表達式）
+- [x] 完成結帳表單驗證（電話、稅號正則表達式）
+- [x] Checkout.tsx 1-2-3 漏斗佈局重構（LINE/Google/一般會員登入按鈕、訪客联絡方式、即時防呆驗證）
 - [ ] 測試完整結帳流程（包含發票資料）
 - [ ] 測試 ECPay 金流與發票資料同步
 - [ ] 儲存 checkpoint
