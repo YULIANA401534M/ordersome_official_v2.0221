@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Menu, X, ShoppingCart, User, LayoutDashboard } from "lucide-react";
+import { Menu, X, ShoppingCart, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
+import UserMenu from "@/components/UserMenu";
 
 const navItems = [
   { href: "/brand", label: "首頁" },
@@ -102,13 +103,9 @@ export default function BrandHeader() {
               </Button>
             </Link>
 
-            {/* User */}
+            {/* User Menu or Login */}
             {isAuthenticated ? (
-              <Link href="/member/profile">
-                <Button variant="ghost" size="icon">
-                  <User className="h-5 w-5" />
-                </Button>
-              </Link>
+              <UserMenu />
             ) : (
               <Link href="/login">
                 <Button variant="ghost" size="sm">

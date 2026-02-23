@@ -34,6 +34,7 @@ import Checkout from "./pages/shop/Checkout";
 import OrderDetail from "./pages/shop/OrderDetail";
 import PaymentRedirect from "./pages/shop/PaymentRedirect";
 import OrderComplete from "./pages/shop/OrderComplete";
+import MyOrders from "./pages/shop/MyOrders";
 
 // Member Pages
 import MemberProfile from "./pages/member/MemberProfile";
@@ -129,6 +130,7 @@ function Router() {
       <Route path="/shop/order/:id" component={OrderDetail} />
       <Route path="/shop/payment/:orderNumber" component={PaymentRedirect} />
       <Route path="/shop/order-complete/:orderNumber" component={OrderComplete} />
+      <Route path="/shop/my-orders" component={MyOrders} />
       
       {/* Authentication Routes */}
       <Route path="/login" component={Login} />

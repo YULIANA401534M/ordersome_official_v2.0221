@@ -949,3 +949,20 @@
 - [x] 修正 redirect_uri 動態拼接（確保使用 VITE_APP_URL）
 - [x] 移除所有穷編碼的測試域名
 - [x] 輸出實際的 redirect_uri 字串供檢查
+
+## 用戶菜單與訂單頁面（2026-02-23）
+
+- [ ] 建立 UserMenu 下拉選單組件（顯示用戶名稱、頭像、登出按鈕）
+- [ ] 在 App.tsx Header 中整合 UserMenu
+- [ ] 新增「我的訂單」頁面（/shop/my-orders）
+- [ ] 連結 UserMenu 至「我的訂單」頁面
+- [ ] TypeScript 0 errors + 42 vitest 通過
+- [ ] 儲存 Checkpoint
+
+## 用戶菜單完成狀態（已完成）
+
+- [x] 建立 UserMenu 下拉選單組件（顯示用戶名稱、頭像、登出按鈕）
+- [x] 在 BrandHeader 中整合 UserMenu
+- [x] 新增「我的訂單」頁面（/shop/my-orders）
+- [x] 連結 UserMenu 至「我的訂單」頁面
+- [x] TypeScript 0 errors + 42 vitest 通過
