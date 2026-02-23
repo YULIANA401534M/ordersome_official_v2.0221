@@ -19,7 +19,10 @@ export default function Checkout() {
   const { user, isAuthenticated } = useAuth();
   const { items, clearCart } = useCartStore();
   const totalPrice = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const shippingFee = totalPrice >= 1000 ? 0 : 100;
+  const { data: storeSettings, isLoading: isSettingsLoading } = trpc.storeSettings.get.useQuery();
+  const baseShippingFee = storeSettings?.baseShippingFee ?? 100;
+  const freeShippingThreshold = storeSettings?.freeShippingThreshold ?? 1000;
+  const shippingFee = totalPrice >= freeShippingThreshold ? 0 : baseShippingFee;
   const grandTotal = totalPrice + shippingFee;
 
   const [formData, setFormData] = useState({
@@ -200,11 +203,18 @@ export default function Checkout() {
                       </div>
                       <div className="flex justify-between text-gray-600">
                         <span>運費</span>
-                        <span>{shippingFee === 0 ? "免運費" : `NT$ ${shippingFee}`}</span>
+                        <span>
+                          {isSettingsLoading
+                            ? <span className="text-gray-400 animate-pulse">計算中...</span>
+                            : shippingFee === 0 ? "免運費" : `NT$ ${shippingFee}`}
+                        </span>
                       </div>
+                      {!isSettingsLoading && totalPrice < freeShippingThreshold && (
+                        <p className="text-xs text-gray-400">滿 NT$ {freeShippingThreshold.toLocaleString()} 免運費</p>
+                      )}
                       <div className="flex justify-between text-lg font-bold text-gray-900 pt-2 border-t">
                         <span>總計</span>
-                        <span>NT$ {grandTotal}</span>
+                        <span>{isSettingsLoading ? "—" : `NT$ ${grandTotal.toLocaleString()}`}</span>
                       </div>
                     </div>
                     <Button type="submit" className="w-full bg-amber-600 hover:bg-amber-700 mt-6" size="lg" disabled={isSubmitting}>
