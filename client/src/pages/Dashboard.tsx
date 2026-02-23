@@ -26,6 +26,16 @@ const DASHBOARD_CARDS: DashboardCard[] = [
     roles: ["super_admin", "manager"],
   },
   {
+    id: "ecommerce-admin",
+    title: "商城後台管理",
+    description: "管理商品、訂單、分類",
+    icon: <Package className="h-8 w-8 text-white" />,
+    href: "/dashboard/admin/ecommerce",
+    gradient: "from-amber-500 to-amber-700",
+    iconBg: "bg-white/20",
+    roles: ["super_admin", "manager"],
+  },
+  {
     id: "franchise",
     title: "加盟專區",
     description: "營收報表、原物料訂貨",

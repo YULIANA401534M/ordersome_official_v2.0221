@@ -8,9 +8,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Package, ArrowLeft, Eye, Truck } from "lucide-react";
+import { Search, Package, Eye, Truck } from "lucide-react";
 import { Link } from "wouter";
 import { toast } from "sonner";
+import AdminDashboardLayout from "@/components/AdminDashboardLayout";
 
 const statusMap: Record<string, { label: string; color: string }> = {
   pending: { label: "待處理", color: "bg-yellow-50 text-yellow-700 border-yellow-200" },
@@ -65,14 +66,8 @@ export default function AdminOrders() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-gray-900 text-white py-4">
-        <div className="container flex items-center gap-4">
-          <Link href="/admin"><Button variant="ghost" size="sm" className="text-white hover:bg-white/10"><ArrowLeft className="h-4 w-4 mr-2" /> 返回</Button></Link>
-          <h1 className="text-xl font-bold">訂單管理</h1>
-        </div>
-      </div>
-      <div className="container py-8">
+    <AdminDashboardLayout>
+      <div className="space-y-6">
         <Card>
           <CardHeader>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -132,8 +127,7 @@ export default function AdminOrders() {
             ) : (<div className="text-center py-8 text-gray-500"><Truck className="h-12 w-12 mx-auto mb-4 text-gray-300" /><p>尚無訂單資料</p></div>)}
           </CardContent>
         </Card>
-      </div>
-      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+        <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>訂單詳情</DialogTitle></DialogHeader>
           {selectedOrder && (
@@ -150,7 +144,8 @@ export default function AdminOrders() {
             </div>
           )}
         </DialogContent>
-      </Dialog>
-    </div>
+        </Dialog>
+      </div>
+    </AdminDashboardLayout>
   );
 }

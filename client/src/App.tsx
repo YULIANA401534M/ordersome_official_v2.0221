@@ -145,11 +145,10 @@ function Router() {
       <Route path="/dashboard/franchise" component={FranchiseDashboard} />
       
       {/* Admin Routes */}
-      <Route path="/admin" component={AdminDashboard} />
-      <Route path="/admin/products" component={AdminProducts} />
-      <Route path="/dashboard/products" component={AdminProducts} />
-      <Route path="/admin/orders" component={AdminOrders} />
-      <Route path="/admin/categories" component={AdminCategories} />
+      <Route path="/dashboard/admin/ecommerce" component={AdminDashboard} />
+      <Route path="/dashboard/admin/products" component={AdminProducts} />
+      <Route path="/dashboard/admin/orders" component={AdminOrders} />
+      <Route path="/dashboard/admin/categories" component={AdminCategories} />
       <Route path="/dashboard/admin/users" component={AdminUsers} />
       <Route path="/dashboard/admin/permissions" component={AdminPermissions} />
       <Route path="/dashboard/admin/sop-permissions" component={AdminSopPermissions} />

@@ -10,9 +10,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Pencil, Trash2, Layers, ArrowLeft } from "lucide-react";
+import { Plus, Pencil, Trash2, Layers } from "lucide-react";
 import { Link } from "wouter";
 import { toast } from "sonner";
+import AdminDashboardLayout from "@/components/AdminDashboardLayout";
 
 export default function AdminCategories() {
   const { user, isAuthenticated } = useAuth();
@@ -54,16 +55,18 @@ export default function AdminCategories() {
   const handleUpdate = () => { if (!editingCategory) return; updateMutation.mutate({ id: editingCategory.id, ...formData }); };
   const handleDelete = (id: number) => { if (confirm("確定要刪除此分類嗎？")) { deleteMutation.mutate({ id }); } };
 
-  if (!isAuthenticated || user?.role !== "super_admin" && user?.role !== "manager") {
+  if (!isAuthenticated || (user?.role !== "super_admin" && user?.role !== "manager")) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Card className="w-full max-w-md"><CardContent className="p-8 text-center">
-          <Layers className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-          <h2 className="text-2xl font-bold mb-2">需要管理員權限</h2>
-          <p className="text-gray-500 mb-4">請使用管理員帳號登入</p>
-          <Link href="/"><Button variant="outline">返回首頁</Button></Link>
-        </CardContent></Card>
-      </div>
+      <AdminDashboardLayout>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <Card className="w-full max-w-md"><CardContent className="p-8 text-center">
+            <Layers className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+            <h2 className="text-2xl font-bold mb-2">需要管理員權限</h2>
+            <p className="text-gray-500 mb-4">請使用管理員帳號登入</p>
+            <Link href="/"><Button variant="outline">返回首頁</Button></Link>
+          </CardContent></Card>
+        </div>
+      </AdminDashboardLayout>
     );
   }
 
@@ -81,14 +84,12 @@ export default function AdminCategories() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-gray-900 text-white py-4">
-        <div className="container flex items-center gap-4">
-          <Link href="/admin"><Button variant="ghost" size="sm" className="text-white hover:bg-white/10"><ArrowLeft className="h-4 w-4 mr-2" /> 返回</Button></Link>
-          <h1 className="text-xl font-bold">分類管理</h1>
+    <AdminDashboardLayout>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">分類管理</h1>
+          <p className="text-gray-600 mt-2">管理商品分類</p>
         </div>
-      </div>
-      <div className="container py-8">
         <Card>
           <CardHeader>
             <div className="flex justify-between items-center">
@@ -117,8 +118,8 @@ export default function AdminCategories() {
             ) : (<div className="text-center py-8 text-gray-500"><Layers className="h-12 w-12 mx-auto mb-4 text-gray-300" /><p>尚無分類資料</p></div>)}
           </CardContent>
         </Card>
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}><DialogContent><DialogHeader><DialogTitle>編輯分類</DialogTitle></DialogHeader><CategoryForm onSubmit={handleUpdate} submitText="儲存變更" /></DialogContent></Dialog>
       </div>
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}><DialogContent><DialogHeader><DialogTitle>編輯分類</DialogTitle></DialogHeader><CategoryForm onSubmit={handleUpdate} submitText="儲存變更" /></DialogContent></Dialog>
-    </div>
+    </AdminDashboardLayout>
   );
 }

@@ -169,8 +169,10 @@ function AdminDashboardLayoutContent({
     { icon: BookOpen, label: "SOP 存取權限", path: "/dashboard/admin/sop-permissions", requiredPermission: "manage_users" },
     { icon: FileText, label: "內容管理", path: "/dashboard/content", requiredPermission: "publish_content" },
     { icon: Handshake, label: "加盟諮詢", path: "/dashboard/franchise-inquiries", requiredPermission: "manage_franchise" },
-    { icon: Package, label: "商品管理", path: "/dashboard/products", requiredPermission: "manage_products" },
-    { icon: ShoppingCart, label: "訂單管理", path: "/admin/orders", requiredPermission: "manage_products" },
+    { icon: Package, label: "商品管理", path: "/dashboard/admin/products", requiredPermission: "manage_products" },
+    { icon: BarChart3, label: "商城總覽", path: "/dashboard/admin/ecommerce", requiredPermission: "manage_products" },
+    { icon: Handshake, label: "分類管理", path: "/dashboard/admin/categories", requiredPermission: "manage_products" },
+    { icon: ShoppingCart, label: "訂單管理", path: "/dashboard/admin/orders", requiredPermission: "manage_products" },
     { icon: BarChart3, label: "流量分析", path: "/dashboard/admin/analytics", requiredPermission: "view_finance" },
   ];
 
