@@ -139,9 +139,9 @@ export function registerOAuthRoutes(app: Express) {
     const { ENV } = await import("./env");
     if (!ENV.lineClientId) { res.redirect(302, "/login?error=line_not_configured"); return; }
     const redirect = getQueryParam(req, "redirect") ?? "";
-    const proto = req.headers["x-forwarded-proto"] ?? req.protocol;
-    const host = req.headers["x-forwarded-host"] ?? req.headers.host;
-    const callbackUrl = `${proto}://${host}/api/oauth/line/callback`;
+    // Use VITE_APP_URL for production reliability (avoid x-forwarded-* headers)
+    const baseUrl = ENV.appUrl || `${req.headers["x-forwarded-proto"] ?? req.protocol}://${req.headers["x-forwarded-host"] ?? req.headers.host}`;
+    const callbackUrl = `${baseUrl.replace(/\/$/, "")}/api/oauth/line/callback`;
     // Encode redirect path into state so callback can restore it
     const statePayload = redirect.startsWith("/") ? redirect : "/shop";
     const state = Buffer.from(statePayload).toString("base64");
@@ -159,9 +159,9 @@ export function registerOAuthRoutes(app: Express) {
     const { ENV } = await import("./env");
     if (!ENV.googleClientId) { res.redirect(302, "/login?error=google_not_configured"); return; }
     const redirect = getQueryParam(req, "redirect") ?? "";
-    const proto = req.headers["x-forwarded-proto"] ?? req.protocol;
-    const host = req.headers["x-forwarded-host"] ?? req.headers.host;
-    const callbackUrl = `${proto}://${host}/api/oauth/google/callback`;
+    // Use VITE_APP_URL for production reliability (avoid x-forwarded-* headers)
+    const baseUrl = ENV.appUrl || `${req.headers["x-forwarded-proto"] ?? req.protocol}://${req.headers["x-forwarded-host"] ?? req.headers.host}`;
+    const callbackUrl = `${baseUrl.replace(/\/$/, "")}/api/oauth/google/callback`;
     const statePayload = redirect.startsWith("/") ? redirect : "/shop";
     const state = Buffer.from(statePayload).toString("base64");
     const googleAuthUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");

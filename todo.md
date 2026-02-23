@@ -941,3 +941,11 @@
 - [ ] 在 LINE Developers Console 加入正式網域 Callback URL
 - [ ] 在 Google Cloud Console 加入正式網域 Redirect URI
 - [ ] 設定自訂網域 ordersome.com.tw 綁定
+
+## OAuth redirect_uri 正式環境修正（2026-02-23）
+
+- [x] 檢查環境變數 VITE_APP_URL 與 NODE_ENV 設定
+- [x] 實查 oauth.ts 中 LINE/Google redirect_uri 的生成邏輯
+- [x] 修正 redirect_uri 動態拼接（確保使用 VITE_APP_URL）
+- [x] 移除所有穷編碼的測試域名
+- [x] 輸出實際的 redirect_uri 字串供檢查
