@@ -31,7 +31,9 @@ import {
   BarChart3,
   Home,
   Handshake,
-  BookOpen
+  BookOpen,
+  Package,
+  ShoppingCart
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -167,6 +169,8 @@ function AdminDashboardLayoutContent({
     { icon: BookOpen, label: "SOP 存取權限", path: "/dashboard/admin/sop-permissions", requiredPermission: "manage_users" },
     { icon: FileText, label: "內容管理", path: "/dashboard/content", requiredPermission: "publish_content" },
     { icon: Handshake, label: "加盟諮詢", path: "/dashboard/franchise-inquiries", requiredPermission: "manage_franchise" },
+    { icon: Package, label: "商品管理", path: "/dashboard/products", requiredPermission: "manage_products" },
+    { icon: ShoppingCart, label: "訂單管理", path: "/admin/orders", requiredPermission: "manage_products" },
     { icon: BarChart3, label: "流量分析", path: "/dashboard/admin/analytics", requiredPermission: "view_finance" },
   ];
 
