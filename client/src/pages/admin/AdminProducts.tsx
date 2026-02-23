@@ -15,6 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { Plus, Pencil, Trash2, Search, Package, ArrowLeft, X, ImagePlus, Loader2, GripVertical } from "lucide-react";
 import { Link } from "wouter";
 import { toast } from "sonner";
+import AdminDashboardLayout from "@/components/AdminDashboardLayout";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface SpecEntry { key: string; values: string }
@@ -235,27 +236,29 @@ export default function AdminProducts() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-gray-900 text-white py-4 sticky top-0 z-10">
-        <div className="container flex items-center gap-4">
-          <Link href="/admin"><Button variant="ghost" size="sm" className="text-white hover:bg-white/10"><ArrowLeft className="h-4 w-4 mr-2" />返回</Button></Link>
-          <h1 className="text-xl font-bold flex-1">商品管理</h1>
+    <AdminDashboardLayout>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">商品管理</h1>
+            <p className="text-gray-600 mt-2">管理線上u5546城商品</p>
+          </div>
           <Button onClick={openAdd} className="bg-amber-500 hover:bg-amber-600 text-white">
             <Plus className="h-4 w-4 mr-2" />新增商品
           </Button>
         </div>
-      </div>
 
-      <div className="container py-6">
+        <div className="bg-white rounded-xl border shadow-sm">
         {/* Search */}
+        <div className="p-4">
         <div className="relative mb-4 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input placeholder="搜尋商品名稱…" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
         </div>
+        </div>
 
         {/* Table */}
-        <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+        <div className="overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50">
@@ -462,6 +465,7 @@ export default function AdminProducts() {
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
-    </div>
+      </div>
+    </AdminDashboardLayout>
   );
 }
