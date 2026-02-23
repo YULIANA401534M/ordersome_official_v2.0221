@@ -47,14 +47,26 @@ export default function ProductDetail() {
     setSpecError(false);
   };
 
+  const cartItems = useCartStore((state) => state.items);
   const handleAddToCart = () => {
     if (!product) return;
     if (!allSpecsSelected) { setSpecError(true); return; }
+    const stock = product.stock ?? 99;
+    const specsKey = JSON.stringify(specKeys.length > 0 ? selectedSpecs : {});
+    const existingQty = cartItems.find(
+      (i) => i.id === product.id && JSON.stringify(i.selectedSpecs ?? {}) === specsKey
+    )?.quantity ?? 0;
+    if (existingQty + quantity > stock) {
+      setSpecError(false);
+      toast.error(`購物車內數量已達庫存上限（${stock} 件）`);
+      return;
+    }
     addToCart({
       id: product.id, name: product.name,
       price: parseFloat(product.price),
       imageUrl: images[0] ?? product.imageUrl,
       quantity,
+      stock,
       selectedSpecs: specKeys.length > 0 ? selectedSpecs : undefined,
     });
     toast.success("已加入購物車");
@@ -64,11 +76,21 @@ export default function ProductDetail() {
   const handleBuyNow = () => {
     if (!product) return;
     if (!allSpecsSelected) { setSpecError(true); return; }
+    const stock = product.stock ?? 99;
+    const specsKey = JSON.stringify(specKeys.length > 0 ? selectedSpecs : {});
+    const existingQty = cartItems.find(
+      (i) => i.id === product.id && JSON.stringify(i.selectedSpecs ?? {}) === specsKey
+    )?.quantity ?? 0;
+    if (existingQty + quantity > stock) {
+      toast.error(`購物車內數量已達庫存上限（${stock} 件）`);
+      return;
+    }
     addToCart({
       id: product.id, name: product.name,
       price: parseFloat(product.price),
       imageUrl: images[0] ?? product.imageUrl,
       quantity,
+      stock,
       selectedSpecs: specKeys.length > 0 ? selectedSpecs : undefined,
     });
     navigate("/shop/cart");

@@ -7,6 +7,7 @@ export interface CartItem {
   price: number;
   imageUrl?: string | null;
   quantity: number;
+  stock: number; // 商品庫存上限，用於防超賣驗證
   selectedSpecs?: Record<string, string>;
 }
 
@@ -33,16 +34,27 @@ export const useCartStore = create<CartStore>()(
             (i) => i.id === item.id && JSON.stringify(i.selectedSpecs ?? {}) === specsKey
           );
           if (existingItem) {
+            const newQty = Math.min(existingItem.quantity + item.quantity, item.stock);
             return {
               items: state.items.map((i) =>
                 i.id === item.id && JSON.stringify(i.selectedSpecs ?? {}) === specsKey
-                  ? { ...i, quantity: i.quantity + item.quantity }
+                  ? { ...i, quantity: newQty, stock: item.stock }
                   : i
               ),
             };
           }
-          return { items: [...state.items, item] };
+          // New item: clamp quantity to stock
+          return { items: [...state.items, { ...item, quantity: Math.min(item.quantity, item.stock) }] };
         });
+      },
+
+      // Returns the current quantity in cart for a given product+specs combination
+      getItemQuantity: (id: number, selectedSpecs?: Record<string, string>) => {
+        const specsKey = JSON.stringify(selectedSpecs ?? {});
+        const found = get().items.find(
+          (i) => i.id === id && JSON.stringify(i.selectedSpecs ?? {}) === specsKey
+        );
+        return found?.quantity ?? 0;
       },
       
       removeItem: (id) => {
@@ -58,7 +70,7 @@ export const useCartStore = create<CartStore>()(
         }
         set((state) => ({
           items: state.items.map((i) =>
-            i.id === id ? { ...i, quantity } : i
+            i.id === id ? { ...i, quantity: Math.min(quantity, i.stock) } : i
           ),
         }));
       },

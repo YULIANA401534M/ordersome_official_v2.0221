@@ -19,7 +19,7 @@ export default function ShopCategory() {
   const filteredProducts = products?.filter((p) => p.categoryId === category?.id);
 
   const handleAddToCart = (product: any) => {
-    addToCart({ id: product.id, name: product.name, price: parseFloat(product.price), imageUrl: product.imageUrl, quantity: 1 });
+    addToCart({ id: product.id, name: product.name, price: parseFloat(product.price), imageUrl: product.imageUrl, quantity: 1, stock: product.stock ?? 99 });
     toast.success("已加入購物車");
   };
 

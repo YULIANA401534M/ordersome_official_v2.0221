@@ -59,7 +59,14 @@ export default function Cart() {
                               <Minus className="h-4 w-4" />
                             </Button>
                             <span className="w-8 text-center font-medium">{item.quantity}</span>
-                            <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => updateQuantity(item.id, item.quantity + 1)}>
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              className="h-8 w-8"
+                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              disabled={item.quantity >= item.stock}
+                              title={item.quantity >= item.stock ? `已達庫存上限（${item.stock} 件）` : undefined}
+                            >
                               <Plus className="h-4 w-4" />
                             </Button>
                           </div>

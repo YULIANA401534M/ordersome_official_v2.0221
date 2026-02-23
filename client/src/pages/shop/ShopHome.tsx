@@ -27,6 +27,7 @@ export default function ShopHome() {
       price: parseFloat(product.price),
       imageUrl: product.imageUrl,
       quantity: 1,
+      stock: product.stock ?? 99,
     });
     toast.success(`已將 ${product.name} 加入購物車`);
   };
