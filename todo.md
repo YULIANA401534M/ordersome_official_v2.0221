@@ -932,4 +932,12 @@
 - [x] Login.tsx 新增 LINE 登入按鈕，Google 改用直連路由
 - [x] 確認 oauth.ts LINE/Google Callback 路由正確串接
 - [x] TypeScript 0 errors + 42 vitest 通過
-- [ ] 儲存 Checkpoint
+- [x] 儲存 Checkpoint
+
+## 正式部署與 LINE OAuth 修正（2026-02-23）
+
+- [ ] 更新 VITE_APP_URL 環境變數為 https://ordersome.com.tw
+- [ ] 儲存 Checkpoint 並發布到正式環境
+- [ ] 在 LINE Developers Console 加入正式網域 Callback URL
+- [ ] 在 Google Cloud Console 加入正式網域 Redirect URI
+- [ ] 設定自訂網域 ordersome.com.tw 綁定
