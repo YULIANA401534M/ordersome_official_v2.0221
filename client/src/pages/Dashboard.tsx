@@ -1,3 +1,4 @@
+import React from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Loader2, Shield, Store, Wrench, ShoppingCart, Package, User, LogOut, Home } from "lucide-react";

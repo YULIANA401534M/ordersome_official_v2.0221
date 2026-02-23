@@ -7,6 +7,7 @@ export interface CartItem {
   price: number;
   imageUrl?: string | null;
   quantity: number;
+  selectedSpecs?: Record<string, string>;
 }
 
 interface CartStore {
@@ -26,11 +27,15 @@ export const useCartStore = create<CartStore>()(
       
       addItem: (item) => {
         set((state) => {
-          const existingItem = state.items.find((i) => i.id === item.id);
+          // Items with different specs are treated as distinct cart entries
+          const specsKey = JSON.stringify(item.selectedSpecs ?? {});
+          const existingItem = state.items.find(
+            (i) => i.id === item.id && JSON.stringify(i.selectedSpecs ?? {}) === specsKey
+          );
           if (existingItem) {
             return {
               items: state.items.map((i) =>
-                i.id === item.id
+                i.id === item.id && JSON.stringify(i.selectedSpecs ?? {}) === specsKey
                   ? { ...i, quantity: i.quantity + item.quantity }
                   : i
               ),

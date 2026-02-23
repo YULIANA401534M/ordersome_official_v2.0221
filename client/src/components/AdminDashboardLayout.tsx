@@ -162,18 +162,18 @@ function AdminDashboardLayoutContent({
 
   // Build menu items based on user role and permissions
   const allMenuItems = [
-    { icon: LayoutDashboard, label: "u8fd4u56deu5100u8868u677f", path: "/dashboard", requiredPermission: null },
-    { icon: Home, label: "u8fd4u56deu9996u9801", path: "/corporate", requiredPermission: null },
-    { icon: BarChart3, label: "u5546u57ceu7e3du89bd", path: "/dashboard/admin/ecommerce", requiredPermission: "manage_products" },
-    { icon: Package, label: "u5546u54c1u7ba1u7406", path: "/dashboard/admin/products", requiredPermission: "manage_products" },
-    { icon: Handshake, label: "u5206u985eu7ba1u7406", path: "/dashboard/admin/categories", requiredPermission: "manage_products" },
-    { icon: ShoppingCart, label: "u8a02u55aeu7ba1u7406", path: "/dashboard/admin/orders", requiredPermission: "manage_products" },
-    { icon: Users, label: "u7528u6236u7ba1u7406", path: "/dashboard/admin/users", requiredPermission: "manage_users" },
-    { icon: Shield, label: "u6b0au9650u7ba1u7406", path: "/dashboard/admin/permissions", requiredPermission: "manage_users" },
-    { icon: BookOpen, label: "SOP u5b58u53d6u6b0au9650", path: "/dashboard/admin/sop-permissions", requiredPermission: "manage_users" },
-    { icon: FileText, label: "u5167u5bb9u7ba1u7406", path: "/dashboard/content", requiredPermission: "publish_content" },
-    { icon: Handshake, label: "u52a0u76dfu8aeeu8a62", path: "/dashboard/franchise-inquiries", requiredPermission: "manage_franchise" },
-    { icon: BarChart3, label: "u6d41u91cfu5206u6790", path: "/dashboard/admin/analytics", requiredPermission: "view_finance" },
+    { icon: LayoutDashboard, label: "返回儀表板", path: "/dashboard", requiredPermission: null },
+    { icon: Home, label: "返回首頁", path: "/corporate", requiredPermission: null },
+    { icon: BarChart3, label: "商城總覽", path: "/dashboard/admin/ecommerce", requiredPermission: "manage_products" },
+    { icon: Package, label: "商品管理", path: "/dashboard/admin/products", requiredPermission: "manage_products" },
+    { icon: Handshake, label: "分類管理", path: "/dashboard/admin/categories", requiredPermission: "manage_products" },
+    { icon: ShoppingCart, label: "訂單管理", path: "/dashboard/admin/orders", requiredPermission: "manage_products" },
+    { icon: Users, label: "用戶管理", path: "/dashboard/admin/users", requiredPermission: "manage_users" },
+    { icon: Shield, label: "權限管理", path: "/dashboard/admin/permissions", requiredPermission: "manage_users" },
+    { icon: BookOpen, label: "SOP 存取權限", path: "/dashboard/admin/sop-permissions", requiredPermission: "manage_users" },
+    { icon: FileText, label: "內容管理", path: "/dashboard/content", requiredPermission: "publish_content" },
+    { icon: Handshake, label: "加盟諮詢", path: "/dashboard/franchise-inquiries", requiredPermission: "manage_franchise" },
+    { icon: BarChart3, label: "流量分析", path: "/dashboard/admin/analytics", requiredPermission: "view_finance" },
   ];
 
   // Filter menu items based on user permissions

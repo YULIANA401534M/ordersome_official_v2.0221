@@ -59,7 +59,24 @@ async function startServer() {
         if (order) {
           await db.updateOrderPayment(order.orderNumber, 'paid', result.tradeNo);
           await db.updateOrderStatus(order.id, 'paid');
-          
+
+          // Deduct stock for each order item and auto-deactivate when depleted
+          const items = await db.getOrderItems(order.id);
+          for (const item of items) {
+            if (!item.productId) continue;
+            const product = await db.getProductById(item.productId);
+            if (!product) continue;
+            const currentStock = product.stock ?? 0;
+            const newStock = Math.max(0, currentStock - item.quantity);
+            await db.updateProduct(item.productId, {
+              stock: newStock,
+              ...(newStock <= 0 ? { isActive: false } : {}),
+            });
+            if (newStock <= 0) {
+              console.log(`[Stock] Product ${item.productId} (${product.name}) auto-deactivated (stock depleted)`);
+            }
+          }
+
           // Notify owner
           await notifyOwner({
             title: `訂單付款成功 - ${result.orderNumber}`,
