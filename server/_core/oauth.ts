@@ -134,6 +134,46 @@ export function registerOAuthRoutes(app: Express) {
     }
   });
 
+  // ─── LINE OAuth Start (initiates LINE login flow) ──────────────────────
+  app.get("/api/oauth/line/start", async (req: Request, res: Response) => {
+    const { ENV } = await import("./env");
+    if (!ENV.lineClientId) { res.redirect(302, "/login?error=line_not_configured"); return; }
+    const redirect = getQueryParam(req, "redirect") ?? "";
+    const proto = req.headers["x-forwarded-proto"] ?? req.protocol;
+    const host = req.headers["x-forwarded-host"] ?? req.headers.host;
+    const callbackUrl = `${proto}://${host}/api/oauth/line/callback`;
+    // Encode redirect path into state so callback can restore it
+    const statePayload = redirect.startsWith("/") ? redirect : "/shop";
+    const state = Buffer.from(statePayload).toString("base64");
+    const lineAuthUrl = new URL("https://access.line.me/oauth2/v2.1/authorize");
+    lineAuthUrl.searchParams.set("response_type", "code");
+    lineAuthUrl.searchParams.set("client_id", ENV.lineClientId);
+    lineAuthUrl.searchParams.set("redirect_uri", callbackUrl);
+    lineAuthUrl.searchParams.set("state", state);
+    lineAuthUrl.searchParams.set("scope", "profile openid");
+    res.redirect(302, lineAuthUrl.toString());
+  });
+
+  // ─── Google OAuth Start (initiates Google login flow) ─────────────────
+  app.get("/api/oauth/google/start", async (req: Request, res: Response) => {
+    const { ENV } = await import("./env");
+    if (!ENV.googleClientId) { res.redirect(302, "/login?error=google_not_configured"); return; }
+    const redirect = getQueryParam(req, "redirect") ?? "";
+    const proto = req.headers["x-forwarded-proto"] ?? req.protocol;
+    const host = req.headers["x-forwarded-host"] ?? req.headers.host;
+    const callbackUrl = `${proto}://${host}/api/oauth/google/callback`;
+    const statePayload = redirect.startsWith("/") ? redirect : "/shop";
+    const state = Buffer.from(statePayload).toString("base64");
+    const googleAuthUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+    googleAuthUrl.searchParams.set("response_type", "code");
+    googleAuthUrl.searchParams.set("client_id", ENV.googleClientId);
+    googleAuthUrl.searchParams.set("redirect_uri", callbackUrl);
+    googleAuthUrl.searchParams.set("state", state);
+    googleAuthUrl.searchParams.set("scope", "openid email profile");
+    googleAuthUrl.searchParams.set("access_type", "online");
+    res.redirect(302, googleAuthUrl.toString());
+  });
+
   // ─── LINE OAuth Direct Callback ────────────────────────────────────────
   app.get("/api/oauth/line/callback", async (req: Request, res: Response) => {
     const code = getQueryParam(req, "code");

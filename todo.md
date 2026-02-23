@@ -924,3 +924,12 @@
 - [x] Checkout.tsx useEffect 自動帶入用戶資料（OAuth 回跳後自動填充）
 - [x] oauth.rbac.test.ts 新增 10 個測試（RBAC 防禦、智慧路由、Provider 偵測）
 - [x] 所有 42 個 vitest 測試通過，TypeScript 0 errors
+
+## 啟用 LINE/Google OAuth 按鈕（2026-02-23）
+
+- [x] 移除 Checkout.tsx LINE/Google 按鈕的 disabled 狀態，接上正確 OAuth URL
+- [x] 新增 oauth.ts LINE/Google /start 路由（發起 OAuth 授權流程）
+- [x] Login.tsx 新增 LINE 登入按鈕，Google 改用直連路由
+- [x] 確認 oauth.ts LINE/Google Callback 路由正確串接
+- [x] TypeScript 0 errors + 42 vitest 通過
+- [ ] 儲存 Checkpoint
