@@ -18,6 +18,10 @@ vi.mock("./db", () => ({
       },
     },
   ]),
+  getStoreSettings: vi.fn().mockResolvedValue({
+    baseShippingFee: 100,
+    freeShippingThreshold: 1000,
+  }),
   createOrder: vi.fn().mockResolvedValue({
     id: 1,
     orderNumber: "ORD20260108001",
@@ -146,6 +150,7 @@ describe("order procedures", () => {
       recipientEmail: "test@example.com",
       shippingAddress: "台北市中正區忠孝東路一段1號",
       paymentMethod: "credit_card",
+      invoiceType: "personal",
       items: [
         {
           id: 1,

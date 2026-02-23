@@ -127,6 +127,9 @@ export const orders = mysqlTable("orders", {
   shippedAt: timestamp("shippedAt"),
   deliveredAt: timestamp("deliveredAt"),
   ecpayTradeNo: varchar("ecpayTradeNo", { length: 50 }),
+  invoiceType: mysqlEnum("invoiceType", ["personal", "company"]).default("personal").notNull(),
+  companyTaxId: varchar("companyTaxId", { length: 8 }),
+  companyName: varchar("companyName", { length: 200 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

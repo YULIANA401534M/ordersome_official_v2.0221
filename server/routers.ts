@@ -306,12 +306,16 @@ export const appRouter = router({
         shippingAddress: z.string(),
         note: z.string().optional(),
         paymentMethod: z.string(),
+        invoiceType: z.enum(['personal', 'company']).default('personal'),
+        companyTaxId: z.string().nullable().optional(),
+        companyName: z.string().nullable().optional(),
         items: z.array(z.object({
           id: z.number(),
           name: z.string(),
           price: z.number(),
           imageUrl: z.string().nullable().optional(),
           quantity: z.number(),
+          selectedSpecs: z.record(z.string(), z.string()).optional(),
         })),
       }))
       .mutation(async ({ ctx, input }) => {
@@ -347,6 +351,9 @@ export const appRouter = router({
           recipientEmail: input.recipientEmail,
           shippingAddress: input.shippingAddress,
           note: input.note,
+          invoiceType: input.invoiceType,
+          companyTaxId: input.companyTaxId,
+          companyName: input.companyName,
         });
 
         if (!order) {

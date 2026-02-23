@@ -894,3 +894,18 @@
 ### 技術品質
 - [x] TypeScript 編譯 0 errors（npx tsc --noEmit）
 - [x] 所有 32 個 vitest 測試通過
+
+## 結帳流程專業化升級（2026-02-23）
+
+### Phase 5：發票欄位整合（進行中）
+- [x] 資料庫 Migration：orders 表新增 invoiceType、companyTaxId、companyName 欄位
+- [x] order.create API input schema 新增發票欄位（invoiceType、companyTaxId、companyName）
+- [x] order.create 寫入發票欄位到資料庫
+- [x] Checkout.tsx 新增發票欄位到 createOrder 呼叫
+- [x] 修復 TypeScript 類型錯誤（z.enum default、z.record 語法）
+- [x] 修復 vitest 測試（getStoreSettings mock）
+- [x] 所有 32 個測試通過，TypeScript 0 errors
+- [ ] 完成結帳表單驗證（電話、稅號正則表達式）
+- [ ] 測試完整結帳流程（包含發票資料）
+- [ ] 測試 ECPay 金流與發票資料同步
+- [ ] 儲存 checkpoint
