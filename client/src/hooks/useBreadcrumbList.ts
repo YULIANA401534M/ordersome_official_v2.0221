@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
+import { injectSchema } from "./schemaUtils";
 
 const BASE_URL = "https://ordersome.com.tw";
 
@@ -51,15 +52,23 @@ export function useBreadcrumbList() {
         ];
       }
 
-      // 商品詳情頁（動態提取分類與商品名稱）
+      // 商品詳情頁
       const productMatch = path.match(/^\/shop\/product\/(.+)$/);
       if (productMatch) {
-        // 注：實際商品名稱需從 URL 參數或資料庫取得
-        // 這裡先用簡化版本，實際應用需整合 useParams 與 API
         return [
           { name: "首頁", item: BASE_URL },
           { name: "線上商城", item: `${BASE_URL}/shop` },
           { name: "商品", item: `${BASE_URL}/shop/product/${productMatch[1]}` },
+        ];
+      }
+
+      // 最新消息頁
+      const newsMatch = path.match(/^\/news\/(.+)$/);
+      if (newsMatch) {
+        return [
+          { name: "首頁", item: BASE_URL },
+          { name: "最新消息", item: `${BASE_URL}/news` },
+          { name: "文章", item: `${BASE_URL}/news/${newsMatch[1]}` },
         ];
       }
 
@@ -68,8 +77,6 @@ export function useBreadcrumbList() {
     };
 
     const breadcrumbs = getBreadcrumbs();
-
-    // 生成 BreadcrumbList Schema JSON-LD
     const schema = {
       "@context": "https://schema.org",
       "@type": "BreadcrumbList",
@@ -81,21 +88,7 @@ export function useBreadcrumbList() {
       })),
     };
 
-    // 更新或建立 BreadcrumbList script 標籤
-    let scriptTag = document.querySelector(
-      'script[type="application/ld+json"][data-breadcrumb]'
-    );
-    if (!scriptTag) {
-      scriptTag = document.createElement("script");
-      scriptTag.setAttribute("type", "application/ld+json");
-      scriptTag.setAttribute("data-breadcrumb", "true");
-      document.head.appendChild(scriptTag);
-    }
-    scriptTag.textContent = JSON.stringify(schema);
-
-    // 清理：組件卸載時保留 script（讓下一個頁面覆寫）
-    return () => {
-      // 保留 script 不移除
-    };
+    const cleanup = injectSchema("breadcrumb", schema);
+    return cleanup;
   }, [location]);
 }

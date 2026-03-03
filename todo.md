@@ -1004,3 +1004,17 @@
 - [x] 確保符合 Google Product Rich Results 規範
 - [x] TypeScript 0 errors + vitest 通過
 - [x] 儲存 Checkpoint
+
+## 全站 Schema 唯一性修復（2026-03-04）
+
+- [x] 排查 FAQPage Schema 重複注入的根本原因（Layout 層 vs Page 層）
+- [x] 審查所有 Schema Hook 的 data-* 選擇器與 cleanup 邏輯
+- [x] 修復 useBreadcrumbList（全站 App.tsx 層）
+- [x] 修復 useRestaurantSchema（BrandStores 頁面層）
+- [x] 修復 useProductSchema（ProductDetail 頁面層）
+- [x] 修復 useArticleSchema（NewsArticle 頁面層）
+- [x] 修復 BrandFranchise FAQPage Schema（頁面層）
+- [x] 修復 BrandHome Organization Schema（頁面層）
+- [x] 確保每個路由 head 中各類型 Schema 只存在單一實例
+- [x] TypeScript 0 errors + 42 vitest 通過
+- [x] 儲存 Checkpoint

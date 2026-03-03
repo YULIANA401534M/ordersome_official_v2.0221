@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import BrandLayout from "@/components/layout/BrandLayout";
 import { trpc } from "@/lib/trpc";
 import { useState, useEffect } from "react";
+import { injectSchema } from "@/hooks/schemaUtils";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { X } from "lucide-react";
 
@@ -45,11 +46,8 @@ export default function BrandMenu() {
         }
       ]
     };
-    const scriptEl = document.createElement("script");
-    scriptEl.type = "application/ld+json";
-    scriptEl.textContent = JSON.stringify(schema);
-    document.head.appendChild(scriptEl);
-    return () => scriptEl.remove();
+    const cleanup = injectSchema("menu", schema);
+    return cleanup;
   }, []);
 
 

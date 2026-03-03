@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { injectSchema } from "./schemaUtils";
 
 const BASE_URL = "https://ordersome.com.tw";
 
@@ -102,24 +103,7 @@ export function useProductSchema(product: ProductData | undefined | null) {
       schema["image"] = imageList;
     }
 
-    // 更新或建立 Product Schema script 標籤
-    let scriptTag = document.querySelector<HTMLScriptElement>(
-      'script[type="application/ld+json"][data-product-schema]'
-    );
-    if (!scriptTag) {
-      scriptTag = document.createElement("script");
-      scriptTag.setAttribute("type", "application/ld+json");
-      scriptTag.setAttribute("data-product-schema", "true");
-      document.head.appendChild(scriptTag);
-    }
-    scriptTag.textContent = JSON.stringify(schema);
-
-    // 離開頁面時移除（避免其他頁面殘留商品 Schema）
-    return () => {
-      const tag = document.querySelector(
-        'script[type="application/ld+json"][data-product-schema]'
-      );
-      if (tag) tag.remove();
-    };
+    const cleanup = injectSchema("product", schema);
+    return cleanup;
   }, [product]);
 }

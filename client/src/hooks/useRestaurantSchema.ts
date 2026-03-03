@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { injectSchema } from "./schemaUtils";
 
 const BASE_URL = "https://ordersome.com.tw";
 
@@ -148,20 +149,7 @@ export function useRestaurantSchema(stores: StoreData[] | undefined) {
       })),
     };
 
-    // 更新或建立 Restaurant Schema script 標籤
-    let scriptTag = document.querySelector(
-      'script[type="application/ld+json"][data-restaurant]'
-    );
-    if (!scriptTag) {
-      scriptTag = document.createElement("script");
-      scriptTag.setAttribute("type", "application/ld+json");
-      scriptTag.setAttribute("data-restaurant", "true");
-      document.head.appendChild(scriptTag);
-    }
-    scriptTag.textContent = JSON.stringify(schema);
-
-    return () => {
-      // 保留 script 不移除（讓下一個頁面覆寫）
-    };
+    const cleanup = injectSchema("restaurant", schema);
+    return cleanup;
   }, [stores]);
 }

@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { injectSchema } from "./schemaUtils";
 
 const BASE_URL = "https://ordersome.com.tw";
 const PUBLISHER_NAME = "宇聯國際文化餐飲有限公司";
@@ -58,21 +59,7 @@ export function useArticleSchema(props: ArticleSchemaProps) {
       },
     };
 
-    // 更新或建立 Article script 標籤
-    let scriptTag = document.querySelector(
-      'script[type="application/ld+json"][data-article]'
-    );
-    if (!scriptTag) {
-      scriptTag = document.createElement("script");
-      scriptTag.setAttribute("type", "application/ld+json");
-      scriptTag.setAttribute("data-article", "true");
-      document.head.appendChild(scriptTag);
-    }
-    scriptTag.textContent = JSON.stringify(schema);
-
-    // 清理：組件卸載時保留 script（讓下一個頁面覆寫）
-    return () => {
-      // 保留 script 不移除
-    };
+    const cleanup = injectSchema("article", schema);
+    return cleanup;
   }, [headline, description, datePublished, dateModified, author, image, url]);
 }

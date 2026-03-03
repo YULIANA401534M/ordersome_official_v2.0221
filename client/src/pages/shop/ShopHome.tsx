@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { injectSchema } from "@/hooks/schemaUtils";
 import { Link } from "wouter";
 import { ShoppingCart, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,11 +31,8 @@ export default function ShopHome() {
       "url": "https://ordersome.com.tw/shop",
       "itemListElement": []
     };
-    const scriptEl = document.createElement("script");
-    scriptEl.type = "application/ld+json";
-    scriptEl.textContent = JSON.stringify(itemListSchema);
-    document.head.appendChild(scriptEl);
-    return () => scriptEl.remove();
+    const cleanup = injectSchema("item-list", itemListSchema);
+    return cleanup;
   }, []);
 
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Building2, Utensils, Store, Calendar, Users } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
+import { injectSchema } from "@/hooks/schemaUtils";
 import LogoIntro from "@/components/LogoIntro";
 import CountUpNumber from "@/components/CountUpNumber";
 
@@ -39,11 +40,8 @@ export default function Home() {
         "https://www.facebook.com/ordersome"
       ]
     };
-    const scriptEl = document.createElement("script");
-    scriptEl.type = "application/ld+json";
-    scriptEl.textContent = JSON.stringify(schema);
-    document.head.appendChild(scriptEl);
-    return () => scriptEl.remove();
+    const cleanup = injectSchema("organization", schema);
+    return cleanup;
   }, []);
 
 

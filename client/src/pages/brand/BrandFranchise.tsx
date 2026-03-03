@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { injectSchema } from "@/hooks/schemaUtils";
 import { motion } from "framer-motion";
 import { 
   Utensils, 
@@ -183,12 +184,8 @@ export default function BrandFranchise() {
         }
       ]
     };
-    const scriptEl = document.createElement("script");
-    scriptEl.type = "application/ld+json";
-    scriptEl.setAttribute("data-faq", "true");
-    scriptEl.textContent = JSON.stringify(faqSchema);
-    document.head.appendChild(scriptEl);
-    return () => scriptEl.remove();
+    const cleanup = injectSchema("faq", faqSchema as Record<string, unknown>);
+    return cleanup;
   }, []);
 
   const [formData, setFormData] = useState({
