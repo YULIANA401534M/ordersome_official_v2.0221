@@ -5,6 +5,7 @@ import { useLocation, useRoute } from "wouter";
 import BrandHeader from "../components/layout/BrandHeader";
 import BrandFooter from "../components/layout/BrandFooter";
 import { Streamdown } from "streamdown";
+import { useArticleSchema } from "../hooks/useArticleSchema";
 
 // 計算閱讀時間（以 250 字/分鐘為基準）
 function calcReadingTime(content: string): number {
@@ -31,6 +32,17 @@ export default function NewsArticle() {
   const articleRef = useRef<HTMLDivElement>(null);
 
   const { data: post, isLoading, error } = trpc.content.getPostBySlug.useQuery({ slug });
+
+  // 注入 Article Schema（防止 hydration error）
+  useArticleSchema({
+    headline: post?.title || "",
+      description: post?.excerpt || post?.title,
+    datePublished: post?.publishedAt ? new Date(post.publishedAt).toISOString() : new Date().toISOString(),
+    dateModified: post?.updatedAt ? new Date(post.updatedAt).toISOString() : undefined,
+    author: "來點什麼",
+    image: post?.coverImage || undefined,
+    url: `https://ordersome.com.tw/news/${slug}`,
+  });
 
   // 閱讀進度條
   useEffect(() => {

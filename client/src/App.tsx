@@ -50,6 +50,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Analytics from "./components/Analytics";
 import { useCanonical } from "./hooks/useCanonical";
+import { useBreadcrumbList } from "./hooks/useBreadcrumbList";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -96,6 +97,9 @@ function Router() {
 
   // 全站動態 Canonical 標籤（移除 UTM 與分頁參數）
   useCanonical();
+
+  // 全站動態 BreadcrumbList Schema（哈一上每一个页面）
+  useBreadcrumbList();
 
   return (
     <>

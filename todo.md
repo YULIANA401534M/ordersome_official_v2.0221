@@ -974,3 +974,13 @@
 - [x] 整合 Canonical Hook 到 App.tsx
 - [x] TypeScript 0 errors + 42 vitest 通過
 - [x] 儲存 Checkpoint
+
+## BreadcrumbList 與 Article Schema（2026-03-04）
+
+- [x] 建立 useBreadcrumbList Hook（動態生成層級路徑）
+- [x] 在 App.tsx 整合 BreadcrumbList Hook（全站自動生效）
+- [x] 建立 useArticleSchema Hook（動態抓取資料庫內容）
+- [x] 在 NewsArticle.tsx 整合 Article Schema
+- [x] 確保無 React hydration error（使用 useEffect 僅客戶端執行）
+- [x] TypeScript 0 errors + 42 vitest 通過
+- [ ] 儲存 Checkpoint
