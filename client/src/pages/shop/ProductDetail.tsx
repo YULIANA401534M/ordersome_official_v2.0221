@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useProductSchema } from "@/hooks/useProductSchema";
 import { useParams, useLocation } from "wouter";
 import { Minus, Plus, ShoppingCart, Truck, Package, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,9 @@ export default function ProductDetail() {
     setSelectedSpecs((prev) => ({ ...prev, [key]: value }));
     setSpecError(false);
   };
+
+  // SEO: 動態注入 Product Schema JSON-LD
+  useProductSchema(product ?? null);
 
   const cartItems = useCartStore((state) => state.items);
   const handleAddToCart = () => {

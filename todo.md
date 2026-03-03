@@ -983,7 +983,7 @@
 - [x] 在 NewsArticle.tsx 整合 Article Schema
 - [x] 確保無 React hydration error（使用 useEffect 僅客戶端執行）
 - [x] TypeScript 0 errors + 42 vitest 通過
-- [ ] 儲存 Checkpoint
+- [x] 儲存 Checkpoint
 
 ## Restaurant Schema 與 FAQPage Schema 升級（2026-03-04）
 
@@ -994,3 +994,13 @@
 - [x] 確保符合 Google Rich Results 規範（使用 useEffect 僅客戶端執行）
 - [x] TypeScript 0 errors + 42 vitest 通過
 - [ ] 儲存 Checkpoint
+
+## Product Schema 商品結構化數據（2026-03-04）
+
+- [x] 讀取商品詳情頁結構與資料庫欄位（name, image, description, price, stock）
+- [x] 建立 useProductSchema Hook（動態生成 Product Schema JSON-LD）
+- [x] 整合 useProductSchema 到 /shop/product/:id 頁面
+- [x] 確保 availability 依庫存狀態動態輸出 InStock/OutOfStock
+- [x] 確保符合 Google Product Rich Results 規範
+- [x] TypeScript 0 errors + vitest 通過
+- [x] 儲存 Checkpoint
