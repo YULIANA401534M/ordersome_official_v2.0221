@@ -1,13 +1,57 @@
 import { Card, CardContent } from "@/components/ui/card";
 import BrandLayout from "@/components/layout/BrandLayout";
 import { trpc } from "@/lib/trpc";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { X } from "lucide-react";
 
 export default function BrandMenu() {
   const { data: menuItems, isLoading } = trpc.menu.list.useQuery();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    document.title = "來點什麼 完整菜單｜必吃韓式飯捲、台式蛋餅與特色鐵板麵";
+    document.querySelector('meta[name="description"]')?.setAttribute(
+      "content",
+      "查看來點什麼最新菜單！獨家韓式飯捲、酥脆台式蛋餅、經典鐵板麵，滿足您對台韓式早午餐的所有渴望。"
+    );
+    document.querySelector('meta[name="keywords"]')?.setAttribute(
+      "content",
+      "來點什麼菜單, 台中早餐菜單, 韓式飯捲, 台式蛋餅, 鐵板麵"
+    );
+
+    // Menu Schema
+    const schema = {
+      "@context": "https://schema.org",
+      "@type": "Menu",
+      "name": "來點什麼完整菜單",
+      "description": "台韓式早午餐菜單",
+      "url": "https://ordersome.com.tw/brand/menu",
+      "hasMenuSection": [
+        {
+          "@type": "MenuSection",
+          "name": "韓式飯捲",
+          "description": "獨家韓式飯捲系列"
+        },
+        {
+          "@type": "MenuSection",
+          "name": "台式蛋餅",
+          "description": "酥脆台式蛋餅系列"
+        },
+        {
+          "@type": "MenuSection",
+          "name": "鐵板麵",
+          "description": "經典鐵板麵系列"
+        }
+      ]
+    };
+    const scriptEl = document.createElement("script");
+    scriptEl.type = "application/ld+json";
+    scriptEl.textContent = JSON.stringify(schema);
+    document.head.appendChild(scriptEl);
+    return () => scriptEl.remove();
+  }, []);
+
 
   // Group menu items by category
   const groupedItems = menuItems?.reduce((acc, item) => {

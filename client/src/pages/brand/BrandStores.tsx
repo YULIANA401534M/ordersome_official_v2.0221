@@ -13,6 +13,50 @@ export default function BrandStores() {
   const storeCardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const mapReadyRef = useRef(false);
 
+  useEffect(() => {
+    document.title = "來點什麼 門市據點｜全台 15 間分店為您服務";
+    document.querySelector('meta[name="description"]')?.setAttribute(
+      "content",
+      "尋找距離您最近的來點什麼門市。我們在台中及全台設有據點，隨時提供美味的台韓式早午餐。"
+    );
+    document.querySelector('meta[name="keywords"]')?.setAttribute(
+      "content",
+      "來點什麼門市, 來點什麼分店, 台中早餐推薦, 附近早午餐"
+    );
+
+    // LocalBusiness Schema
+    const schema = {
+      "@context": "https://schema.org",
+      "@type": "LocalBusiness",
+      "name": "來點什麼 Ordersome",
+      "description": "台韓式早午餐品牌",
+      "url": "https://ordersome.com.tw/brand/stores",
+      "image": "https://ordersome.com.tw/logo.png",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "台中市",
+        "addressRegion": "台中市",
+        "addressCountry": "TW"
+      },
+      "areaServed": [
+        {
+          "@type": "City",
+          "name": "台中市"
+        },
+        {
+          "@type": "City",
+          "name": "南投縣"
+        }
+      ],
+      "priceRange": "$"
+    };
+    const scriptEl = document.createElement("script");
+    scriptEl.type = "application/ld+json";
+    scriptEl.textContent = JSON.stringify(schema);
+    document.head.appendChild(scriptEl);
+    return () => scriptEl.remove();
+  }, []);
+
   // 台中市中心座標
   const TAICHUNG_CENTER = { lat: 24.147, lng: 120.674 };
 

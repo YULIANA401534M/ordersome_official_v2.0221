@@ -2,12 +2,50 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Building2, Utensils, Store, Calendar, Users } from "lucide-react";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import LogoIntro from "@/components/LogoIntro";
 import CountUpNumber from "@/components/CountUpNumber";
 
 export default function Home() {
   const [showContent, setShowContent] = useState(false);
+
+  useEffect(() => {
+    document.title = "來點什麼 Ordersome｜台中早午餐加盟首選、高人氣台韓式早餐";
+    document.querySelector('meta[name="description"]')?.setAttribute(
+      "content",
+      "來點什麼 (Ordersome) 結合台灣經典與韓國風味，提供高利潤人氣美食。全台 15 間門市，大台中早午餐加盟、小資餐飲創業最佳推薦品牌。"
+    );
+    document.querySelector('meta[name="keywords"]')?.setAttribute(
+      "content",
+      "台中早午餐加盟, 早餐加盟, 台中美食, 台中韓式早午餐, 來點什麼, Ordersome"
+    );
+
+    // Organization Schema
+    const schema = {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "來點什麼 Ordersome",
+      "alternateName": "Ordersome",
+      "url": "https://ordersome.com.tw",
+      "logo": "https://ordersome.com.tw/logo.png",
+      "description": "台中台韓式早午餐品牌，提供韓式飯捲、台式蛋餅、鐵板麵等美味餐點",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "台中市",
+        "addressRegion": "台中市",
+        "addressCountry": "TW"
+      },
+      "sameAs": [
+        "https://www.facebook.com/ordersome"
+      ]
+    };
+    const scriptEl = document.createElement("script");
+    scriptEl.type = "application/ld+json";
+    scriptEl.textContent = JSON.stringify(schema);
+    document.head.appendChild(scriptEl);
+    return () => scriptEl.remove();
+  }, []);
+
 
   return (
     <>
