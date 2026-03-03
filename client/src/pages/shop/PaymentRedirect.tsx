@@ -5,6 +5,13 @@ import CorporateLayout from "@/components/layout/CorporateLayout";
 import { trpc } from "@/lib/trpc";
 
 export default function PaymentRedirect() {
+  useEffect(() => {
+    document.querySelector('meta[name="robots"]')?.setAttribute(
+      "content",
+      "noindex, nofollow"
+    );
+  }, []);
+
   const { orderNumber } = useParams<{ orderNumber: string }>();
   const formRef = useRef<HTMLFormElement>(null);
   const { data: paymentData, isLoading, error } = trpc.payment.getPaymentForm.useQuery(

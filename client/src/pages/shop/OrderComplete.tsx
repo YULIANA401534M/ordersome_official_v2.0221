@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -5,6 +6,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, XCircle, Package, ArrowRight, Home } from "lucide-react";
 
 export default function OrderComplete() {
+  useEffect(() => {
+    document.querySelector('meta[name="robots"]')?.setAttribute(
+      "content",
+      "noindex, nofollow"
+    );
+  }, []);
+
   const { orderNumber } = useParams<{ orderNumber: string }>();
   const [, navigate] = useLocation();
 

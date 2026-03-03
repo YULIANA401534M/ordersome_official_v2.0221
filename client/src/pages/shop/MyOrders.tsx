@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Link } from "wouter";
@@ -7,6 +8,13 @@ import { ArrowLeft, ShoppingBag } from "lucide-react";
 import BrandLayout from "@/components/layout/BrandLayout";
 
 export default function MyOrders() {
+  useEffect(() => {
+    document.querySelector('meta[name="robots"]')?.setAttribute(
+      "content",
+      "noindex, nofollow"
+    );
+  }, []);
+
   const { user, isAuthenticated } = useAuth();
   const { data: orders, isLoading } = trpc.order.list.useQuery(undefined, {
     enabled: isAuthenticated,

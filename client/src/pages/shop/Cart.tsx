@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link } from "wouter";
 import { Trash2, Plus, Minus, ArrowLeft, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,13 @@ import { useCartStore } from "@/stores/cartStore";
 import { trpc } from "@/lib/trpc";
 
 export default function Cart() {
+  useEffect(() => {
+    document.querySelector('meta[name="robots"]')?.setAttribute(
+      "content",
+      "noindex, nofollow"
+    );
+  }, []);
+
   const { items, removeItem, updateQuantity, clearCart } = useCartStore();
   const { data: storeSettings } = trpc.storeSettings.get.useQuery();
   const baseShippingFee = storeSettings?.baseShippingFee ?? 100;

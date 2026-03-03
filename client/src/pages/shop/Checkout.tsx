@@ -55,6 +55,13 @@ function StepHeader({ num, icon: Icon, title }: { num: number; icon: React.Eleme
 
 // ─── 主組件 ──────────────────────────────────────────────────
 export default function Checkout() {
+  useEffect(() => {
+    document.querySelector('meta[name="robots"]')?.setAttribute(
+      "content",
+      "noindex, nofollow"
+    );
+  }, []);
+
   const [, navigate] = useLocation();
   const { user, isAuthenticated } = useAuth();
   const { items, clearCart } = useCartStore();

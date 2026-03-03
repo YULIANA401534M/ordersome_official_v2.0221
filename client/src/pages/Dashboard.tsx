@@ -1,4 +1,5 @@
 import React from "react";
+import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Loader2, Shield, Store, Wrench, ShoppingCart, Package, User, LogOut, Home } from "lucide-react";
@@ -100,6 +101,13 @@ function getRoleLabel(role: string | null | undefined): string {
 }
 
 export default function Dashboard() {
+  useEffect(() => {
+    document.querySelector('meta[name="robots"]')?.setAttribute(
+      "content",
+      "noindex, nofollow"
+    );
+  }, []);
+
   const { user, loading, isAuthenticated, logout } = useAuth();
   const [, navigate] = useLocation();
 
