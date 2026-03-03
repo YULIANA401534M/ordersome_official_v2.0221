@@ -1,4 +1,21 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://ordersome.manus.space/sitemap.xml
+# 後台管理系統（所有子路由）
+Disallow: /dashboard/
+
+# 購物流程頁面（不需索引）
+Disallow: /shop/cart
+Disallow: /shop/checkout
+Disallow: /shop/payment/
+Disallow: /shop/order-complete/
+
+# 會員專屬頁面
+Disallow: /shop/my-orders
+Disallow: /profile/
+Disallow: /login
+
+# 管理 API
+Disallow: /api/
+
+Sitemap: https://ordersome.com.tw/sitemap.xml

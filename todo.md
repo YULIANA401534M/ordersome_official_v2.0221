@@ -966,3 +966,11 @@
 - [x] 新增「我的訂單」頁面（/shop/my-orders）
 - [x] 連結 UserMenu 至「我的訂單」頁面
 - [x] TypeScript 0 errors + 42 vitest 通過
+
+## robots.txt 與 Canonical 標籤（2026-03-04）
+
+- [x] 更新 robots.txt 新增 Disallow 規則（/dashboard/, /shop/cart, /shop/checkout, /shop/my-orders, /shop/payment, /shop/order-complete）
+- [x] 建立全站動態 Canonical Hook（移除 UTM 與分頁 query string）
+- [x] 整合 Canonical Hook 到 App.tsx
+- [x] TypeScript 0 errors + 42 vitest 通過
+- [ ] 儲存 Checkpoint

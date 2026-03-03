@@ -49,6 +49,7 @@ import { MarketingTrap } from "./components/MarketingTrap";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Analytics from "./components/Analytics";
+import { useCanonical } from "./hooks/useCanonical";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -92,6 +93,9 @@ function Router() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [location]);
+
+  // 全站動態 Canonical 標籤（移除 UTM 與分頁參數）
+  useCanonical();
 
   return (
     <>
