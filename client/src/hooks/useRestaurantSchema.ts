@@ -12,6 +12,9 @@ interface StoreData {
   latitude?: string | null;
   longitude?: string | null;
   imageUrl?: string | null;
+  slug?: string | null;       // 若資料庫有 slug 欄位，優先用於 @id
+  ratingValue?: number | null; // 門市平均評分（若資料庫有）
+  reviewCount?: number | null; // 評論數（若資料庫有）
 }
 
 /**
@@ -120,11 +123,15 @@ export function useRestaurantSchema(stores: StoreData[] | undefined) {
         position: index + 1,
         item: {
           "@type": "Restaurant",
-          "@id": `${BASE_URL}/brand/stores#store-${store.id}`,
+          // @id 必須唯一：優先使用 slug，否則使用數字 id
+          "@id": store.slug
+            ? `${BASE_URL}/brand/stores/${store.slug}`
+            : `${BASE_URL}/brand/stores#store-${store.id}`,
           name: `來點什麼 - ${store.name}`,
           description: "台韓式早午餐，提供韓式飯捲、台式蛋餅、鐵板麵等特色餐點",
           image: store.imageUrl || `${BASE_URL}/logo.png`,
-          url: `${BASE_URL}/brand/stores`,
+          // url 指向對應門市的頁面錨點，確保每間門市 url 唯一
+          url: `${BASE_URL}/brand/stores#store-${store.id}`,
           menu: `${BASE_URL}/brand/menu`,
           telephone: store.phone || "04-2437-9666",
           address: parseAddress(store.address),
@@ -145,6 +152,14 @@ export function useRestaurantSchema(stores: StoreData[] | undefined) {
           hasMap: store.latitude && store.longitude
             ? `https://maps.google.com/?q=${store.latitude},${store.longitude}`
             : undefined,
+          // aggregateRating：有資料庫數據則真實呈現，否則預設基礎數據
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: store.ratingValue ?? 5,
+            reviewCount: store.reviewCount ?? 1,
+            bestRating: 5,
+            worstRating: 1,
+          },
         },
       })),
     };

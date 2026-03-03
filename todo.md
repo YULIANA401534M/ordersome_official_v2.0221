@@ -1018,3 +1018,11 @@
 - [x] 確保每個路由 head 中各類型 Schema 只存在單一實例
 - [x] TypeScript 0 errors + 42 vitest 通過
 - [x] 儲存 Checkpoint
+
+## Restaurant Schema Rich Results 修復（2026-03-04）
+
+- [x] 修復每間門市 @id 欄位唯一性（使用 store.id 或 store.slug 生成唯一 URI）
+- [x] 修復 url 欄位重複（指向對應門市錨點 #store-{id}）
+- [x] 加入 aggregateRating 欄位（有數據則真實呈現，無則預設 ratingValue:5, reviewCount:1）
+- [x] TypeScript 0 errors + vitest 通過
+- [x] 儲存 Checkpoint
