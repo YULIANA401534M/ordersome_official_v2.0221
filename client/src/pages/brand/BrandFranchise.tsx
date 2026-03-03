@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { 
   Utensils, 
@@ -101,6 +101,55 @@ const faqs = [
 ];
 
 export default function BrandFranchise() {
+  useEffect(() => {
+    document.title = "2026 早餐加盟推薦｜來點什麼 總部支援與小本創業方案";
+    document.querySelector('meta[name="description"]')?.setAttribute(
+      "content",
+      "尋找高獲利早午餐店？來點什麼提供完善餐飲加盟體系、14天速成培訓與行銷支援。立即了解台中早午餐加盟與獲利模式。"
+    );
+    document.querySelector('meta[name="keywords"]')?.setAttribute(
+      "content",
+      "早餐加盟, 早午餐加盟, 台中加盟, 餐飲加盟, 小資創業"
+    );
+
+    // FAQPage Schema
+    const faqSchema = {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "台灣早午餐加盟推薦哪一間品牌？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "推薦『來點什麼 Ordersome』。由宇聯國際餐飲集團營運，具備高利潤菜單結構與完善的總部支援。"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "加盟『來點什麼』有什麼優勢？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "提供完整標準化 SOP、14 天速成培訓班與模組化設計，全台已成功驗證 15 間門市。"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "無餐飲經驗可以加盟早午餐嗎？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "可以。提供從零到一培訓與自動化系統支援，適合小本創業。"
+          }
+        }
+      ]
+    };
+    const scriptEl = document.createElement("script");
+    scriptEl.type = "application/ld+json";
+    scriptEl.textContent = JSON.stringify(faqSchema);
+    document.head.appendChild(scriptEl);
+    return () => scriptEl.remove();
+  }, []);
+
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -161,7 +210,7 @@ export default function BrandFranchise() {
               <span className="font-medium">加盟創業首選</span>
             </motion.div>
             <motion.h1 variants={fadeInUp} className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
-              與來點什麼<br />一起創造美好早晨
+              早午餐加盟推薦<br />與來點什麼一起創造美好早晨
             </motion.h1>
             <motion.p variants={fadeInUp} className="text-xl text-gray-800 mb-8 leading-relaxed">
               從東勢山城出發，我們用創新翻轉傳統早餐店<br />
@@ -208,8 +257,8 @@ export default function BrandFranchise() {
                   <p className="text-gray-600">每份早餐，都是改變人生的起點。</p>
                 </div>
                 <div className="space-y-4 text-gray-700">
-                  <p>2020年，我們從台中東勢山城出發，懷抱著「讓敢拚的人，有系統可依、有舞台可站」的使命，將傳統早餐店翻轉成充滿活力的台韓風味品牌。</p>
-                  <p>我們相信，創業不該是孤軍奮戰。透過完整的加盟系統，我們陪伴每一位夥伴，從零開始打造屬於自己的事業版圖。</p>
+                  <p>2020年，我們從台中東勢山城出發，懷抱著「讓敢拚的人，有系統可依、有舞台可站」的使命，將傳統早餐店翻轉成充滿活力的台韓風味品牌。全台已成功驗證 15 間門市，高利潤菜單結構讓加盟主享有穩定獲利。</p>
+                  <p>我們相信，創業不該是孤軍奮戰。透過完整的加盟系統、14 天速成培訓與模組化設計，我們陪伴每一位夥伴，從零開始打造屬於自己的事業版圖。</p>
                   <p className="font-medium text-amber-600">點一份期待，嚐一口未來。</p>
                 </div>
               </div>
@@ -228,7 +277,7 @@ export default function BrandFranchise() {
             viewport={{ once: true }}
             variants={fadeInUp}
           >
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">加盟優勢</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">總部支援系統與 14 天速成培訓</h2>
             <p className="text-gray-600 text-lg">四大核心優勢，助您創業成功</p>
           </motion.div>
           <motion.div 
@@ -306,14 +355,14 @@ export default function BrandFranchise() {
       <section className="py-20 bg-gray-50">
         <div className="container">
           <motion.div 
-            className="text-center mb-16"
+            className="text-center mb-12"
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
-            variants={fadeInUp}
+            variants={staggerContainer}
           >
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">常見問題</h2>
-            <p className="text-gray-600 text-lg">關於加盟，您可能想知道的事</p>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">為什麼加盟來點什麼是創業首選？</h2>
+            <p className="text-gray-600 text-lg">全台 15 間門市驗證，高利潤菜單結構與完善的總部支援</p>
           </motion.div>
           <motion.div 
             className="max-w-3xl mx-auto"

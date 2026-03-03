@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { ShoppingCart, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,33 @@ import { useCartStore } from "@/stores/cartStore";
 import { toast } from "sonner";
 
 export default function ShopHome() {
+  useEffect(() => {
+    document.title = "來點什麼 線上商城｜獨家特製辣椒醬、人氣周邊商品室配";
+    document.querySelector('meta[name="description"]')?.setAttribute(
+      "content",
+      "來點什麼官方商城。在家也能享受獨門風味！立即選購招版特製辣椒醬、品牌周邊，全台快速室配到府。"
+    );
+    document.querySelector('meta[name="keywords"]')?.setAttribute(
+      "content",
+      "來點什麼辣椒醬, 特製辣椒醬, 團購美食, 室配美食, 早午餐周邊"
+    );
+
+    // ItemList Schema
+    const itemListSchema = {
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      "name": "來點什麼線上商城商品",
+      "description": "來點什麼特製辣椒醬、品牌周邊及美食團購",
+      "url": "https://ordersome.com.tw/shop",
+      "itemListElement": []
+    };
+    const scriptEl = document.createElement("script");
+    scriptEl.type = "application/ld+json";
+    scriptEl.textContent = JSON.stringify(itemListSchema);
+    document.head.appendChild(scriptEl);
+    return () => scriptEl.remove();
+  }, []);
+
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const { data: categories } = trpc.category.list.useQuery();
   const { data: products, isLoading } = trpc.product.list.useQuery();
@@ -40,8 +67,8 @@ export default function ShopHome() {
         <div className="container">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <h1 className="text-3xl md:text-4xl font-bold mb-2">線上商城</h1>
-              <p className="text-gray-300">精選商品，品質保證</p>
+              <h1 className="text-3xl md:text-4xl font-bold mb-2">來點什麼 線上商城</h1>
+              <p className="text-gray-300">獨家特製辣椒醬、人氣周邊商品室配到府</p>
             </div>
             <Link href="/shop/cart">
               <Button variant="outline" className="border-white text-white hover:bg-white/10 gap-2">
