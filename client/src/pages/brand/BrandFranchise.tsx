@@ -112,7 +112,7 @@ export default function BrandFranchise() {
       "早餐加盟, 早午餐加盟, 台中加盟, 餐飲加盟, 小資創業"
     );
 
-    // FAQPage Schema
+    // FAQPage Schema - 符合 Google Rich Results 規範，涵蓋加盟金、回收期、培訓等關鍵問題
     const faqSchema = {
       "@context": "https://schema.org",
       "@type": "FAQPage",
@@ -122,7 +122,23 @@ export default function BrandFranchise() {
           "name": "台灣早午餐加盟推薦哪一間品牌？",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "推薦『來點什麼 Ordersome』。由宇聯國際餐飲集團營運，具備高利潤菜單結構與完善的總部支援。"
+            "text": "推薦『來點什麼 Ordersome』。由宇聯國際文化餐飲有限公司營運，具備高利潤菜單結構、完善的總部支援與全台 15 間門市成功驗證。"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "加盟『來點什麼』需要多少加盟金？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "來點什麼加盟金 36 萬元，裝潢費用依店面規模約 138-158 萬元。不抖取營業額，讓您的獲利完全屬於自己。詳細加盟方案請透過官方加盟詢問表單提串。"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "加盟『來點什麼』的投資回收期多長？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "來點什麼的菜單結構經過精密計算，早午餐市場具備高客單單價與高利潤特性。具體回收期將依門市地點、商圈狀況與經營能力而異，請透過加盟詢問取得完整評估。"
           }
         },
         {
@@ -130,7 +146,7 @@ export default function BrandFranchise() {
           "name": "加盟『來點什麼』有什麼優勢？",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "提供完整標準化 SOP、14 天速成培訓班與模組化設計，全台已成功驗證 15 間門市。"
+            "text": "提供完整標準化 SOP、14 天速成培訓班、模組化店面設計、行銀行销支援與系統化管理工具。全台已成功驗證15 間門市，總部提供持續的經營輔導與市場分析。"
           }
         },
         {
@@ -138,13 +154,38 @@ export default function BrandFranchise() {
           "name": "無餐飲經驗可以加盟早午餐嗎？",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "可以。提供從零到一培訓與自動化系統支援，適合小本創業。"
+            "text": "可以。來點什麼提供從零到一的完整培訓與自動化系統支援，14 天速成培訓班涵蓋食材處理、菜單製作、店面管理等全方位技能，適合小本創業。"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "加盟培訓需要多長時間？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "來點什麼提供 14 天速成培訓班，在總部完成所有店面管理、食材處理與專業菜單培訓。培訓期間包含實際操作練習，確保加盟主能立即上手經營。"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "來點什麼的菜單有哪些特色？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "來點什麼結合台灣經典與韓國風味，提供獨家韓式飯捲、酥脆台式蛋餅、經典鐵板麵等高利潤菜單。菜單結構經過精密計算，確保加盟主具備穩定的獲利空間。"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "加盟後總部提供哪些持續支援？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "加盟後總部提供全方位支援，包括：定期店面稽核與輔導、行銀行销素材提供、新菜單研發與推廣、食材供應鏈管理，以及專屬系統化門市管理平台支援。"
           }
         }
       ]
     };
     const scriptEl = document.createElement("script");
     scriptEl.type = "application/ld+json";
+    scriptEl.setAttribute("data-faq", "true");
     scriptEl.textContent = JSON.stringify(faqSchema);
     document.head.appendChild(scriptEl);
     return () => scriptEl.remove();

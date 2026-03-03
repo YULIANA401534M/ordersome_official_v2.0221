@@ -984,3 +984,13 @@
 - [x] 確保無 React hydration error（使用 useEffect 僅客戶端執行）
 - [x] TypeScript 0 errors + 42 vitest 通過
 - [ ] 儲存 Checkpoint
+
+## Restaurant Schema 與 FAQPage Schema 升級（2026-03-04）
+
+- [x] 讀取門市頁與加盟頁結構，確認資料庫欄位
+- [x] 建立 useRestaurantSchema Hook（動態抓取門市資料）
+- [x] 在 BrandStores.tsx 整合 Restaurant Schema，移除舊静態 LocalBusiness Schema
+- [x] 升級 BrandFranchise.tsx FAQPage Schema（擴充至 8 個問答，含加盟金 36 萬、培訓 14 天等具體數據）
+- [x] 確保符合 Google Rich Results 規範（使用 useEffect 僅客戶端執行）
+- [x] TypeScript 0 errors + 42 vitest 通過
+- [ ] 儲存 Checkpoint

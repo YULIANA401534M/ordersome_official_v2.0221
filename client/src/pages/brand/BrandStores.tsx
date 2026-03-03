@@ -4,9 +4,13 @@ import BrandLayout from "@/components/layout/BrandLayout";
 import { trpc } from "@/lib/trpc";
 import { MapView } from "@/components/Map";
 import { motion } from "framer-motion";
+import { useRestaurantSchema } from "@/hooks/useRestaurantSchema";
 
 export default function BrandStores() {
   const { data: stores, isLoading } = trpc.store.list.useQuery();
+
+  // 動態注入 Restaurant Schema（待門市資料載入後自動生成）
+  useRestaurantSchema(stores);
   const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
@@ -24,37 +28,7 @@ export default function BrandStores() {
       "來點什麼門市, 來點什麼分店, 台中早餐推薦, 附近早午餐"
     );
 
-    // LocalBusiness Schema
-    const schema = {
-      "@context": "https://schema.org",
-      "@type": "LocalBusiness",
-      "name": "來點什麼 Ordersome",
-      "description": "台韓式早午餐品牌",
-      "url": "https://ordersome.com.tw/brand/stores",
-      "image": "https://ordersome.com.tw/logo.png",
-      "address": {
-        "@type": "PostalAddress",
-        "streetAddress": "台中市",
-        "addressRegion": "台中市",
-        "addressCountry": "TW"
-      },
-      "areaServed": [
-        {
-          "@type": "City",
-          "name": "台中市"
-        },
-        {
-          "@type": "City",
-          "name": "南投縣"
-        }
-      ],
-      "priceRange": "$"
-    };
-    const scriptEl = document.createElement("script");
-    scriptEl.type = "application/ld+json";
-    scriptEl.textContent = JSON.stringify(schema);
-    document.head.appendChild(scriptEl);
-    return () => scriptEl.remove();
+    // Restaurant Schema 已由 useRestaurantSchema Hook 動態處理
   }, []);
 
   // 台中市中心座標
