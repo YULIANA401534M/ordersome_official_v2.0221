@@ -973,4 +973,4 @@
 - [x] 建立全站動態 Canonical Hook（移除 UTM 與分頁 query string）
 - [x] 整合 Canonical Hook 到 App.tsx
 - [x] TypeScript 0 errors + 42 vitest 通過
-- [ ] 儲存 Checkpoint
+- [x] 儲存 Checkpoint
