@@ -1067,3 +1067,10 @@
 - [x] AdminUsers 卡片高度統一（移除 h-full/flex-grow，改 items-start）
 - [x] TypeScript 0 errors + vitest 通過
 - [x] 儲存 Checkpoint
+
+## AdminUsers 頁面深度修復（2026-03-10）
+- [x] 權限欄 td 加 min-w-[220px]，確保 flex-row 不因寬度不足被迫換行
+- [x] 手機版改為完整卡片式佈局（顯示角色、狀態、權限、操作）
+- [x] 非 super_admin 的用戶列不顯示編輯/重設密碼/刪除按鈕（僅 super_admin 可被操作）
+- [x] TypeScript 0 errors + vitest 通過
+- [x] 儲存 Checkpoint
