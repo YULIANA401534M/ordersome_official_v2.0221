@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { trpc } from "../lib/trpc";
-import { User, Mail, Phone, MapPin, Save, ArrowLeft, Settings, Briefcase, UserCog } from "lucide-react";
+import { User, Mail, Phone, MapPin, Save, ArrowLeft, Settings, Briefcase, UserCog, KeyRound } from "lucide-react";
 import { trackEvent } from "../components/Analytics";
+import ChangePasswordDialog from "../components/ChangePasswordDialog";
 
 // Helper function to safely check if user has a specific permission
 const hasPermission = (user: any, permission: string): boolean => {
@@ -36,6 +37,7 @@ export default function Profile() {
   });
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+  const [showChangePassword, setShowChangePassword] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -313,14 +315,24 @@ export default function Profile() {
             </div>
 
             {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={updateProfileMutation.isPending}
-              className="w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              <Save className="h-5 w-5" />
-              {updateProfileMutation.isPending ? "儲存中..." : "儲存變更"}
-            </button>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                type="submit"
+                disabled={updateProfileMutation.isPending}
+                className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                <Save className="h-5 w-5" />
+                {updateProfileMutation.isPending ? "儲存中..." : "儲存變更"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowChangePassword(true)}
+                className="flex-1 sm:flex-none border border-gray-300 hover:border-gray-400 bg-white text-gray-700 font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                <KeyRound className="h-5 w-5" />
+                修改密碼
+              </button>
+            </div>
           </form>
 
           {/* Logout Button */}
@@ -334,6 +346,7 @@ export default function Profile() {
           </div>
         </div>
       </div>
+      <ChangePasswordDialog open={showChangePassword} onOpenChange={setShowChangePassword} />
     </div>
   );
 }

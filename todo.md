@@ -937,7 +937,7 @@
 ## 正式部署與 LINE OAuth 修正（2026-02-23）
 
 - [ ] 更新 VITE_APP_URL 環境變數為 https://ordersome.com.tw
-- [ ] 儲存 Checkpoint 並發布到正式環境
+- [x] 儲存 Checkpoint 並發布到正式環境
 - [ ] 在 LINE Developers Console 加入正式網域 Callback URL
 - [ ] 在 Google Cloud Console 加入正式網域 Redirect URI
 - [ ] 設定自訂網域 ordersome.com.tw 綁定
@@ -957,7 +957,7 @@
 - [ ] 新增「我的訂單」頁面（/shop/my-orders）
 - [ ] 連結 UserMenu 至「我的訂單」頁面
 - [ ] TypeScript 0 errors + 42 vitest 通過
-- [ ] 儲存 Checkpoint
+- [x] 儲存 Checkpoint
 
 ## 用戶菜單完成狀態（已完成）
 
@@ -993,7 +993,7 @@
 - [x] 升級 BrandFranchise.tsx FAQPage Schema（擴充至 8 個問答，含加盟金 36 萬、培訓 14 天等具體數據）
 - [x] 確保符合 Google Rich Results 規範（使用 useEffect 僅客戶端執行）
 - [x] TypeScript 0 errors + 42 vitest 通過
-- [ ] 儲存 Checkpoint
+- [x] 儲存 Checkpoint
 
 ## Product Schema 商品結構化數據（2026-03-04）
 
@@ -1056,4 +1056,4 @@
 ### 驗證
 - [ ] TypeScript 0 errors
 - [ ] vitest 42/42 通過
-- [ ] 儲存 Checkpoint
+- [x] 儲存 Checkpoint

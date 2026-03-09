@@ -1,4 +1,21 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import BackButton from "@/components/BackButton";
@@ -21,6 +38,82 @@ import {
 
 type ViewMode = "list" | "read" | "edit" | "create";
 
+// ---- Sortable Item 元件 ----
+function SortableDocItem({
+  doc,
+  isManager,
+  getCategoryName,
+  onOpen,
+  onDelete,
+}: {
+  doc: { id: number; title: string; categoryId: number; version: string | null; pdfUrl: string | null; isVisibleToStaff: boolean; status: string };
+  isManager: boolean;
+  getCategoryName: (id: number) => string;
+  onOpen: (id: number) => void;
+  onDelete: (id: number) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: doc.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="bg-white rounded-2xl shadow-sm p-4 cursor-pointer hover:shadow-md transition-shadow active:scale-[0.99]"
+    >
+      <div className="flex items-start justify-between gap-3">
+        {/* 拖曳把手 */}
+        <button
+          {...attributes}
+          {...listeners}
+          className="p-1 text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing flex-shrink-0 mt-0.5"
+          onClick={(e) => e.stopPropagation()}
+          title="拖曳排序"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/>
+            <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+            <circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/>
+          </svg>
+        </button>
+        <div className="flex-1 min-w-0" onClick={() => onOpen(doc.id)}>
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <span className="text-xs text-purple-600 font-medium bg-purple-50 px-2 py-0.5 rounded-full">
+              {getCategoryName(doc.categoryId)}
+            </span>
+            {isManager && !doc.isVisibleToStaff && (
+              <span className="text-xs text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full flex items-center gap-1">
+                <EyeOff className="w-3 h-3" />員工隱藏
+              </span>
+            )}
+            {isManager && doc.status === "draft" && (
+              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">草稿</span>
+            )}
+          </div>
+          <h3 className="font-semibold text-gray-900 text-base leading-tight">{doc.title}</h3>
+          <div className="flex items-center gap-3 mt-1.5">
+            <span className="text-xs text-gray-400">v{doc.version}</span>
+            {doc.pdfUrl && (
+              <span className="text-xs text-blue-500 flex items-center gap-1">
+                <FileText className="w-3 h-3" />PDF
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-1">
+          <ChevronLeft className="w-5 h-5 text-gray-400 rotate-180 flex-shrink-0" onClick={() => onOpen(doc.id)} />
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(doc.id); }}
+            className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+            title="刪除文件"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SOPKnowledgeBase() {
   const { user } = useAuth();
   const isManager = user?.role === "super_admin" || user?.role === "manager";
@@ -41,6 +134,7 @@ export default function SOPKnowledgeBase() {
   const [isUploadingPdf, setIsUploadingPdf] = useState(false);
   const [sortBy, setSortBy] = useState<"newest" | "oldest">("newest");
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const [localDocs, setLocalDocs] = useState<typeof filteredDocs>([]);
 
   // tRPC queries
   // 使用 getAccessibleCategories 根據權限動態渲染分類（管理員可看全部，其他角色依權限表顯示）
@@ -91,6 +185,10 @@ export default function SOPKnowledgeBase() {
     onError: (err) => toast.error(err.message),
   });
 
+  const reorderDocs = trpc.sop.reorderDocuments.useMutation({
+    onError: (err) => toast.error("排序失敗：" + err.message),
+  });
+
   const deleteDoc = trpc.sop.deleteDocument.useMutation({
     onSuccess: () => {
       toast.success("文件已刪除");
@@ -122,6 +220,24 @@ export default function SOPKnowledgeBase() {
       : true;
     return matchCategory && matchSearch;
   });
+
+  // 同步 localDocs（拖曳用的本地副本）
+  useEffect(() => { setLocalDocs(filteredDocs); }, [filteredDocs.length, sortBy, selectedCategoryId, searchQuery]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = localDocs.findIndex((d) => d.id === active.id);
+    const newIndex = localDocs.findIndex((d) => d.id === over.id);
+    const reordered = arrayMove(localDocs, oldIndex, newIndex);
+    setLocalDocs(reordered);
+    reorderDocs.mutate(reordered.map((d, i) => ({ id: d.id, displayOrder: i })));
+  };
 
   const getCategoryName = (id: number) =>
     categories.find((c) => c.id === id)?.name ?? "未分類";
@@ -484,6 +600,23 @@ export default function SOPKnowledgeBase() {
               </Button>
             )}
           </div>
+        ) : isManager ? (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={localDocs.map((d) => d.id)} strategy={verticalListSortingStrategy}>
+              <div className="space-y-3">
+                {localDocs.map((doc) => (
+                  <SortableDocItem
+                    key={doc.id}
+                    doc={doc}
+                    isManager={isManager}
+                    getCategoryName={getCategoryName}
+                    onOpen={handleOpenDoc}
+                    onDelete={(id) => setDeleteConfirmId(id)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         ) : (
           <div className="space-y-3">
             {filteredDocs.map((doc) => (
@@ -498,14 +631,6 @@ export default function SOPKnowledgeBase() {
                       <span className="text-xs text-purple-600 font-medium bg-purple-50 px-2 py-0.5 rounded-full">
                         {getCategoryName(doc.categoryId)}
                       </span>
-                      {isManager && !doc.isVisibleToStaff && (
-                        <span className="text-xs text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <EyeOff className="w-3 h-3" />員工隱藏
-                        </span>
-                      )}
-                      {isManager && doc.status === "draft" && (
-                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">草稿</span>
-                      )}
                     </div>
                     <h3 className="font-semibold text-gray-900 text-base leading-tight">{doc.title}</h3>
                     <div className="flex items-center gap-3 mt-1.5">
@@ -517,18 +642,7 @@ export default function SOPKnowledgeBase() {
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <ChevronLeft className="w-5 h-5 text-gray-400 rotate-180 flex-shrink-0" />
-                    {isManager && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(doc.id); }}
-                        className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                        title="刪除文件"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
+                  <ChevronLeft className="w-5 h-5 text-gray-400 rotate-180 flex-shrink-0" />
                 </div>
               </div>
             ))}

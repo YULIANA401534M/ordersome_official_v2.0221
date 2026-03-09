@@ -151,6 +151,16 @@ export default function BrandHeader() {
               >
                 線上商城
               </Link>
+              {dashboardUrl && (
+                <Link
+                  href={dashboardUrl}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg flex items-center gap-2"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <LayoutDashboard className="h-4 w-4" />
+                  後台
+                </Link>
+              )}
             </div>
           </nav>
         )}
