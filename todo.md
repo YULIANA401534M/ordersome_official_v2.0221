@@ -1080,3 +1080,9 @@
 - [ ] 桌面版 Table 與手機版 Cards 同步套用此邏輯
 - [ ] TypeScript 0 errors + vitest 通過
 - [ ] 儲存 Checkpoint
+
+## 登出後跳轉修復（2026-03-10）
+- [ ] 找到所有登出入口（DashboardLayout、useAuth、logout mutation 等）
+- [ ] 修改 redirect 目標為 /（首頁）而非 Manus OAuth 選帳頁面
+- [ ] TypeScript 0 errors + vitest 通過
+- [ ] 儲存 Checkpoint

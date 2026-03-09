@@ -32,12 +32,15 @@ export function useAuth(options?: UseAuthOptions) {
         error instanceof TRPCClientError &&
         error.data?.code === "UNAUTHORIZED"
       ) {
-        return;
+        // already logged out, still redirect
+      } else {
+        throw error;
       }
-      throw error;
     } finally {
       utils.auth.me.setData(undefined, null);
       await utils.auth.me.invalidate();
+      // 登出後常跳轉到首頁，避免出現 Manus OAuth 選帳頁面
+      window.location.href = "/";
     }
   }, [logoutMutation, utils]);
 

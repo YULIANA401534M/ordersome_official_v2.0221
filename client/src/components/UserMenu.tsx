@@ -28,8 +28,14 @@ export default function UserMenu() {
   if (!isAuthenticated || !user) return null;
 
   const handleLogout = async () => {
-    await logoutMutation.mutateAsync();
-    setIsOpen(false);
+    try {
+      await logoutMutation.mutateAsync();
+    } catch {
+      // ignore errors, still redirect
+    } finally {
+      setIsOpen(false);
+      window.location.href = "/";
+    }
   };
 
   return (
