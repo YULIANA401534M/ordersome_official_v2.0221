@@ -1074,3 +1074,9 @@
 - [x] 非 super_admin 的用戶列不顯示編輯/重設密碼/刪除按鈕（僅 super_admin 可被操作）
 - [x] TypeScript 0 errors + vitest 通過
 - [x] 儲存 Checkpoint
+
+## AdminUsers 操作按鈕登入者角色修復（2026-03-10）
+- [ ] 加入 currentUser 判斷，只有登入者為 super_admin 才顯示任何用戶的操作按鈕
+- [ ] 桌面版 Table 與手機版 Cards 同步套用此邏輯
+- [ ] TypeScript 0 errors + vitest 通過
+- [ ] 儲存 Checkpoint

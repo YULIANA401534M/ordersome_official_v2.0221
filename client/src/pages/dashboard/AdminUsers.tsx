@@ -3,6 +3,7 @@ import { trpc } from "../../lib/trpc";
 import { Users, Shield, Mail, Phone, Building2, Edit2, RefreshCw, Search, Filter, BarChart3, TrendingUp, UserPlus, Trash2, X } from "lucide-react";
 import AdminDashboardLayout from "@/components/AdminDashboardLayout";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 type UserRole = "super_admin" | "manager" | "franchisee" | "staff" | "customer";
 type UserStatus = "active" | "suspended";
@@ -32,9 +33,9 @@ const ROLE_BADGE_COLORS: Record<UserRole, string> = {
   customer: "bg-gray-100 text-gray-800",
 };
 
-/** 只有 super_admin 的列才顯示操作按鈕 */
-function canEdit(user: any) {
-  return user.role === "super_admin";
+/** 只有當前登入者為 super_admin 時才顯示操作按鈕 */
+function canShowActions(currentUserRole: string | undefined) {
+  return currentUserRole === "super_admin";
 }
 
 /** 渲染權限標籤（橫向排列） */
@@ -70,6 +71,8 @@ export default function AdminUsers() {
     storeId: "",
   });
 
+  const { user: currentUser } = useAuth();
+  const isSuperAdmin = currentUser?.role === "super_admin";
   const queryClient = useQueryClient();
   const utils = trpc.useUtils();
   const { data: users, isLoading, refetch } = trpc.admin.listUsers.useQuery();
@@ -289,9 +292,9 @@ export default function AdminUsers() {
                     <td className="px-6 py-3 min-w-[240px]">
                       <PermissionBadges permissions={user.permissions || []} />
                     </td>
-                    {/* 操作 — 僅 super_admin 列顯示 */}
+                    {/* 操作 — 僅登入者為 super_admin 才顯示 */}
                     <td className="px-6 py-3 text-sm font-medium">
-                      {canEdit(user) ? (
+                      {isSuperAdmin ? (
                         <div className="flex items-center gap-2 flex-wrap">
                           <button onClick={() => setEditingUser(user)} className="text-blue-600 hover:text-blue-900 inline-flex items-center gap-1">
                             <Edit2 className="w-4 h-4" />編輯
@@ -357,8 +360,8 @@ export default function AdminUsers() {
                   <PermissionBadges permissions={user.permissions || []} />
                 </div>
 
-                {/* 操作 — 僅 super_admin 列顯示 */}
-                {canEdit(user) && (
+                {/* 操作 — 僅登入者為 super_admin 才顯示 */}
+                {isSuperAdmin && (
                   <div className="flex items-center gap-3 pt-2 border-t border-gray-100 flex-wrap">
                     <button onClick={() => setEditingUser(user)} className="text-blue-600 hover:text-blue-900 text-sm inline-flex items-center gap-1">
                       <Edit2 className="w-4 h-4" />編輯
