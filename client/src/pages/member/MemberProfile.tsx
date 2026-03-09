@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { Package, LogOut, User } from "lucide-react";
+import { Package, LogOut, User, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,12 +10,14 @@ import CorporateLayout from "@/components/layout/CorporateLayout";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
+import ChangePasswordDialog from "@/components/ChangePasswordDialog";
 
 export default function MemberProfile() {
   const [, navigate] = useLocation();
   const { user, isAuthenticated, loading } = useAuth();
   const [formData, setFormData] = useState({ name: "", phone: "", address: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -154,13 +156,24 @@ export default function MemberProfile() {
                         onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                       />
                     </div>
-                    <Button
-                      type="submit"
-                      className="bg-amber-600 hover:bg-amber-700"
-                      disabled={isSubmitting}
-                    >
-                      {isSubmitting ? "更新中..." : "儲存變更"}
-                    </Button>
+                    <div className="flex flex-wrap gap-3">
+                      <Button
+                        type="submit"
+                        className="bg-amber-600 hover:bg-amber-700"
+                        disabled={isSubmitting}
+                      >
+                        {isSubmitting ? "更新中..." : "儲存變更"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="gap-2"
+                        onClick={() => setShowChangePassword(true)}
+                      >
+                        <KeyRound className="w-4 h-4" />
+                        修改密碼
+                      </Button>
+                    </div>
                   </form>
                 </CardContent>
               </Card>
@@ -168,6 +181,7 @@ export default function MemberProfile() {
           </div>
         </div>
       </section>
+      <ChangePasswordDialog open={showChangePassword} onOpenChange={setShowChangePassword} />
     </CorporateLayout>
   );
 }

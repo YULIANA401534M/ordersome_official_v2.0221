@@ -12,6 +12,8 @@ const PERMISSIONS = [
   { key: "manage_users", label: "管理用戶" },
   { key: "manage_franchise", label: "管理加盟主" },
   { key: "publish_content", label: "發布內容" },
+  { key: "manage_sop", label: "管理 SOP" },
+  { key: "manage_products", label: "管理商城商品" },
 ];
 
 const ROLE_LABELS: Record<UserRole, string> = {
@@ -307,7 +309,7 @@ export default function AdminUsers() {
                     </span>
                   </td>
                   <td className="px-6 py-3">
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-row flex-wrap gap-1 items-start">
                       {user.permissions && user.permissions.length > 0 ? (
                         user.permissions.map((perm: string) => (
                           <span

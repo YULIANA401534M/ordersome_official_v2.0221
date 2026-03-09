@@ -10,6 +10,7 @@ const AVAILABLE_PERMISSIONS = [
   { id: "manage_franchise", label: "管理加盟主", description: "可管理加盟門市資料" },
   { id: "publish_content", label: "發布內容", description: "可建立和發布新聞文章" },
   { id: "manage_products", label: "管理商品與訂單", description: "可新增、編輯、下架商品，及查看訂單" },
+  { id: "manage_sop", label: "管理 SOP", description: "負責員工專區 SOP 的編輯與刪除" },
 ];
 
 export default function AdminPermissions() {

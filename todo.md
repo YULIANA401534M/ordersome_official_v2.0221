@@ -1057,3 +1057,13 @@
 - [ ] TypeScript 0 errors
 - [ ] vitest 42/42 通過
 - [x] 儲存 Checkpoint
+
+## Profile 修改密碼按鈕修正 + AdminUsers 權限擴充（2026-03-10）
+- [x] 排查 /member/profile 修改密碼按鈕未顯示根本原因（路由對應的實際元件）
+- [x] 修復 Profile 頁面整合 ChangePasswordDialog
+- [x] 新增 manage_sop 權限（全端：常數、Zod、前端 Checkbox）
+- [x] 新增 manage_products 權限（全端：常數、Zod、前端 Checkbox）
+- [x] AdminUsers 權限標籤改為 flex flex-row flex-wrap
+- [x] AdminUsers 卡片高度統一（移除 h-full/flex-grow，改 items-start）
+- [x] TypeScript 0 errors + vitest 通過
+- [x] 儲存 Checkpoint
