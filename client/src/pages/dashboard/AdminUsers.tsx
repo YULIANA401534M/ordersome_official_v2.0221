@@ -442,7 +442,19 @@ export default function AdminUsers() {
                 <div className="flex justify-end gap-4">
                   <button onClick={() => setEditingUser(null)} className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition">取消</button>
                   <button
-                    onClick={() => handleUpdateUser(editingUser.id, { name: editingUser.name, email: editingUser.email, phone: editingUser.phone, role: editingUser.role, status: editingUser.status, permissions: editingUser.permissions || [], storeId: editingUser.storeId })}
+                    onClick={() => {
+                      const updates: any = {
+                        name: editingUser.name,
+                        email: editingUser.email,
+                        role: editingUser.role,
+                        status: editingUser.status,
+                        permissions: editingUser.permissions || [],
+                      };
+                      // 只傳送非空值，避免 null 被傳送
+                      if (editingUser.phone) updates.phone = editingUser.phone;
+                      if (editingUser.storeId) updates.storeId = editingUser.storeId;
+                      handleUpdateUser(editingUser.id, updates);
+                    }}
                     disabled={updateUserMutation.isPending}
                     className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
                   >

@@ -1086,3 +1086,12 @@
 - [ ] 修改 redirect 目標為 /（首頁）而非 Manus OAuth 選帳頁面
 - [ ] TypeScript 0 errors + vitest 通過
 - [ ] 儲存 Checkpoint
+
+
+## API 驗證錯誤修復 - EditUserDialog null 值處理（2026-03-10）
+- [x] 排查 /dashboard/admin/users 編輯用戶時的 Zod 驗證錯誤
+- [x] 根本原因：frontend 傳送 null 值，backend Zod schema 期望 undefined
+- [x] 修復 AdminUsers.tsx handleUpdateUser 邏輯：過濾 null 值，只傳送非空欄位
+- [x] phone 和 storeId 欄位：僅在有值時才加入 updates 物件
+- [x] TypeScript 0 errors + 42 vitest 通過
+- [ ] 儲存 Checkpoint
