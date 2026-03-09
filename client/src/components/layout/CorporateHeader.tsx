@@ -82,7 +82,7 @@ export default function CorporateHeader() {
               <Link href="/dashboard">
                 <Button size="sm" variant="outline" className="hidden sm:flex gap-2">
                   <User className="h-4 w-4" />
-                  會員中心
+                  後台
                 </Button>
               </Link>
             )}
