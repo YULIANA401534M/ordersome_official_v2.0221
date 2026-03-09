@@ -128,27 +128,27 @@ export default function AdminUsers() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <Users className="w-8 h-8 text-blue-600" />
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-3">
+                <Users className="w-7 h-7 sm:w-8 sm:h-8 text-blue-600" />
                 用戶管理
               </h1>
-              <p className="mt-2 text-gray-600">管理所有用戶的角色、權限和帳號狀態</p>
+              <p className="mt-1 text-sm sm:text-base text-gray-600">管理所有用戶的角色、權限和帳號狀態</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => setCreatingUser(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
               >
-                <UserPlus className="w-5 h-5" />
+                <UserPlus className="w-4 h-4" />
                 新增用戶
               </button>
               <a
                 href="/dashboard/admin/permissions"
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
               >
-                <Shield className="w-5 h-5" />
+                <Shield className="w-4 h-4" />
                 權限管理
               </a>
             </div>
@@ -165,43 +165,35 @@ export default function AdminUsers() {
             快速訪問專業分析工具，掌握網站流量和 SEO 表現
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Google Analytics 4 */}
-            <a
-              href="https://analytics.google.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-4 p-5 bg-white rounded-lg shadow-sm hover:shadow-md transition border border-purple-200 hover:border-purple-400 group"
+            {/* 即時流量分析 - 尚未開放 */}
+            <div
+              className="flex items-center gap-4 p-5 bg-white rounded-lg shadow-sm border border-gray-200 opacity-50 cursor-not-allowed pointer-events-none"
+              title="尚未開放"
             >
-              <div className="w-14 h-14 bg-gradient-to-br from-purple-100 to-purple-200 rounded-full flex items-center justify-center group-hover:scale-110 transition">
-                <TrendingUp className="w-7 h-7 text-purple-600" />
+              <div className="w-14 h-14 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
+                <TrendingUp className="w-7 h-7 text-gray-400" />
               </div>
               <div className="flex-1">
-                <h3 className="font-bold text-gray-900 text-lg">📊 即時流量分析 (GA4)</h3>
-                <p className="text-sm text-gray-600">查看即時訪客、頁面瀏覽量、轉換率</p>
+                <h3 className="font-bold text-gray-500 text-lg">📊 即時流量分析 (GA4)</h3>
+                <p className="text-sm text-gray-400">查看即時訪客、頁面瀏覽量、轉換率</p>
+                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full mt-1 inline-block">即將推出</span>
               </div>
-              <div className="text-purple-600 group-hover:translate-x-1 transition">
-                →
-              </div>
-            </a>
+            </div>
 
-            {/* Google Search Console */}
-            <a
-              href="https://search.google.com/search-console"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-4 p-5 bg-white rounded-lg shadow-sm hover:shadow-md transition border border-pink-200 hover:border-pink-400 group"
+            {/* SEO 表現分析 - 尚未開放 */}
+            <div
+              className="flex items-center gap-4 p-5 bg-white rounded-lg shadow-sm border border-gray-200 opacity-50 cursor-not-allowed pointer-events-none"
+              title="尚未開放"
             >
-              <div className="w-14 h-14 bg-gradient-to-br from-pink-100 to-pink-200 rounded-full flex items-center justify-center group-hover:scale-110 transition">
-                <BarChart3 className="w-7 h-7 text-pink-600" />
+              <div className="w-14 h-14 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
+                <BarChart3 className="w-7 h-7 text-gray-400" />
               </div>
               <div className="flex-1">
-                <h3 className="font-bold text-gray-900 text-lg">🔍 SEO 表現分析</h3>
-                <p className="text-sm text-gray-600">監控搜尋排名、點擊率、索引狀態</p>
+                <h3 className="font-bold text-gray-500 text-lg">🔍 SEO 表現分析</h3>
+                <p className="text-sm text-gray-400">監控搜尋排名、點擊率、索引狀態</p>
+                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full mt-1 inline-block">即將推出</span>
               </div>
-              <div className="text-pink-600 group-hover:translate-x-1 transition">
-                →
-              </div>
-            </a>
+            </div>
           </div>
         </div>
 
@@ -263,8 +255,8 @@ export default function AdminUsers() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredUsers?.map((user: any) => (
-                <tr key={user.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
+                <tr key={user.id} className="hover:bg-gray-50 align-top">
+                  <td className="px-6 py-3 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
                         <span className="text-blue-600 font-semibold">
@@ -286,7 +278,7 @@ export default function AdminUsers() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-3 whitespace-nowrap">
                     <span
                       className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                         user.role === "super_admin"
@@ -303,7 +295,7 @@ export default function AdminUsers() {
                       {ROLE_LABELS[user.role as UserRole]}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-3 whitespace-nowrap">
                     <span
                       className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                         user.status === "active"
@@ -314,7 +306,7 @@ export default function AdminUsers() {
                       {user.status === "active" ? "啟用" : "停用"}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-3">
                     <div className="flex flex-wrap gap-1">
                       {user.permissions && user.permissions.length > 0 ? (
                         user.permissions.map((perm: string) => (
@@ -330,7 +322,7 @@ export default function AdminUsers() {
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <td className="px-6 py-3 whitespace-nowrap text-sm font-medium">
                     <button
                       onClick={() => setEditingUser(user)}
                       className="text-blue-600 hover:text-blue-900 mr-3 inline-flex items-center gap-1"

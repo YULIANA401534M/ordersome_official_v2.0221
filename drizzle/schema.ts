@@ -304,6 +304,7 @@ export const sopDocuments = mysqlTable("sop_documents", {
   status: mysqlEnum("status", ["draft", "published", "archived"]).default("draft").notNull(),
   isVisibleToStaff: boolean("is_visible_to_staff").default(true).notNull(),
   authorId: int("author_id").notNull(),
+  displayOrder: int("display_order").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
 });

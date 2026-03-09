@@ -154,6 +154,34 @@ export const appRouter = router({
 
         return { success: true, message: "密碼已成功重設，請使用新密碼登入" };
       }),
+
+    // 修改密碼（已登入用戶，需驗證舊密碼）
+    changePassword: protectedProcedure
+      .input(z.object({
+        oldPassword: z.string().min(1, "請輸入舊密碼"),
+        newPassword: z.string().min(6, "新密碼至少需要 6 個字元"),
+        confirmPassword: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (input.newPassword !== input.confirmPassword) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: '新密碼與確認密碼不一致' });
+        }
+        // 讀取用戶（包含 passwordHash）
+        const user = await db.getUserById(ctx.user.id);
+        if (!user || !user.passwordHash) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: '此帳號未設定密碼，請使用忽記密碼功能' });
+        }
+        // 驗證舊密碼
+        const { verifyPassword, hashPassword } = await import('./lib/password');
+        const isValid = await verifyPassword(input.oldPassword, user.passwordHash);
+        if (!isValid) {
+          throw new TRPCError({ code: 'UNAUTHORIZED', message: '舊密碼不正確' });
+        }
+        // 加密新密碼並儲存
+        const newHash = await hashPassword(input.newPassword);
+        await db.updateUserPassword(ctx.user.id, newHash);
+        return { success: true, message: "密碼已成功更新" };
+      }),
   }),
 
   // Categories

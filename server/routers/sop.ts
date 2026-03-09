@@ -12,7 +12,7 @@ import {
   dailyChecklistItems,
   users,
 } from "../../drizzle/schema";
-import { eq, and, desc, or, inArray } from "drizzle-orm";
+import { eq, and, desc, asc, or, inArray } from "drizzle-orm";
 
 const MAKE_WEBHOOK_URL = "https://hook.us2.make.com/9lru5kvflpvyglz9dtpe9b02v97wkdd9";
 
@@ -66,7 +66,10 @@ export const sopRouter = router({
   // 員工查詢：只看 published + isVisibleToStaff=true
   // 管理員查詢：看全部 published（含隱藏的）
   getDocuments: protectedProcedure
-    .input(z.object({ categoryId: z.number().optional() }))
+    .input(z.object({
+      categoryId: z.number().optional(),
+      sortBy: z.enum(["newest", "oldest"]).default("newest"),
+    }))
     .query(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
@@ -78,18 +81,22 @@ export const sopRouter = router({
         ? [eq(sopDocuments.status, "published")]
         : [eq(sopDocuments.status, "published"), eq(sopDocuments.isVisibleToStaff, true)];
 
+      const orderClause = input.sortBy === "oldest"
+        ? asc(sopDocuments.createdAt)
+        : desc(sopDocuments.createdAt);
+
       if (input.categoryId) {
         return db
           .select()
           .from(sopDocuments)
           .where(and(eq(sopDocuments.categoryId, input.categoryId), ...baseConditions))
-          .orderBy(desc(sopDocuments.createdAt));
+          .orderBy(orderClause);
       }
       return db
         .select()
         .from(sopDocuments)
         .where(and(...baseConditions))
-        .orderBy(desc(sopDocuments.createdAt));
+        .orderBy(orderClause);
     }),
 
   // 管理員：查看所有文件（包含 draft/archived）
@@ -161,9 +168,25 @@ export const sopRouter = router({
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-      await db.update(sopDocuments)
-        .set({ status: "archived" })
-        .where(eq(sopDocuments.id, input.id));
+      // 先刪除關聯的閱讀簽收記錄，再刪除文件本身
+      await db.delete(sopReadReceipts).where(eq(sopReadReceipts.documentId, input.id));
+      await db.delete(sopDocuments).where(eq(sopDocuments.id, input.id));
+      return { success: true };
+    }),
+
+  // 排序：更新文件的 displayOrder
+  reorderDocuments: managerProcedure
+    .input(z.array(z.object({ id: z.number(), displayOrder: z.number() })))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await Promise.all(
+        input.map(({ id, displayOrder }) =>
+          db.update(sopDocuments)
+            .set({ displayOrder })
+            .where(eq(sopDocuments.id, id))
+        )
+      );
       return { success: true };
     }),
 

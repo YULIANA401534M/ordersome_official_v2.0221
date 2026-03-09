@@ -251,12 +251,12 @@ export default function AdminProducts() {
   return (
     <AdminDashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">商品管理</h1>
-            <p className="text-gray-600 mt-2">管理線上u5546城商品</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">商品管理</h1>
+            <p className="text-sm sm:text-base text-gray-600 mt-1">管理線上商城商品</p>
           </div>
-          <Button onClick={openAdd} className="bg-amber-500 hover:bg-amber-600 text-white">
+          <Button onClick={openAdd} className="bg-amber-500 hover:bg-amber-600 text-white self-start sm:self-auto">
             <Plus className="h-4 w-4 mr-2" />新增商品
           </Button>
         </div>
@@ -362,7 +362,7 @@ export default function AdminProducts() {
             <p className="text-xs text-gray-400">目前設定：NT$ {storeSettingsData?.baseShippingFee ?? 100}</p>
           </div>
           <div className="space-y-1.5">
-            <Label>免運门滝（NT$）</Label>
+            <Label>免運門檻（NT$）</Label>
             <div className="flex gap-2">
               <Input type="number" placeholder={storeSettingsData?.freeShippingThreshold?.toString() ?? "1000"}
                 value={freeShippingInput} onChange={(e) => setFreeShippingInput(e.target.value)} className="w-32" />

@@ -12,8 +12,12 @@ import RichTextEditor from "@/components/RichTextEditor";
 import { toast } from "sonner";
 import {
   BookOpen, Edit2, Plus, CheckCircle, Eye, EyeOff,
-  FileText, Download, Upload, ChevronLeft, Search, Save, Loader2
+  FileText, Download, Upload, ChevronLeft, Search, Save, Loader2, Trash2, ArrowUpDown
 } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type ViewMode = "list" | "read" | "edit" | "create";
 
@@ -35,12 +39,15 @@ export default function SOPKnowledgeBase() {
   const [editVersion, setEditVersion] = useState("1.0");
   const [editPdfUrl, setEditPdfUrl] = useState("");
   const [isUploadingPdf, setIsUploadingPdf] = useState(false);
+  const [sortBy, setSortBy] = useState<"newest" | "oldest">("newest");
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
 
   // tRPC queries
   // 使用 getAccessibleCategories 根據權限動態渲染分類（管理員可看全部，其他角色依權限表顯示）
   const { data: categories = [] } = trpc.sop.getAccessibleCategories.useQuery();
   const { data: documents = [], refetch: refetchDocs } = trpc.sop.getDocuments.useQuery({
     categoryId: selectedCategoryId ?? undefined,
+    sortBy,
   });
   const { data: allDocuments = [], refetch: refetchAllDocs } = trpc.sop.getAllDocuments.useQuery(
     undefined,
@@ -82,6 +89,16 @@ export default function SOPKnowledgeBase() {
       setViewMode("read");
     },
     onError: (err) => toast.error(err.message),
+  });
+
+  const deleteDoc = trpc.sop.deleteDocument.useMutation({
+    onSuccess: () => {
+      toast.success("文件已刪除");
+      setDeleteConfirmId(null);
+      refetchDocs();
+      refetchAllDocs();
+    },
+    onError: (err) => toast.error("刪除失敗：" + err.message),
   });
 
   const uploadPdf = trpc.storage.uploadPdf.useMutation({
@@ -419,9 +436,21 @@ export default function SOPKnowledgeBase() {
               </Button>
             )}
           </div>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="搜尋 SOP 文件..." className="pl-9 bg-gray-50" />
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="搜尋 SOP 文件..." className="pl-9 bg-gray-50" />
+            </div>
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as "newest" | "oldest")}>
+              <SelectTrigger className="w-32 bg-gray-50 shrink-0">
+                <ArrowUpDown className="w-3.5 h-3.5 mr-1.5 text-gray-400" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">最新到舊</SelectItem>
+                <SelectItem value="oldest">最舊到新</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
@@ -488,13 +517,45 @@ export default function SOPKnowledgeBase() {
                       )}
                     </div>
                   </div>
-                  <ChevronLeft className="w-5 h-5 text-gray-400 rotate-180 flex-shrink-0" />
+                  <div className="flex items-center gap-1">
+                    <ChevronLeft className="w-5 h-5 text-gray-400 rotate-180 flex-shrink-0" />
+                    {isManager && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(doc.id); }}
+                        className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        title="刪除文件"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* 刪除二次確認彈窗 */}
+      <AlertDialog open={deleteConfirmId !== null} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>確認刪除文件</AlertDialogTitle>
+            <AlertDialogDescription>
+              此操作無法復原。刪除後，所有員工的阅讀簽收記錄也將一並刪除。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteConfirmId && deleteDoc.mutate({ id: deleteConfirmId })}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deleteDoc.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "確認刪除"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

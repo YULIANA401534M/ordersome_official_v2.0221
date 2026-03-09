@@ -54,30 +54,32 @@ export default function StaffDashboard() {
           </div>
           {/* Secondary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <Link
-              to="/dashboard/staff/schedule"
-              className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all border-2 border-transparent hover:border-gray-300 block"
+            <div
+              className="bg-white rounded-xl p-6 shadow-md border-2 border-transparent opacity-50 cursor-not-allowed pointer-events-none"
+              title="尚未開放"
             >
               <div className="flex items-center gap-4 mb-4">
-                <div className="p-3 bg-green-100 rounded-lg">
-                  <Calendar className="h-6 w-6 text-green-600" />
+                <div className="p-3 bg-gray-100 rounded-lg">
+                  <Calendar className="h-6 w-6 text-gray-400" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-900">排班系統</h3>
+                <h3 className="text-lg font-bold text-gray-500">排班系統</h3>
               </div>
-              <p className="text-sm text-gray-600">查看本週排班、申請調班、請假</p>
-            </Link>
-            <Link
-              to="/dashboard/staff/announcements"
-              className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all border-2 border-transparent hover:border-gray-300 block"
+              <p className="text-sm text-gray-400">查看本週排班、申請調班、請假</p>
+              <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full mt-2 inline-block">即將推出</span>
+            </div>
+            <div
+              className="bg-white rounded-xl p-6 shadow-md border-2 border-transparent opacity-50 cursor-not-allowed pointer-events-none"
+              title="尚未開放"
             >
               <div className="flex items-center gap-4 mb-4">
-                <div className="p-3 bg-amber-100 rounded-lg">
-                  <Bell className="h-6 w-6 text-amber-600" />
+                <div className="p-3 bg-gray-100 rounded-lg">
+                  <Bell className="h-6 w-6 text-gray-400" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-900">公告事項</h3>
+                <h3 className="text-lg font-bold text-gray-500">公告事項</h3>
               </div>
-              <p className="text-sm text-gray-600">查看最新公告、重要通知、活動資訊</p>
-            </Link>
+              <p className="text-sm text-gray-400">查看最新公告、重要通知、活動資訊</p>
+              <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full mt-2 inline-block">即將推出</span>
+            </div>
           </div>
 
           {/* Recent Activity */}

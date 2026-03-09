@@ -36,7 +36,7 @@ function useIsMobile() {
 export default function StaffDashboardLayout({ children }: StaffDashboardLayoutProps) {
   const [location] = useLocation();
   const { data: user } = trpc.auth.me.useQuery();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_WIDTH);
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -82,6 +82,13 @@ export default function StaffDashboardLayout({ children }: StaffDashboardLayoutP
 
   return (
     <div className="flex h-screen bg-gray-50">
+      {/* Mobile Overlay */}
+      {isMobile && !isCollapsed && (
+        <div
+          className="fixed inset-0 bg-black/40 z-40"
+          onClick={() => setIsCollapsed(true)}
+        />
+      )}
       {/* Sidebar */}
       <div
         ref={sidebarRef}
@@ -94,7 +101,7 @@ export default function StaffDashboardLayout({ children }: StaffDashboardLayoutP
         <div className="p-4 flex items-center justify-between border-b border-purple-500/30">
           {!isCollapsed && (
             <div>
-              <h2 className="text-xl font-bold">員工專區</h2>
+              <h2 className="text-xl font-bold whitespace-nowrap">員工專區</h2>
               <p className="text-sm text-purple-100">{user?.name || "員工"}</p>
             </div>
           )}

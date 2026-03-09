@@ -159,6 +159,15 @@ export async function updateUserProfile(userId: number, data: {
   await db.update(users).set(data).where(eq(users.id, userId));
 }
 
+/** 修改已登入用戶的密碼（需先驗證舊密碼） */
+export async function updateUserPassword(userId: number, newPasswordHash: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(users)
+    .set({ passwordHash: newPasswordHash })
+    .where(eq(users.id, userId));
+}
+
 // ============ CATEGORY FUNCTIONS ============
 export async function getAllCategories() {
   const db = await getDb();

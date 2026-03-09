@@ -1026,3 +1026,34 @@
 - [x] 加入 aggregateRating 欄位（有數據則真實呈現，無則預設 ratingValue:5, reviewCount:1）
 - [x] TypeScript 0 errors + vitest 通過
 - [x] 儲存 Checkpoint
+
+## 全端系統 UI/UX 優化與核心功能擴充（2026-03-10）
+
+### 一、前端 UI 響應式排版修復
+- [ ] /dashboard/admin/users：標題區塊手機版 flex-col + 按鈕縮小
+- [ ] /dashboard/admin/users：用戶列表項目高度統一（移除異常 flex-grow）
+- [ ] /dashboard/admin/products：錯字修正（管理線上u5546城 → 管理線上商城；免運门菴 → 免運門檻）
+- [ ] /dashboard/admin/products：手機版排版確認
+- [ ] /dashboard/staff：Sidebar 手機版預設收合（isOpen: false when mobile）
+- [ ] /dashboard/staff：「員工專區」標題加 whitespace-nowrap
+
+### 二、全域未完成功能防護
+- [ ] 管理員後台：SEO 表現分析、即時流量分析按鈕反灰鎖定
+- [ ] 員工專區：排班系統、公告事項按鈕反灰鎖定
+- [ ] 加盟主專區：訂單管理、庫存管理、營運報表等按鈕反灰鎖定
+
+### 三、SOP CRUD 補強
+- [ ] SOP 列表新增「刪除」按鈕與二次確認彈窗
+- [ ] 後端新增 DELETE SOP API（資料庫同步刪除）
+- [ ] SOP 列表新增排序選項（發布時間新到舊/舊到新）
+- [ ] 後端 SOP 查詢 API 支援 sortBy 參數
+
+### 四、修改密碼模組
+- [ ] 後端新增 changePassword tRPC procedure（舊密碼驗證 + 新密碼加密儲存）
+- [ ] 前端 Navbar 下拉選單新增「修改密碼」入口
+- [ ] 前端修改密碼表單（舊密碼、新密碼、確認新密碼）
+
+### 驗證
+- [ ] TypeScript 0 errors
+- [ ] vitest 42/42 通過
+- [ ] 儲存 Checkpoint
