@@ -45,6 +45,7 @@ import Login from "./pages/Login";
 import Profile from "./pages/Profile";
 import FranchiseDashboard from "./pages/FranchiseDashboard";
 import ProfileComplete from "./pages/ProfileComplete";
+import CompleteProfile from "./pages/CompleteProfile";
 import { MarketingTrap } from "./components/MarketingTrap";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
@@ -145,6 +146,7 @@ function Router() {
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password/:token" component={ResetPassword} />
       <Route path="/profile/complete" component={ProfileComplete} />
+      <Route path="/complete-profile" component={CompleteProfile} />
       <Route path="/profile" component={Profile} />
       
       {/* Member Routes */}

@@ -3,6 +3,7 @@ import { trpc } from "../lib/trpc";
 import { Users, Building2, Mail, Lock, ArrowLeft, Chrome } from "lucide-react";
 import { getLoginUrl } from "../const";
 import { trackEvent } from "../components/Analytics";
+import { toast } from "sonner";
 
 export default function Login() {
   const [showEmailLogin, setShowEmailLogin] = useState(false);
@@ -34,14 +35,17 @@ export default function Login() {
       const role = result?.user?.role ?? "customer";
       const searchParams = new URLSearchParams(window.location.search);
       const redirectParam = searchParams.get("redirect");
-      if (redirectParam) {
-        window.location.href = redirectParam;
-      } else if (role === "customer") {
-        window.location.href = "/shop";
-      } else {
-        // super_admin, manager, franchisee, staff → dashboard
-        window.location.href = "/dashboard";
-      }
+      // Show welcome toast
+      toast.success(`歡迎回來，${result?.user?.name || '會員'} 👋`, { duration: 2500 });
+      setTimeout(() => {
+        if (redirectParam) {
+          window.location.href = redirectParam;
+        } else if (role === "customer") {
+          window.location.href = "/shop?welcome=1";
+        } else {
+          window.location.href = "/dashboard?welcome=1";
+        }
+      }, 600);
     } catch (err: any) {
       setError(err.message || "登入失敗，請檢查帳號密碼");
     } finally {

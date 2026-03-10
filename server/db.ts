@@ -149,6 +149,7 @@ export async function updateUserLastSignedIn(userId: number) {
 export async function updateUserProfile(userId: number, data: { 
   name?: string; 
   fullName?: string;
+  email?: string;
   phone?: string; 
   address?: string;
   shippingAddress?: string;

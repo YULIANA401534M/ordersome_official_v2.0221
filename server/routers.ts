@@ -80,12 +80,19 @@ export const appRouter = router({
       .input(z.object({
         name: z.string().optional(),
         fullName: z.string().optional(),
+        email: z.string().email().optional(),
         phone: z.string().optional(),
         address: z.string().optional(),
         shippingAddress: z.string().optional(),
         avatarUrl: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
+        if (input.email) {
+          const existing = await db.getUserByEmail(input.email);
+          if (existing && existing.id !== ctx.user.id) {
+            throw new TRPCError({ code: 'CONFLICT', message: '此 Email 已被其他帳號使用' });
+          }
+        }
         await db.updateUserProfile(ctx.user.id, input);
         return { success: true };
       }),

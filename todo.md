@@ -1106,3 +1106,11 @@
 - [ ] 儲存 Checkpoint
 - [ ] 確認 Google Cloud Console 已設定 redirect_uri: https://ordersome.com.tw/api/oauth/google/callback
 - [ ] 確認 LINE Developers Console 已設定 Callback URL: https://ordersome.com.tw/api/oauth/line/callback
+
+## 新功能（2026-03-10）
+- [x] LINE 登入後無 Email 時，重導向至 /complete-profile 補填頁面
+- [x] 新會員（Google/LINE）首次註冊成功時，發送 Email 通知給管理員（ordersome2020@gmail.com）
+- [x] 登入/註冊成功後顯示短暫歡迎 Toast 訊息
+- [x] 建立 /complete-profile 前端頁面（補填 Email + 姓名）
+- [x] 擴充 auth.updateProfile procedure 支援 email 欄位
+- [x] App.tsx 新增 /complete-profile 路由

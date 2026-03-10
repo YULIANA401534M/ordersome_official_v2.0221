@@ -3,6 +3,7 @@ import type { Express, Request, Response } from "express";
 import * as db from "../db";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
+import { notifyAdminNewMember } from "./email";
 
 function getQueryParam(req: Request, key: string): string | undefined {
   const value = req.query[key];
@@ -217,10 +218,10 @@ export function registerOAuthRoutes(app: Express) {
         userId: string; displayName: string; pictureUrl?: string;
       };
 
-      // LINE email requires openid+email scope; may be absent
+       // LINE email requires openid+email scope; may be absent
       const lineEmail: string | null = null;
       const existingUser = lineEmail ? await db.getUserByEmail(lineEmail) : null;
-
+      const isNewUser = !existingUser;
       if (existingUser) {
         await db.linkOAuthProvider(existingUser.id, 'line', profile.userId);
         await db.updateUserLastSignedIn(existingUser.id);
@@ -236,15 +237,27 @@ export function registerOAuthRoutes(app: Express) {
           role: "customer",
         });
       }
-
       const sessionUser = existingUser ?? await db.getUserByOpenId(`line:${profile.userId}`);
       if (!sessionUser) { res.redirect(302, "/login?error=line_session_failed"); return; }
-
       const sessionToken = await sdk.createSessionToken(sessionUser.openId, {
         name: sessionUser.name || "", expiresInMs: ONE_YEAR_MS,
       });
       res.cookie(COOKIE_NAME, sessionToken, { ...getSessionCookieOptions(req), maxAge: ONE_YEAR_MS });
-      res.redirect(302, getSmartRedirectUrl(sessionUser.role, state));
+      // Notify admin for new members
+      if (isNewUser) {
+        notifyAdminNewMember({
+          name: profile.displayName,
+          email: null,
+          provider: "line",
+          registeredAt: new Date(),
+        }).catch((e) => console.error("[LINE OAuth] Admin notify failed:", e));
+      }
+      // LINE has no email: redirect new users to complete profile page
+      const baseRedirect = getSmartRedirectUrl(sessionUser.role, state);
+      const finalRedirect = isNewUser
+        ? `/complete-profile?next=${encodeURIComponent(baseRedirect)}&welcome=1`
+        : `${baseRedirect}${baseRedirect.includes('?') ? '&' : '?'}welcome=1`;
+      res.redirect(302, finalRedirect);
 
     } catch (error) {
       console.error("[LINE OAuth] Callback failed", error);
@@ -295,8 +308,8 @@ export function registerOAuthRoutes(app: Express) {
         id: string; email: string; name: string; picture?: string;
       };
 
-      const existingUser = await db.getUserByEmail(googleUser.email);
-
+        const existingUser = await db.getUserByEmail(googleUser.email);
+      const isNewUser = !existingUser;
       if (existingUser) {
         await db.linkOAuthProvider(existingUser.id, 'google', googleUser.id);
         await db.updateUserLastSignedIn(existingUser.id);
@@ -312,15 +325,25 @@ export function registerOAuthRoutes(app: Express) {
           role: "customer",
         });
       }
-
       const sessionUser = existingUser ?? await db.getUserByEmail(googleUser.email);
       if (!sessionUser) { res.redirect(302, "/login?error=google_session_failed"); return; }
-
       const sessionToken = await sdk.createSessionToken(sessionUser.openId, {
         name: sessionUser.name || "", expiresInMs: ONE_YEAR_MS,
       });
       res.cookie(COOKIE_NAME, sessionToken, { ...getSessionCookieOptions(req), maxAge: ONE_YEAR_MS });
-      res.redirect(302, getSmartRedirectUrl(sessionUser.role, state));
+      // Notify admin for new members
+      if (isNewUser) {
+        notifyAdminNewMember({
+          name: googleUser.name,
+          email: googleUser.email,
+          provider: "google",
+          registeredAt: new Date(),
+        }).catch((e) => console.error("[Google OAuth] Admin notify failed:", e));
+      }
+      // Append welcome flag for toast display
+      const baseRedirect = getSmartRedirectUrl(sessionUser.role, state);
+      const finalRedirect = `${baseRedirect}${baseRedirect.includes('?') ? '&' : '?'}welcome=1`;
+      res.redirect(302, finalRedirect);
 
     } catch (error) {
       console.error("[Google OAuth] Callback failed", error);

@@ -9,8 +9,26 @@ import CorporateLayout from "@/components/layout/CorporateLayout";
 import { trpc } from "@/lib/trpc";
 import { useCartStore } from "@/stores/cartStore";
 import { toast } from "sonner";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function ShopHome() {
+  const { user } = useAuth();
+
+  // Show welcome toast when redirected after login/register
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("welcome") === "1") {
+      const name = user?.name || "會員";
+      toast.success(`歡迎加入來點什麼，${name} 🎉`, {
+        description: "登入成功，開始選購吧！",
+        duration: 4000,
+      });
+      const url = new URL(window.location.href);
+      url.searchParams.delete("welcome");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, [user]);
+
   useEffect(() => {
     document.title = "來點什麼 線上商城｜獨家特製辣椒醬、人氣周邊商品室配";
     document.querySelector('meta[name="description"]')?.setAttribute(
