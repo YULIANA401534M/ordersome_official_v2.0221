@@ -186,9 +186,9 @@ export function registerOAuthRoutes(app: Express) {
         res.redirect(302, "/login?error=line_not_configured"); return;
       }
 
-      const host = req.headers["x-forwarded-host"] || req.headers.host || "localhost:3000";
-      const proto = req.headers["x-forwarded-proto"] || req.protocol || "https";
-      const redirectUri = `${proto}://${host}/api/oauth/line/callback`;
+      // MUST use the same redirect_uri as /start (ENV.appUrl), otherwise token exchange fails
+      const lineBaseUrl = ENV.appUrl || `${req.headers["x-forwarded-proto"] ?? req.protocol}://${req.headers["x-forwarded-host"] ?? req.headers.host}`;
+      const redirectUri = `${lineBaseUrl.replace(/\/$/, "")}/api/oauth/line/callback`;
 
       const tokenRes = await fetch("https://api.line.me/oauth2/v2.1/token", {
         method: "POST",
@@ -201,7 +201,11 @@ export function registerOAuthRoutes(app: Express) {
           client_secret: ENV.lineClientSecret,
         }),
       });
-      if (!tokenRes.ok) { res.redirect(302, "/login?error=line_token_failed"); return; }
+      if (!tokenRes.ok) {
+        const errBody = await tokenRes.text().catch(() => "(unreadable)");
+        console.error("[LINE OAuth] Token exchange failed:", tokenRes.status, errBody);
+        res.redirect(302, "/login?error=line_token_failed"); return;
+      }
 
       const tokenData = await tokenRes.json() as { access_token: string };
       const profileRes = await fetch("https://api.line.me/v2/profile", {
@@ -260,9 +264,9 @@ export function registerOAuthRoutes(app: Express) {
         res.redirect(302, "/login?error=google_not_configured"); return;
       }
 
-      const host = req.headers["x-forwarded-host"] || req.headers.host || "localhost:3000";
-      const proto = req.headers["x-forwarded-proto"] || req.protocol || "https";
-      const redirectUri = `${proto}://${host}/api/oauth/google/callback`;
+      // MUST use the same redirect_uri as /start (ENV.appUrl), otherwise token exchange fails
+      const googleBaseUrl = ENV.appUrl || `${req.headers["x-forwarded-proto"] ?? req.protocol}://${req.headers["x-forwarded-host"] ?? req.headers.host}`;
+      const redirectUri = `${googleBaseUrl.replace(/\/$/, "")}/api/oauth/google/callback`;
 
       const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
         method: "POST",
@@ -275,7 +279,11 @@ export function registerOAuthRoutes(app: Express) {
           grant_type: "authorization_code",
         }),
       });
-      if (!tokenRes.ok) { res.redirect(302, "/login?error=google_token_failed"); return; }
+      if (!tokenRes.ok) {
+        const errBody = await tokenRes.text().catch(() => "(unreadable)");
+        console.error("[Google OAuth] Token exchange failed:", tokenRes.status, errBody);
+        res.redirect(302, "/login?error=google_token_failed"); return;
+      }
 
       const tokenData = await tokenRes.json() as { access_token: string };
       const userInfoRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {

@@ -3,7 +3,7 @@ import { trpc } from "../../lib/trpc";
 import { Users, Shield, Mail, Phone, Building2, Edit2, RefreshCw, Search, Filter, BarChart3, TrendingUp, UserPlus, Trash2, X } from "lucide-react";
 import AdminDashboardLayout from "@/components/AdminDashboardLayout";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useAuth } from "../../_core/hooks/useAuth";
 
 type UserRole = "super_admin" | "manager" | "franchisee" | "staff" | "customer";
 type UserStatus = "active" | "suspended";

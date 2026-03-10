@@ -1095,3 +1095,14 @@
 - [x] phone 和 storeId 欄位：僅在有值時才加入 updates 物件
 - [x] TypeScript 0 errors + 42 vitest 通過
 - [ ] 儲存 Checkpoint
+
+## Google/LINE OAuth 登入修復（2026-03-10）
+- [x] 診斷根本原因：/start 路由用 ENV.appUrl 建立 redirect_uri，/callback 路由用 x-forwarded-host（不一致）
+- [x] 修復 LINE /callback：改用 ENV.appUrl 建立 redirectUri，與 /start 完全一致
+- [x] 修復 Google /callback：改用 ENV.appUrl 建立 redirectUri，與 /start 完全一致
+- [x] 增強錯誤日誌：token 交換失敗時輸出詳細錯誤訊息（HTTP status + body）
+- [x] 修正 AdminUsers.tsx 的 useAuth import 路徑（@/_core → 相對路徑）
+- [x] TypeScript 0 errors + 42 vitest 通過
+- [ ] 儲存 Checkpoint
+- [ ] 確認 Google Cloud Console 已設定 redirect_uri: https://ordersome.com.tw/api/oauth/google/callback
+- [ ] 確認 LINE Developers Console 已設定 Callback URL: https://ordersome.com.tw/api/oauth/line/callback
