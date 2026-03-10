@@ -1114,3 +1114,7 @@
 - [x] 建立 /complete-profile 前端頁面（補填 Email + 姓名）
 - [x] 擴充 auth.updateProfile procedure 支援 email 欄位
 - [x] App.tsx 新增 /complete-profile 路由
+
+## OAuth 用戶設定密碼功能（2026-03-10）
+- [x] 後端：changePassword procedure 支援 OAuth 用戶（passwordHash 為 null）首次設定密碼，不需舊密碼驗證
+- [x] 前端：修改密碼 Dialog 偵測 loginMethod，OAuth 用戶顯示「設定密碼」模式（隱藏舊密碼欄位）

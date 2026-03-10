@@ -162,10 +162,12 @@ export const appRouter = router({
         return { success: true, message: "密碼已成功重設，請使用新密碼登入" };
       }),
 
-    // 修改密碼（已登入用戶，需驗證舊密碼）
+    // 修改密碼（已登入用戶）
+    // - 一般帳號：需驗證舊密碼
+    // - OAuth 帳號（Google/LINE）：首次設定時不需舊密碼
     changePassword: protectedProcedure
       .input(z.object({
-        oldPassword: z.string().min(1, "請輸入舊密碼"),
+        oldPassword: z.string().optional(), // OAuth 用戶首次設定時不需舊密碼
         newPassword: z.string().min(6, "新密碼至少需要 6 個字元"),
         confirmPassword: z.string(),
       }))
@@ -175,11 +177,20 @@ export const appRouter = router({
         }
         // 讀取用戶（包含 passwordHash）
         const user = await db.getUserById(ctx.user.id);
-        if (!user || !user.passwordHash) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: '此帳號未設定密碼，請使用忽記密碼功能' });
+        if (!user) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: '用戶不存在' });
         }
-        // 驗證舊密碼
         const { verifyPassword, hashPassword } = await import('./lib/password');
+        if (!user.passwordHash) {
+          // OAuth 用戶首次設定密碼：不需驗證舊密碼
+          const newHash = await hashPassword(input.newPassword);
+          await db.updateUserPassword(ctx.user.id, newHash);
+          return { success: true, message: "密碼設定成功！您現在也可以使用 Email + 密碼登入", isFirstTime: true };
+        }
+        // 一般帳號：需驗證舊密碼
+        if (!input.oldPassword) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: '請輸入舊密碼' });
+        }
         const isValid = await verifyPassword(input.oldPassword, user.passwordHash);
         if (!isValid) {
           throw new TRPCError({ code: 'UNAUTHORIZED', message: '舊密碼不正確' });
@@ -187,7 +198,7 @@ export const appRouter = router({
         // 加密新密碼並儲存
         const newHash = await hashPassword(input.newPassword);
         await db.updateUserPassword(ctx.user.id, newHash);
-        return { success: true, message: "密碼已成功更新" };
+        return { success: true, message: "密碼已成功更新", isFirstTime: false };
       }),
   }),
 
