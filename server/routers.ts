@@ -365,6 +365,7 @@ export const appRouter = router({
         invoiceType: z.enum(['personal', 'company']).default('personal'),
         companyTaxId: z.string().nullable().optional(),
         companyName: z.string().nullable().optional(),
+        orderSource: z.string().optional().default('general'),
         items: z.array(z.object({
           id: z.number(),
           name: z.string(),
@@ -407,6 +408,7 @@ export const appRouter = router({
           recipientEmail: input.recipientEmail,
           shippingAddress: input.shippingAddress,
           note: input.note,
+          orderSource: input.orderSource ?? 'general',
           invoiceType: input.invoiceType,
           companyTaxId: input.companyTaxId,
           companyName: input.companyName,

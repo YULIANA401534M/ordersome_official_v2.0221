@@ -63,6 +63,10 @@ export default function Checkout() {
   }, []);
 
   const [, navigate] = useLocation();
+  // 讀取 URL 中的 source 參數（B2B 福委賣場傳入 'exclusive_B2B'）
+  const orderSource = typeof window !== 'undefined'
+    ? (new URLSearchParams(window.location.search).get('source') ?? 'general')
+    : 'general';
   const { user, isAuthenticated } = useAuth();
   const { items, clearCart } = useCartStore();
 
@@ -219,6 +223,7 @@ export default function Checkout() {
       invoiceType: form.invoiceType,
       companyTaxId: form.invoiceType === "company" ? form.companyTaxId : undefined,
       companyName: form.invoiceType === "company" ? form.companyName : undefined,
+      orderSource,
       items: items.map((item) => ({
         id: item.id,
         name: item.name,

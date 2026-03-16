@@ -100,7 +100,16 @@ export default function AdminOrders() {
                   <TableBody>
                     {filteredOrders.map((order) => (
                       <TableRow key={order.id}>
-                        <TableCell className="font-mono font-medium">{order.orderNumber}</TableCell>
+                        <TableCell className="font-mono font-medium">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span>{order.orderNumber}</span>
+                            {(order as any).orderSource && (order as any).orderSource !== 'general' && (
+                              <Badge className="bg-purple-100 text-purple-700 border border-purple-300 text-xs font-semibold">
+                                福委會專案
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell>{order.recipientName || "-"}</TableCell>
                         <TableCell className="font-medium">NT$ {order.total}</TableCell>
                         <TableCell>
@@ -140,6 +149,14 @@ export default function AdminOrders() {
                 <div className="col-span-2"><span className="text-gray-500">地址：</span>{selectedOrder.shippingAddress}</div>
                 <div><span className="text-gray-500">付款方式：</span>{selectedOrder.paymentMethod}</div>
                 <div><span className="text-gray-500">總金額：</span><span className="font-bold text-amber-600">NT$ {selectedOrder.total}</span></div>
+                {selectedOrder.orderSource && selectedOrder.orderSource !== 'general' && (
+                  <div className="col-span-2">
+                    <span className="text-gray-500">訂單來源：</span>
+                    <Badge className="bg-purple-100 text-purple-700 border border-purple-300 text-xs font-semibold ml-1">
+                      福委會專案 ({selectedOrder.orderSource})
+                    </Badge>
+                  </div>
+                )}
               </div>
             </div>
           )}

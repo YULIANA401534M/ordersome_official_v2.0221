@@ -64,7 +64,7 @@ export default function ExclusiveProduct() {
       stock: product.stock,
     });
     toast.success("已加入購物車");
-    navigate("/shop/checkout");
+    navigate("/shop/checkout?source=exclusive_B2B");
   };
 
   // ── Loading ──

@@ -1133,3 +1133,11 @@
 - [x] 階段三：/exclusive 頁面隱藏 Navbar/Footer，100% 寬度渲染一頁式長圖
 - [x] 階段三：/exclusive 頁面底部固定操作列（福委價 + 立即購買按鈕）
 - [x] 階段三：立即購買按鈕呼叫現有加入購物車方法並導向 /shop/checkout
+## B2B 圖片上傳 + 訂單標記（2026-03-16）
+- [x] 後端：建立本機圖片上傳 API（儲存至 /uploads/b2b，禁止外部雲端）
+- [x] 前端：AdminProducts 替換 exclusiveImageUrl 純文字輸入框為圖片上傳元件
+- [x] 資料庫：orders 表新增 orderSource 欄位（String，預設 'general'）
+- [x] 後端：createOrder procedure 接收並寫入 orderSource 參數
+- [x] 前端：ExclusiveProduct 結帳時傳遞 source=exclusive_B2B
+- [x] 前端：Checkout.tsx 讀取 URL source 參數並傳入訂單
+- [x] 前端：AdminOrders 訂單列表顯示「福委會專案」 Badge（紫色）

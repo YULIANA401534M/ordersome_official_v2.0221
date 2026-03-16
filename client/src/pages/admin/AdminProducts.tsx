@@ -126,6 +126,7 @@ export default function AdminProducts() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [isUploading, setIsUploading] = useState(false);
+  const [isB2BUploading, setIsB2BUploading] = useState(false);
 
   const utils = trpc.useUtils();
   const { data: products, isLoading } = trpc.product.listAll.useQuery();
@@ -172,6 +173,35 @@ export default function AdminProducts() {
     });
     setIsUploading(false);
   }, [uploadImage]);
+
+  // ── B2B 本機圖片上傳 handler ──
+  const handleB2BImageUpload = useCallback(async (file: File) => {
+    setIsB2BUploading(true);
+    try {
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((res, rej) => {
+        reader.onload = () => res(reader.result as string);
+        reader.onerror = rej;
+        reader.readAsDataURL(file);
+      });
+      const response = await fetch("/api/upload/b2b-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileName: file.name, fileData: base64 }),
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "上傳失敗");
+      }
+      const result = await response.json();
+      setForm(prev => ({ ...prev, exclusiveImageUrl: result.url }));
+      toast.success("一頁式長圖上傳成功（儲存於本機）");
+    } catch (e: any) {
+      toast.error("圖片上傳失敗：" + (e.message || "未知錯誤"));
+    } finally {
+      setIsB2BUploading(false);
+    }
+  }, []);
 
   const handleRemoveImage = (idx: number) => {
     setForm(prev => {
@@ -533,12 +563,53 @@ export default function AdminProducts() {
                       <p className="text-xs text-gray-400">存取網址將為：/exclusive/{form.exclusiveSlug || "your-slug"}</p>
                     </div>
                     <div className="space-y-1.5">
-                      <Label>一頁式長圖網址</Label>
-                      <Input value={form.exclusiveImageUrl} onChange={(e) => setForm(p => ({ ...p, exclusiveImageUrl: e.target.value }))} placeholder="https://... （完整圖片網址）" />
-                      <p className="text-xs text-gray-400">專屬賣場頁面將以 100% 寬度渲染此圖片</p>
+                      <Label className="flex items-center gap-1"><ImagePlus className="w-3.5 h-3.5" /> 一頁式長圖（本機儲存）</Label>
+                      <div className="flex gap-2">
+                        <label className="flex-1 cursor-pointer">
+                          <div className={`border-2 border-dashed rounded-lg p-3 text-center transition-colors ${
+                            isB2BUploading ? "border-purple-300 bg-purple-50" : "border-gray-300 hover:border-purple-400 hover:bg-purple-50/50"
+                          }`}>
+                            {isB2BUploading ? (
+                              <div className="flex items-center justify-center gap-2 text-purple-600">
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                <span className="text-sm">上傳中...</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-center gap-2 text-gray-500">
+                                <ImagePlus className="w-4 h-4" />
+                                <span className="text-sm">{form.exclusiveImageUrl ? "重新選擇圖片" : "點擊選擇圖片檔案"}</span>
+                              </div>
+                            )}
+                          </div>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            disabled={isB2BUploading}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleB2BImageUpload(file);
+                              e.target.value = "";
+                            }}
+                          />
+                        </label>
+                        {form.exclusiveImageUrl && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="self-center text-red-500 hover:text-red-600"
+                            onClick={() => setForm(p => ({ ...p, exclusiveImageUrl: "" }))}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-400">圖片將儲存於伺服器本機，支援 JPG/PNG/WebP，最大 10MB</p>
                       {form.exclusiveImageUrl && (
-                        <div className="mt-2 border rounded-lg overflow-hidden max-h-40">
+                        <div className="mt-2 border rounded-lg overflow-hidden max-h-48 bg-gray-50">
                           <img src={form.exclusiveImageUrl} alt="預覽" className="w-full object-cover object-top" />
+                          <p className="text-xs text-gray-400 px-2 py-1 truncate">{form.exclusiveImageUrl}</p>
                         </div>
                       )}
                     </div>
@@ -550,7 +621,7 @@ export default function AdminProducts() {
 
           <DialogFooter className="border-t pt-4">
             <Button variant="outline" onClick={() => setDialogOpen(false)}>取消</Button>
-            <Button onClick={handleSubmit} disabled={isBusy || isUploading} className="bg-amber-600 hover:bg-amber-700 min-w-[100px]">
+            <Button onClick={handleSubmit} disabled={isBusy || isUploading || isB2BUploading} className="bg-amber-600 hover:bg-amber-700 min-w-[100px]">
               {isBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : editingId !== null ? "儲存變更" : "新增商品"}
             </Button>
           </DialogFooter>

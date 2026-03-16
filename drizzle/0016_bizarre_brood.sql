@@ -1,0 +1,1 @@
+ALTER TABLE `orders` ADD `orderSource` varchar(50) DEFAULT 'general' NOT NULL;
