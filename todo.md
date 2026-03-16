@@ -1141,3 +1141,10 @@
 - [x] 前端：ExclusiveProduct 結帳時傳遞 source=exclusive_B2B
 - [x] 前端：Checkout.tsx 讀取 URL source 參數並傳入訂單
 - [x] 前端：AdminOrders 訂單列表顯示「福委會專案」 Badge（紫色）
+
+## B2B 專屬賣場破圖修復（2026-03-16）
+- [x] 檢查資料庫 exclusiveImageUrl 欄位儲存的路徑格式
+- [x] 檢查 Express 靜態路由設定（/uploads/b2b → 實體資料夾）
+- [x] 檢查 Vite Proxy 設定（根本原因：Vite middleware 欄截圖片請求）
+- [x] 修復：在 setupVite 中於 Vite middleware 之前插入 /uploads/b2b 靜態路由
+- [x] 驗證圖片正常回傳 image/jpeg Content-Type

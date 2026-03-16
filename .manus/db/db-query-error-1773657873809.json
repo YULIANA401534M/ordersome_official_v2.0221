@@ -1,0 +1,8 @@
+{
+  "query": "UPDATE products SET exclusive_image_url = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663285169742/gjTAhmM88fiEhPinRVjKbV/1773657145735-hw9p20_269dc77f.png' WHERE exclusive_image_url = '/uploads/b2b/1773657145735-hw9p20.png';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user AKK2AjLXvjySfzt.defe7b7a87b6 --database gjTAhmM88fiEhPinRVjKbV --execute UPDATE products SET exclusive_image_url = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663285169742/gjTAhmM88fiEhPinRVjKbV/1773657145735-hw9p20_269dc77f.png' WHERE exclusive_image_url = '/uploads/b2b/1773657145735-hw9p20.png';",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'exclusive_image_url' in 'where clause'"
+  ]
+}
