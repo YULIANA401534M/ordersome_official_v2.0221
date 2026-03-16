@@ -1161,3 +1161,11 @@
 - [x] ExclusiveProduct.tsx：根容器改為 bg-black
 - [x] ExclusiveProduct.tsx：圖片容器加入 max-w-[768px] mx-auto（Desktop 置中，Mobile 全寬）
 - [x] ExclusiveProduct.tsx：底部操作列與圖片容器同寬置中
+
+## 修復新增商品 INSERT 錯誤（2026-03-16）
+- [x] 診斷：slug UNIQUE 衝突（中文名稱 → slug="-" → 已有 id=90010 衝突）
+- [x] 修復 AdminProducts.tsx generateSlug()：中文名稱時使用 product-{timestamp} 確保唯一性
+- [x] 修復 routers.ts createProduct input schema：exclusiveSlug/exclusiveImageUrl 改為 nullable().optional()
+- [x] 修復資料庫：UPDATE products SET slug='product-90010' WHERE slug='-'
+- [x] 新增 slug 預覽提示文字（amber 色警示）
+- [x] TypeScript 0 errors + vitest 46/46 通過

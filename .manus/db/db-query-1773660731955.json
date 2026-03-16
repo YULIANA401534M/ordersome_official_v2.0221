@@ -1,0 +1,142 @@
+{
+  "query": "SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_DEFAULT FROM information_schema.COLUMNS WHERE TABLE_NAME = 'products' ORDER BY ORDINAL_POSITION;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user AKK2AjLXvjySfzt.defe7b7a87b6 --database gjTAhmM88fiEhPinRVjKbV --execute SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_DEFAULT FROM information_schema.COLUMNS WHERE TABLE_NAME = 'products' ORDER BY ORDINAL_POSITION;",
+  "rows": [
+    {
+      "COLUMN_NAME": "id",
+      "DATA_TYPE": "int",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "categoryId",
+      "DATA_TYPE": "int",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "name",
+      "DATA_TYPE": "varchar",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "slug",
+      "DATA_TYPE": "varchar",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "description",
+      "DATA_TYPE": "text",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "price",
+      "DATA_TYPE": "decimal",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "originalPrice",
+      "DATA_TYPE": "decimal",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "imageUrl",
+      "DATA_TYPE": "text",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "images",
+      "DATA_TYPE": "text",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "specifications",
+      "DATA_TYPE": "text",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "stock",
+      "DATA_TYPE": "int",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "0"
+    },
+    {
+      "COLUMN_NAME": "isActive",
+      "DATA_TYPE": "tinyint",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "1"
+    },
+    {
+      "COLUMN_NAME": "isFeatured",
+      "DATA_TYPE": "tinyint",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "0"
+    },
+    {
+      "COLUMN_NAME": "sortOrder",
+      "DATA_TYPE": "int",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "0"
+    },
+    {
+      "COLUMN_NAME": "createdAt",
+      "DATA_TYPE": "timestamp",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "CURRENT_TIMESTAMP"
+    },
+    {
+      "COLUMN_NAME": "updatedAt",
+      "DATA_TYPE": "timestamp",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "CURRENT_TIMESTAMP"
+    },
+    {
+      "COLUMN_NAME": "specDetails",
+      "DATA_TYPE": "text",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "shippingDetails",
+      "DATA_TYPE": "text",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "isHidden",
+      "DATA_TYPE": "tinyint",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "0"
+    },
+    {
+      "COLUMN_NAME": "exclusiveSlug",
+      "DATA_TYPE": "varchar",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "exclusiveImageUrl",
+      "DATA_TYPE": "text",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "display_order",
+      "DATA_TYPE": "int",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\tDATA_TYPE\tIS_NULLABLE\tCOLUMN_DEFAULT\nid\tint\tNO\tNULL\ncategoryId\tint\tNO\tNULL\nname\tvarchar\tNO\tNULL\nslug\tvarchar\tNO\tNULL\ndescription\ttext\tYES\tNULL\nprice\tdecimal\tNO\tNULL\noriginalPrice\tdecimal\tYES\tNULL\nimageUrl\ttext\tYES\tNULL\nimages\ttext\tYES\tNULL\nspecifications\ttext\tYES\tNULL\nstock\tint\tNO\t0\nisActive\ttinyint\tNO\t1\nisFeatured\ttinyint\tNO\t0\nsortOrder\tint\tNO\t0\ncreatedAt\ttimestamp\tNO\tCURRENT_TIMESTAMP\nupdatedAt\ttimestamp\tNO\tCURRENT_TIMESTAMP\nspecDetails\ttext\tYES\tNULL\nshippingDetails\ttext\tYES\tNULL\nisHidden\ttinyint\tNO\t0\nexclusiveSlug\tvarchar\tYES\tNULL\nexclusiveImageUrl\ttext\tYES\tNULL\ndisplay_order\tint\tNO\t0\n",
+  "stderr": "",
+  "execution_time_ms": 1577
+}

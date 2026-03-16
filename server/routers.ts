@@ -274,8 +274,8 @@ export const appRouter = router({
         isFeatured: z.boolean().optional(),
         sortOrder: z.number().optional(),
         isHidden: z.boolean().optional(),
-        exclusiveSlug: z.string().optional(),
-        exclusiveImageUrl: z.string().optional(),
+        exclusiveSlug: z.string().nullable().optional(),
+        exclusiveImageUrl: z.string().nullable().optional(),
       }))
       .mutation(({ input }) => db.createProduct(input)),
     update: adminProcedure

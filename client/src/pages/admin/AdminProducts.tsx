@@ -237,9 +237,17 @@ export default function AdminProducts() {
   };
 
   // ── Submit ──
+  const generateSlug = (name: string, customSlug: string) => {
+    if (customSlug.trim()) return customSlug.trim();
+    // 嘗試從名稱生成 slug（僅保留英數字和連字符）
+    const base = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    // 若結果為空（例如純中文名稱），使用時間戳確保唯一性
+    return base || `product-${Date.now()}`;
+  };
+
   const buildPayload = () => ({
     name: form.name,
-    slug: form.slug || form.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+    slug: generateSlug(form.name, form.slug),
     description: form.description,
     price: form.price,
     originalPrice: form.originalPrice || undefined,
@@ -427,7 +435,12 @@ export default function AdminProducts() {
                   </div>
                   <div className="space-y-1.5">
                     <Label>網址代稱 (slug)</Label>
-                    <Input value={form.slug} onChange={(e) => setForm(p => ({ ...p, slug: e.target.value }))} placeholder="自動產生" />
+                    <Input value={form.slug} onChange={(e) => setForm(p => ({ ...p, slug: e.target.value }))} placeholder="自動產生（建議填寫英數字）" />
+                    {!form.slug && form.name && (
+                      <p className="text-xs text-amber-600">
+                        預覽：{(() => { const base = form.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''); return base || '將自動使用時間戳（建議手動填寫英文 slug）'; })()}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="space-y-1.5">
