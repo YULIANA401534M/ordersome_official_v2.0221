@@ -252,6 +252,10 @@ export const appRouter = router({
     getById: publicProcedure
       .input(z.object({ id: z.number() }))
       .query(({ input }) => db.getProductById(input.id)),
+    // B2B 封閉式賣場：依專屬網址後綴查詢
+    getByExclusiveSlug: publicProcedure
+      .input(z.object({ exclusiveSlug: z.string() }))
+      .query(({ input }) => db.getProductByExclusiveSlug(input.exclusiveSlug)),
     create: adminProcedure
       .input(z.object({
         categoryId: z.number(),
@@ -269,6 +273,9 @@ export const appRouter = router({
         isActive: z.boolean().optional(),
         isFeatured: z.boolean().optional(),
         sortOrder: z.number().optional(),
+        isHidden: z.boolean().optional(),
+        exclusiveSlug: z.string().optional(),
+        exclusiveImageUrl: z.string().optional(),
       }))
       .mutation(({ input }) => db.createProduct(input)),
     update: adminProcedure
@@ -289,6 +296,9 @@ export const appRouter = router({
         isActive: z.boolean().optional(),
         isFeatured: z.boolean().optional(),
         sortOrder: z.number().optional(),
+        isHidden: z.boolean().optional(),
+        exclusiveSlug: z.string().nullable().optional(),
+        exclusiveImageUrl: z.string().nullable().optional(),
       }))
       .mutation(({ input }) => {
         const { id, ...data } = input;

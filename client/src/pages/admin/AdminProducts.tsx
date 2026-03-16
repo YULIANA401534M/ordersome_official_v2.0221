@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Pencil, Trash2, Search, Package, ArrowLeft, X, ImagePlus, Loader2, GripVertical } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Package, ArrowLeft, X, ImagePlus, Loader2, GripVertical, EyeOff, Link2 } from "lucide-react";
 import { Link } from "wouter";
 import { toast } from "sonner";
 import AdminDashboardLayout from "@/components/AdminDashboardLayout";
@@ -27,6 +27,8 @@ interface FormState {
   specifications: SpecEntry[];
   specDetails: string; shippingDetails: string;
   isActive: boolean; isFeatured: boolean; sortOrder: number;
+  // B2B 封閉式賣場欄位
+  isHidden: boolean; exclusiveSlug: string; exclusiveImageUrl: string;
 }
 
 const EMPTY_FORM: FormState = {
@@ -34,6 +36,7 @@ const EMPTY_FORM: FormState = {
   categoryId: 0, stock: 100, imageUrl: "", images: [],
   specifications: [], specDetails: "", shippingDetails: "",
   isActive: true, isFeatured: false, sortOrder: 0,
+  isHidden: false, exclusiveSlug: "", exclusiveImageUrl: "",
 };
 
 function specsToJson(specs: SpecEntry[]): string {
@@ -200,6 +203,9 @@ export default function AdminProducts() {
       specDetails: (p as any).specDetails || "",
       shippingDetails: (p as any).shippingDetails || "",
       isActive: p.isActive, isFeatured: p.isFeatured, sortOrder: p.sortOrder ?? 0,
+      isHidden: p.isHidden ?? false,
+      exclusiveSlug: p.exclusiveSlug || "",
+      exclusiveImageUrl: p.exclusiveImageUrl || "",
     });
     setDialogOpen(true);
   };
@@ -221,6 +227,9 @@ export default function AdminProducts() {
     isActive: form.isActive,
     isFeatured: form.isFeatured,
     sortOrder: form.sortOrder,
+    isHidden: form.isHidden,
+    exclusiveSlug: form.exclusiveSlug || null,
+    exclusiveImageUrl: form.exclusiveImageUrl || null,
   });
 
   const handleSubmit = () => {
@@ -322,6 +331,7 @@ export default function AdminProducts() {
                           {p.isActive ? "上架中" : "已下架"}
                         </Badge>
                         {p.isFeatured && <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 w-fit">精選</Badge>}
+                        {(p as any).isHidden && <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 w-fit"><EyeOff className="w-3 h-3 mr-1" />B2B 專屬</Badge>}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -499,6 +509,41 @@ export default function AdminProducts() {
                   <Label>排序權重（數字越大越前面）</Label>
                   <Input type="number" value={form.sortOrder} onChange={(e) => setForm(p => ({ ...p, sortOrder: parseInt(e.target.value) || 0 }))} className="w-32" />
                 </div>
+              </div>
+            </section>
+
+            <Separator />
+
+            {/* B2B 封閉式賣場設定 */}
+            <section>
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+                <EyeOff className="w-4 h-4" /> B2B 封閉式賣場
+              </h3>
+              <p className="text-xs text-gray-400 mb-3">開啟後，此商品將從一般商城 (/shop) 隱藏，僅能透過專屬網址存取。</p>
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between rounded-lg border p-3 border-purple-200 bg-purple-50/30">
+                  <div><p className="font-medium text-sm">隱藏商品（B2B 專屬）</p><p className="text-xs text-gray-400">開啟後不顯示於一般商城前台</p></div>
+                  <Switch checked={form.isHidden} onCheckedChange={(v) => setForm(p => ({ ...p, isHidden: v }))} />
+                </div>
+                {form.isHidden && (
+                  <>
+                    <div className="space-y-1.5">
+                      <Label className="flex items-center gap-1"><Link2 className="w-3.5 h-3.5" /> 專屬網址後綴 (slug)</Label>
+                      <Input value={form.exclusiveSlug} onChange={(e) => setForm(p => ({ ...p, exclusiveSlug: e.target.value }))} placeholder="例：company-welfare-2026" />
+                      <p className="text-xs text-gray-400">存取網址將為：/exclusive/{form.exclusiveSlug || "your-slug"}</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>一頁式長圖網址</Label>
+                      <Input value={form.exclusiveImageUrl} onChange={(e) => setForm(p => ({ ...p, exclusiveImageUrl: e.target.value }))} placeholder="https://... （完整圖片網址）" />
+                      <p className="text-xs text-gray-400">專屬賣場頁面將以 100% 寬度渲染此圖片</p>
+                      {form.exclusiveImageUrl && (
+                        <div className="mt-2 border rounded-lg overflow-hidden max-h-40">
+                          <img src={form.exclusiveImageUrl} alt="預覽" className="w-full object-cover object-top" />
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
             </section>
           </div>

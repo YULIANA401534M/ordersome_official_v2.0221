@@ -1118,3 +1118,18 @@
 ## OAuth 用戶設定密碼功能（2026-03-10）
 - [x] 後端：changePassword procedure 支援 OAuth 用戶（passwordHash 為 null）首次設定密碼，不需舊密碼驗證
 - [x] 前端：修改密碼 Dialog 偵測 loginMethod，OAuth 用戶顯示「設定密碼」模式（隱藏舊密碼欄位）
+
+## B2B 封閉式隱藏賣場模組（2026-03-16）
+- [x] 階段零：讀取現有 Product Schema 並建立備份 Checkpoint (b298ec91)
+- [x] 階段一：Schema 擴充 - 新增 isHidden (Boolean, 預設 false)
+- [x] 階段一：Schema 擴充 - 新增 exclusiveSlug (String, Unique, Nullable)
+- [x] 階段一：Schema 擴充 - 新增 exclusiveImageUrl (String, Nullable)
+- [x] 階段一：執行 migration SQL 並驗證
+- [x] 階段二：/shop 前台 API 疊加過濾條件排除 isHidden=true 商品
+- [x] 階段二：新增 B2B 專屬 tRPC procedure (getByExclusiveSlug)
+- [x] 階段三：管理後台 /dashboard/admin/products 表單注入三個新欄位
+- [x] 階段三：建立 /exclusive/[slug] 前台動態路由頁面
+- [x] 階段三：/exclusive 頁面加入 noindex nofollow meta
+- [x] 階段三：/exclusive 頁面隱藏 Navbar/Footer，100% 寬度渲染一頁式長圖
+- [x] 階段三：/exclusive 頁面底部固定操作列（福委價 + 立即購買按鈕）
+- [x] 階段三：立即購買按鈕呼叫現有加入購物車方法並導向 /shop/checkout

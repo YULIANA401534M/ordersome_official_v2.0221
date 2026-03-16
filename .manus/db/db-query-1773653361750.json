@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE `products` ADD `isHidden` boolean DEFAULT false NOT NULL;\nALTER TABLE `products` ADD `exclusiveSlug` varchar(200);\nALTER TABLE `products` ADD `exclusiveImageUrl` text;\nALTER TABLE `products` ADD `display_order` int DEFAULT 0 NOT NULL;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user AKK2AjLXvjySfzt.defe7b7a87b6 --database gjTAhmM88fiEhPinRVjKbV --execute ALTER TABLE `products` ADD `isHidden` boolean DEFAULT false NOT NULL;\nALTER TABLE `products` ADD `exclusiveSlug` varchar(200);\nALTER TABLE `products` ADD `exclusiveImageUrl` text;\nALTER TABLE `products` ADD `display_order` int DEFAULT 0 NOT NULL;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 3158
+}

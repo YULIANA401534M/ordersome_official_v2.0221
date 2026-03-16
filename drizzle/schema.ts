@@ -87,6 +87,10 @@ export const products = mysqlTable("products", {
   isActive: boolean("isActive").default(true).notNull(),
   isFeatured: boolean("isFeatured").default(false).notNull(),
   sortOrder: int("sortOrder").default(0).notNull(),
+  // B2B 封閉式賣場欄位
+  isHidden: boolean("isHidden").default(false).notNull(),         // 隱藏標記：true 時不顯示於 /shop 前台
+  exclusiveSlug: varchar("exclusiveSlug", { length: 200 }),       // 專屬網址後綴（Unique, Nullable）
+  exclusiveImageUrl: text("exclusiveImageUrl"),                   // 一頁式長圖網址（Nullable）
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

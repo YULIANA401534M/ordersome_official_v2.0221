@@ -35,6 +35,7 @@ import OrderDetail from "./pages/shop/OrderDetail";
 import PaymentRedirect from "./pages/shop/PaymentRedirect";
 import OrderComplete from "./pages/shop/OrderComplete";
 import MyOrders from "./pages/shop/MyOrders";
+import ExclusiveProduct from "./pages/ExclusiveProduct";
 
 // Member Pages
 import MemberProfile from "./pages/member/MemberProfile";
@@ -130,6 +131,9 @@ function Router() {
       <Route path="/corporate/franchise" component={CorporateFranchise} />
       <Route path="/corporate/contact" component={CorporateContact} />
       
+      {/* B2B 封閉式賣場 */}
+      <Route path="/exclusive/:slug" component={ExclusiveProduct} />
+
       {/* Shop Routes */}
       <Route path="/shop" component={ShopHome} />
       <Route path="/shop/category/:slug" component={ShopCategory} />

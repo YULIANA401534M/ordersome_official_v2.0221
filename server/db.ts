@@ -217,19 +217,19 @@ export async function getAllProducts() {
 export async function getActiveProducts() {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(products).where(eq(products.isActive, true)).orderBy(products.sortOrder);
+  return db.select().from(products).where(and(eq(products.isActive, true), eq(products.isHidden, false))).orderBy(products.sortOrder);
 }
 
 export async function getFeaturedProducts() {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(products).where(and(eq(products.isActive, true), eq(products.isFeatured, true))).orderBy(products.sortOrder);
+  return db.select().from(products).where(and(eq(products.isActive, true), eq(products.isFeatured, true), eq(products.isHidden, false))).orderBy(products.sortOrder);
 }
 
 export async function getProductsByCategory(categoryId: number) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(products).where(and(eq(products.categoryId, categoryId), eq(products.isActive, true))).orderBy(products.sortOrder);
+  return db.select().from(products).where(and(eq(products.categoryId, categoryId), eq(products.isActive, true), eq(products.isHidden, false))).orderBy(products.sortOrder);
 }
 
 export async function getProductBySlug(slug: string) {
@@ -256,6 +256,16 @@ export async function updateProduct(id: number, data: Partial<InsertProduct>) {
   const db = await getDb();
   if (!db) return;
   await db.update(products).set(data).where(eq(products.id, id));
+}
+
+// B2B 封閉式賣場：依專屬網址後綴查詢單一商品
+export async function getProductByExclusiveSlug(exclusiveSlug: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(products)
+    .where(and(eq(products.exclusiveSlug, exclusiveSlug), eq(products.isActive, true)))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
 }
 
 export async function deleteProduct(id: number) {
