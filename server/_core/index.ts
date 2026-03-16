@@ -2,8 +2,7 @@ import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
-import path from "path";
-import fs from "fs";
+
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
@@ -93,42 +92,6 @@ async function startServer() {
       res.send("0|Error");
     }
   });
-  // ─── B2B 本機圖片上傳服務 ────────────────────────────────────────────────────────────────
-  const b2bUploadsDir = path.resolve(process.cwd(), "uploads", "b2b");
-  if (!fs.existsSync(b2bUploadsDir)) {
-    fs.mkdirSync(b2bUploadsDir, { recursive: true });
-  }
-  // Serve uploaded B2B images as static files under /uploads/b2b/
-  app.use("/uploads/b2b", express.static(b2bUploadsDir));
-
-  // B2B image upload endpoint - local storage ONLY, no external cloud
-  app.post("/api/upload/b2b-image", async (req, res) => {
-    try {
-      const { fileName, fileData } = req.body as { fileName: string; fileData: string };
-      if (!fileName || !fileData) {
-        return res.status(400).json({ error: "缺少必要參數" });
-      }
-      const base64Data = fileData.replace(/^data:[^;]+;base64,/, "");
-      const buffer = Buffer.from(base64Data, "base64");
-      if (buffer.length > 10 * 1024 * 1024) {
-        return res.status(400).json({ error: "圖片大小不可超過 10MB" });
-      }
-      const ext = (fileName.split(".").pop() || "jpg").toLowerCase();
-      const allowed = ["jpg", "jpeg", "png", "gif", "webp"];
-      if (!allowed.includes(ext)) {
-        return res.status(400).json({ error: "不支援的圖片格式" });
-      }
-      const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
-      const filePath = path.join(b2bUploadsDir, uniqueName);
-      fs.writeFileSync(filePath, buffer);
-      console.log(`[B2B Upload] Saved locally: ${filePath}`);
-      return res.json({ url: `/uploads/b2b/${uniqueName}`, fileName: uniqueName });
-    } catch (error) {
-      console.error("[B2B Upload] Error:", error);
-      return res.status(500).json({ error: "圖片上傳失敗" });
-    }
-  });
-
   // tRPC API
   app.use(
     "/api/trpc",

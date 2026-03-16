@@ -174,7 +174,8 @@ export default function AdminProducts() {
     setIsUploading(false);
   }, [uploadImage]);
 
-  // ── B2B 本機圖片上傳 handler ──
+  // ── B2B S3 雲端圖片上傳 handler ──
+  const uploadB2BImage = trpc.storage.uploadImage.useMutation();
   const handleB2BImageUpload = useCallback(async (file: File) => {
     setIsB2BUploading(true);
     try {
@@ -184,24 +185,19 @@ export default function AdminProducts() {
         reader.onerror = rej;
         reader.readAsDataURL(file);
       });
-      const response = await fetch("/api/upload/b2b-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileName: file.name, fileData: base64 }),
+      const result = await uploadB2BImage.mutateAsync({
+        fileName: `b2b/${file.name}`,
+        fileData: base64,
+        contentType: file.type || "image/jpeg",
       });
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || "上傳失敗");
-      }
-      const result = await response.json();
       setForm(prev => ({ ...prev, exclusiveImageUrl: result.url }));
-      toast.success("一頁式長圖上傳成功（儲存於本機）");
+      toast.success("一頁式長圖上傳成功（S3 雲端儲存）");
     } catch (e: any) {
       toast.error("圖片上傳失敗：" + (e.message || "未知錯誤"));
     } finally {
       setIsB2BUploading(false);
     }
-  }, []);
+  }, [uploadB2BImage]);
 
   const handleRemoveImage = (idx: number) => {
     setForm(prev => {

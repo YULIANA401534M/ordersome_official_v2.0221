@@ -1148,3 +1148,11 @@
 - [x] 檢查 Vite Proxy 設定（根本原因：Vite middleware 欄截圖片請求）
 - [x] 修復：在 setupVite 中於 Vite middleware 之前插入 /uploads/b2b 靜態路由
 - [x] 驗證圖片正常回傳 image/jpeg Content-Type
+
+## B2B 圖片上傳重構為 S3 雲端儲存（2026-03-16）
+- [x] 移除 server/_core/index.ts 中 /uploads/b2b 的 express.static 與本機上傳 API
+- [x] 移除 server/_core/vite.ts 中 /uploads/b2b 的 express.static 攔截
+- [x] 重構上傳 API：使用專案內建 trpc.storage.uploadImage（storagePut）上傳至 S3
+- [x] 前端 AdminProducts 上傳元件改為呼叫 trpc.storage.uploadImage
+- [x] 前端 /exclusive/:slug 確認 <img> src 直接讀取 S3 絕對 URL（無需修改）
+- [x] TypeScript 0 errors + vitest 46/46 通過

@@ -7,18 +7,6 @@ import { createServer as createViteServer } from "vite";
 import viteConfig from "../../vite.config";
 
 export async function setupVite(app: Express, server: Server) {
-  // 在 Vite middleware 之前先處理 B2B 本機圖片請求
-  // 避免 Vite catch-all 欄截圖片請求並回傳 HTML
-  const b2bUploadsDir = path.resolve(process.cwd(), "uploads", "b2b");
-  if (!fs.existsSync(b2bUploadsDir)) {
-    fs.mkdirSync(b2bUploadsDir, { recursive: true });
-  }
-  app.use("/uploads/b2b", express.static(b2bUploadsDir, {
-    setHeaders: (res) => {
-      res.setHeader("Cache-Control", "public, max-age=86400");
-    }
-  }));
-
   const serverOptions = {
     middlewareMode: true,
     hmr: { server },
