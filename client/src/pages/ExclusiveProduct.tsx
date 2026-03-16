@@ -70,7 +70,7 @@ export default function ExclusiveProduct() {
   // ── Loading ──
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="min-h-screen flex items-center justify-center bg-black">
         <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
       </div>
     );
@@ -79,10 +79,10 @@ export default function ExclusiveProduct() {
   // ── Not Found ──
   if (error || !product) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-white px-4">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-black px-4">
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-3">找不到此商品</h1>
-          <p className="text-gray-500 mb-6">此專屬連結可能已失效或商品已下架</p>
+          <h1 className="text-4xl font-bold text-white mb-3">找不到此商品</h1>
+          <p className="text-gray-400 mb-6">此專屬連結可能已失效或商品已下架</p>
           <Button onClick={() => navigate("/shop")} variant="outline">
             前往商城
           </Button>
@@ -96,39 +96,41 @@ export default function ExclusiveProduct() {
   const discount = originalPrice ? Math.round((1 - price / originalPrice) * 100) : null;
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      {/* 一頁式長圖 - 100% 寬度 */}
-      <div className="flex-1 w-full">
-        {product.exclusiveImageUrl ? (
-          <img
-            src={product.exclusiveImageUrl}
-            alt={product.name}
-            className="w-full h-auto block"
-            loading="eager"
-          />
-        ) : (
-          /* 如果沒有一頁式長圖，顯示商品基本資訊 */
-          <div className="max-w-2xl mx-auto px-4 py-12">
-            {product.imageUrl && (
-              <img
-                src={product.imageUrl}
-                alt={product.name}
-                className="w-full rounded-2xl shadow-lg mb-8"
-              />
-            )}
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">{product.name}</h1>
-            {product.description && (
-              <p className="text-gray-600 text-lg leading-relaxed whitespace-pre-wrap">
-                {product.description}
-              </p>
-            )}
-          </div>
-        )}
+    <div className="min-h-screen bg-black flex flex-col">
+      {/* 一頁式長圖 - Mobile 全寬 / Desktop 最大 768px 置中 */}
+      <div className="flex-1 w-full flex justify-center">
+        <div className="w-full max-w-[768px]">
+          {product.exclusiveImageUrl ? (
+            <img
+              src={product.exclusiveImageUrl}
+              alt={product.name}
+              className="w-full h-auto block"
+              loading="eager"
+            />
+          ) : (
+            /* 如果沒有一頁式長圖，顯示商品基本資訊 */
+            <div className="px-4 py-12">
+              {product.imageUrl && (
+                <img
+                  src={product.imageUrl}
+                  alt={product.name}
+                  className="w-full rounded-2xl shadow-lg mb-8"
+                />
+              )}
+              <h1 className="text-3xl font-bold text-white mb-4">{product.name}</h1>
+              {product.description && (
+                <p className="text-gray-300 text-lg leading-relaxed whitespace-pre-wrap">
+                  {product.description}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* 底部固定操作列 */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t shadow-[0_-4px_20px_rgba(0,0,0,0.1)]">
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+      {/* 底部固定操作列 - 與圖片容器同寬置中 */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-sm border-t border-white/10 shadow-[0_-4px_20px_rgba(0,0,0,0.5)]">
+        <div className="w-full max-w-[768px] mx-auto px-4 py-3 flex items-center justify-between gap-4">
           {/* 價格區 */}
           <div className="flex items-baseline gap-2 shrink-0">
             <span className="text-xs text-gray-400">福委價</span>

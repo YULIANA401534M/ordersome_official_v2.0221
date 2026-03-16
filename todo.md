@@ -1156,3 +1156,8 @@
 - [x] 前端 AdminProducts 上傳元件改為呼叫 trpc.storage.uploadImage
 - [x] 前端 /exclusive/:slug 確認 <img> src 直接讀取 S3 絕對 URL（無需修改）
 - [x] TypeScript 0 errors + vitest 46/46 通過
+
+## B2B 頁面 Desktop 視圖優化（2026-03-16）
+- [x] ExclusiveProduct.tsx：根容器改為 bg-black
+- [x] ExclusiveProduct.tsx：圖片容器加入 max-w-[768px] mx-auto（Desktop 置中，Mobile 全寬）
+- [x] ExclusiveProduct.tsx：底部操作列與圖片容器同寬置中
