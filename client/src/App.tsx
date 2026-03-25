@@ -73,6 +73,7 @@ import SOPKnowledgeBase from "./pages/dashboard/SOPKnowledgeBase";
 import EquipmentRepairs from "./pages/dashboard/EquipmentRepairs";
 import DailyChecklist from "./pages/dashboard/DailyChecklist";
 import Dashboard from "./pages/Dashboard";
+import AdminTenants from "./pages/dashboard/AdminTenants";
 
 // Landing Page
 import Home from "./pages/Home";
@@ -168,6 +169,7 @@ function Router() {
       <Route path="/dashboard/admin/users" component={AdminUsers} />
       <Route path="/dashboard/admin/permissions" component={AdminPermissions} />
       <Route path="/dashboard/admin/sop-permissions" component={AdminSopPermissions} />
+      <Route path="/dashboard/admin/tenants" component={AdminTenants} />
       <Route path="/dashboard/content" component={ContentManagement} />
       <Route path="/dashboard/content/new" component={ContentEditor} />
       <Route path="/dashboard/content/edit/:id" component={ContentEditor} />

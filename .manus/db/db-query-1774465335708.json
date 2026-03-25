@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE `tenants` (\n  `id` int AUTO_INCREMENT NOT NULL,\n  `name` varchar(100) NOT NULL,\n  `slug` varchar(100) NOT NULL,\n  `plan` enum('trial','basic','pro') NOT NULL DEFAULT 'trial',\n  `isActive` boolean NOT NULL DEFAULT true,\n  `createdAt` timestamp NOT NULL DEFAULT (now()),\n  `updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n  CONSTRAINT `tenants_id` PRIMARY KEY(`id`),\n  CONSTRAINT `tenants_slug_unique` UNIQUE(`slug`)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user AKK2AjLXvjySfzt.defe7b7a87b6 --database gjTAhmM88fiEhPinRVjKbV --execute CREATE TABLE `tenants` (\n  `id` int AUTO_INCREMENT NOT NULL,\n  `name` varchar(100) NOT NULL,\n  `slug` varchar(100) NOT NULL,\n  `plan` enum('trial','basic','pro') NOT NULL DEFAULT 'trial',\n  `isActive` boolean NOT NULL DEFAULT true,\n  `createdAt` timestamp NOT NULL DEFAULT (now()),\n  `updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n  CONSTRAINT `tenants_id` PRIMARY KEY(`id`),\n  CONSTRAINT `tenants_slug_unique` UNIQUE(`slug`)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1657
+}

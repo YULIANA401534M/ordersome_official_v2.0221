@@ -1,0 +1,19 @@
+{
+  "query": "INSERT INTO `tenants` (`id`, `name`, `slug`, `plan`, `isActive`) VALUES (1, '來點什麼', 'ordersome', 'pro', true);\nSELECT * FROM `tenants`;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user AKK2AjLXvjySfzt.defe7b7a87b6 --database gjTAhmM88fiEhPinRVjKbV --execute INSERT INTO `tenants` (`id`, `name`, `slug`, `plan`, `isActive`) VALUES (1, '來點什麼', 'ordersome', 'pro', true);\nSELECT * FROM `tenants`;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "來點什麼",
+      "slug": "ordersome",
+      "plan": "pro",
+      "isActive": "1",
+      "createdAt": "2026-03-25 19:02:41",
+      "updatedAt": "2026-03-25 19:02:41"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tslug\tplan\tisActive\tcreatedAt\tupdatedAt\n1\t來點什麼\tordersome\tpro\t1\t2026-03-25 19:02:41\t2026-03-25 19:02:41\n",
+  "stderr": "",
+  "execution_time_ms": 1717
+}

@@ -1169,3 +1169,42 @@
 - [x] 修復資料庫：UPDATE products SET slug='product-90010' WHERE slug='-'
 - [x] 新增 slug 預覽提示文字（amber 色警示）
 - [x] TypeScript 0 errors + vitest 46/46 通過
+
+## 多租戶（Multi-tenant）架構改造（2026-03-26）
+
+### 任務 1：新增 tenants 資料表
+- [x] 在 drizzle/schema.ts 新增 tenants 表（id, name, slug, plan, isActive, createdAt, updatedAt）
+
+### 任務 2：所有資料表加入 tenantId 欄位
+- [x] users, products, categories, orders, order_items, stores, news, menu_items, posts, franchise_inquiries, contact_submissions, sop_categories, sop_documents, sop_read_receipts, equipment_repairs, daily_checklists, daily_checklist_items, sop_permissions, store_settings 加入 tenantId（int, notNull, default 1）
+
+### 任務 3：執行 migration
+- [x] 建立 tenants 表
+- [x] 為所有表加入 tenantId 欄位
+- [x] 插入第一筆 tenant（id=1, name='來點什麼', slug='ordersome', plan='pro', isActive=true）
+- [x] 現有資料 tenantId 全部設為 1
+
+### 任務 4：更新 TrpcContext 加入 tenantId
+- [x] context.ts 加入 tenantId: number
+- [x] 從 x-tenant-id header 解析，預設為 1
+
+### 任務 5：新增 tenantProcedure
+- [x] 在 trpc.ts 新增 tenantProcedure（繼承 protectedProcedure，確保 ctx.tenantId）
+
+### 任務 6：更新 server/db.ts 查詢函式
+- [x] 所有需要隔離的查詢函式加入 tenantId 參數
+
+### 任務 7：更新各 router 傳入 tenantId
+- [x] 需要隔離的 router 改用 tenantProcedure 或傳入 ctx.tenantId
+- [x] publicProcedure 的公開 query 也傳入 tenantId
+
+### 任務 8：super_admin 跨租戶管理
+- [x] adminRouter 新增 listTenants, createTenant, updateTenant（建立 server/routers/tenant.ts）
+
+### 任務 9：前端租戶管理頁面
+- [x] /dashboard/admin/tenants 頁面（僅 super_admin 可見）
+
+### 驗證
+- [x] 現有功能正常運作（TypeScript 0 errors，伺服器正常運行）
+- [x] tenantId=1 資料正確 migration
+- [x] vitest 測試多租戶隔離（57/57 全部通過，含 11 個多租戶測試）

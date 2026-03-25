@@ -11,6 +11,7 @@ import { adminRouter } from "./routers/admin";
 import { contentRouter } from "./routers/content";
 import { storageRouter } from "./routers/storage";
 import { sopRouter } from "./routers/sop";
+import { tenantRouter } from "./routers/tenant";
 
 // Admin procedure
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -204,8 +205,8 @@ export const appRouter = router({
 
   // Categories
   category: router({
-    list: publicProcedure.query(() => db.getActiveCategories()),
-    listAll: adminProcedure.query(() => db.getAllCategories()),
+    list: publicProcedure.query(({ ctx }) => db.getActiveCategories(ctx.tenantId)),
+    listAll: adminProcedure.query(({ ctx }) => db.getAllCategories(ctx.tenantId)),
     getBySlug: publicProcedure
       .input(z.object({ slug: z.string() }))
       .query(({ input }) => db.getCategoryBySlug(input.slug)),
@@ -240,18 +241,18 @@ export const appRouter = router({
 
   // Products
   product: router({
-    list: publicProcedure.query(() => db.getActiveProducts()),
-    listAll: adminProcedure.query(() => db.getAllProducts()),
-    featured: publicProcedure.query(() => db.getFeaturedProducts()),
+    list: publicProcedure.query(({ ctx }) => db.getActiveProducts(ctx.tenantId)),
+    listAll: adminProcedure.query(({ ctx }) => db.getAllProducts(ctx.tenantId)),
+    featured: publicProcedure.query(({ ctx }) => db.getFeaturedProducts(ctx.tenantId)),
     byCategory: publicProcedure
       .input(z.object({ categoryId: z.number() }))
-      .query(({ input }) => db.getProductsByCategory(input.categoryId)),
+      .query(({ input, ctx }) => db.getProductsByCategory(input.categoryId, ctx.tenantId)),
     getBySlug: publicProcedure
       .input(z.object({ slug: z.string() }))
-      .query(({ input }) => db.getProductBySlug(input.slug)),
+      .query(({ input, ctx }) => db.getProductBySlug(input.slug, ctx.tenantId)),
     getById: publicProcedure
       .input(z.object({ id: z.number() }))
-      .query(({ input }) => db.getProductById(input.id)),
+      .query(({ input, ctx }) => db.getProductById(input.id, ctx.tenantId)),
     // B2B 封閉式賣場：依專屬網址後綴查詢
     getByExclusiveSlug: publicProcedure
       .input(z.object({ exclusiveSlug: z.string() }))
@@ -332,8 +333,8 @@ export const appRouter = router({
 
   // Orders
   order: router({
-    list: protectedProcedure.query(({ ctx }) => db.getOrdersByUser(ctx.user.id)),
-    listAll: adminProcedure.query(() => db.getAllOrders()),
+    list: protectedProcedure.query(({ ctx }) => db.getOrdersByUser(ctx.user.id, ctx.tenantId)),
+    listAll: adminProcedure.query(({ ctx }) => db.getAllOrders(ctx.tenantId)),
     getById: protectedProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ ctx, input }) => {
@@ -383,7 +384,7 @@ export const appRouter = router({
         }
 
         // Fetch store settings for dynamic shipping calculation
-        const storeSettings = await db.getStoreSettings();
+        const storeSettings = await db.getStoreSettings(ctx.tenantId);
         const baseShippingFee = storeSettings?.baseShippingFee ?? 100;
         const freeShippingThreshold = storeSettings?.freeShippingThreshold ?? 1000;
         
@@ -448,8 +449,8 @@ export const appRouter = router({
 
   // Stores
   store: router({
-    list: publicProcedure.query(() => db.getActiveStores()),
-    listAll: adminProcedure.query(() => db.getAllStores()),
+    list: publicProcedure.query(({ ctx }) => db.getActiveStores(ctx.tenantId)),
+    listAll: adminProcedure.query(({ ctx }) => db.getAllStores(ctx.tenantId)),
     create: adminProcedure
       .input(z.object({
         name: z.string(),
@@ -489,11 +490,11 @@ export const appRouter = router({
   news: router({
     list: publicProcedure
       .input(z.object({ category: z.string().optional() }).optional())
-      .query(({ input }) => db.getPublishedNews(input?.category)),
-    listAll: adminProcedure.query(() => db.getAllNews()),
+      .query(({ input, ctx }) => db.getPublishedNews(input?.category, ctx.tenantId)),
+    listAll: adminProcedure.query(({ ctx }) => db.getAllNews(ctx.tenantId)),
     getBySlug: publicProcedure
       .input(z.object({ slug: z.string() }))
-      .query(({ input }) => db.getNewsBySlug(input.slug)),
+      .query(({ input, ctx }) => db.getNewsBySlug(input.slug, ctx.tenantId)),
     create: adminProcedure
       .input(z.object({
         title: z.string(),
@@ -529,8 +530,8 @@ export const appRouter = router({
 
   // Menu Items
   menu: router({
-    list: publicProcedure.query(() => db.getAvailableMenuItems()),
-    listAll: adminProcedure.query(() => db.getAllMenuItems()),
+    list: publicProcedure.query(({ ctx }) => db.getAvailableMenuItems(ctx.tenantId)),
+    listAll: adminProcedure.query(({ ctx }) => db.getAllMenuItems(ctx.tenantId)),
     create: adminProcedure
       .input(z.object({
         categoryName: z.string(),
@@ -636,7 +637,7 @@ export const appRouter = router({
         });
         return { success: true };
       }),
-    list: adminProcedure.query(() => db.getAllContactSubmissions()),
+    list: adminProcedure.query(({ ctx }) => db.getAllContactSubmissions(ctx.tenantId)),
     markRead: adminProcedure
       .input(z.object({ id: z.number() }))
       .mutation(({ input }) => db.markContactAsRead(input.id)),
@@ -677,8 +678,8 @@ export const appRouter = router({
         return { success: true };
       }),
     // List all franchise inquiries (admin only)
-    listInquiries: adminProcedure.query(async () => {
-      return await db.getAllFranchiseInquiries();
+    listInquiries: adminProcedure.query(async ({ ctx }) => {
+      return await db.getAllFranchiseInquiries(ctx.tenantId);
     }),
     // Update inquiry status (admin only)
     updateInquiryStatus: adminProcedure
@@ -696,13 +697,13 @@ export const appRouter = router({
   }),
   // Store Settings
   storeSettings: router({
-    get: publicProcedure.query(() => db.getStoreSettings()),
+    get: publicProcedure.query(({ ctx }) => db.getStoreSettings(ctx.tenantId)),
     update: adminProcedure
       .input(z.object({
         baseShippingFee: z.number().min(0).optional(),
         freeShippingThreshold: z.number().min(0).optional(),
       }))
-      .mutation(({ input }) => db.updateStoreSettings(input)),
+      .mutation(({ input, ctx }) => db.updateStoreSettings(input, ctx.tenantId)),
   }),
   // Admin Dashboard
   admin: adminRouter,
@@ -711,6 +712,8 @@ export const appRouter = router({
   storage: storageRouter,
   // SOP 知識庫系統
   sop: sopRouter,
+  // 多租戶管理
+  tenant: tenantRouter,
 });
 
 export type AppRouter = typeof appRouter;

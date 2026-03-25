@@ -1,10 +1,31 @@
 import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, boolean, date, json } from "drizzle-orm/mysql-core";
 
+// ===== Multi-tenant =====
+
+/**
+ * Tenants table for multi-tenant architecture
+ */
+export const tenants = mysqlTable("tenants", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  slug: varchar("slug", { length: 100 }).notNull().unique(),
+  plan: mysqlEnum("plan", ["trial", "basic", "pro"]).default("trial").notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Tenant = typeof tenants.$inferSelect;
+export type InsertTenant = typeof tenants.$inferInsert;
+
+// ===== Core Tables =====
+
 /**
  * Core user table backing auth flow.
  */
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").default(1).notNull(),
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
@@ -54,6 +75,7 @@ export type InsertUser = typeof users.$inferInsert;
  */
 export const categories = mysqlTable("categories", {
   id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").default(1).notNull(),
   name: varchar("name", { length: 100 }).notNull(),
   slug: varchar("slug", { length: 100 }).notNull().unique(),
   description: text("description"),
@@ -72,6 +94,7 @@ export type InsertCategory = typeof categories.$inferInsert;
  */
 export const products = mysqlTable("products", {
   id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").default(1).notNull(),
   categoryId: int("categoryId").notNull(),
   name: varchar("name", { length: 200 }).notNull(),
   slug: varchar("slug", { length: 200 }).notNull().unique(),
@@ -99,7 +122,7 @@ export type Product = typeof products.$inferSelect;
 export type InsertProduct = typeof products.$inferInsert;
 
 /**
- * Shopping cart items
+ * Shopping cart items (不加 tenantId，跟著 user 走)
  */
 export const cartItems = mysqlTable("cart_items", {
   id: int("id").autoincrement().primaryKey(),
@@ -118,6 +141,7 @@ export type InsertCartItem = typeof cartItems.$inferInsert;
  */
 export const orders = mysqlTable("orders", {
   id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").default(1).notNull(),
   userId: int("userId").notNull(),
   orderNumber: varchar("orderNumber", { length: 50 }).notNull().unique(),
   status: mysqlEnum("status", ["pending", "paid", "processing", "shipped", "delivered", "cancelled", "refunded"]).default("pending").notNull(),
@@ -151,6 +175,7 @@ export type InsertOrder = typeof orders.$inferInsert;
  */
 export const orderItems = mysqlTable("order_items", {
   id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").default(1).notNull(),
   orderId: int("orderId").notNull(),
   productId: int("productId").notNull(),
   productName: varchar("productName", { length: 200 }).notNull(),
@@ -169,6 +194,7 @@ export type InsertOrderItem = typeof orderItems.$inferInsert;
  */
 export const stores = mysqlTable("stores", {
   id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").default(1).notNull(),
   name: varchar("name", { length: 100 }).notNull(),
   address: text("address").notNull(),
   phone: varchar("phone", { length: 20 }),
@@ -190,6 +216,7 @@ export type InsertStore = typeof stores.$inferInsert;
  */
 export const news = mysqlTable("news", {
   id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").default(1).notNull(),
   title: varchar("title", { length: 200 }).notNull(),
   slug: varchar("slug", { length: 200 }).notNull().unique(),
   excerpt: text("excerpt"),
@@ -210,6 +237,7 @@ export type InsertNews = typeof news.$inferInsert;
  */
 export const menuItems = mysqlTable("menu_items", {
   id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").default(1).notNull(),
   categoryName: varchar("categoryName", { length: 100 }).notNull(),
   name: varchar("name", { length: 100 }).notNull(),
   description: text("description"),
@@ -229,6 +257,7 @@ export type InsertMenuItem = typeof menuItems.$inferInsert;
  */
 export const contactSubmissions = mysqlTable("contact_submissions", {
   id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").default(1).notNull(),
   source: mysqlEnum("source", ["brand", "corporate", "franchise"]).default("brand").notNull(),
   name: varchar("name", { length: 100 }).notNull(),
   email: varchar("email", { length: 320 }).notNull(),
@@ -247,6 +276,7 @@ export type InsertContactSubmission = typeof contactSubmissions.$inferInsert;
  */
 export const posts = mysqlTable("posts", {
   id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").default(1).notNull(),
   title: varchar("title", { length: 255 }).notNull(),
   slug: varchar("slug", { length: 255 }).notNull().unique(),
   excerpt: text("excerpt"),
@@ -269,6 +299,7 @@ export type InsertPost = typeof posts.$inferInsert;
  */
 export const franchiseInquiries = mysqlTable("franchise_inquiries", {
   id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").default(1).notNull(),
   name: varchar("name", { length: 100 }).notNull(),
   phone: varchar("phone", { length: 20 }).notNull(),
   email: varchar("email", { length: 320 }),
@@ -290,6 +321,7 @@ export type InsertFranchiseInquiry = typeof franchiseInquiries.$inferInsert;
 /** SOP 分類表 */
 export const sopCategories = mysqlTable("sop_categories", {
   id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").default(1).notNull(),
   name: varchar("name", { length: 100 }).notNull(),
   description: text("description"),
   icon: varchar("icon", { length: 50 }),
@@ -301,6 +333,7 @@ export type SopCategory = typeof sopCategories.$inferSelect;
 /** SOP 文件表 */
 export const sopDocuments = mysqlTable("sop_documents", {
   id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").default(1).notNull(),
   categoryId: int("category_id").notNull(),
   title: varchar("title", { length: 200 }).notNull(),
   content: text("content").notNull(),
@@ -318,6 +351,7 @@ export type SopDocument = typeof sopDocuments.$inferSelect;
 /** SOP 閱讀簽收表 */
 export const sopReadReceipts = mysqlTable("sop_read_receipts", {
   id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").default(1).notNull(),
   documentId: int("document_id").notNull(),
   userId: int("user_id").notNull(),
   readAt: timestamp("read_at").defaultNow().notNull(),
@@ -328,6 +362,7 @@ export type SopReadReceipt = typeof sopReadReceipts.$inferSelect;
 /** 設備報修表 */
 export const equipmentRepairs = mysqlTable("equipment_repairs", {
   id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").default(1).notNull(),
   storeId: int("store_id").notNull(),
   equipmentName: varchar("equipment_name", { length: 100 }).notNull(),
   category: varchar("category", { length: 50 }).default("其他").notNull(),
@@ -346,6 +381,7 @@ export type EquipmentRepair = typeof equipmentRepairs.$inferSelect;
 /** 每日檢查表 */
 export const dailyChecklists = mysqlTable("daily_checklists", {
   id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").default(1).notNull(),
   storeId: int("store_id").notNull(),
   checklistType: mysqlEnum("checklist_type", ["opening", "closing"]).notNull(),
   checkedBy: int("checked_by").notNull(),
@@ -358,6 +394,7 @@ export type DailyChecklist = typeof dailyChecklists.$inferSelect;
 /** 每日檢查項目表 */
 export const dailyChecklistItems = mysqlTable("daily_checklist_items", {
   id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").default(1).notNull(),
   checklistId: int("checklist_id").notNull(),
   itemName: varchar("item_name", { length: 100 }).notNull(),
   isChecked: boolean("is_checked").default(false).notNull(),
@@ -368,6 +405,7 @@ export type DailyChecklistItem = typeof dailyChecklistItems.$inferSelect;
 /** SOP 權限關聯表：控制特定角色或特定用戶可見哪些 SOP 分類與文件 */
 export const sopPermissions = mysqlTable("sop_permissions", {
   id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").default(1).notNull(),
   /** 目標類型：role（角色）或 user（特定用戶） */
   targetType: mysqlEnum("target_type", ["role", "user"]).notNull(),
   /** 角色名稱（當 targetType = 'role' 時使用）*/
@@ -389,13 +427,13 @@ export type SopPermission = typeof sopPermissions.$inferSelect;
 export type InsertSopPermission = typeof sopPermissions.$inferInsert;
 
 /**
- * Store global settings (singleton row, id=1)
+ * Store global settings (singleton row per tenant)
  */
 export const storeSettings = mysqlTable("store_settings", {
   id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").default(1).notNull(),
   baseShippingFee: int("baseShippingFee").default(100).notNull(),
   freeShippingThreshold: int("freeShippingThreshold").default(1000).notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 export type StoreSettings = typeof storeSettings.$inferSelect;
-export type InsertStoreSettings = typeof storeSettings.$inferInsert;

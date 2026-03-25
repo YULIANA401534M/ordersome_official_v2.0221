@@ -12,7 +12,8 @@ import {
   menuItems, InsertMenuItem,
   contactSubmissions, InsertContactSubmission,
   franchiseInquiries, InsertFranchiseInquiry,
-  storeSettings, StoreSettings
+  storeSettings, StoreSettings,
+  tenants, InsertTenant,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -31,6 +32,7 @@ export async function getDb() {
 }
 
 // ============ USER FUNCTIONS ============
+// 注意：upsertUser 和 getUserByXxx 不加 tenantId 過濾（登入流程全系統共用）
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) {
     throw new Error("User openId is required for upsert");
@@ -170,16 +172,16 @@ export async function updateUserPassword(userId: number, newPasswordHash: string
 }
 
 // ============ CATEGORY FUNCTIONS ============
-export async function getAllCategories() {
+export async function getAllCategories(tenantId: number = 1) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(categories).orderBy(categories.sortOrder);
+  return db.select().from(categories).where(eq(categories.tenantId, tenantId)).orderBy(categories.sortOrder);
 }
 
-export async function getActiveCategories() {
+export async function getActiveCategories(tenantId: number = 1) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(categories).where(eq(categories.isActive, true)).orderBy(categories.sortOrder);
+  return db.select().from(categories).where(and(eq(categories.isActive, true), eq(categories.tenantId, tenantId))).orderBy(categories.sortOrder);
 }
 
 export async function getCategoryBySlug(slug: string) {
@@ -208,41 +210,45 @@ export async function deleteCategory(id: number) {
 }
 
 // ============ PRODUCT FUNCTIONS ============
-export async function getAllProducts() {
+export async function getAllProducts(tenantId: number = 1) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(products).orderBy(products.sortOrder);
+  return db.select().from(products).where(eq(products.tenantId, tenantId)).orderBy(products.sortOrder);
 }
 
-export async function getActiveProducts() {
+export async function getActiveProducts(tenantId: number = 1) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(products).where(and(eq(products.isActive, true), eq(products.isHidden, false))).orderBy(products.sortOrder);
+  return db.select().from(products).where(and(eq(products.isActive, true), eq(products.isHidden, false), eq(products.tenantId, tenantId))).orderBy(products.sortOrder);
 }
 
-export async function getFeaturedProducts() {
+export async function getFeaturedProducts(tenantId: number = 1) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(products).where(and(eq(products.isActive, true), eq(products.isFeatured, true), eq(products.isHidden, false))).orderBy(products.sortOrder);
+  return db.select().from(products).where(and(eq(products.isActive, true), eq(products.isFeatured, true), eq(products.isHidden, false), eq(products.tenantId, tenantId))).orderBy(products.sortOrder);
 }
 
-export async function getProductsByCategory(categoryId: number) {
+export async function getProductsByCategory(categoryId: number, tenantId: number = 1) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(products).where(and(eq(products.categoryId, categoryId), eq(products.isActive, true), eq(products.isHidden, false))).orderBy(products.sortOrder);
+  return db.select().from(products).where(and(eq(products.categoryId, categoryId), eq(products.isActive, true), eq(products.isHidden, false), eq(products.tenantId, tenantId))).orderBy(products.sortOrder);
 }
 
-export async function getProductBySlug(slug: string) {
+export async function getProductBySlug(slug: string, tenantId: number = 1) {
   const db = await getDb();
   if (!db) return undefined;
-  const result = await db.select().from(products).where(eq(products.slug, slug)).limit(1);
+  const result = await db.select().from(products).where(and(eq(products.slug, slug), eq(products.tenantId, tenantId))).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
-export async function getProductById(id: number) {
+export async function getProductById(id: number, tenantId?: number) {
   const db = await getDb();
   if (!db) return undefined;
-  const result = await db.select().from(products).where(eq(products.id, id)).limit(1);
+  // tenantId is optional here for backward compatibility (e.g. cart lookups)
+  const conditions = tenantId
+    ? and(eq(products.id, id), eq(products.tenantId, tenantId))
+    : eq(products.id, id);
+  const result = await db.select().from(products).where(conditions).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
@@ -361,16 +367,19 @@ export async function createOrderItems(items: InsertOrderItem[]) {
   await db.insert(orderItems).values(items);
 }
 
-export async function getOrdersByUser(userId: number) {
+export async function getOrdersByUser(userId: number, tenantId: number = 1) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(orders).where(eq(orders.userId, userId)).orderBy(desc(orders.createdAt));
+  return db.select().from(orders).where(and(eq(orders.userId, userId), eq(orders.tenantId, tenantId))).orderBy(desc(orders.createdAt));
 }
 
-export async function getOrderById(id: number) {
+export async function getOrderById(id: number, tenantId?: number) {
   const db = await getDb();
   if (!db) return undefined;
-  const result = await db.select().from(orders).where(eq(orders.id, id)).limit(1);
+  const conditions = tenantId
+    ? and(eq(orders.id, id), eq(orders.tenantId, tenantId))
+    : eq(orders.id, id);
+  const result = await db.select().from(orders).where(conditions).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
@@ -387,10 +396,10 @@ export async function getOrderItems(orderId: number) {
   return db.select().from(orderItems).where(eq(orderItems.orderId, orderId));
 }
 
-export async function getAllOrders() {
+export async function getAllOrders(tenantId: number = 1) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(orders).orderBy(desc(orders.createdAt));
+  return db.select().from(orders).where(eq(orders.tenantId, tenantId)).orderBy(desc(orders.createdAt));
 }
 
 export async function updateOrderStatus(id: number, status: InsertOrder['status']) {
@@ -415,16 +424,16 @@ export async function updateOrderPayment(orderNumber: string, paymentStatus: Ins
 }
 
 // ============ STORE FUNCTIONS ============
-export async function getAllStores() {
+export async function getAllStores(tenantId: number = 1) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(stores).orderBy(stores.sortOrder);
+  return db.select().from(stores).where(eq(stores.tenantId, tenantId)).orderBy(stores.sortOrder);
 }
 
-export async function getActiveStores() {
+export async function getActiveStores(tenantId: number = 1) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(stores).where(eq(stores.isActive, true)).orderBy(stores.sortOrder);
+  return db.select().from(stores).where(and(eq(stores.isActive, true), eq(stores.tenantId, tenantId))).orderBy(stores.sortOrder);
 }
 
 export async function createStore(data: InsertStore) {
@@ -446,27 +455,27 @@ export async function deleteStore(id: number) {
 }
 
 // ============ NEWS FUNCTIONS ============
-export async function getAllNews() {
+export async function getAllNews(tenantId: number = 1) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(news).orderBy(desc(news.createdAt));
+  return db.select().from(news).where(eq(news.tenantId, tenantId)).orderBy(desc(news.createdAt));
 }
 
-export async function getPublishedNews(category?: string) {
+export async function getPublishedNews(category?: string, tenantId: number = 1) {
   const db = await getDb();
   if (!db) return [];
   if (category) {
     return db.select().from(news)
-      .where(and(eq(news.isPublished, true), eq(news.category, category as any)))
+      .where(and(eq(news.isPublished, true), eq(news.category, category as any), eq(news.tenantId, tenantId)))
       .orderBy(desc(news.publishedAt));
   }
-  return db.select().from(news).where(eq(news.isPublished, true)).orderBy(desc(news.publishedAt));
+  return db.select().from(news).where(and(eq(news.isPublished, true), eq(news.tenantId, tenantId))).orderBy(desc(news.publishedAt));
 }
 
-export async function getNewsBySlug(slug: string) {
+export async function getNewsBySlug(slug: string, tenantId: number = 1) {
   const db = await getDb();
   if (!db) return undefined;
-  const result = await db.select().from(news).where(eq(news.slug, slug)).limit(1);
+  const result = await db.select().from(news).where(and(eq(news.slug, slug), eq(news.tenantId, tenantId))).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
@@ -489,16 +498,16 @@ export async function deleteNews(id: number) {
 }
 
 // ============ MENU FUNCTIONS ============
-export async function getAllMenuItems() {
+export async function getAllMenuItems(tenantId: number = 1) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(menuItems).orderBy(menuItems.sortOrder);
+  return db.select().from(menuItems).where(eq(menuItems.tenantId, tenantId)).orderBy(menuItems.sortOrder);
 }
 
-export async function getAvailableMenuItems() {
+export async function getAvailableMenuItems(tenantId: number = 1) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(menuItems).where(eq(menuItems.isAvailable, true)).orderBy(menuItems.sortOrder);
+  return db.select().from(menuItems).where(and(eq(menuItems.isAvailable, true), eq(menuItems.tenantId, tenantId))).orderBy(menuItems.sortOrder);
 }
 
 export async function createMenuItem(data: InsertMenuItem) {
@@ -526,10 +535,10 @@ export async function createContactSubmission(data: InsertContactSubmission) {
   await db.insert(contactSubmissions).values(data);
 }
 
-export async function getAllContactSubmissions() {
+export async function getAllContactSubmissions(tenantId: number = 1) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(contactSubmissions).orderBy(desc(contactSubmissions.createdAt));
+  return db.select().from(contactSubmissions).where(eq(contactSubmissions.tenantId, tenantId)).orderBy(desc(contactSubmissions.createdAt));
 }
 
 export async function markContactAsRead(id: number) {
@@ -582,12 +591,14 @@ export async function createFranchiseInquiry(data: {
   budget?: string;
   experience?: string;
   message?: string;
+  tenantId?: number;
 }) {
   const db = await getDb();
   if (!db) return;
   const now = new Date();
   const result = await db.insert(franchiseInquiries).values({
     ...data,
+    tenantId: data.tenantId ?? 1,
     status: 'pending',
     createdAt: now,
     updatedAt: now,
@@ -595,10 +606,10 @@ export async function createFranchiseInquiry(data: {
   return result;
 }
 
-export async function getAllFranchiseInquiries() {
+export async function getAllFranchiseInquiries(tenantId: number = 1) {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(franchiseInquiries).orderBy(desc(franchiseInquiries.createdAt));
+  return await db.select().from(franchiseInquiries).where(eq(franchiseInquiries.tenantId, tenantId)).orderBy(desc(franchiseInquiries.createdAt));
 }
 
 export async function updateFranchiseInquiryStatus(id: number, status: string) {
@@ -610,17 +621,17 @@ export async function updateFranchiseInquiryStatus(id: number, status: string) {
 }
 
 // ============ STORE SETTINGS FUNCTIONS ============
-export async function getStoreSettings(): Promise<StoreSettings> {
+export async function getStoreSettings(tenantId: number = 1): Promise<StoreSettings> {
   const db = await getDb();
-  const defaultSettings: StoreSettings = { id: 1, baseShippingFee: 100, freeShippingThreshold: 1000, updatedAt: new Date() };
+  const defaultSettings: StoreSettings = { id: 1, tenantId, baseShippingFee: 100, freeShippingThreshold: 1000, updatedAt: new Date() };
   if (!db) return defaultSettings;
-  const rows = await db.select().from(storeSettings).where(eq(storeSettings.id, 1)).limit(1);
+  const rows = await db.select().from(storeSettings).where(and(eq(storeSettings.id, 1), eq(storeSettings.tenantId, tenantId))).limit(1);
   return rows.length > 0 ? rows[0] : defaultSettings;
 }
-export async function updateStoreSettings(data: { baseShippingFee?: number; freeShippingThreshold?: number }) {
+export async function updateStoreSettings(data: { baseShippingFee?: number; freeShippingThreshold?: number }, tenantId: number = 1) {
   const db = await getDb();
   if (!db) return;
-  await db.update(storeSettings).set(data).where(eq(storeSettings.id, 1));
+  await db.update(storeSettings).set(data).where(and(eq(storeSettings.id, 1), eq(storeSettings.tenantId, tenantId)));
 }
 
 export async function updateFranchiseInquiryNotes(id: number, notes: string) {
@@ -629,4 +640,37 @@ export async function updateFranchiseInquiryNotes(id: number, notes: string) {
   await db.update(franchiseInquiries)
     .set({ notes, updatedAt: new Date() })
     .where(eq(franchiseInquiries.id, id));
+}
+
+// ============ TENANT FUNCTIONS ============
+export async function getAllTenants() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(tenants).orderBy(tenants.id);
+}
+
+export async function getTenantById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(tenants).where(eq(tenants.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getTenantBySlug(slug: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(tenants).where(eq(tenants.slug, slug)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createTenant(data: InsertTenant) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(tenants).values(data);
+}
+
+export async function updateTenant(id: number, data: Partial<InsertTenant>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(tenants).set(data).where(eq(tenants.id, id));
 }

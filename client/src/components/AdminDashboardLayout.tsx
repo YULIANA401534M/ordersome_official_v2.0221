@@ -33,7 +33,8 @@ import {
   Handshake,
   BookOpen,
   Package,
-  ShoppingCart
+  ShoppingCart,
+  Building2
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -174,11 +175,13 @@ function AdminDashboardLayoutContent({
     { icon: FileText, label: "內容管理", path: "/dashboard/content", requiredPermission: "publish_content" },
     { icon: Handshake, label: "加盟諮詢", path: "/dashboard/franchise-inquiries", requiredPermission: "manage_franchise" },
     { icon: BarChart3, label: "流量分析", path: "/dashboard/admin/analytics", requiredPermission: "view_finance" },
+    { icon: Building2, label: "租戶管理", path: "/dashboard/admin/tenants", requiredPermission: "super_admin_only" },
   ];
 
   // Filter menu items based on user permissions
   const menuItems = allMenuItems.filter(item => {
     if (!item.requiredPermission) return true; // Always show items without permission requirement
+    if (item.requiredPermission === "super_admin_only") return user?.role === "super_admin";
     return hasPermission(item.requiredPermission);
   });
 

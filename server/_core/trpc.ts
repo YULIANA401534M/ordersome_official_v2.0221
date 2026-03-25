@@ -43,3 +43,17 @@ export const adminProcedure = t.procedure.use(
     });
   }),
 );
+
+/**
+ * tenantProcedure: 繼承 protectedProcedure，確保 ctx 中有 tenantId
+ * 供需要資料隔離的 router 使用
+ */
+export const tenantProcedure = protectedProcedure.use(
+  t.middleware(async ({ ctx, next }) => {
+    // tenantId 已在 createContext 中解析，這裡確保它存在
+    if (!ctx.tenantId || ctx.tenantId < 1) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid tenant context" });
+    }
+    return next({ ctx });
+  }),
+);
