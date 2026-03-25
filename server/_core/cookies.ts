@@ -8,9 +8,17 @@ function isIpAddress(host: string) {
   return host.includes(":");
 }
 
-function isSecureRequest(req: Request) {
+function isLocalRequest(req: Request): boolean {
+  const hostname = req.hostname ?? "";
+  return LOCAL_HOSTS.has(hostname) || isIpAddress(hostname);
+}
+
+function isSecureRequest(req: Request): boolean {
+  // With `app.set("trust proxy", 1)` Express will set req.protocol to "https"
+  // when the upstream proxy (Railway / Cloudflare) forwards via HTTPS.
   if (req.protocol === "https") return true;
 
+  // Fallback: check the raw header in case trust-proxy isn't set.
   const forwardedProto = req.headers["x-forwarded-proto"];
   if (!forwardedProto) return false;
 
@@ -24,25 +32,17 @@ function isSecureRequest(req: Request) {
 export function getSessionCookieOptions(
   req: Request
 ): Pick<CookieOptions, "domain" | "httpOnly" | "path" | "sameSite" | "secure"> {
-  // const hostname = req.hostname;
-  // const shouldSetDomain =
-  //   hostname &&
-  //   !LOCAL_HOSTS.has(hostname) &&
-  //   !isIpAddress(hostname) &&
-  //   hostname !== "127.0.0.1" &&
-  //   hostname !== "::1";
-
-  // const domain =
-  //   shouldSetDomain && !hostname.startsWith(".")
-  //     ? `.${hostname}`
-  //     : shouldSetDomain
-  //       ? hostname
-  //       : undefined;
+  const secure = isLocalRequest(req) ? false : true;
 
   return {
     httpOnly: true,
     path: "/",
-    sameSite: "none",
-    secure: isSecureRequest(req),
+    // sameSite:"none" is required for cross-origin cookie delivery
+    // (e.g. Railway backend + Cloudflare-proxied frontend on a custom domain).
+    // Browsers require secure:true whenever sameSite is "none".
+    sameSite: secure ? "none" : "lax",
+    secure,
+    // Do NOT set domain — let the browser derive it from the response origin.
+    // Hard-coding a domain breaks deployments on subdomains or custom domains.
   };
 }
