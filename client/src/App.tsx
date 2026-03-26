@@ -78,6 +78,25 @@ import AdminTenants from "./pages/dashboard/AdminTenants";
 // Landing Page
 import Home from "./pages/Home";
 
+// DaYong ERP Pages
+import DayoneDashboard from "./pages/dayone/DayoneDashboard";
+import DayoneOrders from "./pages/dayone/DayoneOrders";
+import DayoneCustomers from "./pages/dayone/DayoneCustomers";
+import DayoneDrivers from "./pages/dayone/DayoneDrivers";
+import DayoneProducts from "./pages/dayone/DayoneProducts";
+import DayoneInventory from "./pages/dayone/DayoneInventory";
+import DayonePurchase from "./pages/dayone/DayonePurchase";
+import DayoneDistricts from "./pages/dayone/DayoneDistricts";
+// Driver Mobile Pages
+import DriverHome from "./pages/dayone/driver/DriverHome";
+import DriverOrders from "./pages/dayone/driver/DriverOrders";
+import DriverPickup from "./pages/dayone/driver/DriverPickup";
+import DriverDone from "./pages/dayone/driver/DriverDone";
+import DriverProfile from "./pages/dayone/driver/DriverProfile";
+// Super Admin Pages
+import SuperAdminTenants from "./pages/dayone/SuperAdminTenants";
+import SuperAdminModules from "./pages/dayone/SuperAdminModules";
+
 function Router() {
   const [location] = useLocation();
 
@@ -185,6 +204,24 @@ function Router() {
       <Route path="/dashboard/sop" component={SOPKnowledgeBase} />
       <Route path="/dashboard/repairs" component={EquipmentRepairs} />
       <Route path="/dashboard/checklist" component={DailyChecklist} />
+      {/* DaYong ERP Routes */}
+      <Route path="/dayone" component={DayoneDashboard} />
+      <Route path="/dayone/orders" component={DayoneOrders} />
+      <Route path="/dayone/customers" component={DayoneCustomers} />
+      <Route path="/dayone/drivers" component={DayoneDrivers} />
+      <Route path="/dayone/products" component={DayoneProducts} />
+      <Route path="/dayone/inventory" component={DayoneInventory} />
+      <Route path="/dayone/purchase" component={DayonePurchase} />
+      <Route path="/dayone/districts" component={DayoneDistricts} />
+      {/* Driver Mobile Routes */}
+      <Route path="/driver" component={DriverHome} />
+      <Route path="/driver/orders" component={DriverOrders} />
+      <Route path="/driver/pickup" component={DriverPickup} />
+      <Route path="/driver/done" component={DriverDone} />
+      <Route path="/driver/profile" component={DriverProfile} />
+      {/* Super Admin Routes */}
+      <Route path="/super-admin/tenants" component={SuperAdminTenants} />
+      <Route path="/super-admin/modules" component={SuperAdminModules} />
       {/* Smart Dashboard Entry */}
       <Route path="/dashboard" component={Dashboard} />
       

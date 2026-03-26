@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, KeyRound } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, KeyRound, Egg, ClipboardList, Package, Truck, BarChart3, ShoppingCart, MapPin, Shield } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import ChangePasswordDialog from "@/components/ChangePasswordDialog";
 import { useLocation } from "wouter";
@@ -29,8 +29,24 @@ import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Page 1", path: "/" },
-  { icon: Users, label: "Page 2", path: "/some-path" },
+  { icon: LayoutDashboard, label: "後台總覽", path: "/dashboard" },
+  { icon: Users, label: "用戶管理", path: "/dashboard/admin/users" },
+];
+
+const dayoneMenuItems = [
+  { icon: Egg, label: "ERP 總覽", path: "/dayone" },
+  { icon: ClipboardList, label: "配送訂單", path: "/dayone/orders" },
+  { icon: Users, label: "客戶管理", path: "/dayone/customers" },
+  { icon: Truck, label: "司機管理", path: "/dayone/drivers" },
+  { icon: Package, label: "品項管理", path: "/dayone/products" },
+  { icon: BarChart3, label: "庫存管理", path: "/dayone/inventory" },
+  { icon: ShoppingCart, label: "進貨管理", path: "/dayone/purchase" },
+  { icon: MapPin, label: "行政區管理", path: "/dayone/districts" },
+];
+
+const superAdminItems = [
+  { icon: Shield, label: "租戶總覽", path: "/super-admin/tenants" },
+  { icon: Shield, label: "模組管理", path: "/super-admin/modules" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -114,7 +130,8 @@ function DashboardLayoutContent({
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const activeMenuItem = menuItems.find(item => item.path === location);
+  const allItems = [...menuItems, ...dayoneMenuItems, ...superAdminItems];
+  const activeMenuItem = allItems.find(item => item.path === location);
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -180,7 +197,8 @@ function DashboardLayoutContent({
             </div>
           </SidebarHeader>
 
-          <SidebarContent className="gap-0">
+          <SidebarContent className="gap-0 overflow-y-auto">
+            {/* General */}
             <SidebarMenu className="px-2 py-1">
               {menuItems.map(item => {
                 const isActive = location === item.path;
@@ -192,15 +210,65 @@ function DashboardLayoutContent({
                       tooltip={item.label}
                       className={`h-10 transition-all font-normal`}
                     >
-                      <item.icon
-                        className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
-                      />
+                      <item.icon className={`h-4 w-4 ${isActive ? "text-primary" : ""}`} />
                       <span>{item.label}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
               })}
             </SidebarMenu>
+            {/* DaYong ERP Section */}
+            <div className="px-3 pt-3 pb-1">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground group-data-[collapsible=icon]:hidden flex items-center gap-1">
+                <Egg className="h-3 w-3" /> 大永蛋品 ERP
+              </p>
+            </div>
+            <SidebarMenu className="px-2 pb-1">
+              {dayoneMenuItems.map(item => {
+                const isActive = location === item.path || location.startsWith(item.path + "/");
+                return (
+                  <SidebarMenuItem key={item.path}>
+                    <SidebarMenuButton
+                      isActive={isActive}
+                      onClick={() => setLocation(item.path)}
+                      tooltip={item.label}
+                      className={`h-9 transition-all font-normal`}
+                    >
+                      <item.icon className={`h-4 w-4 ${isActive ? "text-primary" : ""}`} />
+                      <span>{item.label}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+            {/* Super Admin Section */}
+            {user?.role === "super_admin" && (
+              <>
+                <div className="px-3 pt-3 pb-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground group-data-[collapsible=icon]:hidden flex items-center gap-1">
+                    <Shield className="h-3 w-3" /> Super Admin
+                  </p>
+                </div>
+                <SidebarMenu className="px-2 pb-1">
+                  {superAdminItems.map(item => {
+                    const isActive = location === item.path;
+                    return (
+                      <SidebarMenuItem key={item.path}>
+                        <SidebarMenuButton
+                          isActive={isActive}
+                          onClick={() => setLocation(item.path)}
+                          tooltip={item.label}
+                          className={`h-9 transition-all font-normal`}
+                        >
+                          <item.icon className={`h-4 w-4 ${isActive ? "text-primary" : ""}`} />
+                          <span>{item.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </>
+            )}
           </SidebarContent>
 
           <SidebarFooter className="p-3">

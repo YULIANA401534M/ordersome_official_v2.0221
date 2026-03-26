@@ -439,3 +439,20 @@ export const storeSettings = mysqlTable("store_settings", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 export type StoreSettings = typeof storeSettings.$inferSelect;
+
+
+// ===== Module Control System =====
+/**
+ * Tenant module toggles (Lego architecture)
+ */
+export const tenantModules = mysqlTable("tenant_modules", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  moduleKey: varchar("moduleKey", { length: 50 }).notNull(),
+  isEnabled: boolean("isEnabled").default(false).notNull(),
+  config: json("config").$type<Record<string, unknown>>(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type TenantModule = typeof tenantModules.$inferSelect;
+export type InsertTenantModule = typeof tenantModules.$inferInsert;

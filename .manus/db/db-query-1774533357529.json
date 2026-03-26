@@ -1,0 +1,9 @@
+{
+  "query": "\nALTER TABLE `orders`\n  ADD COLUMN IF NOT EXISTS `tenantId` int NOT NULL DEFAULT 1 AFTER `id`,\n  ADD COLUMN IF NOT EXISTS `orderSource` varchar(50) NOT NULL DEFAULT 'general' AFTER `ecpayTradeNo`,\n  ADD COLUMN IF NOT EXISTS `invoiceType` enum('personal','company') NOT NULL DEFAULT 'personal' AFTER `orderSource`,\n  ADD COLUMN IF NOT EXISTS `companyTaxId` varchar(8) NULL AFTER `invoiceType`,\n  ADD COLUMN IF NOT EXISTS `companyName` varchar(200) NULL AFTER `companyTaxId`;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user AKK2AjLXvjySfzt.defe7b7a87b6 --database gjTAhmM88fiEhPinRVjKbV --execute \nALTER TABLE `orders`\n  ADD COLUMN IF NOT EXISTS `tenantId` int NOT NULL DEFAULT 1 AFTER `id`,\n  ADD COLUMN IF NOT EXISTS `orderSource` varchar(50) NOT NULL DEFAULT 'general' AFTER `ecpayTradeNo`,\n  ADD COLUMN IF NOT EXISTS `invoiceType` enum('personal','company') NOT NULL DEFAULT 'personal' AFTER `orderSource`,\n  ADD COLUMN IF NOT EXISTS `companyTaxId` varchar(8) NULL AFTER `invoiceType`,\n  ADD COLUMN IF NOT EXISTS `companyName` varchar(200) NULL AFTER `companyTaxId`;\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1631
+}

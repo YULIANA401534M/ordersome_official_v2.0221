@@ -12,6 +12,7 @@ import { contentRouter } from "./routers/content";
 import { storageRouter } from "./routers/storage";
 import { sopRouter } from "./routers/sop";
 import { tenantRouter } from "./routers/tenant";
+import { dayoneRouter } from "./routers/dayone";
 
 // Admin procedure
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -717,6 +718,8 @@ export const appRouter = router({
   sop: sopRouter,
   // 多租戶管理
   tenant: tenantRouter,
+  // 大永蛋品 ERP 系統
+  dayone: dayoneRouter,
 });
 
 export type AppRouter = typeof appRouter;

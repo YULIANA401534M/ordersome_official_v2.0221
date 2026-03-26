@@ -1,0 +1,9 @@
+{
+  "query": "\nALTER TABLE `products`\n  ADD COLUMN IF NOT EXISTS `tenantId` int NOT NULL DEFAULT 1 AFTER `id`,\n  ADD COLUMN IF NOT EXISTS `specDetails` text NULL AFTER `specifications`,\n  ADD COLUMN IF NOT EXISTS `shippingDetails` text NULL AFTER `specDetails`,\n  ADD COLUMN IF NOT EXISTS `isHidden` tinyint(1) NOT NULL DEFAULT 0 AFTER `isFeatured`,\n  ADD COLUMN IF NOT EXISTS `exclusiveSlug` varchar(200) NULL AFTER `isHidden`,\n  ADD COLUMN IF NOT EXISTS `exclusiveImageUrl` text NULL AFTER `exclusiveSlug`;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user AKK2AjLXvjySfzt.defe7b7a87b6 --database gjTAhmM88fiEhPinRVjKbV --execute \nALTER TABLE `products`\n  ADD COLUMN IF NOT EXISTS `tenantId` int NOT NULL DEFAULT 1 AFTER `id`,\n  ADD COLUMN IF NOT EXISTS `specDetails` text NULL AFTER `specifications`,\n  ADD COLUMN IF NOT EXISTS `shippingDetails` text NULL AFTER `specDetails`,\n  ADD COLUMN IF NOT EXISTS `isHidden` tinyint(1) NOT NULL DEFAULT 0 AFTER `isFeatured`,\n  ADD COLUMN IF NOT EXISTS `exclusiveSlug` varchar(200) NULL AFTER `isHidden`,\n  ADD COLUMN IF NOT EXISTS `exclusiveImageUrl` text NULL AFTER `exclusiveSlug`;\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1584
+}
