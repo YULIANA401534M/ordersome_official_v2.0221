@@ -46,11 +46,11 @@ export const dyDriversRouter = router({
         );
         return { id: input.id };
       } else {
-        const [res] = await client.execute(
+        const [result] = await client.execute(
           `INSERT INTO dy_drivers (tenantId, name, phone, lineId, districtIds, vehicleNo, status, createdAt, updatedAt) VALUES (?,?,?,?,?,?,?,NOW(),NOW())`,
           [input.tenantId, input.name, input.phone ?? null, input.lineId ?? null, districtIdsJson, input.vehicleNo ?? null, input.status]
         );
-        return { id: (res as any).insertId };
+        return { id: (result as any).insertId };
       }
     }),
 
@@ -61,7 +61,7 @@ export const dyDriversRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       // Find driver by userId
-      const [[driver]] = await (db as any).$client.execute(
+      const [_r_driver] = await (db as any).$client.execute(
         `SELECT id FROM dy_drivers WHERE tenantId=? AND userId=? AND status='active'`,
         [input.tenantId, ctx.user.id]
       ) as any;

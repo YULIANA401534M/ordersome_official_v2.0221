@@ -17,7 +17,7 @@ export const dyReportsRouter = router({
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
-      const [[summary]] = await (db as any).$client.execute(
+      const [_r_summary] = await (db as any).$client.execute(
         `SELECT 
            COUNT(*) as totalOrders,
            SUM(totalAmount) as totalAmount,

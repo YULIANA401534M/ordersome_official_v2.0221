@@ -43,11 +43,11 @@ export const dyDistrictsRouter = router({
         );
         return { id: input.id };
       } else {
-        const [res] = await client.execute(
+        const [result] = await client.execute(
           `INSERT INTO dy_districts (tenantId, name, deliveryDays, sortOrder, createdAt) VALUES (?,?,?,?,NOW())`,
           [input.tenantId, input.name, deliveryDaysJson, input.sortOrder]
         );
-        return { id: (res as any).insertId };
+        return { id: (result as any).insertId };
       }
     }),
 
