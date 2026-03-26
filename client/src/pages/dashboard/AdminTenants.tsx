@@ -11,9 +11,17 @@ import { trpc } from "@/lib/trpc";
 import { Building2, Plus, Pencil, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useLocation } from "wouter";
 
 export default function AdminTenants() {
+  const [, navigate] = useLocation();
   const { data: tenants, isLoading, refetch } = trpc.tenant.list.useQuery();
+  
+  const getErpPath = (slug: string): string => {
+    if (slug === 'ordersome') return '/dashboard';
+    if (slug.includes('dayone')) return '/dayone';
+    return '/dayone';
+  };
   const createMutation = trpc.tenant.create.useMutation({
     onSuccess: () => {
       toast.success("租戶建立成功");
@@ -196,18 +204,27 @@ export default function AdminTenants() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center gap-2">
-                    <Badge className={planColor[tenant.plan] || "bg-gray-100"}>
-                      {planLabel[tenant.plan] || tenant.plan}
-                    </Badge>
-                    <Badge variant={tenant.isActive ? "default" : "secondary"}>
-                      {tenant.isActive ? "啟用中" : "已停用"}
-                    </Badge>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Badge className={planColor[tenant.plan] || "bg-gray-100"}>
+                        {planLabel[tenant.plan] || tenant.plan}
+                      </Badge>
+                      <Badge variant={tenant.isActive ? "default" : "secondary"}>
+                        {tenant.isActive ? "啟用中" : "已停用"}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      ID: {tenant.id} &middot; 建立於{" "}
+                      {new Date(tenant.createdAt).toLocaleDateString("zh-TW")}
+                    </p>
+                    <Button
+                      size="sm"
+                      className="w-full"
+                      onClick={() => navigate(getErpPath(tenant.slug))}
+                    >
+                      進入後台
+                    </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-3">
-                    ID: {tenant.id} &middot; 建立於{" "}
-                    {new Date(tenant.createdAt).toLocaleDateString("zh-TW")}
-                  </p>
                 </CardContent>
               </Card>
             ))}

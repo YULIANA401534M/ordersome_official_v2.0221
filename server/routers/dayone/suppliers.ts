@@ -2,8 +2,6 @@ import { z } from "zod";
 import { router, protectedProcedure } from "../../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../../db";
-import { tenantModules } from "../../../drizzle/schema";
-import { eq, and } from "drizzle-orm";
 
 const dyAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== 'super_admin' && ctx.user.role !== 'manager') {
@@ -12,14 +10,14 @@ const dyAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
   return next({ ctx });
 });
 
-export const dyProductsRouter = router({
+export const dySuppliersRouter = router({
   list: dyAdminProcedure
     .input(z.object({ tenantId: z.number() }))
     .query(async ({ input }) => {
       const db = getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const [rows] = await (db as any).$client.execute(
-        `SELECT * FROM dy_products WHERE tenantId = ? ORDER BY code`,
+        `SELECT * FROM dy_suppliers WHERE tenantId = ? ORDER BY name`,
         [input.tenantId]
       );
       return rows as any[];
@@ -29,11 +27,12 @@ export const dyProductsRouter = router({
     .input(z.object({
       id: z.number().optional(),
       tenantId: z.number(),
-      code: z.string().max(50),
       name: z.string().max(100),
-      unit: z.string().max(20),
-      defaultPrice: z.number().min(0),
-      isActive: z.boolean().default(true),
+      contact: z.string().max(100).optional(),
+      phone: z.string().max(20).optional(),
+      address: z.string().optional(),
+      bankAccount: z.string().max(50).optional(),
+      status: z.enum(['active', 'inactive']).default('active'),
     }))
     .mutation(async ({ input }) => {
       const db = getDb();
@@ -41,17 +40,29 @@ export const dyProductsRouter = router({
       const client = (db as any).$client;
       if (input.id) {
         await client.execute(
-          `UPDATE dy_products SET code=?, name=?, unit=?, defaultPrice=?, isActive=?, updatedAt=NOW() WHERE id=? AND tenantId=?`,
-          [input.code, input.name, input.unit, input.defaultPrice, input.isActive, input.id, input.tenantId]
+          `UPDATE dy_suppliers SET name=?, contact=?, phone=?, address=?, bankAccount=?, status=?, updatedAt=NOW() WHERE id=? AND tenantId=?`,
+          [input.name, input.contact ?? null, input.phone ?? null, input.address ?? null, input.bankAccount ?? null, input.status, input.id, input.tenantId]
         );
         return { id: input.id };
       } else {
         const [res] = await client.execute(
-          `INSERT INTO dy_products (tenantId, code, name, unit, defaultPrice, isActive, createdAt, updatedAt) VALUES (?,?,?,?,?,?,NOW(),NOW())`,
-          [input.tenantId, input.code, input.name, input.unit, input.defaultPrice, input.isActive]
+          `INSERT INTO dy_suppliers (tenantId, name, contact, phone, address, bankAccount, status, createdAt, updatedAt) VALUES (?,?,?,?,?,?,?,NOW(),NOW())`,
+          [input.tenantId, input.name, input.contact ?? null, input.phone ?? null, input.address ?? null, input.bankAccount ?? null, input.status]
         );
         return { id: (res as any).insertId };
       }
+    }),
+
+  toggleStatus: dyAdminProcedure
+    .input(z.object({ id: z.number(), tenantId: z.number(), status: z.enum(['active', 'inactive']) }))
+    .mutation(async ({ input }) => {
+      const db = getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
+      await (db as any).$client.execute(
+        `UPDATE dy_suppliers SET status=?, updatedAt=NOW() WHERE id=? AND tenantId=?`,
+        [input.status, input.id, input.tenantId]
+      );
+      return { success: true };
     }),
 
   delete: dyAdminProcedure
@@ -60,7 +71,7 @@ export const dyProductsRouter = router({
       const db = getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       await (db as any).$client.execute(
-        `DELETE FROM dy_products WHERE id=? AND tenantId=?`,
+        `DELETE FROM dy_suppliers WHERE id=? AND tenantId=?`,
         [input.id, input.tenantId]
       );
       return { success: true };

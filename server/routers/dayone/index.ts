@@ -9,6 +9,7 @@ import { dyDistrictsRouter } from "./districts";
 import { dyModulesRouter } from "./modules";
 import { dyReportsRouter } from "./reports";
 import { dyDriverRouter } from "./driver";
+import { dySuppliersRouter } from "./suppliers";
 
 export const dayoneRouter = router({
   products: dyProductsRouter,
@@ -21,4 +22,5 @@ export const dayoneRouter = router({
   modules: dyModulesRouter,
   reports: dyReportsRouter,
   driver: dyDriverRouter,
+  suppliers: dySuppliersRouter,
 });

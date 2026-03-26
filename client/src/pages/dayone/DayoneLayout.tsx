@@ -41,6 +41,14 @@ export function DayoneLayout({ children }: { children: React.ReactNode }) {
         </div>
       </div>
       <div className="flex-1 overflow-y-auto py-3 px-2">
+        {user?.role === 'super_admin' && (
+          <Link href="/dashboard">
+            <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors mb-2 text-amber-300 hover:bg-amber-800 hover:text-amber-50">
+              <ChevronLeft className="w-4 h-4 shrink-0" />
+              返回宇聯後台
+            </a>
+          </Link>
+        )}
         {navItems.map((item) => {
           const active = location === item.path || (item.path !== "/dayone" && location.startsWith(item.path));
           return (
