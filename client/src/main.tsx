@@ -3,7 +3,6 @@ import { UNAUTHED_ERR_MSG } from '@shared/const';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpLink, TRPCClientError } from "@trpc/client";
 import { createRoot } from "react-dom/client";
-import superjson from "superjson";
 import App from "./App";
 import { getLoginUrl } from "./const";
 import "./index.css";
@@ -37,14 +36,15 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
-// Use httpLink instead of httpBatchLink to avoid ?batch=1 query parameter.
-// Cloudflare WAF blocks POST requests with ?batch=1, causing 503 errors.
-// httpLink sends individual requests without batch parameters.
+// Use httpLink (not httpBatchLink) to avoid ?batch=1 query parameter.
+// Use no transformer (not superjson) to avoid {"json":{...}} body format.
+// Both ?batch=1 and {"json":{...}} trigger Cloudflare WAF rules causing 503 errors.
+// Standard JSON passes through Cloudflare without issues.
+// Date fields are transmitted as ISO strings; use new Date(str) on the client.
 const trpcClient = trpc.createClient({
   links: [
     httpLink({
       url: `${window.location.origin}/api/trpc`,
-      transformer: superjson,
       fetch(input, init) {
         return globalThis.fetch(input, {
           ...(init ?? {}),

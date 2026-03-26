@@ -1,11 +1,13 @@
 import { NOT_ADMIN_ERR_MSG, UNAUTHED_ERR_MSG } from '@shared/const';
 import { initTRPC, TRPCError } from "@trpc/server";
-import superjson from "superjson";
 import type { TrpcContext } from "./context";
 
-const t = initTRPC.context<TrpcContext>().create({
-  transformer: superjson,
-});
+// NOTE: superjson transformer intentionally removed.
+// Cloudflare WAF blocks POST requests whose body contains a top-level "json" key
+// (the superjson wire format: {"json":{...},"meta":{...}}).
+// Without the transformer, tRPC uses standard JSON which passes through Cloudflare.
+// Date fields are transmitted as ISO strings and parsed with `new Date(str)` on the client.
+const t = initTRPC.context<TrpcContext>().create();
 
 export const router = t.router;
 export const publicProcedure = t.procedure;

@@ -1,0 +1,19 @@
+{
+  "query": "SELECT imageUrl FROM products WHERE imageUrl IS NOT NULL LIMIT 3;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user AKK2AjLXvjySfzt.defe7b7a87b6 --database gjTAhmM88fiEhPinRVjKbV --execute SELECT imageUrl FROM products WHERE imageUrl IS NOT NULL LIMIT 3;",
+  "rows": [
+    {
+      "imageUrl": "https://images.ordersome.com.tw/ordersome-b2b/images/1771831784229-64nhc3.jpg"
+    },
+    {
+      "imageUrl": "https://images.ordersome.com.tw/ordersome-b2b/images/1771831932707-h02sqt.jpg"
+    },
+    {
+      "imageUrl": "https://d2xsxph8kpxj0f.cloudfront.net/310519663285169742/gjTAhmM88fiEhPinRVjKbV/posts/1773662444262-ps5huk.jpg"
+    }
+  ],
+  "messages": [],
+  "stdout": "imageUrl\nhttps://images.ordersome.com.tw/ordersome-b2b/images/1771831784229-64nhc3.jpg\nhttps://images.ordersome.com.tw/ordersome-b2b/images/1771831932707-h02sqt.jpg\nhttps://d2xsxph8kpxj0f.cloudfront.net/310519663285169742/gjTAhmM88fiEhPinRVjKbV/posts/1773662444262-ps5huk.jpg\n",
+  "stderr": "",
+  "execution_time_ms": 1672
+}
