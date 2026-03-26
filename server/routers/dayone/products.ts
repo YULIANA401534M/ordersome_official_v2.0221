@@ -16,7 +16,7 @@ export const dyProductsRouter = router({
   list: dyAdminProcedure
     .input(z.object({ tenantId: z.number() }))
     .query(async ({ input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const [rows] = await (db as any).$client.execute(
         `SELECT * FROM dy_products WHERE tenantId = ? ORDER BY code`,
@@ -36,7 +36,7 @@ export const dyProductsRouter = router({
       isActive: z.boolean().default(true),
     }))
     .mutation(async ({ input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const client = (db as any).$client;
       if (input.id) {
@@ -57,7 +57,7 @@ export const dyProductsRouter = router({
   delete: dyAdminProcedure
     .input(z.object({ id: z.number(), tenantId: z.number() }))
     .mutation(async ({ input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       await (db as any).$client.execute(
         `DELETE FROM dy_products WHERE id=? AND tenantId=?`,

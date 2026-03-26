@@ -21,7 +21,7 @@ export const dyDriverRouter = router({
       deliveryDate: z.string().optional(), // YYYY-MM-DD, defaults to today
     }))
     .query(async ({ ctx, input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const date = input.deliveryDate ?? new Date().toISOString().slice(0, 10);
       // Find driver record linked to this user
@@ -52,7 +52,7 @@ export const dyDriverRouter = router({
       driverNote: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       // Verify this order belongs to the driver
       const [[driver]] = await (db as any).$client.execute(
@@ -76,7 +76,7 @@ export const dyDriverRouter = router({
       cashCollected: z.number().min(0),
     }))
     .mutation(async ({ ctx, input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const [[driver]] = await (db as any).$client.execute(
         `SELECT id FROM dy_drivers WHERE userId = ? AND tenantId = ? LIMIT 1`,
@@ -102,7 +102,7 @@ export const dyDriverRouter = router({
       note: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const [[driver]] = await (db as any).$client.execute(
         `SELECT id FROM dy_drivers WHERE userId = ? AND tenantId = ? LIMIT 1`,
@@ -135,7 +135,7 @@ export const dyDriverRouter = router({
       imageBase64: z.string(), // base64 data URL
     }))
     .mutation(async ({ ctx, input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const [[driver]] = await (db as any).$client.execute(
         `SELECT id FROM dy_drivers WHERE userId = ? AND tenantId = ? LIMIT 1`,
@@ -167,7 +167,7 @@ export const dyDriverRouter = router({
       workDate: z.string(),
     }))
     .query(async ({ ctx, input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const [[driver]] = await (db as any).$client.execute(
         `SELECT id FROM dy_drivers WHERE userId = ? AND tenantId = ? LIMIT 1`,

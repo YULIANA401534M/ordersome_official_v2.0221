@@ -14,7 +14,7 @@ export const dyInventoryRouter = router({
   list: dyAdminProcedure
     .input(z.object({ tenantId: z.number() }))
     .query(async ({ input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const [rows] = await (db as any).$client.execute(
         `SELECT i.*, p.name as productName, p.code FROM dy_inventory i
@@ -35,7 +35,7 @@ export const dyInventoryRouter = router({
       note: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const client = (db as any).$client;
       // Upsert inventory
@@ -58,7 +58,7 @@ export const dyInventoryRouter = router({
   movements: dyAdminProcedure
     .input(z.object({ tenantId: z.number(), productId: z.number().optional(), limit: z.number().default(50) }))
     .query(async ({ input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       let sql = `SELECT m.*, p.name as productName, p.code FROM dy_stock_movements m
                  JOIN dy_products p ON m.productId = p.id

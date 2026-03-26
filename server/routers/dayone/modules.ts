@@ -22,7 +22,7 @@ export const dyModulesRouter = router({
   list: dyAdminProcedure
     .input(z.object({ tenantId: z.number() }))
     .query(async ({ input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const [rows] = await (db as any).$client.execute(
         `SELECT * FROM tenant_modules WHERE tenantId = ? ORDER BY moduleKey`,
@@ -39,7 +39,7 @@ export const dyModulesRouter = router({
       isEnabled: z.boolean(),
     }))
     .mutation(async ({ input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       await (db as any).$client.execute(
         `INSERT INTO tenant_modules (tenantId, moduleKey, isEnabled, createdAt, updatedAt)
@@ -54,7 +54,7 @@ export const dyModulesRouter = router({
   isEnabled: dyAdminProcedure
     .input(z.object({ tenantId: z.number(), moduleKey: z.string() }))
     .query(async ({ input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) return false;
       const [[row]] = await (db as any).$client.execute(
         `SELECT isEnabled FROM tenant_modules WHERE tenantId=? AND moduleKey=?`,
@@ -66,7 +66,7 @@ export const dyModulesRouter = router({
   // Super admin: list all tenants with their modules
   allTenantModules: superAdminProcedure
     .query(async () => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const [rows] = await (db as any).$client.execute(
         `SELECT t.id, t.name, t.slug, t.plan, t.isActive,

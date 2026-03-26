@@ -14,7 +14,7 @@ export const dyDriversRouter = router({
   list: dyAdminProcedure
     .input(z.object({ tenantId: z.number() }))
     .query(async ({ input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const [rows] = await (db as any).$client.execute(
         `SELECT * FROM dy_drivers WHERE tenantId = ? ORDER BY name`,
@@ -35,7 +35,7 @@ export const dyDriversRouter = router({
       status: z.enum(['active', 'inactive']).default('active'),
     }))
     .mutation(async ({ input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const client = (db as any).$client;
       const districtIdsJson = input.districtIds ? JSON.stringify(input.districtIds) : null;
@@ -58,7 +58,7 @@ export const dyDriversRouter = router({
   myOrders: protectedProcedure
     .input(z.object({ tenantId: z.number(), deliveryDate: z.string() }))
     .query(async ({ ctx, input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       // Find driver by userId
       const [[driver]] = await (db as any).$client.execute(

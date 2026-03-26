@@ -14,7 +14,7 @@ export const dyCustomersRouter = router({
   list: dyAdminProcedure
     .input(z.object({ tenantId: z.number() }))
     .query(async ({ input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const [rows] = await (db as any).$client.execute(
         `SELECT c.*, d.name as districtName 
@@ -39,7 +39,7 @@ export const dyCustomersRouter = router({
       status: z.enum(['active', 'suspended']).default('active'),
     }))
     .mutation(async ({ input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const client = (db as any).$client;
       if (input.id) {
@@ -60,7 +60,7 @@ export const dyCustomersRouter = router({
   getCustomerPrices: dyAdminProcedure
     .input(z.object({ customerId: z.number(), tenantId: z.number() }))
     .query(async ({ input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const [rows] = await (db as any).$client.execute(
         `SELECT cp.*, p.name as productName, p.code, p.unit 
@@ -82,7 +82,7 @@ export const dyCustomersRouter = router({
       effectiveDate: z.string(),
     }))
     .mutation(async ({ input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const [res] = await (db as any).$client.execute(
         `INSERT INTO dy_customer_prices (tenantId, customerId, productId, price, effectiveDate, createdAt) VALUES (?,?,?,?,?,NOW())`,

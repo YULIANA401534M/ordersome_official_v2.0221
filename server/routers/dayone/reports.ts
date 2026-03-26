@@ -15,7 +15,7 @@ export const dyReportsRouter = router({
   dailySummary: dyAdminProcedure
     .input(z.object({ tenantId: z.number(), date: z.string() }))
     .query(async ({ input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const [[summary]] = await (db as any).$client.execute(
         `SELECT 
@@ -41,7 +41,7 @@ export const dyReportsRouter = router({
   monthlyRevenue: dyAdminProcedure
     .input(z.object({ tenantId: z.number(), year: z.number(), month: z.number() }))
     .query(async ({ input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const [rows] = await (db as any).$client.execute(
         `SELECT DATE(deliveryDate) as date, COUNT(*) as orders, SUM(totalAmount) as revenue
@@ -56,7 +56,7 @@ export const dyReportsRouter = router({
   topCustomers: dyAdminProcedure
     .input(z.object({ tenantId: z.number(), limit: z.number().default(10) }))
     .query(async ({ input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const [rows] = await (db as any).$client.execute(
         `SELECT c.name, c.phone, COUNT(o.id) as orderCount, SUM(o.totalAmount) as totalSpending
@@ -72,7 +72,7 @@ export const dyReportsRouter = router({
   inventoryAlerts: dyAdminProcedure
     .input(z.object({ tenantId: z.number() }))
     .query(async ({ input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const [rows] = await (db as any).$client.execute(
         `SELECT i.*, p.name as productName, p.code FROM dy_inventory i

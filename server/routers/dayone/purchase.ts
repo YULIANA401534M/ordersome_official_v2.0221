@@ -14,7 +14,7 @@ export const dyPurchaseRouter = router({
   list: dyAdminProcedure
     .input(z.object({ tenantId: z.number(), status: z.string().optional() }))
     .query(async ({ input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       let sql = `SELECT po.*, s.name as supplierName FROM dy_purchase_orders po
                  JOIN dy_suppliers s ON po.supplierId = s.id
@@ -39,7 +39,7 @@ export const dyPurchaseRouter = router({
       note: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const client = (db as any).$client;
       const totalAmount = input.items.reduce((sum, i) => sum + i.expectedQty * i.unitPrice, 0);
@@ -69,7 +69,7 @@ export const dyPurchaseRouter = router({
       })),
     }))
     .mutation(async ({ ctx, input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const client = (db as any).$client;
       for (const item of input.items) {
@@ -101,7 +101,7 @@ export const dyPurchaseRouter = router({
   suppliers: dyAdminProcedure
     .input(z.object({ tenantId: z.number() }))
     .query(async ({ input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const [rows] = await (db as any).$client.execute(
         `SELECT * FROM dy_suppliers WHERE tenantId = ? AND status='active' ORDER BY name`,
@@ -122,7 +122,7 @@ export const dyPurchaseRouter = router({
       status: z.enum(['active', 'inactive']).default('active'),
     }))
     .mutation(async ({ input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const client = (db as any).$client;
       if (input.id) {

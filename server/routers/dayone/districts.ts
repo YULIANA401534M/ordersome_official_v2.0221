@@ -14,7 +14,7 @@ export const dyDistrictsRouter = router({
   list: dyAdminProcedure
     .input(z.object({ tenantId: z.number() }))
     .query(async ({ input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const [rows] = await (db as any).$client.execute(
         `SELECT * FROM dy_districts WHERE tenantId = ? ORDER BY sortOrder, name`,
@@ -32,7 +32,7 @@ export const dyDistrictsRouter = router({
       sortOrder: z.number().default(0),
     }))
     .mutation(async ({ input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const client = (db as any).$client;
       const deliveryDaysJson = JSON.stringify(input.deliveryDays);
@@ -54,7 +54,7 @@ export const dyDistrictsRouter = router({
   delete: dyAdminProcedure
     .input(z.object({ id: z.number(), tenantId: z.number() }))
     .mutation(async ({ input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       await (db as any).$client.execute(
         `DELETE FROM dy_districts WHERE id=? AND tenantId=?`,

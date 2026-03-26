@@ -42,29 +42,27 @@ export function DayoneLayout({ children }: { children: React.ReactNode }) {
       </div>
       <div className="flex-1 overflow-y-auto py-3 px-2">
         {user?.role === 'super_admin' && (
-          <Link href="/dashboard">
-            <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors mb-2 text-amber-300 hover:bg-amber-800 hover:text-amber-50">
-              <ChevronLeft className="w-4 h-4 shrink-0" />
-              返回宇聯後台
-            </a>
+          <Link href="/dashboard" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors mb-2 text-amber-300 hover:bg-amber-800 hover:text-amber-50">
+            <ChevronLeft className="w-4 h-4 shrink-0" />
+            返回宇聯後台
           </Link>
         )}
         {navItems.map((item) => {
           const active = location === item.path || (item.path !== "/dayone" && location.startsWith(item.path));
           return (
-            <Link key={item.path} href={item.path}>
-              <a
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors mb-0.5",
-                  active
-                    ? "bg-amber-400 text-amber-950"
-                    : "text-amber-200 hover:bg-amber-800 hover:text-amber-50"
-                )}
-                onClick={() => setMobileOpen(false)}
-              >
-                <item.icon className="w-4 h-4 shrink-0" />
-                {item.label}
-              </a>
+            <Link
+              key={item.path}
+              href={item.path}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors mb-0.5",
+                active
+                  ? "bg-amber-400 text-amber-950"
+                  : "text-amber-200 hover:bg-amber-800 hover:text-amber-50"
+              )}
+              onClick={() => setMobileOpen(false)}
+            >
+              <item.icon className="w-4 h-4 shrink-0" />
+              {item.label}
             </Link>
           );
         })}

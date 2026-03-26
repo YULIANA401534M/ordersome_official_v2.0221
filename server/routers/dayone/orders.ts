@@ -19,7 +19,7 @@ export const dyOrdersRouter = router({
       status: z.string().optional(),
     }))
     .query(async ({ input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       let sql = `SELECT o.*, c.name as customerName, c.address as customerAddress, c.phone as customerPhone,
                         d.name as driverName, dist.name as districtName
@@ -40,7 +40,7 @@ export const dyOrdersRouter = router({
   getWithItems: dyAdminProcedure
     .input(z.object({ id: z.number(), tenantId: z.number() }))
     .query(async ({ input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const [[order]] = await (db as any).$client.execute(
         `SELECT o.*, c.name as customerName, c.address as customerAddress, c.phone as customerPhone
@@ -72,7 +72,7 @@ export const dyOrdersRouter = router({
       note: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const client = (db as any).$client;
       const totalAmount = input.items.reduce((sum, i) => sum + i.qty * i.unitPrice, 0);
@@ -99,7 +99,7 @@ export const dyOrdersRouter = router({
       status: z.enum(['pending', 'assigned', 'picked', 'delivering', 'delivered', 'returned', 'cancelled']),
     }))
     .mutation(async ({ input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       await (db as any).$client.execute(
         `UPDATE dy_orders SET status=?, updatedAt=NOW() WHERE id=? AND tenantId=?`,
@@ -120,7 +120,7 @@ export const dyOrdersRouter = router({
       paidAmount: z.number().default(0),
     }))
     .mutation(async ({ input }) => {
-      const db = getDb();
+      const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       await (db as any).$client.execute(
         `UPDATE dy_orders SET status='delivered', signatureUrl=?, photoUrl=?, inBoxes=?, returnBoxes=?, paidAmount=?, paymentStatus=IF(paidAmount>=totalAmount,'paid','partial'), updatedAt=NOW() WHERE id=? AND tenantId=?`,
