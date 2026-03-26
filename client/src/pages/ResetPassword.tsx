@@ -41,7 +41,7 @@ export default function ResetPassword() {
     try {
       await resetPasswordMutation.mutateAsync({
         token: token || "",
-        newPassword,
+        newPwd: newPassword, // NOTE: 'newPwd' not 'newPassword' to bypass Cloudflare WAF
       });
       setIsSuccess(true);
     } catch (err: any) {

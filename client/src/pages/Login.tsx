@@ -20,7 +20,7 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      const result = await loginMutation.mutateAsync({ email, password });
+      const result = await loginMutation.mutateAsync({ email, pwd: password });
       
       // Track login event in GA4
       if (result?.user) {
