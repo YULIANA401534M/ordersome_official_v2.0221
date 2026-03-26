@@ -45,11 +45,11 @@ export const dySuppliersRouter = router({
         );
         return { id: input.id };
       } else {
-        const [res] = await client.execute(
+        const [result] = await client.execute(
           `INSERT INTO dy_suppliers (tenantId, name, contact, phone, address, bankAccount, status, createdAt, updatedAt) VALUES (?,?,?,?,?,?,?,NOW(),NOW())`,
           [input.tenantId, input.name, input.contact ?? null, input.phone ?? null, input.address ?? null, input.bankAccount ?? null, input.status]
         );
-        return { id: (res as any).insertId };
+        return { id: (result as any).insertId };
       }
     }),
 

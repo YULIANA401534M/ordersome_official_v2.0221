@@ -46,11 +46,11 @@ export const dyDriversRouter = router({
         );
         return { id: input.id };
       } else {
-        const [res] = await client.execute(
+        const [result] = await client.execute(
           `INSERT INTO dy_drivers (tenantId, name, phone, lineId, districtIds, vehicleNo, status, createdAt, updatedAt) VALUES (?,?,?,?,?,?,?,NOW(),NOW())`,
           [input.tenantId, input.name, input.phone ?? null, input.lineId ?? null, districtIdsJson, input.vehicleNo ?? null, input.status]
         );
-        return { id: (res as any).insertId };
+        return { id: (result as any).insertId };
       }
     }),
 

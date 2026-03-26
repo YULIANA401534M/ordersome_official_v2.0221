@@ -77,12 +77,12 @@ export const dyOrdersRouter = router({
       const client = (db as any).$client;
       const totalAmount = input.items.reduce((sum, i) => sum + i.qty * i.unitPrice, 0);
       const orderNo = `DY${Date.now()}`;
-      const [res] = await client.execute(
+      const [result] = await client.execute(
         `INSERT INTO dy_orders (tenantId, orderNo, customerId, driverId, deliveryDate, districtId, status, totalAmount, paidAmount, paymentStatus, prevBoxes, inBoxes, returnBoxes, remainBoxes, note, createdAt, updatedAt)
          VALUES (?,?,?,?,?,?,'pending',?,0,'unpaid',0,0,0,0,?,NOW(),NOW())`,
         [input.tenantId, orderNo, input.customerId, input.driverId ?? null, input.deliveryDate, input.districtId ?? null, totalAmount, input.note ?? null]
       );
-      const orderId = (res as any).insertId;
+      const orderId = (result as any).insertId;
       for (const item of input.items) {
         await client.execute(
           `INSERT INTO dy_order_items (tenantId, orderId, productId, qty, unitPrice, subtotal, returnQty) VALUES (?,?,?,?,?,?,0)`,
