@@ -48,15 +48,14 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  // In production (Railway), the build output is at dist/public relative to
-  // the project root (two levels up from server/_core/).
-  // import.meta.dirname resolves to server/_core at runtime.
+  // In production (Railway), the build output is at dist/public.
+  // Use process.cwd() which is reliable across all deployment environments.
   const candidates = [
-    path.resolve(import.meta.dirname, "public"),           // compiled: server/_core/public
-    path.resolve(import.meta.dirname, "..", "public"),     // compiled: server/public
+    path.resolve(process.cwd(), "dist", "public"),         // Railway: CWD/dist/public
+    path.resolve(import.meta.dirname, "public"),           // esbuild bundle: dist/public
+    path.resolve(import.meta.dirname, "..", "public"),     // alternate bundle path
     path.resolve(import.meta.dirname, "../..", "dist", "public"), // dev fallback
-    path.resolve(process.cwd(), "dist", "public"),         // Railway CWD fallback
-    path.resolve(process.cwd(), "public"),                 // Railway CWD fallback 2
+    path.resolve(process.cwd(), "public"),                 // last resort
   ];
 
   const distPath = candidates.find(p => fs.existsSync(p));
@@ -65,18 +64,21 @@ export function serveStatic(app: Express) {
     console.error(
       `[serveStatic] Could not find build directory. Tried:\n${candidates.join("\n")}`
     );
-    // Still register a fallback so the server doesn't crash
-    app.use("*", (_req, res) => {
-      res.status(503).send("Frontend build not found. Run pnpm build first.");
-    });
+    // IMPORTANT: Do NOT register a catch-all fallback here.
+    // The /api/trpc routes are already registered before serveStatic is called.
+    // A catch-all here would shadow API 404s with HTML, causing "Service Unavailable" JSON errors.
     return;
   }
 
   console.log(`[serveStatic] Serving static files from: ${distPath}`);
   app.use(express.static(distPath));
 
-  // SPA fallback — serve index.html for all unmatched routes
-  app.use("*", (_req, res) => {
+  // SPA fallback — serve index.html for all non-API unmatched routes
+  app.use((req, res, next) => {
+    // Never intercept /api routes — let Express return its own 404
+    if (req.path.startsWith("/api")) {
+      return next();
+    }
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }
