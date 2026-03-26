@@ -284,7 +284,9 @@ export const posts = mysqlTable("posts", {
   coverImage: text("coverImage"),
   status: mysqlEnum("status", ["draft", "published"]).default("draft").notNull(),
   // Publish targets: JSON array of ['corporate', 'brand'] - supports multiple targets
-  publishTargets: json("publishTargets").$type<string[]>().default(["brand"]).notNull(),
+  // NOTE: No .default() here - TiDB does not support JSON column defaults in DDL
+  // Application layer must always provide this value (default: ["brand"])
+  publishTargets: json("publishTargets").$type<string[]>().notNull(),
   authorId: int("authorId").notNull(),
   publishedAt: timestamp("publishedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
