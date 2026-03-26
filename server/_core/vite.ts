@@ -48,19 +48,34 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  const distPath =
-    process.env.NODE_ENV === "development"
-      ? path.resolve(import.meta.dirname, "../..", "dist", "public")
-      : path.resolve(import.meta.dirname, "public");
-  if (!fs.existsSync(distPath)) {
+  // In production (Railway), the build output is at dist/public relative to
+  // the project root (two levels up from server/_core/).
+  // import.meta.dirname resolves to server/_core at runtime.
+  const candidates = [
+    path.resolve(import.meta.dirname, "public"),           // compiled: server/_core/public
+    path.resolve(import.meta.dirname, "..", "public"),     // compiled: server/public
+    path.resolve(import.meta.dirname, "../..", "dist", "public"), // dev fallback
+    path.resolve(process.cwd(), "dist", "public"),         // Railway CWD fallback
+    path.resolve(process.cwd(), "public"),                 // Railway CWD fallback 2
+  ];
+
+  const distPath = candidates.find(p => fs.existsSync(p));
+
+  if (!distPath) {
     console.error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`
+      `[serveStatic] Could not find build directory. Tried:\n${candidates.join("\n")}`
     );
+    // Still register a fallback so the server doesn't crash
+    app.use("*", (_req, res) => {
+      res.status(503).send("Frontend build not found. Run pnpm build first.");
+    });
+    return;
   }
 
+  console.log(`[serveStatic] Serving static files from: ${distPath}`);
   app.use(express.static(distPath));
 
-  // fall through to index.html if the file doesn't exist
+  // SPA fallback — serve index.html for all unmatched routes
   app.use("*", (_req, res) => {
     res.sendFile(path.resolve(distPath, "index.html"));
   });

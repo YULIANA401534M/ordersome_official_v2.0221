@@ -140,9 +140,10 @@ export function registerOAuthRoutes(app: Express) {
     const { ENV } = await import("./env");
     if (!ENV.lineClientId) { res.redirect(302, "/login?error=line_not_configured"); return; }
     const redirect = getQueryParam(req, "redirect") ?? "";
-    // Use VITE_APP_URL for production reliability (avoid x-forwarded-* headers)
-    const baseUrl = ENV.appUrl || `${req.headers["x-forwarded-proto"] ?? req.protocol}://${req.headers["x-forwarded-host"] ?? req.headers.host}`;
-    const callbackUrl = `${baseUrl.replace(/\/$/, "")}/api/oauth/line/callback`;
+    // Always use VITE_APP_URL (e.g. https://ordersome.com.tw) as the base URL.
+    // Deriving from headers is unreliable behind Railway + Cloudflare proxies.
+    const baseUrl = (ENV.appUrl || `${req.protocol}://${req.headers.host}`).replace(/\/$/, "");
+    const callbackUrl = `${baseUrl}/api/oauth/line/callback`;
     // Encode redirect path into state so callback can restore it
     const statePayload = redirect.startsWith("/") ? redirect : "/shop";
     const state = Buffer.from(statePayload).toString("base64");
@@ -160,9 +161,9 @@ export function registerOAuthRoutes(app: Express) {
     const { ENV } = await import("./env");
     if (!ENV.googleClientId) { res.redirect(302, "/login?error=google_not_configured"); return; }
     const redirect = getQueryParam(req, "redirect") ?? "";
-    // Use VITE_APP_URL for production reliability (avoid x-forwarded-* headers)
-    const baseUrl = ENV.appUrl || `${req.headers["x-forwarded-proto"] ?? req.protocol}://${req.headers["x-forwarded-host"] ?? req.headers.host}`;
-    const callbackUrl = `${baseUrl.replace(/\/$/, "")}/api/oauth/google/callback`;
+    // Always use VITE_APP_URL as the base URL (reliable behind Railway + Cloudflare).
+    const baseUrl = (ENV.appUrl || `${req.protocol}://${req.headers.host}`).replace(/\/$/, "");
+    const callbackUrl = `${baseUrl}/api/oauth/google/callback`;
     const statePayload = redirect.startsWith("/") ? redirect : "/shop";
     const state = Buffer.from(statePayload).toString("base64");
     const googleAuthUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
@@ -187,9 +188,9 @@ export function registerOAuthRoutes(app: Express) {
         res.redirect(302, "/login?error=line_not_configured"); return;
       }
 
-      // MUST use the same redirect_uri as /start (ENV.appUrl), otherwise token exchange fails
-      const lineBaseUrl = ENV.appUrl || `${req.headers["x-forwarded-proto"] ?? req.protocol}://${req.headers["x-forwarded-host"] ?? req.headers.host}`;
-      const redirectUri = `${lineBaseUrl.replace(/\/$/, "")}/api/oauth/line/callback`;
+      // MUST use the same redirect_uri as /start, otherwise token exchange fails.
+      const lineBaseUrl = (ENV.appUrl || `${req.protocol}://${req.headers.host}`).replace(/\/$/, "");
+      const redirectUri = `${lineBaseUrl}/api/oauth/line/callback`;
 
       const tokenRes = await fetch("https://api.line.me/oauth2/v2.1/token", {
         method: "POST",
@@ -277,9 +278,9 @@ export function registerOAuthRoutes(app: Express) {
         res.redirect(302, "/login?error=google_not_configured"); return;
       }
 
-      // MUST use the same redirect_uri as /start (ENV.appUrl), otherwise token exchange fails
-      const googleBaseUrl = ENV.appUrl || `${req.headers["x-forwarded-proto"] ?? req.protocol}://${req.headers["x-forwarded-host"] ?? req.headers.host}`;
-      const redirectUri = `${googleBaseUrl.replace(/\/$/, "")}/api/oauth/google/callback`;
+      // MUST use the same redirect_uri as /start, otherwise token exchange fails.
+      const googleBaseUrl = (ENV.appUrl || `${req.protocol}://${req.headers.host}`).replace(/\/$/, "");
+      const redirectUri = `${googleBaseUrl}/api/oauth/google/callback`;
 
       const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
         method: "POST",
