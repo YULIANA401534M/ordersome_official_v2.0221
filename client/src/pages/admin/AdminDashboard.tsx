@@ -3,10 +3,11 @@ import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Package, ShoppingCart, TrendingUp, ArrowRight, Settings, Layers } from "lucide-react";
-import { Link } from "wouter";
+import { useLocation } from "wouter";
 import AdminDashboardLayout from "@/components/AdminDashboardLayout";
 
 export default function AdminDashboard() {
+  const [, setLocation] = useLocation();
   const { user, isAuthenticated } = useAuth();
   const { data: products } = trpc.product.listAll.useQuery();
   const { data: orders } = trpc.order.listAll.useQuery();
@@ -33,7 +34,7 @@ export default function AdminDashboard() {
             <Settings className="h-16 w-16 mx-auto mb-4 text-gray-400" />
             <h2 className="text-2xl font-bold mb-2">需要管理員權限</h2>
             <p className="text-gray-500 mb-4">請使用管理員帳號登入</p>
-            <Link href="/"><Button variant="outline">返回首頁</Button></Link>
+            <Button variant="outline" onClick={() => setLocation("/")}>返回首頁</Button>
           </CardContent></Card>
         </div>
       </AdminDashboardLayout>
@@ -52,8 +53,7 @@ export default function AdminDashboard() {
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {stats.map((stat, i) => (
-            <Link key={i} href={stat.link}>
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+            <Card key={i} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setLocation(stat.link)}>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -66,7 +66,6 @@ export default function AdminDashboard() {
                   </div>
                 </CardContent>
               </Card>
-            </Link>
           ))}
         </div>
 
@@ -75,8 +74,7 @@ export default function AdminDashboard() {
           <h2 className="text-xl font-bold mb-4">快速操作</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {quickLinks.map((item, i) => (
-              <Link key={i} href={item.link}>
-                <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+              <Card key={i} className="hover:shadow-lg transition-shadow cursor-pointer h-full" onClick={() => setLocation(item.link)}>
                   <CardContent className="p-6 flex items-center gap-4">
                     <div className="bg-amber-100 p-3 rounded-lg">
                       <item.icon className="h-6 w-6 text-amber-600" />
@@ -88,7 +86,6 @@ export default function AdminDashboard() {
                     <ArrowRight className="h-5 w-5 text-gray-400" />
                   </CardContent>
                 </Card>
-              </Link>
             ))}
           </div>
         </div>
@@ -99,7 +96,7 @@ export default function AdminDashboard() {
             <CardHeader><CardTitle className="text-amber-800">待處理訂單提醒</CardTitle></CardHeader>
             <CardContent>
               <p className="text-amber-700">您有 {orders.filter(o => o.status === "pending").length} 筆待處理的訂單，請盡快處理。</p>
-              <Link href="/dashboard/admin/orders"><Button className="mt-4 bg-amber-600 hover:bg-amber-700">前往處理</Button></Link>
+              <Button className="mt-4 bg-amber-600 hover:bg-amber-700" onClick={() => setLocation("/dashboard/admin/orders")}>前往處理</Button>
             </CardContent>
           </Card>
         )}
