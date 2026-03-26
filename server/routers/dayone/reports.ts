@@ -17,7 +17,7 @@ export const dyReportsRouter = router({
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
-      const [summaryRows] = await (db as any).$client.execute(
+      const [[summary]] = await (db as any).$client.execute(
         `SELECT 
            COUNT(*) as totalOrders,
            SUM(totalAmount) as totalAmount,
@@ -27,15 +27,13 @@ export const dyReportsRouter = router({
          FROM dy_orders WHERE tenantId=? AND deliveryDate=?`,
         [input.tenantId, input.date]
       ) as any;
-      const summary = (summaryRows as any[])[0];
-      const [byDriverRows] = await (db as any).$client.execute(
+      const [byDriver] = await (db as any).$client.execute(
         `SELECT d.name as driverName, COUNT(o.id) as orderCount, SUM(o.totalAmount) as totalAmount
          FROM dy_orders o LEFT JOIN dy_drivers d ON o.driverId = d.id
          WHERE o.tenantId=? AND o.deliveryDate=?
          GROUP BY o.driverId, d.name`,
         [input.tenantId, input.date]
       );
-      const byDriver = byDriverRows as any[];
       return { summary, byDriver };
     }),
 

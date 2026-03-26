@@ -43,12 +43,12 @@ export const dyPurchaseRouter = router({
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const client = (db as any).$client;
       const totalAmount = input.items.reduce((sum, i) => sum + i.expectedQty * i.unitPrice, 0);
-      const [result] = await client.execute(
+      const [res] = await client.execute(
         `INSERT INTO dy_purchase_orders (tenantId, supplierId, deliveryDate, status, totalAmount, note, createdAt, updatedAt)
          VALUES (?,?,?,'pending',?,?,NOW(),NOW())`,
         [input.tenantId, input.supplierId, input.deliveryDate, totalAmount, input.note ?? null]
       );
-      const poId = (result as any).insertId;
+      const poId = (res as any).insertId;
       for (const item of input.items) {
         await client.execute(
           `INSERT INTO dy_purchase_order_items (tenantId, purchaseOrderId, productId, expectedQty, actualQty, unitPrice) VALUES (?,?,?,?,0,?)`,
@@ -132,11 +132,11 @@ export const dyPurchaseRouter = router({
         );
         return { id: input.id };
       } else {
-        const [result] = await client.execute(
+        const [res] = await client.execute(
           `INSERT INTO dy_suppliers (tenantId, name, contact, phone, address, bankAccount, status, createdAt) VALUES (?,?,?,?,?,?,?,NOW())`,
           [input.tenantId, input.name, input.contact ?? null, input.phone ?? null, input.address ?? null, input.bankAccount ?? null, input.status]
         );
-        return { id: (result as any).insertId };
+        return { id: (res as any).insertId };
       }
     }),
 });

@@ -46,11 +46,11 @@ export const dyProductsRouter = router({
         );
         return { id: input.id };
       } else {
-        const [result] = await client.execute(
+        const [res] = await client.execute(
           `INSERT INTO dy_products (tenantId, code, name, unit, defaultPrice, isActive, createdAt, updatedAt) VALUES (?,?,?,?,?,?,NOW(),NOW())`,
           [input.tenantId, input.code, input.name, input.unit, input.defaultPrice, input.isActive]
         );
-        return { id: (result as any).insertId };
+        return { id: (res as any).insertId };
       }
     }),
 

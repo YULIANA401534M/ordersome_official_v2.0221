@@ -49,11 +49,11 @@ export const dyCustomersRouter = router({
         );
         return { id: input.id };
       } else {
-        const [result] = await client.execute(
+        const [res] = await client.execute(
           `INSERT INTO dy_customers (tenantId, name, phone, address, districtId, paymentType, creditLimit, outstandingAmount, status, createdAt, updatedAt) VALUES (?,?,?,?,?,?,?,0,?,NOW(),NOW())`,
           [input.tenantId, input.name, input.phone ?? null, input.address ?? null, input.districtId ?? null, input.paymentType, input.creditLimit, input.status]
         );
-        return { id: (result as any).insertId };
+        return { id: (res as any).insertId };
       }
     }),
 
@@ -84,10 +84,10 @@ export const dyCustomersRouter = router({
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
-      const [result] = await (db as any).$client.execute(
+      const [res] = await (db as any).$client.execute(
         `INSERT INTO dy_customer_prices (tenantId, customerId, productId, price, effectiveDate, createdAt) VALUES (?,?,?,?,?,NOW())`,
         [input.tenantId, input.customerId, input.productId, input.price, input.effectiveDate]
       );
-      return { id: (result as any).insertId };
+      return { id: (res as any).insertId };
     }),
 });
