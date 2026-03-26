@@ -1,7 +1,7 @@
 import { trpc } from "@/lib/trpc";
 import { UNAUTHED_ERR_MSG } from '@shared/const';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { httpBatchLink, TRPCClientError } from "@trpc/client";
+import { httpLink, TRPCClientError } from "@trpc/client";
 import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
@@ -37,9 +37,12 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
+// Use httpLink instead of httpBatchLink to avoid ?batch=1 query parameter.
+// Cloudflare WAF blocks POST requests with ?batch=1, causing 503 errors.
+// httpLink sends individual requests without batch parameters.
 const trpcClient = trpc.createClient({
   links: [
-    httpBatchLink({
+    httpLink({
       url: `${window.location.origin}/api/trpc`,
       transformer: superjson,
       fetch(input, init) {
