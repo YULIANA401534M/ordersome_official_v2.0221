@@ -456,3 +456,22 @@ export const tenantModules = mysqlTable("tenant_modules", {
 });
 export type TenantModule = typeof tenantModules.$inferSelect;
 export type InsertTenantModule = typeof tenantModules.$inferInsert;
+
+// ===== DaYong ERP - Work Logs =====
+/**
+ * Driver work logs for daily tracking
+ */
+export const dyWorkLogs = mysqlTable("dy_work_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  driverId: int("driverId").notNull(),
+  workDate: date("workDate").notNull(),
+  startTime: varchar("startTime", { length: 10 }),
+  endTime: varchar("endTime", { length: 10 }),
+  totalOrders: int("totalOrders").default(0).notNull(),
+  totalCollected: decimal("totalCollected", { precision: 10, scale: 2 }).default("0").notNull(),
+  note: text("note"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type DyWorkLog = typeof dyWorkLogs.$inferSelect;
+export type InsertDyWorkLog = typeof dyWorkLogs.$inferInsert;

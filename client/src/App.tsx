@@ -93,6 +93,9 @@ import DriverOrders from "./pages/dayone/driver/DriverOrders";
 import DriverPickup from "./pages/dayone/driver/DriverPickup";
 import DriverDone from "./pages/dayone/driver/DriverDone";
 import DriverProfile from "./pages/dayone/driver/DriverProfile";
+import DriverToday from "./pages/dayone/driver/DriverToday";
+import DriverOrderDetail from "./pages/dayone/driver/DriverOrderDetail";
+import DriverWorkLog from "./pages/dayone/driver/DriverWorkLog";
 // Super Admin Pages
 import SuperAdminTenants from "./pages/dayone/SuperAdminTenants";
 import SuperAdminModules from "./pages/dayone/SuperAdminModules";
@@ -215,9 +218,12 @@ function Router() {
       <Route path="/dayone/districts" component={DayoneDistricts} />
       {/* Driver Mobile Routes */}
       <Route path="/driver" component={DriverHome} />
+      <Route path="/driver/today" component={DriverToday} />
       <Route path="/driver/orders" component={DriverOrders} />
+      <Route path="/driver/order/:id" component={DriverOrderDetail} />
       <Route path="/driver/pickup" component={DriverPickup} />
       <Route path="/driver/done" component={DriverDone} />
+      <Route path="/driver/worklog" component={DriverWorkLog} />
       <Route path="/driver/profile" component={DriverProfile} />
       {/* Super Admin Routes */}
       <Route path="/super-admin/tenants" component={SuperAdminTenants} />

@@ -1,16 +1,16 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Link, useLocation } from "wouter";
-import { ClipboardList, Package, CheckCircle, User, Home } from "lucide-react";
+import { ClipboardList, Package, CheckCircle, User, Home, BookOpen } from "lucide-react";
 
 const NAV = [
   { href: "/driver", icon: Home, label: "首頁" },
-  { href: "/driver/orders", icon: ClipboardList, label: "配送單" },
-  { href: "/driver/pickup", icon: Package, label: "取貨" },
-  { href: "/driver/done", icon: CheckCircle, label: "完成" },
+  { href: "/driver/today", icon: ClipboardList, label: "今日" },
+  { href: "/driver/orders", icon: Package, label: "配送單" },
+  { href: "/driver/worklog", icon: BookOpen, label: "日誌" },
   { href: "/driver/profile", icon: User, label: "我的" },
 ];
 
-export default function DriverLayout({ children }: { children: React.ReactNode }) {
+export default function DriverLayout({ children, title }: { children: React.ReactNode; title?: string }) {
   const { user, loading } = useAuth();
   const [location] = useLocation();
 
@@ -36,7 +36,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
       {/* Top bar */}
       <div className="bg-amber-600 text-white px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
         <Package className="w-5 h-5" />
-        <span className="font-bold text-sm">大永蛋品配送</span>
+        <span className="font-bold text-sm">{title ?? '大永蛋品配送'}</span>
         <span className="ml-auto text-xs opacity-80">{user.name}</span>
       </div>
 

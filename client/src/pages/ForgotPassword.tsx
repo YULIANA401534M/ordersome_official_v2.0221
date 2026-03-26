@@ -18,8 +18,8 @@ export default function ForgotPassword() {
       const result = await requestResetMutation.mutateAsync({ email });
       setIsSubmitted(true);
       // In development, show the reset link
-      if (result.resetLink) {
-        setResetLink(result.resetLink);
+      if ('resetLink' in result && result.resetLink) {
+        setResetLink(result.resetLink as string);
       }
     } catch (err: any) {
       setError(err.message || "發生錯誤，請稍後再試");

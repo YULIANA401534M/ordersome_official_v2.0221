@@ -21,7 +21,7 @@ export default function AdminTenants() {
       setCreateOpen(false);
       resetCreateForm();
     },
-    onError: (err) => {
+    onError: (err: any) => {
       toast.error(err.message);
     },
   });
@@ -31,7 +31,7 @@ export default function AdminTenants() {
       refetch();
       setEditOpen(false);
     },
-    onError: (err) => {
+    onError: (err: any) => {
       toast.error(err.message);
     },
   });
@@ -177,7 +177,7 @@ export default function AdminTenants() {
           </Card>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {tenants.map((tenant) => (
+            {tenants.map((tenant: any) => (
               <Card key={tenant.id} className={!tenant.isActive ? "opacity-60" : ""}>
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
