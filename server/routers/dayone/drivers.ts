@@ -61,10 +61,11 @@ export const dyDriversRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       // Find driver by userId
-      const [_r_driver] = await (db as any).$client.execute(
+      const [driverRows] = await (db as any).$client.execute(
         `SELECT id FROM dy_drivers WHERE tenantId=? AND userId=? AND status='active'`,
         [input.tenantId, ctx.user.id]
       ) as any;
+      const driver = (driverRows as any[])[0];
       if (!driver) throw new TRPCError({ code: 'NOT_FOUND', message: '找不到司機資料' });
       const [rows] = await (db as any).$client.execute(
         `SELECT o.*, c.name as customerName, c.address as customerAddress, c.phone as customerPhone

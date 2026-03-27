@@ -25,10 +25,11 @@ export const dyDriverRouter = router({
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const date = input.deliveryDate ?? new Date().toISOString().slice(0, 10);
       // Find driver record linked to this user
-      const [_r_driver] = await (db as any).$client.execute(
+      const [driverRows1] = await (db as any).$client.execute(
         `SELECT id FROM dy_drivers WHERE userId = ? AND tenantId = ? LIMIT 1`,
         [ctx.user.id, input.tenantId]
       ) as any;
+      const driver = (driverRows1 as any[])[0];
       if (!driver) throw new TRPCError({ code: 'NOT_FOUND', message: '找不到司機資料，請聯絡管理員' });
       const [rows] = await (db as any).$client.execute(
         `SELECT o.*, c.name as customerName, c.address as customerAddress, c.phone as customerPhone,
@@ -55,10 +56,11 @@ export const dyDriverRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       // Verify this order belongs to the driver
-      const [_r_driver] = await (db as any).$client.execute(
+      const [driverRows2] = await (db as any).$client.execute(
         `SELECT id FROM dy_drivers WHERE userId = ? AND tenantId = ? LIMIT 1`,
         [ctx.user.id, input.tenantId]
       ) as any;
+      const driver = (driverRows2 as any[])[0];
       if (!driver) throw new TRPCError({ code: 'FORBIDDEN', message: '找不到司機資料' });
       await (db as any).$client.execute(
         `UPDATE dy_orders SET status=?, driverNote=COALESCE(?, driverNote), updatedAt=NOW()
@@ -78,10 +80,11 @@ export const dyDriverRouter = router({
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
-      const [_r_driver] = await (db as any).$client.execute(
+      const [driverRows3] = await (db as any).$client.execute(
         `SELECT id FROM dy_drivers WHERE userId = ? AND tenantId = ? LIMIT 1`,
         [ctx.user.id, input.tenantId]
       ) as any;
+      const driver = (driverRows3 as any[])[0];
       if (!driver) throw new TRPCError({ code: 'FORBIDDEN', message: '找不到司機資料' });
       await (db as any).$client.execute(
         `UPDATE dy_orders
@@ -104,17 +107,19 @@ export const dyDriverRouter = router({
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
-      const [_r_driver] = await (db as any).$client.execute(
+      const [driverRows4] = await (db as any).$client.execute(
         `SELECT id FROM dy_drivers WHERE userId = ? AND tenantId = ? LIMIT 1`,
         [ctx.user.id, input.tenantId]
       ) as any;
+      const driver = (driverRows4 as any[])[0];
       if (!driver) throw new TRPCError({ code: 'FORBIDDEN', message: '找不到司機資料' });
       // Calculate totals for the day
-      const [_r_summary] = await (db as any).$client.execute(
+      const [summaryRows] = await (db as any).$client.execute(
         `SELECT COUNT(*) as totalOrders, COALESCE(SUM(cashCollected),0) as totalCollected
          FROM dy_orders WHERE tenantId=? AND driverId=? AND deliveryDate=? AND status='delivered'`,
         [input.tenantId, driver.id, input.workDate]
       ) as any;
+      const summary = (summaryRows as any[])[0];
       // Upsert work log
       await (db as any).$client.execute(
         `INSERT INTO dy_work_logs (tenantId, driverId, workDate, startTime, endTime, totalOrders, totalCollected, note, createdAt)
@@ -137,10 +142,11 @@ export const dyDriverRouter = router({
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
-      const [_r_driver] = await (db as any).$client.execute(
+      const [driverRows5] = await (db as any).$client.execute(
         `SELECT id FROM dy_drivers WHERE userId = ? AND tenantId = ? LIMIT 1`,
         [ctx.user.id, input.tenantId]
       ) as any;
+      const driver = (driverRows5 as any[])[0];
       if (!driver) throw new TRPCError({ code: 'FORBIDDEN', message: '找不到司機資料' });
       // Convert base64 to buffer
       const base64Data = input.imageBase64.replace(/^data:image\/\w+;base64,/, '');
@@ -169,15 +175,17 @@ export const dyDriverRouter = router({
     .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
-      const [_r_driver] = await (db as any).$client.execute(
+      const [driverRows6] = await (db as any).$client.execute(
         `SELECT id FROM dy_drivers WHERE userId = ? AND tenantId = ? LIMIT 1`,
         [ctx.user.id, input.tenantId]
       ) as any;
+      const driver = (driverRows6 as any[])[0];
       if (!driver) return null;
-      const [_r_log] = await (db as any).$client.execute(
+      const [logRows] = await (db as any).$client.execute(
         `SELECT * FROM dy_work_logs WHERE driverId=? AND workDate=? AND tenantId=? LIMIT 1`,
         [driver.id, input.workDate, input.tenantId]
       ) as any;
+      const log = (logRows as any[])[0];
       return log ?? null;
     }),
 });

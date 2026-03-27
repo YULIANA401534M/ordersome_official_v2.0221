@@ -42,12 +42,13 @@ export const dyOrdersRouter = router({
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
-      const [_r_order] = await (db as any).$client.execute(
+      const [orderRows] = await (db as any).$client.execute(
         `SELECT o.*, c.name as customerName, c.address as customerAddress, c.phone as customerPhone
          FROM dy_orders o JOIN dy_customers c ON o.customerId = c.id
          WHERE o.id=? AND o.tenantId=?`,
         [input.id, input.tenantId]
       ) as any;
+      const order = (orderRows as any[])[0];
       if (!order) throw new TRPCError({ code: 'NOT_FOUND' });
       const [items] = await (db as any).$client.execute(
         `SELECT oi.*, p.name as productName, p.code, p.unit FROM dy_order_items oi

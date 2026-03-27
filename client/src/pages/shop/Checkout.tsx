@@ -4,7 +4,7 @@ import { Link, useLocation } from "wouter";
 import {
   ArrowLeft, CreditCard, Building, Store, FileText,
   AlertCircle, ShoppingCart, User, Package, ChevronRight,
-  Mail, Phone, CheckCircle2
+  Mail, Phone, CheckCircle2, Minus, Plus, Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,7 +68,16 @@ export default function Checkout() {
     ? (new URLSearchParams(window.location.search).get('source') ?? 'general')
     : 'general';
   const { user, isAuthenticated } = useAuth();
-  const { items, clearCart } = useCartStore();
+  const { items, clearCart, updateQuantity, removeItem } = useCartStore();
+
+  const handleUpdateQty = (item: typeof items[0], delta: number) => {
+    const newQty = item.quantity + delta;
+    if (newQty <= 0) {
+      removeItem(item.id);
+    } else {
+      updateQuantity(item.id, Math.min(newQty, item.stock));
+    }
+  };
 
   const totalPrice = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const { data: storeSettings, isLoading: isSettingsLoading } = trpc.storeSettings.get.useQuery();
@@ -294,7 +303,7 @@ export default function Checkout() {
                     {items.map((item) => (
                       <div
                         key={`${item.id}-${JSON.stringify(item.selectedSpecs)}`}
-                        className="flex items-start gap-4 py-4 first:pt-0 last:pb-0"
+                        className="flex items-start gap-3 py-4 first:pt-0 last:pb-0"
                       >
                         {item.imageUrl && (
                           <img
@@ -304,7 +313,18 @@ export default function Checkout() {
                           />
                         )}
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-gray-900 truncate">{item.name}</p>
+                          {/* 商品名稱 + 刪除按鈕 */}
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="font-semibold text-gray-900 leading-snug">{item.name}</p>
+                            <button
+                              type="button"
+                              onClick={() => removeItem(item.id)}
+                              className="text-gray-400 hover:text-red-500 transition-colors shrink-0 p-0.5 mt-0.5"
+                              title="移除商品"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
                           {item.selectedSpecs && Object.keys(item.selectedSpecs).length > 0 && (
                             <p className="text-xs text-gray-500 mt-0.5">
                               {Object.entries(item.selectedSpecs)
@@ -312,11 +332,33 @@ export default function Checkout() {
                                 .join(" · ")}
                             </p>
                           )}
-                          <p className="text-sm text-gray-500 mt-1">數量：{item.quantity}</p>
+                          {/* 數量調整 + 小計 */}
+                          <div className="flex items-center justify-between mt-2">
+                            <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateQty(item, -1)}
+                                className="px-2.5 py-1.5 text-gray-600 hover:bg-gray-100 transition-colors"
+                              >
+                                <Minus className="h-3 w-3" />
+                              </button>
+                              <span className="px-3 py-1 text-sm font-semibold text-gray-900 min-w-[2.5rem] text-center border-x border-gray-200">
+                                {item.quantity}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateQty(item, 1)}
+                                disabled={item.quantity >= item.stock}
+                                className="px-2.5 py-1.5 text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                              >
+                                <Plus className="h-3 w-3" />
+                              </button>
+                            </div>
+                            <p className="font-semibold text-gray-900">
+                              NT$ {(item.price * item.quantity).toLocaleString()}
+                            </p>
+                          </div>
                         </div>
-                        <p className="font-semibold text-gray-900 shrink-0">
-                          NT$ {(item.price * item.quantity).toLocaleString()}
-                        </p>
                       </div>
                     ))}
                   </div>

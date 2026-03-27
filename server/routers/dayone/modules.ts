@@ -56,10 +56,11 @@ export const dyModulesRouter = router({
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) return false;
-      const [_r_row] = await (db as any).$client.execute(
+      const [rowData] = await (db as any).$client.execute(
         `SELECT isEnabled FROM tenant_modules WHERE tenantId=? AND moduleKey=?`,
         [input.tenantId, input.moduleKey]
       ) as any;
+      const row = (rowData as any[])[0];
       return row?.isEnabled === 1 || row?.isEnabled === true;
     }),
 
