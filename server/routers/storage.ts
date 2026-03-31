@@ -1,34 +1,39 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
+import { r2Put } from "../lib/r2";
 import { storagePut } from "../storage";
 
 /**
  * Storage router for file upload operations
+ * - uploadImage: uses Cloudflare R2 directly (works on Railway)
+ * - uploadPdf: uses Manus Forge storagePut (dev-only, SOP feature)
  */
 export const storageRouter = router({
   /**
-   * Upload image to S3
+   * Upload image to Cloudflare R2
    * Returns the public URL of the uploaded image
    */
   uploadImage: protectedProcedure
     .input(
       z.object({
         fileName: z.string(),
-        fileData: z.string(), // Base64 encoded image data
+        fileData: z.string(), // Base64 encoded image data (data:image/xxx;base64,...)
         contentType: z.string().optional(),
       })
     )
     .mutation(async ({ input }) => {
       try {
-        const base64Data = input.fileData.replace(/^data:image\/\w+;base64,/, "");
+        const base64Data = input.fileData.replace(/^data:[\w/]+;base64,/, "");
         const buffer = Buffer.from(base64Data, "base64");
         const timestamp = Date.now();
         const randomString = Math.random().toString(36).substring(2, 8);
-        const fileExtension = input.fileName.split(".").pop() || "jpg";
-        const uniqueFileName = `posts/${timestamp}-${randomString}.${fileExtension}`;
-        const result = await storagePut(
-          uniqueFileName,
+        const fileExtension = input.fileName.split(".").pop()?.toLowerCase() || "jpg";
+        // Store under products/ folder in R2
+        const folder = input.fileName.startsWith("b2b/") ? "products/b2b" : "products";
+        const uniqueKey = `${folder}/${timestamp}-${randomString}.${fileExtension}`;
+        const result = await r2Put(
+          uniqueKey,
           buffer,
           input.contentType || "image/jpeg"
         );
@@ -37,13 +42,16 @@ export const storageRouter = router({
         }
         return { url: result.url, key: result.key };
       } catch (error) {
-        console.error("[Storage] Upload error:", error);
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "圖片上傳失敗" });
+        console.error("[Storage/R2] Upload error:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "圖片上傳失敗：" + (error instanceof Error ? error.message : String(error)),
+        });
       }
     }),
 
   /**
-   * Upload PDF to S3 (for SOP documents)
+   * Upload PDF to Manus Forge storage (for SOP documents)
    */
   uploadPdf: protectedProcedure
     .input(
