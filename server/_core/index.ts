@@ -125,7 +125,7 @@ async function startServer() {
       const client = (database as any).$client;
 
       // 4. 查詢客戶
-      let customerId: number | null = null;
+      let customerId: number = 0;
       const [customerRows] = await client.execute(
         `SELECT id, name FROM dy_customers WHERE tenantId = 2 AND name = ? AND status = 'active' LIMIT 1`,
         [parsedOrderObj.customerName]
@@ -153,14 +153,15 @@ async function startServer() {
       // 6. 生成 orderNo
       const orderNo = `DY${Date.now()}`;
 
-      // 7. 計算 total
-      const total = resolvedItems.reduce((sum, i) => sum + (i.productId ? i.unitPrice * i.qty : 0), 0);
+      // 7. 計算 totalAmount
+      const totalAmount = resolvedItems.reduce((sum, i) => sum + (i.productId ? i.unitPrice * i.qty : 0), 0);
 
       // 8. 寫入 dy_orders
+      const deliveryDate = parsedOrderObj.deliveryDate || new Date().toISOString().slice(0, 10);
       const [orderResult] = await client.execute(
-        `INSERT INTO dy_orders (tenantId, orderNo, customerId, status, orderSource, deliveryDate, note, total, createdAt, updatedAt)
+        `INSERT INTO dy_orders (tenantId, orderNo, customerId, status, orderSource, deliveryDate, note, totalAmount, createdAt, updatedAt)
          VALUES (2, ?, ?, 'pending', 'line', ?, ?, ?, NOW(), NOW())`,
-        [orderNo, customerId, parsedOrderObj.deliveryDate, parsedOrderObj.rawText, total]
+        [orderNo, customerId, deliveryDate, parsedOrderObj.rawText, totalAmount]
       );
       const orderId = (orderResult as any).insertId;
 
@@ -177,10 +178,10 @@ async function startServer() {
       // 10. 組裝 replyMessage
       const itemLines = resolvedItems.map(i => `${i.productName} x${i.qty}`).join("\n");
       let replyMessage: string;
-      if (customerId !== null) {
-        replyMessage = `✅ 收到 ${parsedOrderObj.customerName} 的訂單！\n${itemLines}\n預計 ${parsedOrderObj.deliveryDate} 配送，謝謝！`;
+      if (customerId !== 0) {
+        replyMessage = `✅ 收到 ${parsedOrderObj.customerName} 的訂單！\n${itemLines}\n預計 ${deliveryDate} 配送，謝謝！`;
       } else {
-        replyMessage = `✅ 已收到您的訂單！\n${itemLines}\n預計 ${parsedOrderObj.deliveryDate} 配送。\n⚠️ 查無客戶資料，請聯繫業務確認。`;
+        replyMessage = `✅ 已收到您的訂單！\n${itemLines}\n預計 ${deliveryDate} 配送。\n⚠️ 查無客戶資料，請聯繫業務確認。`;
       }
 
       // 11. 回傳
