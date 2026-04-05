@@ -5,7 +5,7 @@ export default function DeliveryNote() {
   const [, params] = useRoute("/dayone/orders/:orderId/delivery-note");
   const orderId = Number(params?.orderId);
 
-  const { data: order, isLoading } = trpc.dayone.orders.getWithItems.useQuery({ orderId });
+  const { data: order, isLoading } = trpc.dayone.orders.getWithItems.useQuery({ id: orderId, tenantId: 2 });
 
   if (isLoading) return <div style={{ padding: 32, textAlign: "center" }}>載入中...</div>;
   if (!order) return <div style={{ padding: 32, textAlign: "center" }}>找不到訂單</div>;
