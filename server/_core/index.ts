@@ -106,6 +106,19 @@ async function startServer() {
         return res.status(400).json({ success: false, error: "invalid tenant" });
       }
 
+      let parsedOrderObj = parsedOrder;
+      if (typeof parsedOrder === 'string') {
+        const cleaned = parsedOrder
+          .replace(/```json/g, '')
+          .replace(/```/g, '')
+          .trim();
+        try {
+          parsedOrderObj = JSON.parse(cleaned);
+        } catch (e) {
+          return res.status(400).json({ success: false, error: 'invalid parsedOrder format' });
+        }
+      }
+
       const { getDb } = await import("../db");
       const database = await getDb();
       if (!database) {
@@ -117,7 +130,7 @@ async function startServer() {
       let customerId: number | null = null;
       const [customerRows] = await client.execute(
         `SELECT id, name FROM dy_customers WHERE tenantId = 2 AND name = ? AND status = 'active' LIMIT 1`,
-        [parsedOrder.customerName]
+        [parsedOrderObj.customerName]
       );
       const customer = (customerRows as any[])[0];
       if (customer) {
@@ -126,7 +139,7 @@ async function startServer() {
 
       // 3. 查詢品項售價
       const resolvedItems: { productId: number | null; productName: string; qty: number; unitPrice: number }[] = [];
-      for (const item of parsedOrder.items as { productName: string; quantity: number }[]) {
+      for (const item of parsedOrderObj.items as { productName: string; quantity: number }[]) {
         const [productRows] = await client.execute(
           `SELECT id, name, price FROM dy_products WHERE tenantId = 2 AND name = ? AND isActive = 1 LIMIT 1`,
           [item.productName]
@@ -149,7 +162,7 @@ async function startServer() {
       const [orderResult] = await client.execute(
         `INSERT INTO dy_orders (tenantId, orderNo, customerId, status, orderSource, deliveryDate, note, total, createdAt, updatedAt)
          VALUES (2, ?, ?, 'pending', 'line', ?, ?, ?, NOW(), NOW())`,
-        [orderNo, customerId, parsedOrder.deliveryDate, parsedOrder.rawText, total]
+        [orderNo, customerId, parsedOrderObj.deliveryDate, parsedOrderObj.rawText, total]
       );
       const orderId = (orderResult as any).insertId;
 
@@ -167,9 +180,9 @@ async function startServer() {
       const itemLines = resolvedItems.map(i => `${i.productName} x${i.qty}`).join("\n");
       let replyMessage: string;
       if (customerId !== null) {
-        replyMessage = `✅ 收到 ${parsedOrder.customerName} 的訂單！\n${itemLines}\n預計 ${parsedOrder.deliveryDate} 配送，謝謝！`;
+        replyMessage = `✅ 收到 ${parsedOrderObj.customerName} 的訂單！\n${itemLines}\n預計 ${parsedOrderObj.deliveryDate} 配送，謝謝！`;
       } else {
-        replyMessage = `✅ 已收到您的訂單！\n${itemLines}\n預計 ${parsedOrder.deliveryDate} 配送。\n⚠️ 查無客戶資料，請聯繫業務確認。`;
+        replyMessage = `✅ 已收到您的訂單！\n${itemLines}\n預計 ${parsedOrderObj.deliveryDate} 配送。\n⚠️ 查無客戶資料，請聯繫業務確認。`;
       }
 
       // 9. 回傳
