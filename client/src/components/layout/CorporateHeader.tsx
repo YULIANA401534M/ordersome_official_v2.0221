@@ -26,7 +26,6 @@ export default function CorporateHeader() {
 
   const cartCount = cartItems?.reduce((sum, item) => sum + item.quantity, 0) || 0;
 
-  // Determine dashboard URL based on user role
   const getDashboardUrl = () => {
     if (!user) return null;
     if (user.role === "super_admin" || user.role === "manager") {
@@ -36,7 +35,7 @@ export default function CorporateHeader() {
     } else if (user.role === "staff") {
       return "/dashboard/staff";
     }
-    return null; // customer role has no dashboard
+    return null;
   };
 
   const dashboardUrl = getDashboardUrl();
@@ -45,7 +44,6 @@ export default function CorporateHeader() {
     <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm shadow-sm">
       <div className="container">
         <div className="flex items-center justify-between h-16 md:h-20">
-          {/* Logo */}
           <Link href="/corporate" className="flex items-center gap-3">
             <img
               src="/logos/yulian-logo-horizontal.png"
@@ -58,7 +56,6 @@ export default function CorporateHeader() {
             </div>
           </Link>
 
-          {/* Desktop Navigation */}
           <nav className="hidden xl:flex items-center gap-6">
             {navItems.map((item) => (
               <Link
@@ -75,9 +72,7 @@ export default function CorporateHeader() {
             ))}
           </nav>
 
-          {/* Right Actions */}
           <div className="flex items-center gap-3">
-            {/* Member Center (for all authenticated users) */}
             {isAuthenticated && (
               <Link href="/dashboard">
                 <Button size="sm" variant="outline" className="hidden sm:flex gap-2">
@@ -86,15 +81,11 @@ export default function CorporateHeader() {
                 </Button>
               </Link>
             )}
-
-            {/* Shop Link */}
             <Link href="/shop">
               <Button size="sm" className="hidden sm:flex bg-amber-600 hover:bg-amber-700">
                 線上商城
               </Button>
             </Link>
-
-            {/* Cart */}
             <Link href="/shop/cart" className="relative">
               <Button variant="ghost" size="icon">
                 <ShoppingCart className="h-5 w-5" />
@@ -105,8 +96,6 @@ export default function CorporateHeader() {
                 )}
               </Button>
             </Link>
-
-            {/* User */}
             {isAuthenticated ? (
               <Link href="/member/profile">
                 <Button variant="ghost" size="icon">
@@ -120,8 +109,6 @@ export default function CorporateHeader() {
                 </Button>
               </Link>
             )}
-
-            {/* Mobile Menu Button */}
             <Button
               variant="ghost"
               size="icon"
@@ -133,7 +120,6 @@ export default function CorporateHeader() {
           </div>
         </div>
 
-        {/* Mobile Navigation */}
         {isMenuOpen && (
           <nav className="xl:hidden py-4 border-t">
             <div className="flex flex-col gap-2">
