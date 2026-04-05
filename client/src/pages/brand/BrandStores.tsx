@@ -8,43 +8,26 @@ import { useRestaurantSchema } from "@/hooks/useRestaurantSchema";
 
 export default function BrandStores() {
   const { data: stores, isLoading } = trpc.store.list.useQuery();
-
-  // 動態注入 Restaurant Schema（待門市資料載入後自動生成）
   useRestaurantSchema(stores);
   const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
   const storeCardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
-  const mapReadyRef = useRef(false);
 
   useEffect(() => {
     document.title = "來點什麼 門市據點｜全台 15 間分店為您服務";
-    document.querySelector('meta[name="description"]')?.setAttribute(
-      "content",
-      "尋找距離您最近的來點什麼門市。我們在台中及全台設有據點，隨時提供美味的台韓式早午餐。"
-    );
-    document.querySelector('meta[name="keywords"]')?.setAttribute(
-      "content",
-      "來點什麼門市, 來點什麼分店, 台中早餐推薦, 附近早午餐"
-    );
-
-    // Restaurant Schema 已由 useRestaurantSchema Hook 動態處理
   }, []);
 
-  // 台中市中心座標
   const TAICHUNG_CENTER = { lat: 24.147, lng: 120.674 };
 
   const addMarkersToMap = (googleMap: google.maps.Map, storeList: typeof stores) => {
     if (!storeList || storeList.length === 0) return;
-    // 清除舊標記
     markersRef.current.forEach(m => m.setMap(null));
     markersRef.current = [];
-
     const newMarkers = storeList.map((store) => {
       if (!store.latitude || !store.longitude) return null;
       const lat = parseFloat(String(store.latitude));
       const lng = parseFloat(String(store.longitude));
-
       const marker = new google.maps.Marker({
         position: { lat, lng },
         map: googleMap,
@@ -58,35 +41,25 @@ export default function BrandStores() {
           strokeWeight: 2,
         },
       });
-
       marker.addListener("click", () => {
         setSelectedStoreId(store.id);
         googleMap.setCenter({ lat, lng });
         googleMap.setZoom(16);
         const cardEl = storeCardRefs.current.get(store.id);
-        if (cardEl) {
-          cardEl.scrollIntoView({ behavior: "smooth", block: "center" });
-        }
+        if (cardEl) cardEl.scrollIntoView({ behavior: "smooth", block: "center" });
       });
-
       return marker;
     }).filter(Boolean) as google.maps.Marker[];
-
     markersRef.current = newMarkers;
   };
 
   const handleMapReady = (googleMap: google.maps.Map) => {
     mapRef.current = googleMap;
-    mapReadyRef.current = true;
     googleMap.setCenter(TAICHUNG_CENTER);
     googleMap.setZoom(12);
-    // 若 stores 已載入，立即添加標記
-    if (stores && stores.length > 0) {
-      addMarkersToMap(googleMap, stores);
-    }
+    if (stores && stores.length > 0) addMarkersToMap(googleMap, stores);
   };
 
-  // stores 資料載入後，若地圖已就緒則添加標記
   useEffect(() => {
     if (mapRef.current && stores && stores.length > 0 && markersRef.current.length === 0) {
       addMarkersToMap(mapRef.current, stores);
@@ -112,27 +85,20 @@ export default function BrandStores() {
 
   return (
     <BrandLayout>
-      {/* Hero Section */}
       <section className="relative py-20 bg-gradient-to-br from-gray-900 via-gray-800 to-amber-900 overflow-hidden">
         <div className="absolute inset-0">
           <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/20 rounded-full blur-3xl" />
           <div className="absolute bottom-0 left-0 w-80 h-80 bg-yellow-500/10 rounded-full blur-3xl" />
         </div>
         <div className="container relative z-10 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
             <div className="inline-flex items-center gap-2 bg-amber-500/20 text-amber-300 px-5 py-2 rounded-full text-sm font-medium border border-amber-500/30 mb-6">
               <MapPin className="h-4 w-4" />
               全台門市據點
             </div>
             <h1 className="text-5xl md:text-6xl font-black text-white mb-4">
               找到最近的
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-300">
-                {" "}來點什麼
-              </span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-300"> 來點什麼</span>
             </h1>
             <p className="text-xl text-gray-300 max-w-2xl mx-auto">
               全台 {stores?.length || 12} 間門市，台中、南投全面覆蓋，隨時享用美味餐點
@@ -146,7 +112,6 @@ export default function BrandStores() {
         </div>
       </section>
 
-      {/* Map + Store List */}
       <section className="py-12 bg-white">
         <div className="container">
           {isLoading ? (
@@ -155,17 +120,12 @@ export default function BrandStores() {
             </div>
           ) : (
             <div className="grid lg:grid-cols-2 gap-8 items-start">
-              {/* Google Map - sticky */}
               <div className="lg:sticky lg:top-24">
                 <div className="h-[600px] rounded-2xl overflow-hidden shadow-xl border border-gray-100">
                   <MapView onMapReady={handleMapReady} />
                 </div>
-                <p className="text-center text-sm text-gray-400 mt-3">
-                  點擊地圖標記或右側門市卡片可互動定位
-                </p>
+                <p className="text-center text-sm text-gray-400 mt-3">點擊地圖標記或右側門市卡片可互動定位</p>
               </div>
-
-              {/* Store Cards */}
               <div className="space-y-4 max-h-[650px] overflow-y-auto pr-2">
                 <div className="sticky top-0 bg-white py-2 z-10 border-b border-gray-100 mb-2">
                   <p className="text-sm font-medium text-gray-500">
@@ -184,13 +144,10 @@ export default function BrandStores() {
                     )}
                   </p>
                 </div>
-
                 {stores?.map((store, index) => (
                   <motion.div
                     key={store.id}
-                    ref={(el) => {
-                      if (el) storeCardRefs.current.set(store.id, el);
-                    }}
+                    ref={(el) => { if (el) storeCardRefs.current.set(store.id, el); }}
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.4, delay: index * 0.04 }}
@@ -204,12 +161,9 @@ export default function BrandStores() {
                     <div className="flex items-start justify-between mb-3">
                       <h3 className="text-base font-bold text-gray-900">{store.name}</h3>
                       {selectedStoreId === store.id && (
-                        <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium flex-shrink-0 ml-2">
-                          已選中
-                        </span>
+                        <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium flex-shrink-0 ml-2">已選中</span>
                       )}
                     </div>
-
                     <div className="space-y-1.5 text-gray-600 text-sm mb-4">
                       <div className="flex items-start gap-2">
                         <MapPin className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
@@ -218,13 +172,7 @@ export default function BrandStores() {
                       {store.phone && (
                         <div className="flex items-center gap-2">
                           <Phone className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                          <a
-                            href={`tel:${store.phone}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="hover:text-amber-600 transition-colors"
-                          >
-                            {store.phone}
-                          </a>
+                          <a href={`tel:${store.phone}`} onClick={(e) => e.stopPropagation()} className="hover:text-amber-600 transition-colors">{store.phone}</a>
                         </div>
                       )}
                       {store.openingHours && (
@@ -234,7 +182,6 @@ export default function BrandStores() {
                         </div>
                       )}
                     </div>
-
                     <button
                       onClick={(e) => openNavigation(e, store)}
                       className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white py-2.5 px-4 rounded-xl font-semibold text-sm transition-all duration-200 hover:shadow-lg hover:shadow-amber-200 active:scale-95"
