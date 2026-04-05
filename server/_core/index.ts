@@ -99,26 +99,45 @@ async function startServer() {
   // LINE Order from Make webhook
   app.post("/api/dayone/line-order", async (req, res) => {
     try {
-      const { tenantId, lineUserId, displayName, replyToken, parsedOrder } = req.body;
+      const { tenantId, lineUserId, replyToken, rawMessage } = req.body;
 
       // 1. 基本驗證
       if (tenantId !== 2) {
         return res.status(400).json({ success: false, error: "invalid tenant" });
       }
 
-      let parsedOrderObj = parsedOrder;
-      if (typeof parsedOrder === 'string') {
-        const cleaned = parsedOrder
-          .replace(/```json/g, '')
-          .replace(/```/g, '')
-          .trim();
-        try {
-          parsedOrderObj = JSON.parse(cleaned);
-        } catch (e) {
-          return res.status(400).json({ success: false, error: 'invalid parsedOrder format' });
+      // 2. 呼叫 Gemini API 解析 rawMessage
+      const today = new Date().toISOString().slice(0, 10);
+      const geminiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{
+                text: `你是台灣雞蛋批發商訂單解析助手。只回傳純JSON不加任何標記：{"customerName":"客戶名稱沒有就空字串","items":[{"productName":"品名","quantity":數字}],"deliveryDate":"YYYY-MM-DD沒有日期填明天","rawText":"原始訊息"}\n今天：${today}\n訊息：${rawMessage}`
+              }]
+            }]
+          }),
         }
+      );
+      if (!geminiRes.ok) {
+        console.error("[LINE Order] Gemini API error", geminiRes.status);
+        return res.status(500).json({ success: false, error: "gemini api error" });
+      }
+      const geminiData = await geminiRes.json() as any;
+      const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+      const cleaned = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
+      let parsedOrderObj: any;
+      try {
+        parsedOrderObj = JSON.parse(cleaned);
+      } catch (e) {
+        console.error("[LINE Order] Gemini parse failed", cleaned);
+        return res.status(500).json({ success: false, error: "failed to parse gemini response" });
       }
 
+      // 3. 取得 DB
       const { getDb } = await import("../db");
       const database = await getDb();
       if (!database) {
@@ -126,7 +145,7 @@ async function startServer() {
       }
       const client = (database as any).$client;
 
-      // 2. 查詢客戶
+      // 4. 查詢客戶
       let customerId: number | null = null;
       const [customerRows] = await client.execute(
         `SELECT id, name FROM dy_customers WHERE tenantId = 2 AND name = ? AND status = 'active' LIMIT 1`,
@@ -137,7 +156,7 @@ async function startServer() {
         customerId = customer.id;
       }
 
-      // 3. 查詢品項售價
+      // 5. 查詢品項售價
       const resolvedItems: { productId: number | null; productName: string; qty: number; unitPrice: number }[] = [];
       for (const item of parsedOrderObj.items as { productName: string; quantity: number }[]) {
         const [productRows] = await client.execute(
@@ -152,13 +171,13 @@ async function startServer() {
         }
       }
 
-      // 4. 生成 orderNo
+      // 6. 生成 orderNo
       const orderNo = `DY${Date.now()}`;
 
-      // 5. 計算 total
+      // 7. 計算 total
       const total = resolvedItems.reduce((sum, i) => sum + (i.productId ? i.unitPrice * i.qty : 0), 0);
 
-      // 6. 寫入 dy_orders
+      // 8. 寫入 dy_orders
       const [orderResult] = await client.execute(
         `INSERT INTO dy_orders (tenantId, orderNo, customerId, status, orderSource, deliveryDate, note, total, createdAt, updatedAt)
          VALUES (2, ?, ?, 'pending', 'line', ?, ?, ?, NOW(), NOW())`,
@@ -166,7 +185,7 @@ async function startServer() {
       );
       const orderId = (orderResult as any).insertId;
 
-      // 7. 寫入 dy_order_items（只寫有 productId 的品項）
+      // 9. 寫入 dy_order_items（只寫有 productId 的品項）
       for (const item of resolvedItems) {
         if (item.productId !== null) {
           await client.execute(
@@ -176,7 +195,7 @@ async function startServer() {
         }
       }
 
-      // 8. 組裝 replyMessage
+      // 10. 組裝 replyMessage
       const itemLines = resolvedItems.map(i => `${i.productName} x${i.qty}`).join("\n");
       let replyMessage: string;
       if (customerId !== null) {
@@ -185,7 +204,7 @@ async function startServer() {
         replyMessage = `✅ 已收到您的訂單！\n${itemLines}\n預計 ${parsedOrderObj.deliveryDate} 配送。\n⚠️ 查無客戶資料，請聯繫業務確認。`;
       }
 
-      // 9. 回傳
+      // 11. 回傳
       return res.json({ success: true, orderNo, customerId, replyMessage });
     } catch (error) {
       console.error("[LINE Order Error]", error);
