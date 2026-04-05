@@ -99,43 +99,21 @@ async function startServer() {
   // LINE Order from Make webhook
   app.post("/api/dayone/line-order", async (req, res) => {
     try {
-      const { tenantId, lineUserId, replyToken, rawMessage } = req.body;
+      const { tenantId, lineUserId, replyToken, rawMessage, parsedText } = req.body;
 
       // 1. 基本驗證
       if (tenantId !== 2) {
         return res.status(400).json({ success: false, error: "invalid tenant" });
       }
 
-      // 2. 呼叫 Gemini API 解析 rawMessage
-      const today = new Date().toISOString().slice(0, 10);
-      const geminiRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key=${process.env.GEMINI_API_KEY}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{
-              parts: [{
-                text: `你是台灣雞蛋批發商訂單解析助手。只回傳純JSON不加任何標記：{"customerName":"客戶名稱沒有就空字串","items":[{"productName":"品名","quantity":數字}],"deliveryDate":"YYYY-MM-DD沒有日期填明天","rawText":"原始訊息"}\n今天：${today}\n訊息：${rawMessage}`
-              }]
-            }]
-          }),
-        }
-      );
-      if (!geminiRes.ok) {
-        const errText = await geminiRes.text();
-        console.error("[LINE Order] Gemini API error", geminiRes.status, errText);
-        return res.status(500).json({ success: false, error: "gemini api error" });
-      }
-      const geminiData = await geminiRes.json() as any;
-      const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-      const cleaned = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
+      // 2. 解析 Gemini 回傳的 parsedText
+      const cleaned = parsedText.replace(/```json/g, '').replace(/```/g, '').trim();
       let parsedOrderObj: any;
       try {
         parsedOrderObj = JSON.parse(cleaned);
       } catch (e) {
-        console.error("[LINE Order] Gemini parse failed", cleaned);
-        return res.status(500).json({ success: false, error: "failed to parse gemini response" });
+        console.error("[LINE Order] parsedText parse failed", cleaned);
+        return res.status(400).json({ success: false, error: "invalid parsedText format" });
       }
 
       // 3. 取得 DB
