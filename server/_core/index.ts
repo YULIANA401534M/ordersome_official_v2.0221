@@ -184,7 +184,24 @@ async function startServer() {
         replyMessage = `✅ 已收到您的訂單！\n${itemLines}\n預計 ${deliveryDate} 配送。\n⚠️ 查無客戶資料，請聯繫業務確認。`;
       }
 
-      // 11. 回傳
+      // 11. 呼叫 LINE Reply API
+      const lineReplyUrl = 'https://api.line.me/v2/bot/message/reply';
+      const lineToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+      if (replyToken && lineToken) {
+        await fetch(lineReplyUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${lineToken}`
+          },
+          body: JSON.stringify({
+            replyToken,
+            messages: [{ type: 'text', text: replyMessage }]
+          })
+        });
+      }
+
+      // 12. 回傳
       return res.json({ success: true, orderNo, customerId, replyMessage });
     } catch (error) {
       console.error("[LINE Order Error]", error);
