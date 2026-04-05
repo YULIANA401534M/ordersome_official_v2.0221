@@ -10,6 +10,14 @@ const dyAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
   return next({ ctx });
 });
 
+const dyDriverProcedure = protectedProcedure.use(({ ctx, next }) => {
+  const role = ctx.user.role;
+  if (!['super_admin', 'manager', 'driver'].includes(role)) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: '需要管理員或司機權限' });
+  }
+  return next({ ctx });
+});
+
 export const dyOrdersRouter = router({
   list: dyAdminProcedure
     .input(z.object({
@@ -37,7 +45,7 @@ export const dyOrdersRouter = router({
       return rows as any[];
     }),
 
-  getWithItems: dyAdminProcedure
+  getWithItems: dyDriverProcedure
     .input(z.object({ id: z.number(), tenantId: z.number() }))
     .query(async ({ input }) => {
       const db = await getDb();
