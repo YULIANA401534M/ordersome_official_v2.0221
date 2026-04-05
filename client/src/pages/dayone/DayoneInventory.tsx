@@ -20,12 +20,18 @@ const MOVEMENT_TYPES = [
 export default function DayoneInventory() {
   const [adjustOpen, setAdjustOpen] = useState(false);
   const [form, setForm] = useState({ productId: "", movementType: "in" as string, qty: 0, note: "" });
+  const [safetyEdit, setSafetyEdit] = useState<{ id: number; productId: number; value: number } | null>(null);
 
   const utils = trpc.useUtils();
   const { data: inventory, isLoading } = trpc.dayone.inventory.list.useQuery({ tenantId: TENANT_ID });
   const { data: alerts } = trpc.dayone.reports.inventoryAlerts.useQuery({ tenantId: TENANT_ID });
   const { data: products } = trpc.dayone.products.list.useQuery({ tenantId: TENANT_ID });
   const { data: movements } = trpc.dayone.inventory.movements.useQuery({ tenantId: TENANT_ID, limit: 20 });
+
+  const setSafety = trpc.dayone.inventory.setSafety.useMutation({
+    onSuccess: () => { toast.success("警示門檻已更新"); setSafetyEdit(null); utils.dayone.inventory.list.invalidate(); utils.dayone.reports.inventoryAlerts.invalidate(); },
+    onError: (e) => toast.error(e.message),
+  });
 
   const adjust = trpc.dayone.inventory.adjust.useMutation({
     onSuccess: () => {
@@ -80,7 +86,7 @@ export default function DayoneInventory() {
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50 border-b">
                     <tr>
-                      {["品項", "庫存量", "單位"].map(h => (
+                      {["品項", "庫存量", "警示門檻", "單位"].map(h => (
                         <th key={h} className="text-left px-4 py-2.5 font-medium text-gray-600">{h}</th>
                       ))}
                     </tr>
@@ -89,8 +95,23 @@ export default function DayoneInventory() {
                     {(inventory as any[]).map((inv: any) => (
                       <tr key={inv.id} className="border-b hover:bg-gray-50">
                         <td className="px-4 py-2.5 font-medium">{inv.productName}</td>
-                        <td className={`px-4 py-2.5 font-bold ${inv.currentQty <= (inv.minStockAlert ?? 0) ? "text-orange-600" : "text-gray-900"}`}>
+                        <td className={`px-4 py-2.5 font-bold ${Number(inv.currentQty) <= Number(inv.safetyQty) ? "text-orange-600" : "text-gray-900"}`}>
                           {inv.currentQty}
+                        </td>
+                        <td className="px-4 py-2.5">
+                          {safetyEdit?.id === inv.id ? (
+                            <div className="flex gap-1 items-center">
+                              <input type="number" className="w-16 border rounded px-1 py-0.5 text-sm" value={safetyEdit.value}
+                                onChange={e => setSafetyEdit(s => s ? { ...s, value: Number(e.target.value) } : null)} />
+                              <button className="text-xs text-amber-600 font-medium" onClick={() => setSafety.mutate({ tenantId: TENANT_ID, productId: safetyEdit.productId, safetyQty: safetyEdit.value })}>存</button>
+                              <button className="text-xs text-gray-400" onClick={() => setSafetyEdit(null)}>✕</button>
+                            </div>
+                          ) : (
+                            <span className="cursor-pointer text-gray-500 hover:text-amber-600"
+                              onClick={() => setSafetyEdit({ id: inv.id, productId: inv.productId, value: Number(inv.safetyQty) })}>
+                              {inv.safetyQty ?? 0} ✏️
+                            </span>
+                          )}
                         </td>
                         <td className="px-4 py-2.5 text-gray-500">{inv.unit}</td>
                       </tr>
@@ -111,7 +132,7 @@ export default function DayoneInventory() {
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50 border-b">
                     <tr>
-                      {["品項", "類型", "數量", "時間"].map(h => (
+                      {["品項", "類型", "數量", "備註", "時間"].map(h => (
                         <th key={h} className="text-left px-4 py-2.5 font-medium text-gray-600">{h}</th>
                       ))}
                     </tr>
@@ -128,6 +149,7 @@ export default function DayoneInventory() {
                             </span>
                           </td>
                           <td className="px-4 py-2.5 font-medium">{m.qty > 0 ? `+${m.qty}` : m.qty}</td>
+                          <td className="px-4 py-2.5 text-xs text-gray-500">{m.note ?? "-"}</td>
                           <td className="px-4 py-2.5 text-xs text-gray-500">
                             {new Date(m.createdAt).toLocaleString("zh-TW", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
                           </td>

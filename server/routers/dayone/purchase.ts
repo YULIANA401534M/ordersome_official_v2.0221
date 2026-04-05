@@ -34,7 +34,7 @@ export const dyPurchaseRouter = router({
       items: z.array(z.object({
         productId: z.number(),
         expectedQty: z.number().positive(),
-        unitPrice: z.number().positive(),
+        unitPrice: z.number().min(0),
       })),
       note: z.string().optional(),
     }))

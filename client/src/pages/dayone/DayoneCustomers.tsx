@@ -131,7 +131,7 @@ export default function DayoneCustomers() {
             </div>
             <Button className="w-full bg-amber-600 hover:bg-amber-700 mt-2" onClick={() => {
               if (!form.name) { toast.error("請填寫客戶名稱"); return; }
-              upsert.mutate({ ...form, tenantId: TENANT_ID, id: editing?.id, districtId: form.districtId ? Number(form.districtId) : undefined });
+              upsert.mutate({ ...form, tenantId: TENANT_ID, id: editing?.id, districtId: form.districtId ? Number(form.districtId) : undefined, creditLimit: Number(form.creditLimit) });
             }} disabled={upsert.isPending}>
               {upsert.isPending ? "儲存中..." : "儲存"}
             </Button>

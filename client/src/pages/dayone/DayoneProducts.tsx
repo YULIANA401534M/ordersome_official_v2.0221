@@ -16,9 +16,21 @@ export default function DayoneProducts() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState(emptyForm);
+  const [unitOpen, setUnitOpen] = useState(false);
+  const [unitForm, setUnitForm] = useState({ name: "", sortOrder: 0 });
+  const [editingUnit, setEditingUnit] = useState<any>(null);
 
   const utils = trpc.useUtils();
   const { data: products, isLoading } = trpc.dayone.products.list.useQuery({ tenantId: TENANT_ID });
+  const { data: units } = trpc.dayone.units.list.useQuery({ tenantId: TENANT_ID });
+  const upsertUnit = trpc.dayone.units.upsert.useMutation({
+    onSuccess: () => { toast.success(editingUnit ? "單位已更新" : "單位已新增"); setUnitOpen(false); setUnitForm({ name: "", sortOrder: 0 }); setEditingUnit(null); utils.dayone.units.list.invalidate(); },
+    onError: (e) => toast.error(e.message),
+  });
+  const deleteUnit = trpc.dayone.units.delete.useMutation({
+    onSuccess: () => { toast.success("單位已刪除"); utils.dayone.units.list.invalidate(); },
+    onError: (e) => toast.error(e.message),
+  });
 
   const upsert = trpc.dayone.products.upsert.useMutation({
     onSuccess: () => { toast.success(editing ? "品項已更新" : "品項已新增"); setOpen(false); utils.dayone.products.list.invalidate(); },
@@ -37,9 +49,14 @@ export default function DayoneProducts() {
       <div className="space-y-5">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">品項管理</h1>
-          <Button className="bg-amber-600 hover:bg-amber-700 gap-2" onClick={openCreate}>
-            <Plus className="w-4 h-4" /> 新增品項
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" className="gap-2" onClick={() => { setEditingUnit(null); setUnitForm({ name: "", sortOrder: 0 }); setUnitOpen(true); }}>
+              管理單位
+            </Button>
+            <Button className="bg-amber-600 hover:bg-amber-700 gap-2" onClick={openCreate}>
+              <Plus className="w-4 h-4" /> 新增品項
+            </Button>
+          </div>
         </div>
 
         <Card>
@@ -85,7 +102,18 @@ export default function DayoneProducts() {
             <div className="space-y-3">
               <div><Label>品項名稱 *</Label><Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} /></div>
               <div><Label>品項代碼</Label><Input value={form.code} onChange={e => setForm(p => ({ ...p, code: e.target.value }))} /></div>
-              <div><Label>單位</Label><Input value={form.unit} onChange={e => setForm(p => ({ ...p, unit: e.target.value }))} /></div>             <div>
+              <div>
+                <Label>單位</Label>
+                <Select value={form.unit} onValueChange={v => setForm(p => ({ ...p, unit: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(units as any[] ?? [{ name: "箱" }]).map((u: any) => (
+                      <SelectItem key={u.name} value={u.name}>{u.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
                 <Label>狀態</Label>
                 <Select value={form.isActive ? "active" : "inactive"} onValueChange={v => setForm(p => ({ ...p, isActive: v === "active" }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -102,6 +130,57 @@ export default function DayoneProducts() {
             }} disabled={upsert.isPending}>
               {upsert.isPending ? "儲存中..." : "儲存"}
             </Button>
+          </DialogContent>
+        </Dialog>
+        {/* 單位管理 Dialog */}
+        <Dialog open={unitOpen} onOpenChange={setUnitOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader><DialogTitle>管理單位</DialogTitle></DialogHeader>
+            <div className="space-y-3">
+              <div className="border rounded-lg overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 border-b">
+                    <tr>
+                      <th className="text-left px-3 py-2 font-medium text-gray-600">單位名稱</th>
+                      <th className="text-left px-3 py-2 font-medium text-gray-600">排序</th>
+                      <th className="px-3 py-2"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(units as any[] ?? []).map((u: any) => (
+                      <tr key={u.id} className="border-b">
+                        {editingUnit?.id === u.id ? (
+                          <>
+                            <td className="px-3 py-1"><Input className="h-7" value={editingUnit.name} onChange={e => setEditingUnit((p: any) => ({ ...p, name: e.target.value }))} /></td>
+                            <td className="px-3 py-1"><Input className="h-7 w-16" type="number" value={editingUnit.sortOrder} onChange={e => setEditingUnit((p: any) => ({ ...p, sortOrder: Number(e.target.value) }))} /></td>
+                            <td className="px-3 py-1 flex gap-1">
+                              <button className="text-xs text-amber-600 font-medium" onClick={() => upsertUnit.mutate({ id: u.id, tenantId: TENANT_ID, name: editingUnit.name, sortOrder: editingUnit.sortOrder })}>存</button>
+                              <button className="text-xs text-gray-400" onClick={() => setEditingUnit(null)}>✕</button>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="px-3 py-2">{u.name}</td>
+                            <td className="px-3 py-2 text-gray-500">{u.sortOrder}</td>
+                            <td className="px-3 py-2 flex gap-2">
+                              <button className="text-xs text-amber-600" onClick={() => setEditingUnit({ id: u.id, name: u.name, sortOrder: u.sortOrder })}>編輯</button>
+                              <button className="text-xs text-red-500" onClick={() => deleteUnit.mutate({ id: u.id, tenantId: TENANT_ID })}>刪除</button>
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex gap-2">
+                <Input placeholder="新單位名稱" value={unitForm.name} onChange={e => setUnitForm(p => ({ ...p, name: e.target.value }))} />
+                <Button className="bg-amber-600 hover:bg-amber-700 shrink-0" onClick={() => {
+                  if (!unitForm.name) return;
+                  upsertUnit.mutate({ tenantId: TENANT_ID, name: unitForm.name, sortOrder: unitForm.sortOrder });
+                }}>新增</Button>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
