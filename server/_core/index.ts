@@ -109,7 +109,7 @@ async function startServer() {
       // 2. 呼叫 Gemini API 解析 rawMessage
       const today = new Date().toISOString().slice(0, 10);
       const geminiRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -123,7 +123,8 @@ async function startServer() {
         }
       );
       if (!geminiRes.ok) {
-        console.error("[LINE Order] Gemini API error", geminiRes.status);
+        const errText = await geminiRes.text();
+        console.error("[LINE Order] Gemini API error", geminiRes.status, errText);
         return res.status(500).json({ success: false, error: "gemini api error" });
       }
       const geminiData = await geminiRes.json() as any;
