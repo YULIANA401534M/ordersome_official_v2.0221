@@ -475,3 +475,18 @@ export const dyWorkLogs = mysqlTable("dy_work_logs", {
 });
 export type DyWorkLog = typeof dyWorkLogs.$inferSelect;
 export type InsertDyWorkLog = typeof dyWorkLogs.$inferInsert;
+
+/**
+ * DaYong ERP - Districts (行政區管理)
+ * Manages delivery districts and their delivery schedules
+ */
+export const dyDistricts = mysqlTable("dy_districts", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  name: varchar("name", { length: 50 }).notNull(),
+  deliveryDays: text("deliveryDays"), // JSON array of weekday numbers (0-6)
+  sortOrder: int("sortOrder").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type DyDistrict = typeof dyDistricts.$inferSelect;
+export type InsertDyDistrict = typeof dyDistricts.$inferInsert;

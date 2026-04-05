@@ -108,7 +108,7 @@ export default function DayoneOrders() {
                     <div key={idx} className="flex gap-2 mt-1">
                       <Select value={item.productId} onValueChange={(v) => {
                         const prod = (products as any[] ?? []).find((p: any) => String(p.id) === v);
-                        setOrderItems(prev => prev.map((it, i) => i === idx ? { ...it, productId: v, unitPrice: prod?.defaultPrice ?? 0 } : it));
+                        setOrderItems(prev => prev.map((it, i) => i === idx ? { ...it, productId: v, unitPrice: Number(prod?.defaultPrice ?? 0) } : it));
                       }}>
                         <SelectTrigger className="flex-1"><SelectValue placeholder="品項" /></SelectTrigger>
                         <SelectContent>
@@ -142,7 +142,7 @@ export default function DayoneOrders() {
                   driverId: newOrder.driverId ? Number(newOrder.driverId) : undefined,
                   deliveryDate: newOrder.deliveryDate,
                   note: newOrder.note || undefined,
-                  items: validItems.map(i => ({ productId: Number(i.productId), qty: i.qty, unitPrice: i.unitPrice })),
+                  items: validItems.map(i => ({ productId: Number(i.productId), qty: Number(i.qty), unitPrice: Number(i.unitPrice) })),
                 });
               }} disabled={createOrder.isPending}>
                 {createOrder.isPending ? "建立中..." : "建立訂單"}
