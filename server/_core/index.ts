@@ -95,6 +95,91 @@ async function startServer() {
       res.send("0|Error");
     }
   });
+
+  // LINE Order from Make webhook
+  app.post("/api/dayone/line-order", async (req, res) => {
+    try {
+      const { tenantId, lineUserId, displayName, replyToken, parsedOrder } = req.body;
+
+      // 1. 基本驗證
+      if (tenantId !== 2) {
+        return res.status(400).json({ success: false, error: "invalid tenant" });
+      }
+
+      const { getDb } = await import("../db");
+      const database = await getDb();
+      if (!database) {
+        return res.status(500).json({ success: false, error: "internal error" });
+      }
+      const client = (database as any).$client;
+
+      // 2. 查詢客戶
+      let customerId: number | null = null;
+      const [customerRows] = await client.execute(
+        `SELECT id, name FROM dy_customers WHERE tenantId = 2 AND name = ? AND status = 'active' LIMIT 1`,
+        [parsedOrder.customerName]
+      );
+      const customer = (customerRows as any[])[0];
+      if (customer) {
+        customerId = customer.id;
+      }
+
+      // 3. 查詢品項售價
+      const resolvedItems: { productId: number | null; productName: string; qty: number; unitPrice: number }[] = [];
+      for (const item of parsedOrder.items as { productName: string; quantity: number }[]) {
+        const [productRows] = await client.execute(
+          `SELECT id, name, price FROM dy_products WHERE tenantId = 2 AND name = ? AND isActive = 1 LIMIT 1`,
+          [item.productName]
+        );
+        const product = (productRows as any[])[0];
+        if (product) {
+          resolvedItems.push({ productId: product.id, productName: item.productName, qty: item.quantity, unitPrice: product.price });
+        } else {
+          resolvedItems.push({ productId: null, productName: item.productName, qty: item.quantity, unitPrice: 0 });
+        }
+      }
+
+      // 4. 生成 orderNo
+      const orderNo = `DY${Date.now()}`;
+
+      // 5. 計算 total
+      const total = resolvedItems.reduce((sum, i) => sum + (i.productId ? i.unitPrice * i.qty : 0), 0);
+
+      // 6. 寫入 dy_orders
+      const [orderResult] = await client.execute(
+        `INSERT INTO dy_orders (tenantId, orderNo, customerId, status, orderSource, deliveryDate, note, total, createdAt, updatedAt)
+         VALUES (2, ?, ?, 'pending', 'line', ?, ?, ?, NOW(), NOW())`,
+        [orderNo, customerId, parsedOrder.deliveryDate, parsedOrder.rawText, total]
+      );
+      const orderId = (orderResult as any).insertId;
+
+      // 7. 寫入 dy_order_items（只寫有 productId 的品項）
+      for (const item of resolvedItems) {
+        if (item.productId !== null) {
+          await client.execute(
+            `INSERT INTO dy_order_items (orderId, productId, qty, unitPrice) VALUES (?, ?, ?, ?)`,
+            [orderId, item.productId, item.qty, item.unitPrice]
+          );
+        }
+      }
+
+      // 8. 組裝 replyMessage
+      const itemLines = resolvedItems.map(i => `${i.productName} x${i.qty}`).join("\n");
+      let replyMessage: string;
+      if (customerId !== null) {
+        replyMessage = `✅ 收到 ${parsedOrder.customerName} 的訂單！\n${itemLines}\n預計 ${parsedOrder.deliveryDate} 配送，謝謝！`;
+      } else {
+        replyMessage = `✅ 已收到您的訂單！\n${itemLines}\n預計 ${parsedOrder.deliveryDate} 配送。\n⚠️ 查無客戶資料，請聯繫業務確認。`;
+      }
+
+      // 9. 回傳
+      return res.json({ success: true, orderNo, customerId, replyMessage });
+    } catch (error) {
+      console.error("[LINE Order Error]", error);
+      return res.status(500).json({ success: false, error: "internal error" });
+    }
+  });
+
   // tRPC API
   app.use(
     "/api/trpc",
