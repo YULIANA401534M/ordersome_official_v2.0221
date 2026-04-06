@@ -1,6 +1,6 @@
 # CLAUDE.md — OrderSome 專案完整說明
 
-> 最後更新：2026-04-05 | 核對版本：commit bb4f9b33
+> 最後更新：2026-04-06 | 核對版本：commit fb02268
 > 適用對象：Claude Code、VS Code、任何接手的 AI 或開發者
 
 ---
@@ -40,7 +40,7 @@
 | 資料庫 | TiDB Cloud（MySQL 相容） |
 | 圖片儲存 | Cloudflare R2（S3-compatible） |
 | 金流 | 綠界（ECPay） |
-| 認證 | Manus OAuth + Google OAuth + LINE OAuth + Email/Password |
+| 認證 | Google OAuth + LINE OAuth + Email/Password |
 | 密碼 | bcryptjs |
 | 打包 | Vite 7（前端）+ esbuild（後端） |
 | 套件管理 | pnpm 10 |
@@ -49,6 +49,7 @@
 | 表單 | React Hook Form + Zod |
 | 圖表 | Recharts |
 | 簽名 | react-signature-canvas |
+| 自動化 | Make（Webhook/Scenario） |
 
 ---
 
@@ -58,15 +59,13 @@
 ```
 服務名稱: ordersome_official_v2.0221
 生產網址: https://ordersome.com.tw
-自動部署: 推送到 GitHub main 分支後自動觸發
+自動部署: 推送到 GitHub main 分支後自動觸發（約 2-3 分鐘）
 ```
 
 ### 3.2 GitHub 推送指令
 ```bash
-# ⚠️ 必須用 user_github，不是 origin
-git push user_github main
+git push origin main
 ```
-> `origin` 指向 Manus 內部 S3 備份，`user_github` 才是真正的 GitHub。
 
 ### 3.3 TiDB Cloud 資料庫
 ```
@@ -74,41 +73,36 @@ git push user_github main
 主機:   gateway01.ap-northeast-1.prod.aws.tidbcloud.com
 埠:     4000
 資料庫: ordersome
-用戶:   2PEiAB7nB6htiep.root
-SSL:    rejectUnauthorized: true（server/db.ts 手動解析 URL）
+SSL:    rejectUnauthorized: true
+注意:   TiDB 不支援 ADD COLUMN IF NOT EXISTS，需用 SHOW COLUMNS 確認再 ALTER
 ```
 
 ### 3.4 Cloudflare R2 圖片儲存
 ```
 Bucket:        ordersome-b2b
-Account:       d4dbdd11c1db22961203972fd5c46b06
 公開 URL 前綴: https://pub-344b4e8c0e374787a0dd2b2024ee46c6.r2.dev
-
-環境變數（標準 AWS SDK 命名，勿使用 R2_ACCESS_KEY 舊格式）：
-R2_ACCOUNT_ID        = d4dbdd11c1db22961203972fd5c46b06
-R2_ACCESS_KEY_ID     = d1908a2d75c6af2adfccb1f587dc811a
-R2_SECRET_ACCESS_KEY = 168b4fd65f3fe105dceb48e706724e08e10cad5f262fee05da936253c934db1a
-R2_BUCKET            = ordersome-b2b
-R2_PUBLIC_URL_PREFIX = https://pub-344b4e8c0e374787a0dd2b2024ee46c6.r2.dev
 ```
 
 ### 3.5 Railway 完整環境變數
 ```
-NODE_ENV="production"
-DATABASE_URL="mysql://2PEiAB7nB6htiep.root:Y9QkbXSPa0Zgulq0@gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000/ordersome?ssl={\"rejectUnauthorized\":true}"
-JWT_SECRET="ordersome-yulian-secret-2026-xK9mP"
-VITE_APP_ID="ordersome"
-VITE_APP_URL="https://ordersome.com.tw"
-OAUTH_SERVER_URL="https://ordersome.com.tw"
-R2_ACCOUNT_ID="d4dbdd11c1db22961203972fd5c46b06"
-R2_ACCESS_KEY_ID="d1908a2d75c6af2adfccb1f587dc811a"
-R2_SECRET_ACCESS_KEY="168b4fd65f3fe105dceb48e706724e08e10cad5f262fee05da936253c934db1a"
-R2_BUCKET="ordersome-b2b"
-R2_PUBLIC_URL_PREFIX="https://pub-344b4e8c0e374787a0dd2b2024ee46c6.r2.dev"
-GOOGLE_CLIENT_ID="615601412173-un3n4k1t25tg3863t1gef251vuqc6ug4.apps.googleusercontent.com"
-GOOGLE_CLIENT_SECRET="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"
-LINE_CLIENT_ID="2009201434"
-LINE_CLIENT_SECRET="e2d1022c6417b4c1fdd5e5bd51e30aac"
+NODE_ENV=production
+DATABASE_URL=（TiDB Cloud 連線字串）
+JWT_SECRET=ordersome-yulian-secret-2026-xK9mP
+VITE_APP_ID=ordersome
+VITE_APP_URL=https://ordersome.com.tw
+OAUTH_SERVER_URL=https://ordersome.com.tw
+R2_ACCOUNT_ID=d4dbdd11c1db22961203972fd5c46b06
+R2_ACCESS_KEY_ID=（R2 金鑰）
+R2_SECRET_ACCESS_KEY=（R2 私鑰）
+R2_BUCKET=ordersome-b2b
+R2_PUBLIC_URL_PREFIX=https://pub-344b4e8c0e374787a0dd2b2024ee46c6.r2.dev
+GOOGLE_CLIENT_ID=（Google OAuth）
+GOOGLE_CLIENT_SECRET=（Google OAuth）
+LINE_CLIENT_ID=2009201434
+LINE_CLIENT_SECRET=（LINE OAuth）
+VITE_GOOGLE_MAPS_API_KEY=（Google Maps，直接引用，已移除 Forge Proxy）
+GEMINI_API_KEY=（Google AI Studio，供後端 line-order endpoint 使用）
+LINE_CHANNEL_ACCESS_TOKEN=（大永 LINE@ Messaging API Token，供後端直接回覆 LINE 用）
 ```
 
 ---
@@ -120,7 +114,7 @@ pnpm dev              # 開發伺服器（port 3000）
 pnpm build            # 生產構建（Vite + esbuild）
 pnpm start            # 啟動生產伺服器
 pnpm check            # TypeScript 型別檢查
-pnpm test             # 執行所有測試（58/58 通過）
+pnpm test             # 執行所有測試
 pnpm db:push          # 生成並執行 Drizzle migration
 pnpm format           # Prettier 格式化
 ```
@@ -176,32 +170,23 @@ ordersome_official_v2/
 │   │       ├── purchase.ts
 │   │       ├── reports.ts
 │   │       └── suppliers.ts
-│   ├── _core/                       # ⚠️ 核心框架，勿隨意修改
-│   │   ├── env.ts                   # 所有環境變數（統一從這裡讀取）
-│   │   ├── context.ts               # tRPC 上下文（認證）
-│   │   ├── trpc.ts                  # tRPC 初始化（publicProcedure / protectedProcedure）
-│   │   ├── oauth.ts                 # OAuth 認證邏輯
-│   │   ├── llm.ts                   # LLM 集成（invokeLLM）
-│   │   ├── notification.ts          # notifyOwner()
-│   │   ├── index.ts                 # Express 入口
-│   │   └── ...
-│   └── lib/
-│       └── password.ts              # bcrypt 密碼雜湊
+│   └── _core/                       # ⚠️ 核心框架，勿隨意修改
+│       ├── env.ts                   # 所有環境變數（統一從這裡讀取）
+│       ├── context.ts               # tRPC 上下文（認證）
+│       ├── trpc.ts                  # tRPC 初始化（publicProcedure / protectedProcedure）
+│       ├── oauth.ts                 # OAuth 認證邏輯
+│       ├── notification.ts          # notifyOwner()
+│       └── index.ts                 # Express 入口（含公開 Webhook endpoints）
 │
 ├── drizzle/
 │   ├── schema.ts                    # ✅ 所有 Drizzle 表定義（見第八節）
 │   ├── relations.ts
-│   └── 0000_*.sql ~ 0020_*.sql     # SQL 遷移文件（21 個）
+│   └── 0000_*.sql ~ 0020_*.sql     # SQL 遷移文件
 │
-├── shared/
-│   ├── const.ts                     # 共用常數（COOKIE_NAME 等）
-│   ├── types.ts                     # re-export 所有 schema 型別
-│   └── _core/errors.ts
-│
-├── package.json
-├── tsconfig.json
-├── vite.config.ts
-└── drizzle.config.ts
+└── shared/
+    ├── const.ts
+    ├── types.ts
+    └── _core/errors.ts
 ```
 
 ---
@@ -338,9 +323,50 @@ ordersome_official_v2/
 
 ---
 
-## 八、資料庫 Tables（完整清單）
+## 八、公開 Webhook Endpoints（server/_core/index.ts）
 
-### 8.1 Drizzle 管理的表（`drizzle/schema.ts`）
+這些 endpoint 不走 tRPC，直接掛在 Express（無需登入）：
+
+| Endpoint | 說明 |
+|----------|------|
+| `POST /api/payment/callback` | 綠界 ECPay 付款回調 |
+| `POST /api/dayone/line-order` | 大永 LINE@ 接單 Webhook（Make → 後端） |
+
+### POST /api/dayone/line-order 規格
+
+**Request Body（Make 傳來）：**
+```json
+{
+  "tenantId": 2,
+  "lineUserId": "Uxxxx",
+  "replyToken": "xxxxxx",
+  "rawMessage": "鴻大客戶白大箱5箱 液白3箱 明天配",
+  "parsedText": "Gemini 解析後的 JSON 字串（可能含 markdown 標記）"
+}
+```
+
+**後端處理邏輯：**
+1. 驗證 tenantId === 2
+2. 清洗 parsedText（移除 ```json 標記，並 JSON.parse）
+3. 用 customerName 查 dy_customers（模糊比對）
+4. 用 productName 查 dy_products（取 id 和 price）
+5. INSERT dy_orders（orderSource = 'line'）
+6. INSERT dy_order_items
+7. 直接呼叫 LINE Reply API 回覆客戶
+8. 回傳 { success, orderNo, replyMessage }
+
+**Make Scenario 結構（大永蛋品LINE接單）：**
+```
+Webhooks[1] → Filter(只處理文字訊息) → Google Gemini AI[7] → HTTP[5](後端)
+```
+- HTTP[6]（LINE Reply）已廢棄，後端直接呼叫 LINE API
+- Make Webhook URL：https://hook.us2.make.com/6ihglkavm26i29mdgg33dvxngggv1xiu
+
+---
+
+## 九、資料庫 Tables（完整清單）
+
+### 9.1 Drizzle 管理的表（`drizzle/schema.ts`）
 
 | 表名 | 用途 |
 |------|------|
@@ -369,28 +395,33 @@ ordersome_official_v2/
 | `dy_work_logs` | 大永司機工作日誌 |
 | `dy_districts` | ✅ 大永行政區（已加入 schema，migration 0020） |
 
-### 8.2 ⚠️ 大永 ERP 的 raw SQL 表（不在 schema.ts，直接在 TiDB）
+### 9.2 ⚠️ 大永 ERP 的 raw SQL 表（不在 schema.ts，直接在 TiDB）
 
-這是已知技術債，目前以 raw SQL 操作：
+這是已知技術債，目前以 raw SQL 操作：`(db as any).$client.execute(...)`
 
-| 表名 | 用途 |
-|------|------|
-| `dy_customers` | 客戶 |
-| `dy_customer_prices` | 客戶特殊定價 |
-| `dy_drivers` | 司機（含 `userId` 連結 users 表） |
-| `dy_orders` | 大永訂單（含 boxes/signature/cash 欄位） |
-| `dy_order_items` | 訂單明細 |
-| `dy_products` | 商品（含 code/unit 欄位） |
-| `dy_inventory` | 庫存（含 safetyQty） |
-| `dy_purchase_orders` | 採購單 |
-| `dy_purchase_order_items` | 採購明細 |
-| `dy_stock_movements` | 庫存異動記錄 |
-| `dy_suppliers` | 供應商 |
-| `dy_delivery_signatures` | 送貨簽名 |
+| 表名 | 用途 | 重要欄位備註 |
+|------|------|------|
+| `dy_customers` | 客戶 | 待加 `lineUserId` 欄位（LIFF 身份綁定用） |
+| `dy_customer_prices` | 客戶特殊定價 | |
+| `dy_drivers` | 司機 | 含 `userId` 連結 users 表 |
+| `dy_orders` | 大永訂單 | `orderSource`（line/manual）、`totalAmount`（非 total）、`status` enum |
+| `dy_order_items` | 訂單明細 | |
+| `dy_products` | 商品 | 含 `code`/`unit`/`price` 欄位 |
+| `dy_inventory` | 庫存 | 含 `safetyQty` |
+| `dy_purchase_orders` | 採購單 | |
+| `dy_purchase_order_items` | 採購明細 | |
+| `dy_stock_movements` | 庫存異動記錄 | |
+| `dy_suppliers` | 供應商 | |
+| `dy_delivery_signatures` | 送貨簽名 | |
+
+**⚠️ dy_orders 重要欄位名稱（踩過的坑）：**
+- 金額欄位是 `totalAmount`，不是 `total`
+- `orderSource` 欄位已有 ALTER TABLE 新增（DEFAULT 'general'）
+- `customerId` 是 NOT NULL，找不到客戶時傳 0 不傳 null
 
 ---
 
-## 九、tRPC API 路由（完整清單）
+## 十、tRPC API 路由（完整清單）
 
 > 呼叫方式：`trpc.<router>.<procedure>.useQuery()` / `.useMutation()`
 
@@ -480,41 +511,41 @@ Procedures: `uploadImage` / `uploadPdf`
 
 ---
 
-## 十、認證系統
+## 十一、認證系統
 
-### 10.1 OAuth 流程
-- Manus OAuth（App ID: `ordersome`）
+### 11.1 OAuth 流程
 - Google OAuth（Client ID: `615601412173-...`）
 - LINE OAuth（Client ID: `2009201434`）
 - Email + 密碼（bcryptjs，僅 franchisee/admin 角色）
 
-### 10.2 ⚠️ Cloudflare WAF 繞過
+### 11.2 ⚠️ Cloudflare WAF 特殊命名
 登入 mutation 的密碼欄位命名刻意避開保留字：
 - 登入：`pwd`（非 `password`）
 - 重設密碼：`newPwd`（非 `newPassword`）
 
-### 10.3 用戶角色（5 種）
+### 11.3 用戶角色（6 種）
 ```
 super_admin  — 超級管理員（可存取所有功能）
 manager      — 管理員（可存取 admin 功能）
 franchisee   — 加盟商（可存取 /dashboard/franchise）
 staff        — 員工（可存取 SOP/reports/repairs/checklist）
 customer     — 一般會員（預設，可購物）
+driver       — 司機（大永）
 ```
 
-### 10.4 tRPC 程序類型
+### 11.4 tRPC 程序類型
 | 類型 | 限制 |
 |------|------|
 | `publicProcedure` | 無限制 |
 | `protectedProcedure` | 需登入 |
 | `adminProcedure` | 需 super_admin 或 manager |
 | `franchiseeProcedure` | 需 franchisee / super_admin / manager |
-| `dyAdminProcedure`（大永） | 需 super_admin 或 manager |
+| `dyAdminProcedure` | 需 super_admin 或 manager |
 | `driverProcedure` | 需 driver / manager / super_admin |
 
 ---
 
-## 十一、購物車架構
+## 十二、購物車架構
 
 購物車使用 **Zustand 5 + localStorage**（key: `"cart-storage"`），**不使用 tRPC**：
 
@@ -531,7 +562,7 @@ useCartStore().getItemQuantity(id, specs)  // 某商品目前數量
 
 ---
 
-## 十二、綠界金流（ECPay）
+## 十三、綠界金流（ECPay）
 
 - **測試環境**（無 ECPAY env 時自動啟用）：`https://payment-stage.ecpay.com.tw/...`
 - **生產環境**（三個 env 都有才啟用）：`https://payment.ecpay.com.tw/...`
@@ -547,7 +578,7 @@ verifyCheckMacValue(params, val)  // 驗證簽章
 
 ---
 
-## 十三、圖片儲存路徑規則
+## 十四、圖片儲存路徑規則
 
 | 類型 | R2 Key 格式 |
 |------|------------|
@@ -558,19 +589,20 @@ verifyCheckMacValue(params, val)  // 驗證簽章
 
 ---
 
-## 十四、核心架構原則
+## 十五、核心架構原則
 
-### 14.1 Lego 模組架構
+### 15.1 Lego 模組架構
 - 每個功能模組可透過 `tenant_modules` 表的 `moduleKey` 開關
 - 前端 `ModuleGuard` 組件根據 `useModules()` hook 控制頁面存取
 - 大永 ERP 的 `tenantId = 2`，官網是 `tenantId = 1`
 
-### 14.2 tenantId 隔離
+### 15.2 tenantId 隔離
 - **所有資料查詢必須帶 tenantId**（防止租戶資料互串）
 - `ctx.tenantId` 由 tRPC context 自動注入
 - 大永 ERP 的 queries 需手動傳入 `tenantId` 參數
+- **絕對禁止 hardcode tenantId**（影響 SaaS 擴充）
 
-### 14.3 shared/ 共用型別
+### 15.3 shared/ 共用型別
 ```typescript
 // shared/types.ts — 前後端共用型別從這裡 import
 export type * from "../drizzle/schema";
@@ -580,8 +612,8 @@ export * from "./_core/errors";
 COOKIE_NAME = "app_session_id"
 ```
 
-### 14.4 server/_core/ 目錄
-**勿隨意修改**，除非在擴展基礎設施。包含：
+### 15.4 server/_core/ 目錄
+**勿隨意修改**，除非擴展基礎設施：
 - `env.ts` — 所有環境變數統一讀取
 - `trpc.ts` — tRPC 初始化與 procedure 定義
 - `context.ts` — 認證上下文
@@ -590,7 +622,7 @@ COOKIE_NAME = "app_session_id"
 
 ---
 
-## 十五、SEO 架構
+## 十六、SEO 架構
 
 每個頁面透過 hooks 動態注入 JSON-LD：
 
@@ -604,7 +636,7 @@ COOKIE_NAME = "app_session_id"
 
 ---
 
-## 十六、測試
+## 十七、測試
 
 ```
 server/admin.test.ts          — 用戶管理
@@ -623,119 +655,144 @@ server/storage.r2.test.ts     — R2 圖片上傳
 
 ---
 
-## 十七、已知問題與技術債
-
-### ✅ 已修復（2026-04-05）
-1. **大永 `dy_districts` 不在 schema.ts** → 已加入，migration: `0020_add_dy_districts.sql`
-2. **TiDB SSL 連線失敗** → `server/db.ts` 改用 `mysql2/promise` 手動解析 URL + SSL
-3. **大永訂單 `unitPrice` 型別錯誤** → `DayoneOrders.tsx` 加入 `Number()` 轉型
-
-### 🔴 高優先級（待處理）
-4. **大永 ERP 其餘 12 張 `dy_` 表不在 schema.ts** — 以 raw SQL 操作，是技術債。修復方式：逐一在 `drizzle/schema.ts` 補上表定義並執行 migration。
-
-### 🟡 中優先級
-5. **韓式飯捲菜單圖打包在 Railway** — `client/public/images/menu/korean-roll/` 有大量圖片，建議批次上傳到 R2 改用 CDN URL。
-6. **密碼重設郵件尚未實作** — `requestPasswordReset` 目前只 `console.log` 重設連結，應串接 nodemailer。
-
----
-
 ## 十八、每次開發前必做的確認清單
 
-- [ ] **git pull origin main 先拉最新程式碼** — 再開始任何工作
-- [ ] **git status 確認工作目錄狀態** — 確認沒有意外的 deleted 或 modified 檔案再 commit
-- [ ] **git push 只用精準的 git add 檔案名稱** — 絕不用 `git add -A` 或 `git add .`
-- [ ] **資料查詢帶 tenantId** — 勿漏掉租戶隔離
-- [ ] **圖片上傳走 `trpc.storage.uploadImage`** — 底層是 `server/storage.ts`（R2），使用 Base64 傳送
-- [ ] **R2 環境變數使用標準命名** — `R2_ACCESS_KEY_ID`（不是 `R2_ACCESS_KEY`）
-- [ ] **密碼欄位命名** — 登入 `pwd`、重設 `newPwd`（Cloudflare WAF 限制）
-- [ ] **購物車狀態** — 用 Zustand `useCartStore`，不是 tRPC
-- [ ] **司機路由** — `/driver/`，不是 `/dayone/driver/`
-- [ ] **GitHub 推送** — `git push user_github main`，不是 `origin`
-- [ ] **勿修改 `server/_core/`** — 除非擴充基礎設施
-- [ ] **大永 ERP raw SQL 表** — 不在 Drizzle ORM，需用 `(db as any).$client.execute(...)` 操作
-- [ ] **新增 Drizzle Schema** — 必須執行 `pnpm db:push` 生成並執行 migration
-- [ ] **posts 表 publishTargets** — TiDB 不支援 JSON 欄位預設值，應用層必須提供（預設 `["brand"]`）
+- [ ] `git pull origin main` → 先拉最新程式碼
+- [ ] `git status` → 確認工作目錄狀態
+- [ ] 每次 commit 只用 `git add 指定檔案`，**絕不用 `git add -A`**
+- [ ] 所有 DB 查詢帶 `tenantId`
+- [ ] 圖片上傳走 `trpc.storage.uploadImage`
+- [ ] R2 環境變數用 `R2_ACCESS_KEY_ID`（不是 `R2_ACCESS_KEY`）
+- [ ] 密碼欄位：登入 `pwd`、重設 `newPwd`
+- [ ] 司機路由是 `/driver/`，不是 `/dayone/driver/`
+- [ ] **勿修改 `server/_core/`**（除非整體基礎設施）
+- [ ] 大永 raw SQL 用 `(db as any).$client.execute(...)`
+- [ ] Schema 變更後執行 `pnpm db:push`
+- [ ] `pnpm run build` 零錯誤才能 push
+- [ ] 兩台電腦（家裡/公司）開始前都要先 `git pull`
+- [ ] 每次任務結束 Claude Code 執行 `/clear`
 
 ---
 
-## 十九、Manus / Claude Code 分工說明
+## 十九、已知問題與技術債
 
-| 情境 | 建議工具 |
-|------|---------|
-| 閱讀 / 修改現有程式碼 | Claude Code（直接讀寫） |
-| 大型新功能開發 | Manus（有 sandbox 環境、可跑測試） |
-| 部署到 Railway | GitHub push → Railway 自動觸發 |
-| 資料庫 migration | `pnpm db:push`（本地或 Manus sandbox） |
-| R2 批次上傳 | `scripts/r2-upload-and-tidb-write.mjs` |
-| 測試驗證 | `pnpm test`（58/58 應全部通過） |
+### ✅ 已修復
+1. 大永 `dy_districts` 不在 schema → 已加入，migration: `0020_add_dy_districts.sql`
+2. TiDB SSL 連線失敗 → `server/db.ts` 改用 `mysql2/promise` 手動解析 URL + SSL
+3. Google Maps Forge Proxy 問題 → 改用 `VITE_GOOGLE_MAPS_API_KEY` 直接引用
+4. LINE@ 接單 JSON 格式問題 → 改用 Data Structure 模式 + 後端清洗
+5. `dy_orders` 缺少 `orderSource` 欄位 → 已 ALTER TABLE 新增
+6. 大永訂單 `unitPrice` 型別錯誤 → `DayoneOrders.tsx` 加入 `Number()` 轉型
 
----
+### 🔴 高優先級（待處理）
+7. **大永 ERP 12 張 `dy_` 表不在 schema.ts** — 技術債，暫以 raw SQL 操作
+8. **`dy_customers` 缺少 `lineUserId` 欄位** — LIFF 身份綁定需要此欄位
 
-## 二十、商業願景與 SaaS 策略
-
-這個系統的終極目標是成為「台灣餐飲/食品批發業的 SaaS 平台」。
-
-### 核心商業邏輯：
-- **tenantId=1**：宇聯國際（來點什麼餐飲連鎖，自用）
-- **tenantId=2**：大永蛋品（雞蛋批發配送，付費客戶，開發費 20-40 萬 + 月租 3,000-8,000）
-- **tenantId=3+**：未來其他食品批發商（蔬菜、飲料、肉品等）
-
-### 為什麼要做多租戶：
-- 同一套程式碼服務所有客戶，邊際成本接近零
-- 每個客戶的資料完全隔離（tenantId 隔離）
-- 功能用 tenant_modules 開關，不需要重寫程式碼
-- 大永蛋品做完的功能，改顏色和細節就能賣給下一個批發商
-- **這就是為什麼所有程式碼絕對禁止 hardcode tenantId**
+### 🟡 中優先級
+9. 韓式飯捲菜單圖打包在 Railway — 應批次上傳到 R2 改用 CDN URL
+10. 密碼重設郵件尚未實作 — 目前只 `console.log` 重設連結
 
 ---
 
-## 二十一、開發路線圖（依優先順序）
+## 二十、開發路線圖（依優先順序）
 
-### 階段 A（現在，大永蛋品上線）：
-- 修復現有 5 個基礎 Bug
-- 派車單（出貨單）數位化 + 列印
-- LINE@ 接單整合（用 Make Webhook，不寫 LINE SDK）
-- 積欠款提醒（司機頁面）
-- 帳務管理頁面（月結對帳）
+### 階段 A（大永蛋品上線）→ 進行中
+- ✅ 大永後台基礎（客戶、訂單、庫存、進貨、行政區、司機）
+- ✅ 司機手機工作站（/driver）
+- ✅ 電子簽收（DriverSign.tsx）
+- ✅ 派車單打印（DeliveryNote.tsx）
+- ✅ SuperAdminModules 模組開關控制台
+- ✅ Google Maps 修復
+- ✅ LINE@ 接單整合（Make → Gemini → 後端 → LINE Reply）
+- ⏳ **LIFF 客戶下單（最高優先，下一個任務）**
+- ⏳ 帳務管理（應收應付、月結對帳）
+- ⏳ 積欠款提醒（司機配送時顯示）
 
-### 階段 B（大永穩定後，宇聯 ERP）：
-- 庫存管理（食材盤點、低庫存警報）—— 最痛的問題
-- 排班系統（取代 Excel 紙本）
-- 門市日報系統（整合現有 Make 自動報表）
-- 異常警報中心（整合以上所有警報）
+### 階段 B（大永穩定後，宇聯 ERP）
+- 庫存管理、排班系統、門市日報、異常警報中心
 
-### 階段 C（宇聯 ERP 完成後）：
-- 採購物流系統
-- 財務報表
-- 人資薪資
+### 階段 C
+- 採購物流、財務報表、人資薪資
 
-### 階段 D（SaaS 化）：
-- 多租戶管理介面完善
-- 計費系統
-- 白牌客製化（每個客戶可以改 logo 和顏色）
+### 階段 D（SaaS 化）
+- 多租戶管理完善、計費系統、白牌客製化
 
 ---
 
-## 二十二、大永蛋品功能清單（對應紙本作業數位化）
+## 二十一、下一個任務（LIFF 客戶下單）
 
-### 已完成：
-- 後台管理（`/dayone`）：客戶、訂單、庫存、進貨、行政區、司機管理
-- 司機手機工作站（`/driver`）：今日路線、電子簽收、現金收款、工作日誌
+### 架構
+```
+客戶點 LINE 選單
+→ 開啟 LIFF 網頁（/liff/order）
+→ 系統用 lineUserId 自動識別客戶身份
+→ 客戶選擇品項和數量
+→ 送出
+→ 後端寫入 dy_orders（orderSource = 'liff'）
+→ LINE 回覆確認訊息
+```
 
-### 待開發：
-- 派車單列印（對應現有三聯單格式，含前箱/入箱/回箱/餘箱）
-- LINE@ 自動接單（用 Make Webhook 整合）
-- 積欠款提醒（司機配送時顯示客戶欠款）
-- 帳務管理（應收應付、月結對帳）
-- 進出貨日報表（對應現有紙本矩陣格式）
+### 需要做的事
+1. `dy_customers` 加 `lineUserId VARCHAR(50)` 欄位
+2. 前端新增 `/liff/order` 頁面（手機優化，從 dy_products 撈品項）
+3. 後端新增 `POST /api/dayone/liff-order`（用 lineUserId 查客戶）
+4. LINE Developers 建立 LIFF（取回 LIFF ID）
+5. LINE 選單設定入口連結
 
-### 大永蛋品聯絡資訊：
-- **聯絡人**：洪靖博（蛋博），0980190857，dayoneegg@gmail.com
-- **地址**：台中市西屯區西林巷 63-18 號
-- **主要業務**：雞蛋批發配送，台中地區，約 28 個行政區，D1/D2 兩條配送路線
+### 第一次給 Claude Code 的指令
+```
+請先讀 CLAUDE.md。
+
+任務：調查（不要修改任何東西）。
+
+1. 執行 SQL：SHOW COLUMNS FROM dy_customers;
+   確認有沒有 lineUserId 欄位
+
+2. 執行 SQL：SELECT id, name, price, isActive FROM dy_products WHERE tenantId = 2 AND isActive = 1 LIMIT 20;
+   回報結果
+
+3. 列出 client/src/pages/dayone/ 目錄所有檔案
+
+4. 不要做任何東西，只回報
+```
 
 ---
 
-*文件版本：CLAUDE.md v1.1*
-*核對時間：2026-04-05*
+## 二十二、大永蛋品業務背景
+
+- 聯絡人：洪靖博（蛋博），0980190857，dayoneegg@gmail.com
+- 地址：台中市西屯區西林巷 63-18 號
+- 業務：雞蛋批發配送，台中地區，約 28 個行政區，D1/D2 兩條配送路線
+- tenantId = 2
+- 蛋品 SKU：白大箱、白小箱、白紙、液白、液紙、粉蛋、紅蛋、液體蛋、破蛋、洗選白帶裝、洗選白袋裝、洗選白盒裝、A液紙、鹹蛋、鹹蛋、皮蛋、水皮蛋
+
+---
+
+## 二十三、分業客戶
+
+- tenantId=1：宇聯國際（來點什麼餐飲連鎖，自用）
+- tenantId=2：大永蛋品（雞蛋批發，付費客戶，開發費 20-40 萬 + 月租 3,000-8,000）
+- tenantId=3+：未來其他食品批發商
+
+大永做完的功能，改顏色和細節就能賣給下一個批發商。透過模組授權接近零邊際成本。
+
+---
+
+## 二十四、踩坑紀錄（避免再踩）
+
+- `git add -A` 絕對不能用
+- 兩台電腦要先 pull，不然有衝突
+- Procedure 參數名稱要對（DeliveryNote bug：前端傳 orderId，後端要 id）
+- Gemini REST API 對免費帳號有模型限制，Make 內建模組才能正常使用
+- Make JSON string 模式無法處理換行符號，改用 Data structure 模式
+- `dy_orders` 欄位名稱是 `totalAmount` 不是 `total`
+- `dy_orders.customerId` 是 NOT NULL，找不到客戶傳 0 不傳 null
+- LINE Reply 由後端直接呼叫（用 LINE_CHANNEL_ACCESS_TOKEN），不經過 Make
+- TiDB 不支援 `ADD COLUMN IF NOT EXISTS`
+
+---
+
+*文件版本：CLAUDE.md v2.0*
+*核對時間：2026-04-06*
+*核對 commit：fb02268*
 *核對來源：schema.ts / routers.ts / App.tsx / dayone/*.ts / package.json / env.ts / storage.ts*
