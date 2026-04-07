@@ -75,7 +75,7 @@ pnpm db:push      # 生成並執行 Drizzle migration
 ## 六、已知問題 & 技術債
 
 ### 🔴 高優先（待處理）
-- **posts migration 未執行**：`scheduledAt` / `category` 欄位 schema 已加，前端已就緒，TiDB 尚未 ALTER TABLE（Railway shell 執行）
+- ✅ posts migration 已完成（2026-04-07，本機直連 TiDB 執行）
 - **大永 12 張 dy_ 表不在 schema.ts** — 技術債，raw SQL 操作
 - **`dy_customers` 缺 `lineUserId` 欄位** — LIFF 身份綁定用
 
@@ -105,7 +105,7 @@ pnpm db:push      # 生成並執行 Drizzle migration
 - ✅ posts 表新增 scheduledAt / category（migration SQL 已生成，待 Railway 執行）
 - ✅ 後端新增 publishScheduled procedure + 每分鐘排程器
 - ✅ getPublishedPosts 支援分頁（page/pageSize）和分類篩選
-- ⏳ **Railway 執行 migration SQL**（scheduledAt、category 欄位）— 前端已就緒，等 DB
+- ✅ posts 表 migration 已執行（scheduledAt、category 欄位已存在於 TiDB）
 - ✅ ContentEditor.tsx：category 下拉 + scheduledAt 日期時間選擇器
 - ✅ ContentManagement.tsx：分類篩選 tab + 分類標籤
 - ✅ BrandNews.tsx：分頁、圖片 16:9、分類篩選
@@ -143,14 +143,11 @@ pnpm db:push      # 生成並執行 Drizzle migration
 
 ---
 
-## 九、下一個任務（Railway migration + LIFF）
+## 九、下一個任務（LIFF 客戶下單）
 
-### 最緊急：Railway 執行 migration
-在 Railway shell 執行以下 SQL（建議先 `SHOW COLUMNS FROM posts;` 確認尚未有這兩個欄位）：
-```sql
-ALTER TABLE posts ADD scheduledAt timestamp NULL;
-ALTER TABLE posts ADD category varchar(50) NULL;
-```
+### Migration 補充說明
+- `scheduledAt` / `category` 已於 2026-04-07 直接用本機 `node scripts/migrate-posts-columns.mjs` 執行
+- 未來若需要執行 migration，不需要 Railway shell，直接在本機跑即可（DATABASE_URL 在 .env 裡有）
 
 ### 下一個開發任務：LIFF 客戶下單
 見 CLAUDE_REFERENCE.md R10 節。
