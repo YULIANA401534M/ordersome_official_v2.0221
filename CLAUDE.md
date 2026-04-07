@@ -75,8 +75,7 @@ pnpm db:push      # 生成並執行 Drizzle migration
 ## 六、已知問題 & 技術債
 
 ### 🔴 高優先（待處理）
-- **BrandNews / CorporateNews 前端**：`getPublishedPosts` 已改回傳 `{ posts, total, ... }`，前端仍用舊格式 `.map()` → 會 crash，需改為 `data?.posts?.map()`
-- **posts migration 未執行**：`scheduledAt` / `category` 欄位 schema 已加，TiDB 尚未 ALTER TABLE
+- **posts migration 未執行**：`scheduledAt` / `category` 欄位 schema 已加，前端已就緒，TiDB 尚未 ALTER TABLE（Railway shell 執行）
 - **大永 12 張 dy_ 表不在 schema.ts** — 技術債，raw SQL 操作
 - **`dy_customers` 缺 `lineUserId` 欄位** — LIFF 身份綁定用
 
@@ -106,12 +105,12 @@ pnpm db:push      # 生成並執行 Drizzle migration
 - ✅ posts 表新增 scheduledAt / category（migration SQL 已生成，待 Railway 執行）
 - ✅ 後端新增 publishScheduled procedure + 每分鐘排程器
 - ✅ getPublishedPosts 支援分頁（page/pageSize）和分類篩選
-- ⏳ **Railway 執行 migration SQL**（scheduledAt、category 欄位）
-- ⏳ ContentEditor.tsx：category 下拉 + scheduledAt 日期時間選擇器
-- ⏳ ContentManagement.tsx：分類篩選、顯示分類標籤
-- ⏳ BrandNews.tsx：分頁、雙模式（卡片/清單）、圖片 16:9、分類篩選
-- ⏳ CorporateNews.tsx：同上
-- ⏳ AdminOrders.tsx：訂單編號後紫色標籤文字改中文
+- ⏳ **Railway 執行 migration SQL**（scheduledAt、category 欄位）— 前端已就緒，等 DB
+- ✅ ContentEditor.tsx：category 下拉 + scheduledAt 日期時間選擇器
+- ✅ ContentManagement.tsx：分類篩選 tab + 分類標籤
+- ✅ BrandNews.tsx：分頁、圖片 16:9、分類篩選
+- ✅ CorporateNews.tsx：同上
+- ✅ AdminOrders.tsx：紫色標籤文字改用 ORDER_SOURCE_LABELS 中文顯示
 
 ### 階段 B — 宇聯 ERP（大永穩定後）
 - 庫存管理、排班、門市日報、異常警報
@@ -125,7 +124,7 @@ pnpm db:push      # 生成並執行 Drizzle migration
 
 | 檔案 | 變更摘要 |
 |------|---------|
-| `AdminOrders.tsx` | 時間格式含時分、來源篩選中文、super_admin 刪除按鈕、refunded 狀態 |
+| `AdminOrders.tsx` | 時間格式含時分、來源篩選中文、super_admin 刪除按鈕、紫色標籤改中文 |
 | `AdminDashboard.tsx` | 卡片從 4 個→6 個，grid 改 `grid-cols-2 md:grid-cols-3` |
 | `server/db.ts` | 新增 `deleteOrder(id, tenantId)`（先刪 items 再刪 orders） |
 | `server/routers.ts` | 新增 `order.delete`（adminProcedure） |
@@ -134,47 +133,27 @@ pnpm db:push      # 生成並執行 Drizzle migration
 | `drizzle/schema.ts` | posts 表新增 scheduledAt / category，migration: 0020_medical_forge.sql |
 | `server/routers/content.ts` | getPublishedPosts 改分頁格式、新增 publishScheduled |
 | `server/_core/index.ts` | 新增每分鐘排程器（自動發布到期草稿） |
+| `ContentEditor.tsx` | 新增 category 下拉 + scheduledAt datetime-local 選擇器 |
+| `ContentManagement.tsx` | 分類篩選 tab + 卡片顯示分類標籤 |
+| `BrandNews.tsx` | 分頁、16:9 圖片、分類篩選 |
+| `CorporateNews.tsx` | 同上 |
 
-**⚠️ 本機待 push**：drizzle/schema.ts / server/routers/content.ts / server/_core/index.ts / drizzle/0020_medical_forge.sql
+**⚠️ 待處理**：Railway shell 執行 `ALTER TABLE posts ADD scheduledAt timestamp; ALTER TABLE posts ADD category varchar(50);`
+**⚠️ 本機未 push**：drizzle/schema.ts / server/routers/content.ts / server/_core/index.ts / drizzle/0020_medical_forge.sql
 
 ---
 
-## 九、下一個任務（前端 CMS / 新聞頁升級）
+## 九、下一個任務（Railway migration + LIFF）
 
-### 待辦清單（依優先順序）
-1. ⚠️ **Railway shell 執行**：`ALTER TABLE posts ADD scheduledAt timestamp; ALTER TABLE posts ADD category varchar(50);`
-2. `ContentEditor.tsx`：新增 `category` select（餐飲新聞/加盟快報/品牌動態/集團公告）+ `scheduledAt` datetime-local
-3. `ContentManagement.tsx`：分類篩選 tab/下拉、列表顯示分類標籤
-4. `BrandNews.tsx`：分頁 + 雙模式 + 圖片 16:9 + 分類篩選
-5. `CorporateNews.tsx`：同上
-6. `AdminOrders.tsx`：紫色標籤文字改中文
-
-### 給 Claude Code 的指令（直接複製貼上）
+### 最緊急：Railway 執行 migration
+在 Railway shell 執行以下 SQL（建議先 `SHOW COLUMNS FROM posts;` 確認尚未有這兩個欄位）：
+```sql
+ALTER TABLE posts ADD scheduledAt timestamp NULL;
+ALTER TABLE posts ADD category varchar(50) NULL;
 ```
-請先讀 CLAUDE.md。開始前 git pull origin main。
 
-任務：升級前端 CMS 和新聞頁，配合後端已更新的功能。
-
-【背景】
-- getPublishedPosts 回傳格式已改為 { posts, total, page, pageSize, totalPages }
-- posts 表已有 category / scheduledAt 欄位（migration 需先在 Railway 執行）
-- 前端目前仍用舊格式 newsItems?.map(...)，會直接 crash
-
-【任務一】ContentEditor.tsx
-- 新增 category select（選項：餐飲新聞/加盟快報/品牌動態/集團公告/空白）
-- 新增 scheduledAt datetime-local input（選填）
-- createPost / updatePost mutation 帶入這兩個欄位
-
-【任務二】BrandNews.tsx
-- useQuery 改接 { posts, total, totalPages }
-- 改用 data?.posts?.map()
-- 加入分頁（page state，prev/next 按鈕，顯示「第 X / Y 頁」）
-- 圖片改為 16:9 aspect-ratio
-
-【任務三】CorporateNews.tsx（同任務二）
-
-完成後 pnpm run build 零錯誤，不要 push。
-```
+### 下一個開發任務：LIFF 客戶下單
+見 CLAUDE_REFERENCE.md R10 節。
 
 ---
 
