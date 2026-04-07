@@ -117,6 +117,22 @@ export const dyOrdersRouter = router({
       return { success: true };
     }),
 
+  getLiffOrders: dyAdminProcedure
+    .query(async () => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
+      const [rows] = await (db as any).$client.execute(
+        `SELECT o.id as orderId, o.orderNo, o.createdAt, o.totalAmount, o.status,
+                c.name as customerName, c.phone as customerPhone
+         FROM dy_orders o
+         JOIN dy_customers c ON o.customerId = c.id
+         WHERE o.orderSource = 'liff' AND o.tenantId = 90004
+         ORDER BY o.createdAt DESC`,
+        []
+      );
+      return rows as any[];
+    }),
+
   // Driver: update delivery result (signature, photo, boxes)
   confirmDelivery: protectedProcedure
     .input(z.object({

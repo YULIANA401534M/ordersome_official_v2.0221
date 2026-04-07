@@ -10,6 +10,7 @@ import {
   Building2,
   LogOut,
   ChevronLeft,
+  Smartphone,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ const NAV_ITEMS = [
   { icon: MapPin, label: "行政區管理", path: "/dayone/districts" },
   { icon: Building2, label: "供應商管理", path: "/dayone/suppliers" },
   { icon: BarChart3, label: "報表", path: "/dayone/reports" },
+  { icon: Smartphone, label: "LIFF訂單", path: "/dayone/liff-orders" },
 ];
 
 export default function DayoneLayout({ children }: { children: React.ReactNode }) {
