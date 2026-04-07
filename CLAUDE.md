@@ -145,9 +145,11 @@ pnpm db:push      # 生成並執行 Drizzle migration
 
 ## 九、下一個任務（LIFF 客戶下單）
 
-### Migration 補充說明
-- `scheduledAt` / `category` 已於 2026-04-07 直接用本機 `node scripts/migrate-posts-columns.mjs` 執行
-- 未來若需要執行 migration，不需要 Railway shell，直接在本機跑即可（DATABASE_URL 在 .env 裡有）
+### Migration 做法（重要）
+- Railway 新版介面**已移除 Shell**，不能在 Railway 上直接執行 SQL
+- 正確做法：在本機 VS Code 終端機執行 `node scripts/migrate-posts-columns.mjs`
+- `.env` 裡有 `DATABASE_URL` 直連 TiDB，本機可以直接操作生產資料庫
+- 改完 schema.ts 後，寫一個 `scripts/migrate-xxx.mjs` 腳本，在本機跑即可
 
 ### 下一個開發任務：LIFF 客戶下單
 見 CLAUDE_REFERENCE.md R10 節。
@@ -165,7 +167,7 @@ pnpm db:push      # 生成並執行 Drizzle migration
 - `dy_orders.customerId` 是 NOT NULL，找不到客戶傳 0 不傳 null
 - LINE Reply 由後端直接呼叫（用 LINE_CHANNEL_ACCESS_TOKEN），不經過 Make
 - TiDB 不支援 `ADD COLUMN IF NOT EXISTS`
-- `drizzle-kit migrate` 本機無法連 TiDB（SSL profile 型別錯誤），需在 Railway shell 執行
+- `drizzle-kit migrate` 本機無法連 TiDB（SSL profile 型別錯誤）；Railway 新版介面也已移除 Shell → 正確做法：寫 `scripts/migrate-xxx.mjs` 在本機用 DATABASE_URL 直連執行
 - `getPublishedPosts` 回傳格式已改為分頁物件 `{ posts, total, ... }`，前端用 `.posts` 取陣列
 - `DayoneLayout` 元件要加入 git（untracked 檔案 Railway build 找不到）
 - Tiptap `RichTextEditor` 的 `content` prop 只在初始化時讀取，需在 useEffect 裡用 `editor.commands.setContent()` 更新
