@@ -16,16 +16,29 @@ import { router, publicProcedure } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "./db";
 
-const DAYONE_TENANT_ID = 90004;
+// 租戶對應表：tenant slug → tenantId
+const TENANT_MAP: Record<string, number> = {
+  dayone: 90004,
+};
+
+const DEFAULT_TENANT_ID = 90004;
+
+function resolveTenantId(tenant?: string): number {
+  if (!tenant) return DEFAULT_TENANT_ID;
+  return TENANT_MAP[tenant] ?? DEFAULT_TENANT_ID;
+}
 
 export const liffRouter = router({
-  // 公開查詢：取得大永蛋品所有上架商品（供 LIFF 下單頁使用）
-  getProducts: publicProcedure.query(async () => {
+  // 公開查詢：取得指定租戶所有上架商品（供 LIFF 下單頁使用）
+  getProducts: publicProcedure
+    .input(z.object({ tenant: z.string().optional() }))
+    .query(async ({ input }) => {
+    const tenantId = resolveTenantId(input.tenant);
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
     const [rows] = await (db as any).$client.execute(
       `SELECT id, code, name, unit, defaultPrice FROM dy_products WHERE tenantId = ? AND isActive = 1 ORDER BY code`,
-      [DAYONE_TENANT_ID]
+      [tenantId]
     );
     return (rows as any[]).map((r) => ({
       id: r.id as number,
@@ -40,6 +53,7 @@ export const liffRouter = router({
     .input(
       z.object({
         lineId: z.string().min(1),
+        tenant: z.string().optional(),
         items: z.array(
           z.object({
             productId: z.number().int().positive(),
@@ -49,6 +63,7 @@ export const liffRouter = router({
       })
     )
     .mutation(async ({ input }) => {
+      const tenantId = resolveTenantId(input.tenant);
       const db = await getDb();
       if (!db) {
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
@@ -58,7 +73,7 @@ export const liffRouter = router({
       // 1. 查客戶（用 lineId）
       const [customerRows] = await client.execute(
         `SELECT id, name FROM dy_customers WHERE tenantId = ? AND lineId = ? AND status = 'active' LIMIT 1`,
-        [DAYONE_TENANT_ID, input.lineId]
+        [tenantId, input.lineId]
       );
       const customer = (customerRows as any[])[0];
       if (!customer) {
@@ -82,7 +97,7 @@ export const liffRouter = router({
           `SELECT price FROM dy_customer_prices
            WHERE tenantId = ? AND customerId = ? AND productId = ?
            ORDER BY effectiveDate DESC LIMIT 1`,
-          [DAYONE_TENANT_ID, customerId, item.productId]
+          [tenantId, customerId, item.productId]
         );
         const priceRow = (priceRows as any[])[0];
         const unitPrice: number | null = priceRow ? Number(priceRow.price) : null;
@@ -107,7 +122,7 @@ export const liffRouter = router({
            (tenantId, orderNo, customerId, status, orderSource, totalAmount, paidAmount, paymentStatus,
             prevBoxes, inBoxes, returnBoxes, remainBoxes, createdAt, updatedAt)
          VALUES (?, ?, ?, 'pending', 'liff', ?, 0, 'unpaid', 0, 0, 0, 0, NOW(), NOW())`,
-        [DAYONE_TENANT_ID, orderNo, customerId, totalAmount]
+        [tenantId, orderNo, customerId, totalAmount]
       );
       const orderId: number = (orderResult as any).insertId;
 
@@ -118,7 +133,7 @@ export const liffRouter = router({
              (tenantId, orderId, productId, qty, unitPrice, subtotal, returnQty)
            VALUES (?, ?, ?, ?, ?, ?, 0)`,
           [
-            DAYONE_TENANT_ID,
+            tenantId,
             orderId,
             item.productId,
             item.qty,

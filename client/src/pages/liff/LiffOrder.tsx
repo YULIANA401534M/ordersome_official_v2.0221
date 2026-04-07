@@ -1,5 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import liff from "@line/liff";
 import { trpc } from "@/lib/trpc";
+
+// 租戶對應表：?tenant=xxx → { liffId, brandName }
+const TENANT_CONFIG: Record<string, { liffId: string; brandName: string }> = {
+  dayone: { liffId: "2009700774-rWyJ27md", brandName: "大永蛋品" },
+};
+const DEFAULT_CONFIG = { liffId: "2009700774-rWyJ27md", brandName: "快速下單" };
+
+function getTenantConfig(slug: string | null) {
+  if (!slug) return { ...DEFAULT_CONFIG, slug: null };
+  return { ...(TENANT_CONFIG[slug] ?? DEFAULT_CONFIG), slug };
+}
 
 // ---------- 型別 ----------
 interface CartItem {
@@ -98,17 +110,63 @@ function SuccessScreen({ orderNo }: { orderNo: string }) {
   );
 }
 
+// ---------- Loading 畫面 ----------
+function LoadingScreen() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 gap-4">
+      <div className="w-10 h-10 border-4 border-amber-400 border-t-transparent rounded-full animate-spin" />
+      <p className="text-sm text-gray-500">驗證身份中...</p>
+    </div>
+  );
+}
+
 // ---------- 主頁面 ----------
 export default function LiffOrder() {
-  // 從 URL query string 取得 lineId
-  const params = new URLSearchParams(window.location.search);
-  const lineId = params.get("lineId") ?? "";
+  const tenantSlug = new URLSearchParams(window.location.search).get("tenant");
+  const config = getTenantConfig(tenantSlug);
+
+  const [lineId, setLineId] = useState<string>("");
+  const [liffReady, setLiffReady] = useState(false);
+  const [liffError, setLiffError] = useState<string | null>(null);
 
   const [cart, setCart] = useState<Record<number, number>>({});
   const [submittedOrderNo, setSubmittedOrderNo] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const { data: products, isLoading, isError } = trpc.dayone.liff.getProducts.useQuery();
+  useEffect(() => {
+    liff
+      .init({ liffId: config.liffId })
+      .then(() => {
+        if (!liff.isLoggedIn()) {
+          liff.login();
+          return;
+        }
+        return liff.getProfile().then((profile) => {
+          setLineId(profile.userId);
+          setLiffReady(true);
+        });
+      })
+      .catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        setLiffError(`LIFF 初始化失敗：${msg}`);
+      });
+  }, []);
+
+  if (liffError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-6 text-center">
+        <p className="text-red-500 text-sm">{liffError}</p>
+      </div>
+    );
+  }
+
+  if (!liffReady) {
+    return <LoadingScreen />;
+  }
+
+  const { data: products, isLoading, isError } = trpc.dayone.liff.getProducts.useQuery({
+    tenant: config.slug ?? undefined,
+  });
   const createOrder = trpc.dayone.liff.createOrder.useMutation({
     onSuccess(data) {
       setSubmittedOrderNo(data.orderNo);
@@ -138,10 +196,6 @@ export default function LiffOrder() {
   }
 
   function handleSubmit() {
-    if (!lineId) {
-      setErrorMsg("缺少 LINE 身份識別（lineId），請從 LINE 選單重新進入");
-      return;
-    }
     const items = Object.entries(cart)
       .filter(([, q]) => q > 0)
       .map(([id, qty]) => ({ productId: Number(id), qty }));
@@ -150,7 +204,7 @@ export default function LiffOrder() {
       return;
     }
     setErrorMsg(null);
-    createOrder.mutate({ lineId, items });
+    createOrder.mutate({ lineId, tenant: config.slug ?? undefined, items });
   }
 
   return (
@@ -159,18 +213,13 @@ export default function LiffOrder() {
       <div className="bg-white px-5 pt-8 pb-5 border-b border-gray-100 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-amber-400 flex items-center justify-center shrink-0">
-            <span className="text-white font-black text-lg leading-none">大</span>
+            <span className="text-white font-black text-lg leading-none">{config.brandName.charAt(0)}</span>
           </div>
           <div>
-            <h1 className="text-xl font-black text-gray-900 leading-tight">大永蛋品</h1>
+            <h1 className="text-xl font-black text-gray-900 leading-tight">{config.brandName}</h1>
             <p className="text-xs text-gray-400 tracking-widest">快速下單</p>
           </div>
         </div>
-        {!lineId && (
-          <div className="mt-3 px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-xs text-red-600">
-            ⚠️ 未帶入 lineId，請從 LINE 選單重新進入
-          </div>
-        )}
       </div>
 
       {/* ===== 商品列表 ===== */}
