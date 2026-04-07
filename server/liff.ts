@@ -117,12 +117,15 @@ export const liffRouter = router({
 
       // 4. 寫入 dy_orders
       const orderNo = `LIFF${Date.now()}`;
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const deliveryDate = tomorrow.toISOString().slice(0, 10);
       const [orderResult] = await client.execute(
         `INSERT INTO dy_orders
            (tenantId, orderNo, customerId, status, orderSource, totalAmount, paidAmount, paymentStatus,
-            prevBoxes, inBoxes, returnBoxes, remainBoxes, createdAt, updatedAt)
-         VALUES (?, ?, ?, 'pending', 'liff', ?, 0, 'unpaid', 0, 0, 0, 0, NOW(), NOW())`,
-        [tenantId, orderNo, customerId, totalAmount]
+            prevBoxes, inBoxes, returnBoxes, remainBoxes, deliveryDate, createdAt, updatedAt)
+         VALUES (?, ?, ?, 'pending', 'liff', ?, 0, 'unpaid', 0, 0, 0, 0, ?, NOW(), NOW())`,
+        [tenantId, orderNo, customerId, totalAmount, deliveryDate]
       );
       const orderId: number = (orderResult as any).insertId;
 
