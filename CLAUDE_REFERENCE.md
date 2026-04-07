@@ -126,7 +126,10 @@ ordersome_official_v2/
 | `/dashboard/checklist` | `DailyChecklist` |
 
 ### 大永 ERP（管理端）
-`/dayone` / `/dayone/orders` / `/dayone/customers` / `/dayone/drivers` / `/dayone/products` / `/dayone/inventory` / `/dayone/purchase` / `/dayone/districts` / `/dayone/reports` / `/dayone/suppliers`
+`/dayone` / `/dayone/orders` / `/dayone/customers` / `/dayone/drivers` / `/dayone/products` / `/dayone/inventory` / `/dayone/purchase` / `/dayone/districts` / `/dayone/reports` / `/dayone/suppliers` / `/dayone/liff-orders`
+
+### LIFF（LINE 前台）
+`/liff/order?tenant=dayone`
 
 ### ⚠️ 司機 App（`/driver/`，不是 `/dayone/driver/`）
 `/driver` / `/driver/today` / `/driver/orders` / `/driver/order/:id` / `/driver/pickup` / `/driver/done` / `/driver/worklog` / `/driver/profile`
@@ -225,7 +228,7 @@ Procedures: `uploadImage` / `uploadPdf`
 | `dayone.driver` | `getMyTodayOrders` / `updateOrderStatus` / `recordCashPayment` / `submitWorkLog` / `uploadSignature` / `getMyWorkLog` |
 | `dayone.drivers` | `list` / `upsert` / `myOrders` |
 | `dayone.inventory` | `list` / `adjust` / `setSafety` / `movements` |
-| `dayone.orders` | `list` / `getWithItems` / `create` / `updateStatus` / `confirmDelivery` |
+| `dayone.orders` | `list` / `getWithItems` / `create` / `updateStatus` / `confirmDelivery` / `getLiffOrders` |
 | `dayone.products` | `list` / `upsert` / `delete` |
 | `dayone.purchase` | `list` / `create` / `receive` / `suppliers` / `upsertSupplier` |
 | `dayone.reports` | `dailySummary` / `monthlyRevenue` / `topCustomers` / `inventoryAlerts` |
@@ -294,32 +297,34 @@ useCartStore().getTotalPrice() / .getTotalItems() / .getItemQuantity(id, specs)
 
 ---
 
-## R10、下一個任務（LIFF 客戶下單）
+## R10、LIFF 客戶下單（已完成）
 
 ### 架構
 ```
-客戶點 LINE 選單 → LIFF 網頁（/liff/order）→ lineUserId 識別身份
-→ 選品下單 → 後端寫入 dy_orders（orderSource='liff'）→ LINE 回覆確認
+客戶點 LINE 選單 → LIFF 網頁（/liff/order?tenant=dayone）→ lineUserId 識別身份
+→ 選品下單 → 後端寫入 dy_orders（orderSource='liff'）→ 大永後台查看（/dayone/liff-orders）
 ```
 
-### 需要做的事
-1. `dy_customers` 加 `lineUserId VARCHAR(50)` 欄位
-2. 前端新增 `/liff/order` 頁面（手機優化）
-3. 後端新增 `POST /api/dayone/liff-order`
-4. LINE Developers 建立 LIFF（取回 LIFF ID）
-5. LINE 選單設定入口連結
+### 多租戶擴充方式
+- **後端** `server/liff.ts`：`TENANT_MAP` 加一行 `newslug: tenantId`
+- **前端** `client/src/pages/liff/LiffOrder.tsx`：`TENANT_CONFIG` 加一行 `newslug: { liffId: "...", brandName: "..." }`
 
-### 給 Claude Code 的調查指令
+### LIFF ID
+- 現用：`2009700774-rWyJ27md`（測試用，建立在 Leo 的 LINE 後台）
+- ⚠️ 正式上線前：蛋博需用自己的 LINE 後台建立 LIFF，取得新 liffId，更新前端 `TENANT_CONFIG` 的 dayone.liffId
+
+### URL 格式
 ```
-請先讀 CLAUDE.md。
-
-任務：調查（不要修改任何東西）。
-
-1. 執行 SQL：SHOW COLUMNS FROM dy_customers;（確認有無 lineUserId 欄位）
-2. 執行 SQL：SELECT id, name, price, isActive FROM dy_products WHERE tenantId = 90004 AND isActive = 1 LIMIT 20;
-3. 列出 client/src/pages/dayone/ 目錄所有檔案
-4. 只回報，不要做任何修改
+/liff/order?tenant=dayone
 ```
+
+### 相關檔案
+| 檔案 | 說明 |
+|------|------|
+| `server/liff.ts` | LIFF tRPC router（getProducts / createOrder），多租戶 |
+| `client/src/pages/liff/LiffOrder.tsx` | LIFF 下單頁面，讀 ?tenant= query string |
+| `client/src/pages/dayone/DayoneLiffOrders.tsx` | 大永後台 LIFF 訂單查看頁 |
+| `server/routers/dayone/orders.ts` | getLiffOrders procedure |
 
 ---
 

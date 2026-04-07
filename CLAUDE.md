@@ -93,7 +93,7 @@ pnpm db:push      # 生成並執行 Drizzle migration
 - ✅ SuperAdminModules 模組開關
 - ✅ Google Maps 修復
 - ✅ LINE@ 接單整合（Make → Gemini → 後端 → LINE Reply）
-- ⏳ **LIFF 客戶下單（高優先）**
+- ✅ **LIFF 客戶下單**（多租戶，/liff/order?tenant=dayone）
 - ⏳ 帳務管理（應收應付、月結對帳）
 - ⏳ 積欠款提醒
 
@@ -120,7 +120,22 @@ pnpm db:push      # 生成並執行 Drizzle migration
 
 ---
 
-## 八、最近變更（2026-04-07）
+## 八、最近變更（2026-04-08）
+
+| 檔案 | 變更摘要 |
+|------|---------|
+| `server/liff.ts` | LIFF 下單 API，多租戶支援（TENANT_MAP：dayone→90004），getProducts/createOrder 接 tenant 參數 |
+| `client/src/pages/liff/LiffOrder.tsx` | LIFF 下單頁面，接 LINE SDK，從 ?tenant= 讀取租戶，多租戶 TENANT_CONFIG |
+| `client/src/pages/dayone/DayoneLiffOrders.tsx` | 大永後台 LIFF 訂單查看頁（新建），手機/桌面雙版型 |
+| `client/src/components/DayoneLayout.tsx` | 側邊選單新增「LIFF訂單」入口（/dayone/liff-orders） |
+| `client/src/App.tsx` | 新增 /dayone/liff-orders 路由 |
+| `server/routers/dayone/orders.ts` | 新增 getLiffOrders procedure（orderSource='liff', tenantId=90004） |
+
+**LIFF URL 格式**：`/liff/order?tenant=dayone`
+
+---
+
+## 八-B、舊變更紀錄（2026-04-07）
 
 | 檔案 | 變更摘要 |
 |------|---------|
@@ -138,12 +153,9 @@ pnpm db:push      # 生成並執行 Drizzle migration
 | `BrandNews.tsx` | 分頁、16:9 圖片、分類篩選 |
 | `CorporateNews.tsx` | 同上 |
 
-**⚠️ 待處理**：Railway shell 執行 `ALTER TABLE posts ADD scheduledAt timestamp; ALTER TABLE posts ADD category varchar(50);`
-**⚠️ 本機未 push**：drizzle/schema.ts / server/routers/content.ts / server/_core/index.ts / drizzle/0020_medical_forge.sql
-
 ---
 
-## 九、下一個任務（LIFF 客戶下單）
+## 九、下一個任務
 
 ### Migration 做法（重要）
 - Railway 新版介面**已移除 Shell**，不能在 Railway 上直接執行 SQL
@@ -151,8 +163,10 @@ pnpm db:push      # 生成並執行 Drizzle migration
 - `.env` 裡有 `DATABASE_URL` 直連 TiDB，本機可以直接操作生產資料庫
 - 改完 schema.ts 後，寫一個 `scripts/migrate-xxx.mjs` 腳本，在本機跑即可
 
-### 下一個開發任務：LIFF 客戶下單
-見 CLAUDE_REFERENCE.md R10 節。
+### 待處理任務
+- ⏳ 帳務管理（應收應付、月結對帳）
+- ⏳ 積欠款提醒
+- ⏳ LIFF 正式上線：蛋博用自己的 LINE 後台建立 LIFF，更新前端 `TENANT_CONFIG` 的 liffId
 
 ---
 
