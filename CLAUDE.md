@@ -1,6 +1,6 @@
 # CLAUDE.md — OrderSome 專案完整說明
 
-> 最後更新：2026-04-06 | 核對版本：commit fb02268
+> 最後更新：2026-04-07 | 核對版本：commit c853002（本機尚有未 push 的 content/schema 修改）
 > 適用對象：Claude Code、VS Code、任何接手的 AI 或開發者
 
 ---
@@ -381,7 +381,7 @@ Webhooks[1] → Filter(只處理文字訊息) → Google Gemini AI[7] → HTTP[5
 | `news` | 新聞 |
 | `menu_items` | 菜單 |
 | `contact_submissions` | 聯絡表單 |
-| `posts` | CMS 文章（publishTargets JSON 陣列） |
+| `posts` | CMS 文章（publishTargets JSON 陣列，新增 `scheduledAt` / `category` 欄位）<br>　└ `scheduledAt` timestamp — 排定發布時間，null = 無排程<br>　└ `category` varchar(50) — 文章分類（如：餐飲新聞、加盟快報） |
 | `franchise_inquiries` | 加盟詢問 |
 | `sop_categories` | SOP 分類 |
 | `sop_documents` | SOP 文件 |
@@ -447,7 +447,7 @@ Webhooks[1] → Filter(只處理文字訊息) → Google Gemini AI[7] → HTTP[5
 `list` / `add` / `updateQuantity` / `remove` / `clear`
 
 ### order（電商訂單）
-`list` / `listAll` / `getById` / `getByNumber` / `create` / `updateStatus`
+`list` / `listAll` / `getById` / `getByNumber` / `create` / `updateStatus` / `delete`（adminProcedure，先刪 order_items 再刪 orders）
 
 ### store（門市）
 `list` / `listAll` / `create` / `update` / `delete`
@@ -474,7 +474,16 @@ Webhooks[1] → Filter(只處理文字訊息) → Google Gemini AI[7] → HTTP[5
 `listUsers` / `updateUser` / `resetUserPassword` / `createUser` / `deleteUser`
 
 ### content（CMS 文章）
-`listPosts` / `getPublishedPosts` / `getPostBySlug` / `getPostById` / `createPost` / `updatePost`
+`listPosts` / `getPublishedPosts` / `getPostBySlug` / `getPostById` / `createPost` / `updatePost` / `deletePost` / `publishScheduled`
+
+**getPublishedPosts 回傳格式（已改為分頁）：**
+```typescript
+// input
+{ publishTarget?: "brand"|"corporate", category?: string, page?: number, pageSize?: number }
+// output（注意：不再直接回傳陣列，改為物件）
+{ posts: Post[], total: number, page: number, pageSize: number, totalPages: number }
+```
+⚠️ **前端呼叫 getPublishedPosts 的地方需更新**：BrandNews.tsx、CorporateNews.tsx 目前仍用舊格式（直接 `.map()`），新對話中需修改為 `.posts.map()`。
 
 ### storage（圖片/PDF 上傳）
 ```typescript
@@ -683,14 +692,20 @@ server/storage.r2.test.ts     — R2 圖片上傳
 4. LINE@ 接單 JSON 格式問題 → 改用 Data Structure 模式 + 後端清洗
 5. `dy_orders` 缺少 `orderSource` 欄位 → 已 ALTER TABLE 新增
 6. 大永訂單 `unitPrice` 型別錯誤 → `DayoneOrders.tsx` 加入 `Number()` 轉型
+7. `@/components/ui/alert-dialog` 缺失 → 已建立（來自 @radix-ui/react-alert-dialog）
+8. `uploadPdf` 用 Manus Forge storagePut（dev-only）→ 改為 `r2Put`（Cloudflare R2，生產可用）
+9. Tiptap 編輯器編輯既有文章時內容空白 → `RichTextEditor.tsx` 加入 `useEffect` 在 `editor.isEmpty` 時 `setContent`
+10. `AdminOrders` 建立時間無時分 → 改用 `toLocaleString` 含 hour/minute
 
 ### 🔴 高優先級（待處理）
-7. **大永 ERP 12 張 `dy_` 表不在 schema.ts** — 技術債，暫以 raw SQL 操作
-8. **`dy_customers` 缺少 `lineUserId` 欄位** — LIFF 身份綁定需要此欄位
+11. **大永 ERP 12 張 `dy_` 表不在 schema.ts** — 技術債，暫以 raw SQL 操作
+12. **`dy_customers` 缺少 `lineUserId` 欄位** — LIFF 身份綁定需要此欄位
+13. **BrandNews / CorporateNews 前端尚未更新分頁格式** — `getPublishedPosts` 已改回傳 `{ posts, total, ... }`，前端仍用舊格式 `.map()`，需改為 `data?.posts?.map()`，並加入分頁 UI
 
 ### 🟡 中優先級
-9. 韓式飯捲菜單圖打包在 Railway — 應批次上傳到 R2 改用 CDN URL
-10. 密碼重設郵件尚未實作 — 目前只 `console.log` 重設連結
+14. 韓式飯捲菜單圖打包在 Railway — 應批次上傳到 R2 改用 CDN URL
+15. 密碼重設郵件尚未實作 — 目前只 `console.log` 重設連結
+16. **posts 表新增 `scheduledAt` / `category` 欄位的 migration SQL 尚未在 TiDB 執行** — 本機 drizzle-kit SSL 無法連 TiDB，需 push 後在 Railway shell 執行或手動 ALTER TABLE
 
 ---
 
@@ -704,9 +719,28 @@ server/storage.r2.test.ts     — R2 圖片上傳
 - ✅ SuperAdminModules 模組開關控制台
 - ✅ Google Maps 修復
 - ✅ LINE@ 接單整合（Make → Gemini → 後端 → LINE Reply）
-- ⏳ **LIFF 客戶下單（最高優先，下一個任務）**
+- ⏳ **LIFF 客戶下單（高優先）**
 - ⏳ 帳務管理（應收應付、月結對帳）
 - ⏳ 積欠款提醒（司機配送時顯示）
+
+### 階段 A-2（宇聯官網/電商優化）→ 進行中
+- ✅ AdminOrders 改版（時間格式、來源篩選、刪除功能、refunded 狀態）
+- ✅ AdminDashboard 改版（6 張統計卡片）
+- ✅ ContentEditor / RichTextEditor 修復（草稿空白問題）
+- ✅ CMS 後端升級（category 欄位、scheduledAt 排程發布、分頁）
+- ✅ 訂單管理：來源篩選下拉（中文顯示）、刪除訂單（super_admin）、時間顯示到分鐘
+- ✅ 商城總覽：訂單卡片拆分為6個（待處理/付款處理中/已出貨送達/總計）
+- ✅ 草稿文章：編輯時內容不再消失（RichTextEditor useEffect 修復）
+- ✅ SOP PDF 上傳：改用 Cloudflare R2，生產環境可正常使用
+- ✅ posts 表新增 scheduledAt、category 欄位（migration SQL 已生成，待 Railway 執行）
+- ✅ 後端新增 publishScheduled procedure + 每分鐘排程器
+- ✅ getPublishedPosts 支援分頁（page/pageSize）和分類篩選
+- ⏳ **Railway 執行 migration SQL（scheduledAt、category 欄位）**
+- ⏳ 前端 ContentEditor.tsx：加 category 下拉、scheduledAt 日期時間選擇器
+- ⏳ 前端 ContentManagement.tsx：加分類篩選、顯示分類標籤
+- ⏳ 前端 BrandNews.tsx：分頁、雙模式（卡片/清單）、圖片 16:9、分類篩選
+- ⏳ 前端 CorporateNews.tsx：同上
+- ⏳ AdminOrders.tsx：訂單編號後紫色標籤文字改中文
 
 ### 階段 B（大永穩定後，宇聯 ERP）
 - 庫存管理、排班系統、門市日報、異常警報中心
@@ -719,7 +753,89 @@ server/storage.r2.test.ts     — R2 圖片上傳
 
 ---
 
-## 二十一、下一個任務（LIFF 客戶下單）
+## 二十一、最近的變更記錄（2026-04-07）
+
+### AdminOrders.tsx 修改
+- 建立時間格式：`toLocaleString("zh-TW", { hour: "2-digit", minute: "2-digit", hour12: false })`
+- 新增來源篩選下拉（動態從資料生成，`ORDER_SOURCE_LABELS` mapping 顯示中文）
+- 新增刪除按鈕（`super_admin` 限定，紅色 Trash2，`window.confirm` 二次確認）
+- 補上 `refunded`（已退款）狀態選項
+
+### AdminDashboard.tsx 修改
+- 統計卡片從 4 個→6 個，grid 改 `grid-cols-2 md:grid-cols-3`
+- 新增：待處理訂單（amber）、付款/處理中（blue）、已出貨/送達（green）
+
+### server/db.ts 修改
+- 新增 `deleteOrder(id, tenantId)`：先 DELETE order_items，再 DELETE orders
+
+### server/routers.ts 修改
+- 新增 `order.delete`：adminProcedure，帶 tenantId 隔離
+
+### RichTextEditor.tsx 修改
+- 新增 `useEffect`：API 資料回來後，若 `editor.isEmpty` 則 `setContent(content)`
+- 解決編輯既有文章時 Tiptap 顯示空白的問題
+
+### server/routers/storage.ts 修改
+- `uploadPdf` 從 `storagePut`（Manus Forge dev-only）改為 `r2Put`（Cloudflare R2）
+- 移除 `import { storagePut } from "../storage"`
+
+### drizzle/schema.ts 修改
+- `posts` 表新增：`scheduledAt: timestamp("scheduledAt")` 和 `category: varchar("category", { length: 50 })`
+- Migration SQL 已生成：`drizzle/0020_medical_forge.sql`
+- ⚠️ **TiDB 尚未執行此 migration（本機 drizzle-kit 無法連線 TiDB SSL）**
+
+### server/routers/content.ts 重寫
+- `getPublishedPosts`：新增 `category` / `page` / `pageSize` 參數，回傳改為 `{ posts, total, page, pageSize, totalPages }`
+- `listPosts`：新增 `category` 篩選
+- `createPost` / `updatePost`：新增 `category` 和 `scheduledAt` 欄位
+- 新增 `publishScheduled`：adminProcedure，批次發布到期排程文章
+
+### server/_core/index.ts 修改
+- 新增 import：`posts`（schema）、`and / eq / sql`（drizzle-orm）
+- `server.listen` callback 內加入每分鐘排程器，自動發布 `scheduledAt <= now` 的草稿
+
+---
+
+## 二十二、下一個任務（前端 CMS / 新聞頁升級）
+
+### 待辦清單（依優先順序）
+1. ⚠️ **Railway 執行 migration SQL** — `ALTER TABLE posts ADD scheduledAt timestamp; ALTER TABLE posts ADD category varchar(50);`
+2. `ContentEditor.tsx`：新增 `category` select 下拉（選項：餐飲新聞 / 加盟快報 / 品牌動態 / 集團公告）和 `scheduledAt` datetime-local 選擇器
+3. `ContentManagement.tsx`：加分類篩選 tab / 下拉，列表顯示分類標籤
+4. `BrandNews.tsx`：分頁（`page` state + prev/next 按鈕）、雙模式（卡片/清單切換）、圖片 16:9 裁切、分類篩選
+5. `CorporateNews.tsx`：同上
+6. `AdminOrders.tsx`：訂單編號後紫色標籤文字改中文
+
+### 第一次給 Claude Code 的指令
+```
+請先讀 CLAUDE.md。開始前 git pull origin main。
+
+任務：升級前端 CMS 和新聞頁，配合後端已更新的功能。
+
+【背景】
+- getPublishedPosts 回傳格式已改為 { posts, total, page, pageSize, totalPages }
+- posts 表已有 category / scheduledAt 欄位（migration 需先在 Railway 執行）
+- 前端目前仍用舊格式 newsItems?.map(...)，會直接 crash
+
+【任務一】ContentEditor.tsx
+- 新增 category select（選項：餐飲新聞 / 加盟快報 / 品牌動態 / 集團公告 / 空白）
+- 新增 scheduledAt datetime-local input（選填）
+- createPost / updatePost mutation 帶入這兩個欄位
+
+【任務二】BrandNews.tsx
+- useQuery 改接 { posts, total, totalPages }
+- 改用 data?.posts?.map()
+- 加入分頁（page state，prev/next 按鈕，顯示「第 X / Y 頁」）
+- 圖片改為 16:9 aspect-ratio
+
+【任務三】CorporateNews.tsx（同任務二）
+
+完成後 pnpm run build 零錯誤，不要 push。
+```
+
+---
+
+## 二十三、下一個任務（LIFF 客戶下單）
 
 ### 架構
 ```
@@ -758,7 +874,7 @@ server/storage.r2.test.ts     — R2 圖片上傳
 
 ---
 
-## 二十二、大永蛋品業務背景
+## 二十四、大永蛋品業務背景
 
 - 聯絡人：洪靖博（蛋博），0980190857，dayoneegg@gmail.com
 - 地址：台中市西屯區西林巷 63-18 號
@@ -768,7 +884,7 @@ server/storage.r2.test.ts     — R2 圖片上傳
 
 ---
 
-## 二十三、分業客戶
+## 二十五、分業客戶
 
 - tenantId=1：宇聯國際（來點什麼餐飲連鎖，自用）
 - tenantId=2：大永蛋品（雞蛋批發，付費客戶，開發費 20-40 萬 + 月租 3,000-8,000）
@@ -778,7 +894,7 @@ server/storage.r2.test.ts     — R2 圖片上傳
 
 ---
 
-## 二十四、踩坑紀錄（避免再踩）
+## 二十六、踩坑紀錄（避免再踩）
 
 - `git add -A` 絕對不能用
 - 兩台電腦要先 pull，不然有衝突
@@ -789,10 +905,16 @@ server/storage.r2.test.ts     — R2 圖片上傳
 - `dy_orders.customerId` 是 NOT NULL，找不到客戶傳 0 不傳 null
 - LINE Reply 由後端直接呼叫（用 LINE_CHANNEL_ACCESS_TOKEN），不經過 Make
 - TiDB 不支援 `ADD COLUMN IF NOT EXISTS`
+- `drizzle-kit migrate` 在本機無法連 TiDB（SSL profile 型別錯誤），需在 Railway shell 執行或手動 ALTER TABLE
+- `getPublishedPosts` 回傳格式已改為分頁物件 `{ posts, total, ... }`，前端用 `.posts` 取陣列
+- `DayoneLayout` 元件要加入 git（untracked 檔案 Railway build 找不到）
+- Tiptap `RichTextEditor` 的 `content` prop 只在初始化時讀取，編輯既有文章時需在 `useEffect` 內用 `editor.commands.setContent()` 才能更新編輯器內容
+- SOP 的 `uploadPdf` 原本用 Manus Forge `storagePut`（dev-only），已改為 `r2Put`（Cloudflare R2），生產環境才能正常上傳
 
 ---
 
-*文件版本：CLAUDE.md v2.0*
-*核對時間：2026-04-06*
-*核對 commit：fb02268*
-*核對來源：schema.ts / routers.ts / App.tsx / dayone/*.ts / package.json / env.ts / storage.ts*
+*文件版本：CLAUDE.md v2.1*
+*核對時間：2026-04-07*
+*最後 push commit：c853002*
+*本機待 push：drizzle/schema.ts / server/routers/content.ts / server/_core/index.ts / drizzle/0020_medical_forge.sql*
+*核對來源：schema.ts / routers.ts / routers/content.ts / routers/storage.ts / AdminOrders.tsx / AdminDashboard.tsx / RichTextEditor.tsx / db.ts*
