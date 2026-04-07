@@ -357,7 +357,11 @@ export default function AdminProducts() {
                       {p.originalPrice && <p className="text-xs text-gray-400 line-through">NT$ {Number(p.originalPrice).toLocaleString()}</p>}
                     </TableCell>
                     <TableCell>
-                      <span className={`text-sm font-medium ${p.stock <= 10 ? "text-red-500" : "text-gray-700"}`}>{p.stock}</span>
+                      <div className="flex flex-col gap-1">
+                        <span className={`text-sm font-medium ${p.stock === 0 ? "text-red-600" : p.stock <= 10 ? "text-orange-500" : "text-gray-700"}`}>{p.stock}</span>
+                        {p.stock === 0 && <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200 w-fit text-xs">缺貨</Badge>}
+                        {p.stock > 0 && p.stock <= 10 && <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200 w-fit text-xs">庫存偏低</Badge>}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-1">
