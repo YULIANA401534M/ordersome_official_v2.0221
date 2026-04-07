@@ -101,6 +101,8 @@ import DriverWorkLog from "./pages/dayone/driver/DriverWorkLog";
 // Super Admin Pages
 import SuperAdminTenants from "./pages/dayone/SuperAdminTenants";
 import SuperAdminModules from "./pages/dayone/SuperAdminModules";
+// LIFF Pages
+import LiffOrder from "./pages/liff/LiffOrder";
 
 function Router() {
   const [location] = useLocation();
@@ -229,6 +231,8 @@ function Router() {
       <Route path="/driver/done" component={DriverDone} />
       <Route path="/driver/worklog" component={DriverWorkLog} />
       <Route path="/driver/profile" component={DriverProfile} />
+      {/* LIFF Routes */}
+      <Route path="/liff/order" component={LiffOrder} />
       {/* Super Admin Routes */}
       <Route path="/super-admin/tenants" component={SuperAdminTenants} />
       <Route path="/super-admin/modules" component={SuperAdminModules} />

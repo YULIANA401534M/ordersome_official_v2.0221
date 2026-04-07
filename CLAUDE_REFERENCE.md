@@ -316,7 +316,7 @@ useCartStore().getTotalPrice() / .getTotalItems() / .getItemQuantity(id, specs)
 任務：調查（不要修改任何東西）。
 
 1. 執行 SQL：SHOW COLUMNS FROM dy_customers;（確認有無 lineUserId 欄位）
-2. 執行 SQL：SELECT id, name, price, isActive FROM dy_products WHERE tenantId = 2 AND isActive = 1 LIMIT 20;
+2. 執行 SQL：SELECT id, name, price, isActive FROM dy_products WHERE tenantId = 90004 AND isActive = 1 LIMIT 20;
 3. 列出 client/src/pages/dayone/ 目錄所有檔案
 4. 只回報，不要做任何修改
 ```
@@ -328,12 +328,12 @@ useCartStore().getTotalPrice() / .getTotalItems() / .getItemQuantity(id, specs)
 - 聯絡人：洪靖博（蛋博），0980190857，dayoneegg@gmail.com
 - 地址：台中市西屯區西林巷 63-18 號
 - 業務：雞蛋批發配送，台中地區，約 28 個行政區，D1/D2 兩條配送路線
-- tenantId = 2
+- tenantId = 90004
 - 蛋品 SKU：白大箱、白小箱、白紙、液白、液紙、粉蛋、紅蛋、液體蛋、破蛋、洗選白帶裝、洗選白袋裝、洗選白盒裝、A液紙、鹹蛋、皮蛋、水皮蛋
 
 ### 分業客戶
 - tenantId=1：宇聯國際（來點什麼，自用）
-- tenantId=2：大永蛋品（付費客戶，開發費 20-40 萬 + 月租 3,000-8,000）
+- tenantId=90004：大永蛋品（付費客戶，開發費 20-40 萬 + 月租 3,000-8,000）
 - tenantId=3+：未來其他食品批發商
 
 ---

@@ -20,7 +20,7 @@
 | 司機 App | `/driver/` |
 | 會員中心 | `/member/` |
 
-**tenantId=1**：宇聯官網 ｜ **tenantId=2**：大永蛋品
+**tenantId=1**：宇聯官網 ｜ **tenantId=90004**：大永蛋品
 
 ---
 
