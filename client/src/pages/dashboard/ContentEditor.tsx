@@ -16,6 +16,8 @@ export default function ContentEditor() {
   const [coverImage, setCoverImage] = useState("");
   const [status, setStatus] = useState<"draft" | "published">("draft");
   const [publishTargets, setPublishTargets] = useState<("corporate" | "brand")[]>(["brand"]);
+  const [category, setCategory] = useState("");
+  const [scheduledAt, setScheduledAt] = useState("");
   const [isUploading, setIsUploading] = useState(false);
 
   // Fetch post if editing existing
@@ -63,6 +65,12 @@ export default function ContentEditor() {
       setCoverImage(post.coverImage || "");
       setStatus(post.status);
       setPublishTargets((post.publishTargets as ("corporate" | "brand")[]) || ["brand"]);
+      setCategory((post as any).category || "");
+      setScheduledAt(
+        (post as any).scheduledAt
+          ? new Date((post as any).scheduledAt).toISOString().slice(0, 16)
+          : ""
+      );
     }
   }, [post]);
 
@@ -128,6 +136,8 @@ export default function ContentEditor() {
       coverImage,
       status,
       publishTargets,
+      category: category || undefined,
+      scheduledAt: scheduledAt || undefined,
     };
 
     if (postId) {
@@ -337,6 +347,34 @@ export default function ContentEditor() {
                 已選擇 {publishTargets.length} 個發布目標
               </p>
             )}
+          </div>
+
+          {/* Category + ScheduledAt (side by side) */}
+          <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">文章分類</label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">不分類</option>
+                <option value="餐飲新聞">餐飲新聞</option>
+                <option value="加盟快報">加盟快報</option>
+                <option value="品牌動態">品牌動態</option>
+                <option value="集團公告">集團公告</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">排程發布時間（選填）</label>
+              <input
+                type="datetime-local"
+                value={scheduledAt}
+                onChange={(e) => setScheduledAt(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <p className="mt-1 text-xs text-gray-500">設定後系統將自動在指定時間發布（狀態須為草稿）</p>
+            </div>
           </div>
 
           {/* Status */}

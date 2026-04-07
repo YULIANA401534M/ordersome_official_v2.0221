@@ -6,9 +6,14 @@ import AdminDashboardLayout from "@/components/AdminDashboardLayout";
 
 type PostStatus = "draft" | "published";
 
+const CATEGORY_OPTIONS = ["餐飲新聞", "加盟快報", "品牌動態", "集團公告"];
+
 export default function ContentManagement() {
   const [, setLocation] = useLocation();
-  const { data: posts, isLoading, refetch } = trpc.content.listPosts.useQuery();
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const { data: posts, isLoading, refetch } = trpc.content.listPosts.useQuery(
+    categoryFilter !== "all" ? { category: categoryFilter } : undefined
+  );
   const deletePostMutation = trpc.content.deletePost.useMutation({
     onSuccess: () => refetch(),
   });
@@ -41,7 +46,24 @@ export default function ContentManagement() {
           </div>
 
           {/* Action Bar */}
-          <div className="mb-8 flex justify-end">
+          <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => setCategoryFilter("all")}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition ${categoryFilter === "all" ? "bg-blue-600 text-white" : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"}`}
+              >
+                全部
+              </button>
+              {CATEGORY_OPTIONS.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setCategoryFilter(cat)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition ${categoryFilter === cat ? "bg-blue-600 text-white" : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"}`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
             <button
               onClick={() => setLocation("/dashboard/content/new")}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
@@ -69,8 +91,8 @@ export default function ContentManagement() {
 
                   {/* Content */}
                   <div className="p-6">
-                    {/* Status Badge */}
-                    <div className="mb-3">
+                    {/* Status Badge + Category */}
+                    <div className="mb-3 flex items-center gap-2 flex-wrap">
                       <span
                         className={`px-3 py-1 text-xs font-semibold rounded-full ${
                           post.status === "published"
@@ -80,6 +102,11 @@ export default function ContentManagement() {
                       >
                         {post.status === "published" ? "已發布" : "草稿"}
                       </span>
+                      {(post as any).category && (
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700">
+                          {(post as any).category}
+                        </span>
+                      )}
                     </div>
 
                     {/* Title */}

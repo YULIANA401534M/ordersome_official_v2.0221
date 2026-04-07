@@ -43,7 +43,7 @@ const ORDER_SOURCE_LABELS: Record<string, string> = {
 
 function getOrderSourceLabel(orderSource: string | null | undefined): string | null {
   if (!orderSource || orderSource === "general") return null;
-  return B2B_COMPANY_NAMES[orderSource] ?? orderSource;
+  return ORDER_SOURCE_LABELS[orderSource] ?? B2B_COMPANY_NAMES[orderSource] ?? orderSource;
 }
 
 export default function AdminOrders() {
