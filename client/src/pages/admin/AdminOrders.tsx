@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Package, Eye, Truck } from "lucide-react";
+import { Search, Package, Eye, Truck, Trash2 } from "lucide-react";
 import { Link } from "wouter";
 import { toast } from "sonner";
 import AdminDashboardLayout from "@/components/AdminDashboardLayout";
@@ -31,6 +31,16 @@ const B2B_COMPANY_NAMES: Record<string, string> = {
   RealtekVIP: "瑞昱福委",
 };
 
+const ORDER_SOURCE_LABELS: Record<string, string> = {
+  general: "一般訂單",
+  TWMVIP: "台哥大福委",
+  OBVIP: "OB 福委",
+  PegatronVIP: "和碩專屬福委",
+  RealtekVIP: "瑞昱專屬福委",
+  exclusive_B2B: "B2B 福委",
+  line: "LINE 接單",
+};
+
 function getOrderSourceLabel(orderSource: string | null | undefined): string | null {
   if (!orderSource || orderSource === "general") return null;
   return B2B_COMPANY_NAMES[orderSource] ?? orderSource;
@@ -42,6 +52,7 @@ export default function AdminOrders() {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [sourceFilter, setSourceFilter] = useState("all");
 
   const { data: orders, isLoading, refetch } = trpc.order.listAll.useQuery();
 
@@ -49,6 +60,16 @@ export default function AdminOrders() {
     onSuccess: () => { toast.success("訂單狀態更新成功"); refetch(); },
     onError: (error) => { toast.error("更新失敗: " + error.message); },
   });
+
+  const deleteOrderMutation = trpc.order.delete.useMutation({
+    onSuccess: () => { toast.success("訂單已刪除"); refetch(); },
+    onError: (error) => { toast.error("刪除失敗: " + error.message); },
+  });
+
+  // 動態產生 orderSource 唯一值清單
+  const orderSourceOptions = orders
+    ? [...new Set(orders.map((o) => (o as any).orderSource).filter(Boolean))]
+    : [];
 
   const handleStatusChange = (orderId: number, newStatus: "pending" | "paid" | "processing" | "shipped" | "delivered" | "cancelled" | "refunded") => {
     updateStatusMutation.mutate({ id: orderId, status: newStatus });
@@ -59,11 +80,17 @@ export default function AdminOrders() {
     setIsDetailOpen(true);
   };
 
+  const handleDeleteOrder = (order: any) => {
+    if (!window.confirm(`確定要刪除訂單 ${order.orderNumber}？此操作無法復原。`)) return;
+    deleteOrderMutation.mutate({ id: order.id });
+  };
+
   const filteredOrders = orders?.filter((o) => {
     const matchSearch = o.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (o.recipientName && o.recipientName.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchStatus = statusFilter === "all" || o.status === statusFilter;
-    return matchSearch && matchStatus;
+    const matchSource = sourceFilter === "all" || (o as any).orderSource === sourceFilter;
+    return matchSearch && matchStatus && matchSource;
   });
 
   if (!isAuthenticated || (user?.role !== "super_admin" && user?.role !== "manager")) {
@@ -106,6 +133,16 @@ export default function AdminOrders() {
                     <SelectItem value="shipped">已出貨</SelectItem>
                     <SelectItem value="delivered">已送達</SelectItem>
                     <SelectItem value="cancelled">已取消</SelectItem>
+                    <SelectItem value="refunded">已退款</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={sourceFilter} onValueChange={setSourceFilter}>
+                  <SelectTrigger className="w-32"><SelectValue placeholder="來源篩選" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">全部來源</SelectItem>
+                    {orderSourceOptions.map((src) => (
+                      <SelectItem key={src} value={src}>{ORDER_SOURCE_LABELS[src] ?? src}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -162,12 +199,31 @@ export default function AdminOrders() {
                             </Select>
                           </TableCell>
                           <TableCell className="text-gray-500">
-                            {order.createdAt ? new Date(order.createdAt).toLocaleDateString("zh-TW") : "-"}
+                            {order.createdAt ? new Date(order.createdAt).toLocaleString("zh-TW", {
+                              year: "numeric",
+                              month: "numeric",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              hour12: false,
+                            }) : "-"}
                           </TableCell>
                           <TableCell>
-                            <Button variant="ghost" size="sm" onClick={() => viewOrderDetail(order)}>
-                              <Eye className="h-4 w-4" />
-                            </Button>
+                            <div className="flex items-center gap-1">
+                              <Button variant="ghost" size="sm" onClick={() => viewOrderDetail(order)}>
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              {user?.role === "super_admin" && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                  onClick={() => handleDeleteOrder(order)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       );

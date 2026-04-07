@@ -414,6 +414,14 @@ export async function getAllOrders(tenantId: number = 1) {
   return db.select().from(orders).where(eq(orders.tenantId, tenantId)).orderBy(desc(orders.createdAt));
 }
 
+export async function deleteOrder(id: number, tenantId: number) {
+  const db = await getDb();
+  if (!db) return;
+  // Delete order items first to avoid FK constraint issues
+  await db.delete(orderItems).where(eq(orderItems.orderId, id));
+  await db.delete(orders).where(and(eq(orders.id, id), eq(orders.tenantId, tenantId)));
+}
+
 export async function updateOrderStatus(id: number, status: InsertOrder['status']) {
   const db = await getDb();
   if (!db) return;

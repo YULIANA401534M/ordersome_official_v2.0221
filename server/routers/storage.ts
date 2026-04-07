@@ -2,12 +2,11 @@ import { z } from "zod";
 import { router, protectedProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { r2Put } from "../lib/r2";
-import { storagePut } from "../storage";
 
 /**
  * Storage router for file upload operations
  * - uploadImage: uses Cloudflare R2 directly (works on Railway)
- * - uploadPdf: uses Manus Forge storagePut (dev-only, SOP feature)
+ * - uploadPdf: uses Cloudflare R2 directly (sop-pdfs/ folder)
  */
 export const storageRouter = router({
   /**
@@ -68,13 +67,8 @@ export const storageRouter = router({
       try {
         const base64Data = input.fileData.replace(/^data:application\/pdf;base64,/, "");
         const buffer = Buffer.from(base64Data, "base64");
-        const timestamp = Date.now();
-        const randomString = Math.random().toString(36).substring(2, 8);
-        const uniqueFileName = `sop-pdfs/${timestamp}-${randomString}.pdf`;
-        const result = await storagePut(uniqueFileName, buffer, "application/pdf");
-        if (!result || !result.url) {
-          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "PDF 上傳失敗" });
-        }
+        const uniqueFileName = `sop-pdfs/${Date.now()}-${Math.random().toString(36).slice(2)}.pdf`;
+        const result = await r2Put(uniqueFileName, buffer, "application/pdf");
         return { url: result.url, key: result.key };
       } catch (error) {
         console.error("[Storage] PDF upload error:", error);

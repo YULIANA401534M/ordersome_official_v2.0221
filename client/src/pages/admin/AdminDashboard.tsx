@@ -2,7 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Package, ShoppingCart, TrendingUp, ArrowRight, Settings, Layers } from "lucide-react";
+import { Package, ShoppingCart, ArrowRight, Settings, Layers, Clock, CreditCard, Truck } from "lucide-react";
 import { useLocation } from "wouter";
 import AdminDashboardLayout from "@/components/AdminDashboardLayout";
 
@@ -14,10 +14,12 @@ export default function AdminDashboard() {
   const { data: categories } = trpc.category.listAll.useQuery();
 
   const stats = [
-    { title: "商品數量", value: products?.length || 0, icon: Package, color: "bg-blue-500", link: "/dashboard/admin/products" },
-    { title: "訂單數量", value: orders?.length || 0, icon: ShoppingCart, color: "bg-green-500", link: "/dashboard/admin/orders" },
-    { title: "商品分類", value: categories?.length || 0, icon: Layers, color: "bg-purple-500", link: "/dashboard/admin/categories" },
-    { title: "待處理訂單", value: orders?.filter(o => o.status === "pending").length || 0, icon: TrendingUp, color: "bg-amber-500", link: "/dashboard/admin/orders" },
+    { title: "商品數量", value: products?.length ?? 0, icon: Package, color: "bg-blue-500", link: "/dashboard/admin/products" },
+    { title: "總訂單數", value: orders?.length ?? 0, icon: ShoppingCart, color: "bg-green-500", link: "/dashboard/admin/orders" },
+    { title: "商品分類", value: categories?.length ?? 0, icon: Layers, color: "bg-purple-500", link: "/dashboard/admin/categories" },
+    { title: "待處理訂單", value: orders?.filter(o => o.status === "pending").length ?? 0, icon: Clock, color: "bg-amber-500", link: "/dashboard/admin/orders" },
+    { title: "付款/處理中", value: orders?.filter(o => o.status === "paid" || o.status === "processing").length ?? 0, icon: CreditCard, color: "bg-blue-400", link: "/dashboard/admin/orders" },
+    { title: "已出貨/送達", value: orders?.filter(o => o.status === "shipped" || o.status === "delivered").length ?? 0, icon: Truck, color: "bg-green-400", link: "/dashboard/admin/orders" },
   ];
 
   const quickLinks = [
@@ -51,7 +53,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
           {stats.map((stat, i) => (
             <Card key={i} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setLocation(stat.link)}>
                 <CardContent className="p-6">

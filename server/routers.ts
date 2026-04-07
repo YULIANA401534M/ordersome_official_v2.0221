@@ -449,6 +449,9 @@ export const appRouter = router({
         status: z.enum(['pending', 'paid', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded']),
       }))
       .mutation(({ input }) => db.updateOrderStatus(input.id, input.status)),
+    delete: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(({ input, ctx }) => db.deleteOrder(input.id, ctx.tenantId)),
   }),
 
   // Stores

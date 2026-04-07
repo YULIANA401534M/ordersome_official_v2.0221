@@ -18,7 +18,7 @@ import {
   Redo,
   Minus,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 interface RichTextEditorProps {
   content: string;
   onChange: (html: string) => void;
@@ -40,6 +40,13 @@ export default function RichTextEditor({ content, onChange, placeholder }: RichT
       onChange(editor.getHTML());
     },
   });
+
+  useEffect(() => {
+    if (!editor) return;
+    if (content && editor.isEmpty) {
+      editor.commands.setContent(content);
+    }
+  }, [editor, content]);
 
   if (!editor) return null;
 
