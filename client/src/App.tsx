@@ -89,6 +89,7 @@ import DayonePurchase from "./pages/dayone/DayonePurchase";
 import DayoneDistricts from "./pages/dayone/DayoneDistricts";
 import DayoneReports from "./pages/dayone/DayoneReports";
 import DayoneLiffOrders from "./pages/dayone/DayoneLiffOrders";
+import DayoneAR from "./pages/dayone/DayoneAR";
 import SupplierList from "./pages/erp/dayone/SupplierList";
 // Driver Mobile Pages
 import DriverHome from "./pages/dayone/driver/DriverHome";
@@ -224,6 +225,7 @@ function Router() {
       <Route path="/dayone/reports" component={DayoneReports} />
       <Route path="/dayone/suppliers" component={SupplierList} />
       <Route path="/dayone/liff-orders" component={DayoneLiffOrders} />
+      <Route path="/dayone/ar" component={DayoneAR} />
       {/* Driver Mobile Routes */}
       <Route path="/driver" component={DriverHome} />
       <Route path="/driver/today" component={DriverToday} />

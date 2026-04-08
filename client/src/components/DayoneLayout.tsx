@@ -11,6 +11,7 @@ import {
   LogOut,
   ChevronLeft,
   Smartphone,
+  CreditCard,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ const NAV_ITEMS = [
   { icon: Building2, label: "供應商管理", path: "/dayone/suppliers" },
   { icon: BarChart3, label: "報表", path: "/dayone/reports" },
   { icon: Smartphone, label: "LIFF訂單", path: "/dayone/liff-orders" },
+  { icon: CreditCard, label: "應收帳款", path: "/dayone/ar" },
 ];
 
 export default function DayoneLayout({ children }: { children: React.ReactNode }) {
