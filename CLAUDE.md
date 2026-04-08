@@ -57,6 +57,7 @@ pnpm db:push      # 生成並執行 Drizzle migration
 - [ ] `git status` — 確認工作目錄狀態
 - [ ] commit 只用 `git add 指定檔案`，**絕不用 `git add -A`**
 - [ ] `pnpm run build` 零錯誤才能 push
+- [ ] 任務結束前執行 git status，確認無未 commit 檔案，全部 push 才算完成
 - [ ] 每次任務結束執行 `/clear`
 
 ---
