@@ -289,6 +289,8 @@ export const posts = mysqlTable("posts", {
   publishTargets: json("publishTargets").$type<string[]>().notNull(),
   authorId: int("authorId").notNull(),
   publishedAt: timestamp("publishedAt"),
+  scheduledAt: timestamp("scheduledAt"),
+  category: varchar("category", { length: 50 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

@@ -11,6 +11,8 @@ import * as db from "../db";
 import { notifyOwner } from "./notification";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import { posts } from "../../drizzle/schema";
+import { and, eq, sql } from "drizzle-orm";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -234,6 +236,31 @@ async function startServer() {
 
   server.listen(port, "0.0.0.0", () => {
     console.log(`Server running on http://0.0.0.0:${port}/`);
+
+    // 排程發布檢查（每分鐘）
+    setInterval(async () => {
+      try {
+        const now = new Date();
+        const database = await db.getDb();
+        if (!database) return;
+        await database
+          .update(posts)
+          .set({
+            status: "published" as const,
+            publishedAt: now,
+            scheduledAt: null,
+          })
+          .where(
+            and(
+              eq(posts.status, "draft"),
+              sql`${posts.scheduledAt} IS NOT NULL`,
+              sql`${posts.scheduledAt} <= ${now}`,
+            )
+          );
+      } catch (e) {
+        console.error("[Scheduler] publishScheduled error", e);
+      }
+    }, 60 * 1000);
   });
 }
 

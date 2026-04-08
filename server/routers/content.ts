@@ -19,44 +19,81 @@ const contentProcedure = protectedProcedure.use(({ ctx, next }) => {
   return next({ ctx });
 });
 
+// Admin procedure (super_admin or manager only)
+const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (ctx.user.role !== "super_admin" && ctx.user.role !== "manager") {
+    throw new TRPCError({ code: "FORBIDDEN", message: "需要管理員權限" });
+  }
+  return next({ ctx });
+});
+
 export const contentRouter = router({
   /**
    * List all posts (for content management dashboard)
    */
-  listPosts: contentProcedure.query(async () => {
-    const database = await db.getDb();
-    if (!database) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "資料庫連線失敗" });
-    const allPosts = await database.select().from(posts).orderBy(desc(posts.createdAt));
-    return allPosts;
-  }),
-
-  /**
-   * Get published posts (for public news page)
-   * Filter by publishTarget: 'corporate' or 'brand'
-   */
-  getPublishedPosts: publicProcedure
-    .input(z.object({ publishTarget: z.enum(["corporate", "brand"]).optional() }))
+  listPosts: contentProcedure
+    .input(z.object({ category: z.string().optional() }).optional())
     .query(async ({ input }) => {
       const database = await db.getDb();
       if (!database) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "資料庫連線失敗" });
-      
-      // Build where conditions
+      const conditions = [];
+      if (input?.category) {
+        conditions.push(sql`${posts.category} = ${input.category}`);
+      }
+      const query = database.select().from(posts).orderBy(desc(posts.createdAt));
+      const allPosts = conditions.length > 0
+        ? await query.where(and(...conditions))
+        : await query;
+      return allPosts;
+    }),
+
+  /**
+   * Get published posts (for public news page)
+   * Filter by publishTarget: 'corporate' or 'brand', optional category, with pagination
+   */
+  getPublishedPosts: publicProcedure
+    .input(z.object({
+      publishTarget: z.string().optional(),
+      category: z.string().optional(),
+      page: z.number().default(1),
+      pageSize: z.number().default(12),
+    }))
+    .query(async ({ input }) => {
+      const database = await db.getDb();
+      if (!database) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "資料庫連線失敗" });
+
       const conditions = [eq(posts.status, "published")];
-      
-      // Filter by publishTarget using JSON_CONTAINS
+
       if (input.publishTarget) {
         conditions.push(
           sql`JSON_CONTAINS(${posts.publishTargets}, JSON_QUOTE(${input.publishTarget}))`
         );
       }
-      
+
+      if (input.category) {
+        conditions.push(sql`${posts.category} = ${input.category}`);
+      }
+
+      const [{ count }] = await database
+        .select({ count: sql<number>`count(*)` })
+        .from(posts)
+        .where(and(...conditions));
+
       const publishedPosts = await database
         .select()
         .from(posts)
         .where(and(...conditions))
-        .orderBy(desc(posts.publishedAt));
-      
-      return publishedPosts;
+        .orderBy(desc(posts.publishedAt))
+        .limit(input.pageSize)
+        .offset((input.page - 1) * input.pageSize);
+
+      return {
+        posts: publishedPosts,
+        total: Number(count),
+        page: input.page,
+        pageSize: input.pageSize,
+        totalPages: Math.ceil(Number(count) / input.pageSize),
+      };
     }),
 
   /**
@@ -98,6 +135,8 @@ export const contentRouter = router({
         coverImage: z.string().optional(),
         status: z.enum(["draft", "published"]),
         publishTargets: z.array(z.enum(["corporate", "brand"])).default(["brand"]),
+        category: z.string().optional(),
+        scheduledAt: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -108,6 +147,7 @@ export const contentRouter = router({
         ...input,
         authorId: ctx.user.id,
         publishedAt: input.status === "published" ? new Date() : null,
+        scheduledAt: input.scheduledAt ? new Date(input.scheduledAt) : null,
       };
 
       await database.insert(posts).values(newPost);
@@ -128,15 +168,21 @@ export const contentRouter = router({
         coverImage: z.string().optional(),
         status: z.enum(["draft", "published"]).optional(),
         publishTargets: z.array(z.enum(["corporate", "brand"])).optional(),
+        category: z.string().optional(),
+        scheduledAt: z.string().optional(),
       })
     )
     .mutation(async ({ input }) => {
       const database = await db.getDb();
       if (!database) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "資料庫連線失敗" });
 
-      const { postId, ...updates } = input;
+      const { postId, scheduledAt, ...rest } = input;
+      const updates: Record<string, unknown> = { ...rest };
 
-      // If changing status to published, set publishedAt
+      if (scheduledAt !== undefined) {
+        updates.scheduledAt = scheduledAt ? new Date(scheduledAt) : null;
+      }
+
       if (updates.status === "published") {
         await database
           .update(posts)
@@ -158,6 +204,31 @@ export const contentRouter = router({
       const database = await db.getDb();
       if (!database) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "資料庫連線失敗" });
       await database.delete(posts).where(eq(posts.id, input.postId));
+      return { success: true };
+    }),
+
+  /**
+   * Publish all scheduled posts whose scheduledAt <= now
+   */
+  publishScheduled: adminProcedure
+    .mutation(async () => {
+      const database = await db.getDb();
+      if (!database) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "資料庫連線失敗" });
+      const now = new Date();
+      await database
+        .update(posts)
+        .set({
+          status: "published",
+          publishedAt: now,
+          scheduledAt: null,
+        })
+        .where(
+          and(
+            eq(posts.status, "draft"),
+            sql`${posts.scheduledAt} IS NOT NULL`,
+            sql`${posts.scheduledAt} <= ${now}`,
+          )
+        );
       return { success: true };
     }),
 });

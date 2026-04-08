@@ -141,6 +141,13 @@
       "when": 1774545869402,
       "tag": "0019_wealthy_meteorite",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "5",
+      "when": 1775570726908,
+      "tag": "0020_medical_forge",
+      "breakpoints": true
     }
   ]
 }
