@@ -7,7 +7,8 @@ import { trpc } from "@/lib/trpc";
 
 export default function CorporateHome() {
   const [, setLocation] = useLocation();
-  const { data: newsItems } = trpc.content.getPublishedPosts.useQuery({ publishTarget: "corporate" });
+  const { data: _newsData } = trpc.content.getPublishedPosts.useQuery({ publishTarget: "corporate" });
+  const newsItems = _newsData?.posts ?? [];
   const { data: products } = trpc.product.list.useQuery();
 
   return (

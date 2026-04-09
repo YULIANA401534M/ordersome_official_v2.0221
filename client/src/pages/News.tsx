@@ -6,7 +6,8 @@ import BrandFooter from "../components/layout/BrandFooter";
 
 export default function News() {
   const [, setLocation] = useLocation();
-  const { data: posts, isLoading } = trpc.content.getPublishedPosts.useQuery({ publishTarget: "brand" });
+  const { data: _postsData, isLoading } = trpc.content.getPublishedPosts.useQuery({ publishTarget: "brand" });
+  const posts = _postsData?.posts ?? [];
 
   return (
     <div className="min-h-screen flex flex-col">
