@@ -83,23 +83,23 @@ export default function BrandMenu() {
             完整菜單
           </h2>
           <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-            <div 
+            <div
               className="cursor-pointer hover:shadow-xl transition-shadow rounded-xl overflow-hidden"
-              onClick={() => setSelectedImage("/menu/menu-1.jpg")}
+              onClick={() => setSelectedImage("/menu/2026菜單-01_0.jpg")}
             >
               <img
-                src="/menu/menu-1.jpg"
-                alt="來點什麼菜單 - 韓式飯捲、韓式特色餐點"
+                src="/menu/2026菜單-01_0.jpg"
+                alt="來點什麼菜單 - 黑黑大大堡、鐵板炒麵、厚醬厚片"
                 className="w-full h-auto"
               />
             </div>
-            <div 
+            <div
               className="cursor-pointer hover:shadow-xl transition-shadow rounded-xl overflow-hidden"
-              onClick={() => setSelectedImage("/menu/menu-2.jpg")}
+              onClick={() => setSelectedImage("/menu/2026菜單-02_0.jpg")}
             >
               <img
-                src="/menu/menu-2.jpg"
-                alt="來點什麼菜單 - 來點什麼、厚醬厚片、滿福堡"
+                src="/menu/2026菜單-02_0.jpg"
+                alt="來點什麼菜單 - 韓式飯捲、減醣輕食、米台韓混合"
                 className="w-full h-auto"
               />
             </div>
