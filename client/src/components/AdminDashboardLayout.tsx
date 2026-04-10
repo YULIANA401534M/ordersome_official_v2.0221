@@ -63,10 +63,14 @@ export default function AdminDashboardLayout({
   const isManager = user?.role === "manager";
   const hasAdminAccess = user?.role === "super_admin" || user?.role === "manager";
 
-  // ── 來點什麼模組開關查詢（tenantId=1）──
+  // ── 模組開關查詢（兩個 useQuery 必須在所有 early return 之前）──
   const { data: orderSomeModules } = trpc.dayone.modules.list.useQuery(
     { tenantId: 1 },
-    { enabled: !loading && hasAdminAccess }
+    { enabled: !!user && (user.role === "super_admin" || user.role === "manager") }
+  );
+  const { data: dayoneModules } = trpc.dayone.modules.list.useQuery(
+    { tenantId: 90004 },
+    { enabled: !!user && (user.role === "super_admin" || user.role === "manager") }
   );
 
   if (loading) {
@@ -131,11 +135,6 @@ export default function AdminDashboardLayout({
   const hasOSModule = (key: string) =>
     isSuperAdmin || (orderSomeModules?.some((m: any) => m.moduleKey === key && m.isEnabled) ?? false);
 
-  // ── 大永蛋品模組開關查詢（tenantId=90004）──
-  const { data: dayoneModules } = trpc.dayone.modules.list.useQuery(
-    { tenantId: 90004 },
-    { enabled: isManager || isSuperAdmin }
-  );
   const hasDYModule = (key: string) =>
     isSuperAdmin || (dayoneModules?.some((m: any) => m.moduleKey === key && m.isEnabled) ?? false);
 
