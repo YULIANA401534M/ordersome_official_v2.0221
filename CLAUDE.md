@@ -1,6 +1,6 @@
 # CLAUDE.md — OrderSome 工作主檔
 
-> 最後更新：2026-04-07 | 文件版本：v3.0
+> 最後更新：2026-04-10 | 文件版本：v4.0
 > 詳細參考（路由/API/DB表/架構）→ 見 `CLAUDE_REFERENCE.md`
 
 ---
@@ -113,6 +113,10 @@ pnpm db:push      # 生成並執行 Drizzle migration
 - ✅ BrandNews.tsx：分頁、圖片 16:9、分類篩選
 - ✅ CorporateNews.tsx：同上
 - ✅ AdminOrders.tsx：紫色標籤文字改用 ORDER_SOURCE_LABELS 中文顯示
+- ✅ Email 通知系統（Resend）
+- ✅ AI 文章助手（半自動，Gemini 2.5 Flash）
+- ✅ 後台 UI 統一（側邊欄重組，三大分組）
+- ✅ 入口頁依角色顯示功能卡片
 
 ### 階段 B — 宇聯 ERP（大永穩定後）
 - 庫存管理、排班、門市日報、異常警報
@@ -122,7 +126,25 @@ pnpm db:push      # 生成並執行 Drizzle migration
 
 ---
 
-## 八、最近變更（2026-04-08）
+## 八、最近變更（2026-04-10）
+
+| 檔案 | 變更摘要 |
+|------|---------|
+| `server/mail.ts` | 改用 Resend API 發信（取代 SMTP） |
+| `server/routers.ts` | 已出貨自動寄 Email 給買家、新訂單通知管理員 |
+| `orders` 表 | 新增 `shippingProofUrl` 欄位 |
+| `server/routers/sop.ts` | createDocument 預設 status 改為 published |
+| `client/src/pages/dashboard/ContentEditor.tsx` | 排程發布警示文字 |
+| `client/src/pages/admin/AdminOrders.tsx` | 訂單詳情顯示買家 Email、出貨證明上傳 |
+| `server/routers/ai-writer.ts` | AI 文章助手後端 API（Gemini 2.5 Flash + NewsAPI） |
+| `client/src/pages/dashboard/AIWriter.tsx` | AI 文章助手前端頁面 |
+| `client/src/pages/Dashboard.tsx` | 入口頁重設計，依角色顯示功能卡片 |
+| `client/src/components/AdminDashboardLayout.tsx` | 完全重寫側邊欄（純 Tailwind），三大分組：宇聯/來點什麼/大永 |
+| `client/src/hooks/useModules.ts` | tenantId 修正為 90004 |
+
+---
+
+## 八-B、舊變更紀錄（2026-04-08）
 
 | 檔案 | 變更摘要 |
 |------|---------|
@@ -137,7 +159,7 @@ pnpm db:push      # 生成並執行 Drizzle migration
 
 ---
 
-## 八-B、舊變更紀錄（2026-04-07）
+## 八-C、舊變更紀錄（2026-04-07）
 
 | 檔案 | 變更摘要 |
 |------|---------|
@@ -191,4 +213,63 @@ pnpm db:push      # 生成並執行 Drizzle migration
 
 ---
 
-*CLAUDE.md v3.0 — 精簡主檔，詳細參考見 CLAUDE_REFERENCE.md*
+## 十一、系統架構說明
+
+### 多租戶架構
+
+```
+宇聯國際（母公司）
+├── 商城管理（官網電商，tenantId=1）
+├── 內容管理（官網文章，tenantId=1）
+├── 人員管理（系統層級）
+└── 系統管理（租戶/模組開關）
+
+來點什麼（tenantId=1，子系統）
+├── 門市管理（SOP/報修/檢查表）
+├── 人員管理（來點什麼自己的）
+└── ERP 模組（依模組開關啟用）
+
+大永蛋品（tenantId=90004，子系統）
+├── 完整 ERP
+└── 人員管理
+```
+
+### 五種用戶角色
+
+| 角色 | 權限範圍 |
+|------|---------|
+| `super_admin` | 全部功能 + 可調整所有人的模組權限 |
+| `manager` | 宇聯商城/內容/人員 + 來點什麼門市 + 來點什麼ERP（依模組開關）+ 大永ERP |
+| `franchisee`（門市夥伴） | SOP/報修/檢查表/線上商城 |
+| `staff` | SOP/線上商城 |
+| `customer` | 線上商城/我的訂單 |
+| `driver` | 司機App（`/driver/`） |
+
+### 模組開關（tenant_modules 表）
+
+`moduleKey` 清單：`delivery` / `crm_customers` / `inventory` / `purchasing` / `accounting` / `scheduling` / `daily_report` / `equipment_repair`
+
+查詢：`trpc.dayone.modules.list({ tenantId })`
+前端 hook：`useModules()`（`client/src/hooks/useModules.ts`）
+
+### Email 發信
+
+- 服務：Resend（resend.com）
+- 環境變數：`RESEND_API_KEY`
+- 觸發時機：訂單狀態改為 `shipped` → 寄給買家；新訂單建立 → 寄給所有 `manager`/`super_admin`
+
+### AI 文章助手
+
+| 項目 | 說明 |
+|------|------|
+| 後端 | `server/routers/ai-writer.ts` |
+| 前端 | `client/src/pages/dashboard/AIWriter.tsx` |
+| 路由 | `/dashboard/ai-writer` |
+| 模型 | Gemini 2.5 Flash（`gemini-2.5-flash`） |
+| 新聞來源 | NewsAPI（`NEWS_API_KEY`） |
+| 品牌資訊 | 已內建完整 Prompt（來點什麼品牌故事/產品/加盟資訊） |
+| 模式 | 半自動（AI 生成草稿，人工審核後發布） |
+
+---
+
+*CLAUDE.md v4.0 — 精簡主檔，詳細參考見 CLAUDE_REFERENCE.md*

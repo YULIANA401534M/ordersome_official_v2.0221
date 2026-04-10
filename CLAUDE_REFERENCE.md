@@ -2,6 +2,7 @@
 
 > 這份文件是「查閱用」，不是每次都要讀。
 > 開新對話時只需讀 `CLAUDE.md`，有需要才查這裡。
+> 最後更新：2026-04-10
 
 ---
 
@@ -124,6 +125,7 @@ ordersome_official_v2/
 | `/dashboard/sop` | `SOPKnowledgeBase` |
 | `/dashboard/repairs` | `EquipmentRepairs` |
 | `/dashboard/checklist` | `DailyChecklist` |
+| `/dashboard/ai-writer` | `AIWriter`（AI 文章助手） |
 
 ### 大永 ERP（管理端）
 `/dayone` / `/dayone/orders` / `/dayone/customers` / `/dayone/drivers` / `/dayone/products` / `/dayone/inventory` / `/dayone/purchase` / `/dayone/districts` / `/dayone/reports` / `/dayone/suppliers` / `/dayone/liff-orders`
@@ -150,7 +152,7 @@ ordersome_official_v2/
 | `categories` | 商品分類 |
 | `products` | 商品（含 isHidden / exclusiveSlug） |
 | `cart_items` | 購物車 |
-| `orders` | 電商訂單 |
+| `orders` | 電商訂單（含 `shippingProofUrl` 出貨證明欄位） |
 | `order_items` | 訂單明細 |
 | `stores` | 門市 |
 | `news` | 新聞 |
@@ -218,7 +220,10 @@ trpc.storage.uploadImage.mutate({ fileName, fileData, contentType })
 Procedures: `uploadImage` / `uploadPdf`
 
 ### sop
-`getCategories` / `createCategory` / `updateCategory` / `getDocuments` / `getAllDocuments` / `getDocumentById` / `createDocument` / `updateDocument` / `getSopPermissions` / `updateSopPermissions` / `getAccessibleCategories`
+`getCategories` / `createCategory` / `updateCategory` / `getDocuments` / `getAllDocuments` / `getDocumentById` / `createDocument`（預設 status=published）/ `updateDocument` / `getSopPermissions` / `updateSopPermissions` / `getAccessibleCategories`
+
+### aiWriter
+`generateArticle`（Gemini 2.5 Flash + NewsAPI，後端：`server/routers/ai-writer.ts`）
 
 ### dayone（大永 ERP）
 | Sub-router | Procedures |
