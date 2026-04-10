@@ -1,10 +1,10 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
+import { trpc } from "@/lib/trpc";
 import {
   UtensilsCrossed,
   LogOut,
   Menu,
-  X,
   Shield,
   LayoutDashboard,
   Package,
@@ -30,8 +30,10 @@ import {
   Home,
   Wrench,
   ClipboardCheck,
+  CalendarDays,
+  ClipboardList,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import { Button } from "./ui/button";
@@ -44,6 +46,17 @@ export default function AdminDashboardLayout({
   const { loading, user, logout } = useAuth();
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // ── 側邊欄滾動記憶 ──
+  useEffect(() => {
+    const nav = document.getElementById("sidebar-nav");
+    if (!nav) return;
+    const saved = sessionStorage.getItem("sidebar-scroll");
+    if (saved) nav.scrollTop = parseInt(saved);
+    const handler = () => sessionStorage.setItem("sidebar-scroll", String(nav.scrollTop));
+    nav.addEventListener("scroll", handler);
+    return () => nav.removeEventListener("scroll", handler);
+  }, [location]);
 
   if (loading) {
     return <DashboardLayoutSkeleton />;
@@ -95,9 +108,12 @@ export default function AdminDashboardLayout({
     );
   }
 
+  const isSuperAdmin = user.role === "super_admin";
+  const isManager = user.role === "manager";
+
   const hasPermission = (permission: string) => {
     if (!user) return false;
-    if (user.role === "super_admin") return true;
+    if (isSuperAdmin) return true;
     if (!user.permissions) return false;
     const permissions =
       typeof user.permissions === "string"
@@ -106,8 +122,13 @@ export default function AdminDashboardLayout({
     return Array.isArray(permissions) && permissions.includes(permission);
   };
 
-  const isSuperAdmin = user.role === "super_admin";
-  const isManager = user.role === "manager";
+  // ── 來點什麼模組開關查詢（tenantId=1）──
+  const { data: orderSomeModules } = trpc.dayone.modules.list.useQuery(
+    { tenantId: 1 },
+    { enabled: isManager || isSuperAdmin }
+  );
+  const hasOSModule = (key: string) =>
+    isSuperAdmin || (orderSomeModules?.some((m: any) => m.moduleKey === key && m.isEnabled) ?? false);
 
   // ── 宇聯總部分組 ──
   const ecommerceItems = hasPermission("manage_products")
@@ -138,7 +159,7 @@ export default function AdminDashboardLayout({
     ? [{ icon: Store, label: "加盟詢問", path: "/dashboard/franchise-inquiries" }]
     : [];
 
-  // ── 來點什麼分組（門市管理 & 預留 ERP）──
+  // ── 來點什麼分組（門市管理）──
   const storeOperationItems =
     isSuperAdmin || isManager
       ? [
@@ -147,6 +168,28 @@ export default function AdminDashboardLayout({
           { icon: ClipboardCheck, label: "每日檢查表", path: "/dashboard/checklist" },
         ]
       : [];
+
+  // ── 來點什麼 ERP 模組開關項目 ──
+  // 每個模組：有開 → 可點連結，沒開 → 灰色「即將推出」
+  type OsErpItem = { icon: React.ComponentType<{ className?: string }>; label: string; path?: string };
+  const osErpEnabled: OsErpItem[] = [];
+  const osErpComingSoon: { icon: React.ComponentType<{ className?: string }>; label: string }[] = [];
+
+  if (isSuperAdmin || isManager) {
+    const osModuleDefs: { key: string; icon: React.ComponentType<{ className?: string }>; label: string; path: string }[] = [
+      { key: "inventory",       icon: Warehouse,      label: "庫存管理", path: "/dashboard/inventory" },
+      { key: "scheduling",      icon: CalendarDays,   label: "排班管理", path: "/dashboard/scheduling" },
+      { key: "equipment_repair",icon: Wrench,         label: "設備報修", path: "/dashboard/repairs" },
+      { key: "daily_report",    icon: ClipboardList,  label: "門市日報", path: "/dashboard/daily-report" },
+    ];
+    for (const def of osModuleDefs) {
+      if (hasOSModule(def.key)) {
+        osErpEnabled.push({ icon: def.icon, label: def.label, path: def.path });
+      } else {
+        osErpComingSoon.push({ icon: def.icon, label: def.label });
+      }
+    }
+  }
 
   // ── 大永蛋品 ERP ──
   const erpItems =
@@ -173,9 +216,7 @@ export default function AdminDashboardLayout({
       ]
     : [];
 
-  const bottomItems = [
-    { icon: Home, label: "返回首頁", path: "/" },
-  ];
+  const bottomItems = [{ icon: Home, label: "返回首頁", path: "/" }];
 
   const allItems = [
     ...ecommerceItems,
@@ -183,6 +224,7 @@ export default function AdminDashboardLayout({
     ...userItems,
     ...franchiseItems,
     ...storeOperationItems,
+    ...osErpEnabled,
     ...erpItems,
     ...systemItems,
     ...bottomItems,
@@ -231,37 +273,23 @@ export default function AdminDashboardLayout({
     );
   };
 
-  // 預留項目（灰色 disabled）
-  const renderComingSoonGroup = (
-    label: string,
+  const renderComingSoonItems = (
     items: { icon: React.ComponentType<{ className?: string }>; label: string }[]
   ) => {
-    if (items.length === 0) return null;
-    return (
-      <div>
-        <p className={groupLabelClass}>{label}</p>
-        {items.map((item) => (
-          <div
-            key={item.label}
-            className="flex items-center gap-3 px-4 py-2 text-sm text-gray-400 cursor-not-allowed"
-            title="即將推出"
-          >
-            <item.icon className="h-4 w-4 shrink-0" />
-            <span>{item.label}</span>
-            <span className="ml-auto text-[10px] bg-gray-100 text-gray-400 rounded px-1">即將推出</span>
-          </div>
-        ))}
+    return items.map((item) => (
+      <div
+        key={item.label}
+        className="flex items-center gap-3 px-4 py-2 text-sm text-gray-400 cursor-not-allowed"
+        title="即將推出"
+      >
+        <item.icon className="h-4 w-4 shrink-0" />
+        <span>{item.label}</span>
+        <span className="ml-auto text-[10px] bg-gray-100 text-gray-400 rounded px-1">即將推出</span>
       </div>
-    );
+    ));
   };
 
-  const comingSoonErpItems =
-    isSuperAdmin || isManager
-      ? [
-          { icon: Warehouse, label: "庫存管理" },
-          { icon: Users, label: "排班管理" },
-        ]
-      : [];
+  const showOsErpSection = (isSuperAdmin || isManager) && (osErpEnabled.length > 0 || osErpComingSoon.length > 0);
 
   const sidebarContent = (
     <>
@@ -279,7 +307,7 @@ export default function AdminDashboardLayout({
       </div>
 
       {/* Menu */}
-      <nav className="flex-1 overflow-y-auto py-2 space-y-1">
+      <nav id="sidebar-nav" className="flex-1 overflow-y-auto py-2 space-y-1">
         {/* 宇聯總部 */}
         {(ecommerceItems.length > 0 || contentItems.length > 0 || userItems.length > 0 || franchiseItems.length > 0) && (
           <div className="px-4 pt-3 pb-1">
@@ -292,13 +320,29 @@ export default function AdminDashboardLayout({
         {renderGroup("加盟管理", franchiseItems)}
 
         {/* 來點什麼 */}
-        {(storeOperationItems.length > 0 || comingSoonErpItems.length > 0) && (
+        {(storeOperationItems.length > 0 || showOsErpSection) && (
           <div className="px-4 pt-3 pb-1">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">來點什麼</p>
           </div>
         )}
         {renderGroup("門市管理", storeOperationItems)}
-        {renderComingSoonGroup("來點什麼 ERP", comingSoonErpItems)}
+        {showOsErpSection && (
+          <div>
+            <p className={groupLabelClass}>來點什麼 ERP</p>
+            {osErpEnabled.map((item) => (
+              <Link key={item.path} href={item.path!}>
+                <a
+                  className={menuItemClass(item.path!)}
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  <span>{item.label}</span>
+                </a>
+              </Link>
+            ))}
+            {renderComingSoonItems(osErpComingSoon)}
+          </div>
+        )}
 
         {/* 大永蛋品 */}
         {erpItems.length > 0 && (
