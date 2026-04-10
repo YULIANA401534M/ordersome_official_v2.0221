@@ -215,6 +215,10 @@ function Router() {
       <Route path="/dashboard/sop" component={SOPKnowledgeBase} />
       <Route path="/dashboard/repairs" component={EquipmentRepairs} />
       <Route path="/dashboard/checklist" component={DailyChecklist} />
+      {/* 來點什麼 ERP 模組路由（暫以大永頁面代替，待開發專屬頁面） */}
+      <Route path="/dashboard/inventory" component={DayoneInventory} />
+      <Route path="/dashboard/scheduling" component={DailyChecklist} />
+      <Route path="/dashboard/daily-report" component={DailyChecklist} />
       {/* DaYong ERP Routes */}
       <Route path="/dayone" component={DayoneDashboard} />
       <Route path="/dayone/orders" component={DayoneOrders} />

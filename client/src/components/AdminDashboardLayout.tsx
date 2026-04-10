@@ -131,6 +131,14 @@ export default function AdminDashboardLayout({
   const hasOSModule = (key: string) =>
     isSuperAdmin || (orderSomeModules?.some((m: any) => m.moduleKey === key && m.isEnabled) ?? false);
 
+  // ── 大永蛋品模組開關查詢（tenantId=90004）──
+  const { data: dayoneModules } = trpc.dayone.modules.list.useQuery(
+    { tenantId: 90004 },
+    { enabled: isManager || isSuperAdmin }
+  );
+  const hasDYModule = (key: string) =>
+    isSuperAdmin || (dayoneModules?.some((m: any) => m.moduleKey === key && m.isEnabled) ?? false);
+
   // ── 宇聯總部分組 ──
   const ecommerceItems = hasPermission("manage_products")
     ? [
@@ -160,14 +168,14 @@ export default function AdminDashboardLayout({
     ? [{ icon: Store, label: "加盟詢問", path: "/dashboard/franchise-inquiries" }]
     : [];
 
-  // ── 來點什麼分組（門市管理）──
+  // ── 來點什麼分組（門市管理）── 接模組開關
   const storeOperationItems =
     isSuperAdmin || isManager
-      ? [
-          { icon: BookOpen, label: "SOP 知識庫", path: "/dashboard/sop" },
-          { icon: Wrench, label: "設備報修", path: "/dashboard/repairs" },
-          { icon: ClipboardCheck, label: "每日檢查表", path: "/dashboard/checklist" },
-        ]
+      ? ([
+          hasOSModule("sop")              ? { icon: BookOpen,       label: "SOP 知識庫", path: "/dashboard/sop" }      : null,
+          hasOSModule("equipment_repair") ? { icon: Wrench,         label: "設備報修",   path: "/dashboard/repairs" }  : null,
+          hasOSModule("checklist")        ? { icon: ClipboardCheck, label: "每日檢查表", path: "/dashboard/checklist" } : null,
+        ].filter(Boolean) as { icon: React.ComponentType<{ className?: string }>; label: string; path: string }[])
       : [];
 
   // ── 來點什麼 ERP 模組開關項目 ──
@@ -178,10 +186,9 @@ export default function AdminDashboardLayout({
 
   if (isSuperAdmin || isManager) {
     const osModuleDefs: { key: string; icon: React.ComponentType<{ className?: string }>; label: string; path: string }[] = [
-      { key: "inventory",       icon: Warehouse,      label: "庫存管理", path: "/dashboard/inventory" },
-      { key: "scheduling",      icon: CalendarDays,   label: "排班管理", path: "/dashboard/scheduling" },
-      { key: "equipment_repair",icon: Wrench,         label: "設備報修", path: "/dashboard/repairs" },
-      { key: "daily_report",    icon: ClipboardList,  label: "門市日報", path: "/dashboard/daily-report" },
+      { key: "inventory",    icon: Warehouse,    label: "庫存管理", path: "/dashboard/inventory" },
+      { key: "scheduling",   icon: CalendarDays, label: "排班管理", path: "/dashboard/scheduling" },
+      { key: "daily_report", icon: ClipboardList, label: "門市日報", path: "/dashboard/daily-report" },
     ];
     for (const def of osModuleDefs) {
       if (hasOSModule(def.key)) {
@@ -192,22 +199,34 @@ export default function AdminDashboardLayout({
     }
   }
 
-  // ── 大永蛋品 ERP ──
-  const erpItems =
-    isSuperAdmin || isManager
-      ? [
-          { icon: Package2, label: "ERP 總覽", path: "/dayone" },
-          { icon: Truck, label: "配送訂單", path: "/dayone/orders" },
-          { icon: Users, label: "客戶管理", path: "/dayone/customers" },
-          { icon: Car, label: "司機管理", path: "/dayone/drivers" },
-          { icon: Egg, label: "品項管理", path: "/dayone/products" },
-          { icon: Warehouse, label: "庫存管理", path: "/dayone/inventory" },
-          { icon: ShoppingBag, label: "進貨管理", path: "/dayone/purchase" },
-          { icon: Map, label: "行政區管理", path: "/dayone/districts" },
-          { icon: Smartphone, label: "LIFF 訂單", path: "/dayone/liff-orders" },
-          { icon: CreditCard, label: "應收帳款", path: "/dayone/ar" },
-        ]
-      : [];
+  // ── 大永蛋品 ERP ── 接模組開關
+  type DyErpItem = { icon: React.ComponentType<{ className?: string }>; label: string; path: string };
+  const dyErpEnabled: DyErpItem[] = [];
+  const dyErpComingSoon: { icon: React.ComponentType<{ className?: string }>; label: string }[] = [];
+
+  if (isSuperAdmin || isManager) {
+    const dyModuleDefs: { key: string; icon: React.ComponentType<{ className?: string }>; label: string; path: string }[] = [
+      { key: "erp_dashboard", icon: Package2,    label: "ERP 總覽",   path: "/dayone" },
+      { key: "delivery",      icon: Truck,       label: "配送訂單",   path: "/dayone/orders" },
+      { key: "crm_customers", icon: Users,       label: "客戶管理",   path: "/dayone/customers" },
+      { key: "driver_mgmt",   icon: Car,         label: "司機管理",   path: "/dayone/drivers" },
+      { key: "products",      icon: Egg,         label: "品項管理",   path: "/dayone/products" },
+      { key: "inventory",     icon: Warehouse,   label: "庫存管理",   path: "/dayone/inventory" },
+      { key: "purchasing",    icon: ShoppingBag, label: "進貨管理",   path: "/dayone/purchase" },
+      { key: "districts",     icon: Map,         label: "行政區管理", path: "/dayone/districts" },
+      { key: "liff_orders",   icon: Smartphone,  label: "LIFF 訂單", path: "/dayone/liff-orders" },
+      { key: "accounting",    icon: CreditCard,  label: "應收帳款",   path: "/dayone/ar" },
+    ];
+    for (const def of dyModuleDefs) {
+      if (hasDYModule(def.key)) {
+        dyErpEnabled.push({ icon: def.icon, label: def.label, path: def.path });
+      } else {
+        dyErpComingSoon.push({ icon: def.icon, label: def.label });
+      }
+    }
+  }
+
+  const showDyErpSection = (isSuperAdmin || isManager) && (dyErpEnabled.length > 0 || dyErpComingSoon.length > 0);
 
   // ── 系統管理（super_admin 限定）──
   const systemItems = isSuperAdmin
@@ -226,7 +245,7 @@ export default function AdminDashboardLayout({
     ...franchiseItems,
     ...storeOperationItems,
     ...osErpEnabled,
-    ...erpItems,
+    ...dyErpEnabled,
     ...systemItems,
     ...bottomItems,
   ];
@@ -346,12 +365,28 @@ export default function AdminDashboardLayout({
         )}
 
         {/* 大永蛋品 */}
-        {erpItems.length > 0 && (
+        {showDyErpSection && (
           <div className="px-4 pt-3 pb-1">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">大永蛋品</p>
           </div>
         )}
-        {renderGroup("大永蛋品 ERP", erpItems)}
+        {showDyErpSection && (
+          <div>
+            <p className={groupLabelClass}>大永蛋品 ERP</p>
+            {dyErpEnabled.map((item) => (
+              <Link key={item.path} href={item.path}>
+                <a
+                  className={menuItemClass(item.path)}
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  <span>{item.label}</span>
+                </a>
+              </Link>
+            ))}
+            {renderComingSoonItems(dyErpComingSoon)}
+          </div>
+        )}
 
         {/* 系統 */}
         {renderGroup("系統管理", systemItems)}

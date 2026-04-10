@@ -6,14 +6,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 
 const MODULE_LABELS: Record<string, string> = {
-  delivery: "配送管理",
-  crm_customers: "客戶管理",
-  inventory: "庫存管理",
-  purchasing: "進貨管理",
-  accounting: "帳務管理",
-  scheduling: "排班系統",
-  daily_report: "門市日報",
+  // ── 通用功能模組 ──
+  inventory:        "庫存管理",
+  delivery:         "配送管理",
+  crm_customers:    "客戶管理",
+  purchasing:       "進貨管理",
+  accounting:       "帳務管理",
+  scheduling:       "排班系統",
+  daily_report:     "門市日報",
   equipment_repair: "設備報修",
+  sop:              "SOP 知識庫",
+  checklist:        "每日檢查表",
+  // ── 大永專屬模組 ──
+  erp_dashboard:    "ERP 總覽",
+  driver_mgmt:      "司機管理",
+  products:         "品項管理",
+  districts:        "行政區管理",
+  liff_orders:      "LIFF 訂單",
 };
 
 type TenantRow = {
