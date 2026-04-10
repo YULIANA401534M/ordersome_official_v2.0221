@@ -134,7 +134,7 @@ export const sopRouter = router({
       content: z.string().min(1),
       pdfUrl: z.string().optional(),
       version: z.string().default("1.0"),
-      status: z.enum(["draft", "published", "archived"]).default("draft"),
+      status: z.enum(["draft", "published", "archived"]).default("published"),
       isVisibleToStaff: z.boolean().default(true),
     }))
     .mutation(async ({ input, ctx }) => {

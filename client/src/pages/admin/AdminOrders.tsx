@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Package, Eye, Truck, Trash2 } from "lucide-react";
+import { Search, Package, Eye, Truck, Trash2, Upload, Loader2 } from "lucide-react";
 import { Link } from "wouter";
 import { toast } from "sonner";
 import AdminDashboardLayout from "@/components/AdminDashboardLayout";
@@ -56,10 +56,43 @@ export default function AdminOrders() {
 
   const { data: orders, isLoading, refetch } = trpc.order.listAll.useQuery();
 
+  const [isUploadingProof, setIsUploadingProof] = useState(false);
+
   const updateStatusMutation = trpc.order.updateStatus.useMutation({
     onSuccess: () => { toast.success("訂單狀態更新成功"); refetch(); },
     onError: (error) => { toast.error("更新失敗: " + error.message); },
   });
+
+  const uploadShippingProofMutation = trpc.order.uploadShippingProof.useMutation({
+    onSuccess: () => { toast.success("出貨證明上傳成功"); refetch(); },
+    onError: (error) => { toast.error("上傳失敗: " + error.message); },
+  });
+
+  const uploadImageMutation = trpc.storage.uploadImage.useMutation({
+    onSuccess: (data) => {
+      if (selectedOrder) {
+        uploadShippingProofMutation.mutate({ id: selectedOrder.id, shippingProofUrl: data.url });
+        setSelectedOrder({ ...selectedOrder, shippingProofUrl: data.url });
+      }
+      setIsUploadingProof(false);
+    },
+    onError: (error) => {
+      toast.error("上傳失敗: " + error.message);
+      setIsUploadingProof(false);
+    },
+  });
+
+  const handleShippingProofUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingProof(true);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const base64 = ev.target?.result as string;
+      uploadImageMutation.mutate({ fileName: file.name, fileData: base64, contentType: file.type });
+    };
+    reader.readAsDataURL(file);
+  };
 
   const deleteOrderMutation = trpc.order.delete.useMutation({
     onSuccess: () => { toast.success("訂單已刪除"); refetch(); },
@@ -259,6 +292,9 @@ export default function AdminOrders() {
                     </div>
                     <div><span className="text-gray-500">收件人：</span>{selectedOrder.recipientName}</div>
                     <div><span className="text-gray-500">電話：</span>{selectedOrder.recipientPhone}</div>
+                    {selectedOrder.recipientEmail && (
+                      <div className="col-span-2"><span className="text-gray-500">買家 Email：</span>{selectedOrder.recipientEmail}</div>
+                    )}
                     <div className="col-span-2"><span className="text-gray-500">地址：</span>{selectedOrder.shippingAddress}</div>
                     <div><span className="text-gray-500">付款方式：</span>{selectedOrder.paymentMethod}</div>
                     <div><span className="text-gray-500">總金額：</span><span className="font-bold text-amber-600">NT$ {selectedOrder.total}</span></div>
@@ -269,6 +305,28 @@ export default function AdminOrders() {
                           {companyLabel}
                         </Badge>
                       </div>
+                    )}
+                  </div>
+                  {/* 出貨證明上傳 */}
+                  <div className="border-t pt-4">
+                    <p className="text-sm font-medium text-gray-700 mb-2">出貨證明</p>
+                    {selectedOrder.shippingProofUrl ? (
+                      <div className="flex items-center gap-3">
+                        <a href={selectedOrder.shippingProofUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline text-sm">查看出貨證明</a>
+                        <label className="cursor-pointer text-xs text-gray-500 hover:text-gray-700">
+                          <span>重新上傳</span>
+                          <input type="file" accept="image/*,video/mp4" className="hidden" onChange={handleShippingProofUpload} disabled={isUploadingProof} />
+                        </label>
+                      </div>
+                    ) : (
+                      <label className="flex items-center gap-2 cursor-pointer px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-colors w-fit">
+                        {isUploadingProof ? (
+                          <><Loader2 className="h-4 w-4 animate-spin text-blue-500" /><span className="text-sm text-blue-500">上傳中...</span></>
+                        ) : (
+                          <><Upload className="h-4 w-4 text-gray-400" /><span className="text-sm text-gray-500">上傳出貨證明（jpg/png/mp4）</span></>
+                        )}
+                        <input type="file" accept="image/*,video/mp4" className="hidden" onChange={handleShippingProofUpload} disabled={isUploadingProof} />
+                      </label>
                     )}
                   </div>
                 </div>

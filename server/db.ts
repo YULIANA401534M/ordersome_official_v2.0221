@@ -431,6 +431,12 @@ export async function updateOrderStatus(id: number, status: InsertOrder['status'
   await db.update(orders).set(updateData).where(eq(orders.id, id));
 }
 
+export async function updateOrderShippingProof(id: number, shippingProofUrl: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(orders).set({ shippingProofUrl } as any).where(eq(orders.id, id));
+}
+
 export async function updateOrderPayment(orderNumber: string, paymentStatus: InsertOrder['paymentStatus'], ecpayTradeNo?: string) {
   const db = await getDb();
   if (!db) return;

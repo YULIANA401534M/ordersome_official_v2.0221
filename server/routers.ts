@@ -13,6 +13,9 @@ import { storageRouter } from "./routers/storage";
 import { sopRouter } from "./routers/sop";
 import { tenantRouter } from "./routers/tenant";
 import { dayoneRouter } from "./routers/dayone";
+import { sendMail } from "./mail";
+import { users } from "../drizzle/schema";
+import { inArray } from "drizzle-orm";
 
 // Admin procedure
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -441,6 +444,36 @@ export const appRouter = router({
           content: `收到新訂單！\n訂單編號：${order.orderNumber}\n收件人：${input.recipientName}\n金額：NT$ ${total}\n付款方式：${input.paymentMethod}`,
         });
 
+        // 寄 Email 通知所有 manager 和 super_admin
+        try {
+          const database = await db.getDb();
+          if (database) {
+            const admins = await database
+              .select({ email: users.email })
+              .from(users)
+              .where(inArray(users.role, ['super_admin', 'manager']));
+            const adminEmails = admins.map(u => u.email).filter(Boolean) as string[];
+            if (adminEmails.length > 0) {
+              const orderTime = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' });
+              const html = `
+                <h2>新訂單通知 #${order.orderNumber}</h2>
+                <p><strong>訂單編號：</strong>${order.orderNumber}</p>
+                <p><strong>買家：</strong>${input.recipientName}</p>
+                <p><strong>金額：</strong>NT$ ${total}</p>
+                <p><strong>下單時間：</strong>${orderTime}</p>
+                <p><a href="https://ordersome.com.tw/dashboard/admin/orders">前往後台查看訂單</a></p>
+              `;
+              await Promise.all(
+                adminEmails.map(email =>
+                  sendMail({ to: email, subject: `新訂單通知 #${order.orderNumber}`, html })
+                )
+              );
+            }
+          }
+        } catch (e) {
+          console.error('[Mail] 新訂單通知寄送失敗', e);
+        }
+
         return order;
       }),
     updateStatus: adminProcedure
@@ -448,7 +481,46 @@ export const appRouter = router({
         id: z.number(),
         status: z.enum(['pending', 'paid', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded']),
       }))
-      .mutation(({ input }) => db.updateOrderStatus(input.id, input.status)),
+      .mutation(async ({ input }) => {
+        await db.updateOrderStatus(input.id, input.status);
+
+        // 出貨時寄 Email 通知買家
+        if (input.status === 'shipped') {
+          try {
+            const order = await db.getOrderById(input.id);
+            if (order?.recipientEmail) {
+              const shippedAt = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' });
+              const proofSection = (order as any).shippingProofUrl
+                ? `<p><strong>出貨證明：</strong><a href="${(order as any).shippingProofUrl}">查看出貨證明</a></p>`
+                : '';
+              const html = `
+                <h2>您的訂單已出貨！</h2>
+                <p><strong>訂單編號：</strong>${order.orderNumber}</p>
+                <p><strong>出貨日期：</strong>${shippedAt}</p>
+                ${proofSection}
+                <p>感謝您的購買，如有任何問題請聯絡我們。</p>
+                <p>來點什麼 OrderSome</p>
+              `;
+              await sendMail({
+                to: order.recipientEmail,
+                subject: '您的訂單已出貨！',
+                html,
+              });
+            }
+          } catch (e) {
+            console.error('[Mail] 出貨通知寄送失敗', e);
+          }
+        }
+      }),
+    uploadShippingProof: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        shippingProofUrl: z.string().url(),
+      }))
+      .mutation(async ({ input }) => {
+        await db.updateOrderShippingProof(input.id, input.shippingProofUrl);
+        return { success: true };
+      }),
     delete: adminProcedure
       .input(z.object({ id: z.number() }))
       .mutation(({ input, ctx }) => db.deleteOrder(input.id, ctx.tenantId)),

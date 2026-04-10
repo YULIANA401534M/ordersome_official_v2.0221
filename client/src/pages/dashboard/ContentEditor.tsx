@@ -373,7 +373,7 @@ export default function ContentEditor() {
                 onChange={(e) => setScheduledAt(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <p className="mt-1 text-xs text-gray-500">設定後系統將自動在指定時間發布（狀態須為草稿）</p>
+              <p className="mt-1 text-xs text-amber-600 font-medium">⚠️ 排程發布需將狀態設為「草稿」，系統將於指定時間自動發布</p>
             </div>
           </div>
 

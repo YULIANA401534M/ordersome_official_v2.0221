@@ -159,6 +159,7 @@ export const orders = mysqlTable("orders", {
   shippedAt: timestamp("shippedAt"),
   deliveredAt: timestamp("deliveredAt"),
   ecpayTradeNo: varchar("ecpayTradeNo", { length: 50 }),
+  shippingProofUrl: text("shippingProofUrl"),
   orderSource: varchar("orderSource", { length: 50 }).default("general").notNull(),
   invoiceType: mysqlEnum("invoiceType", ["personal", "company"]).default("personal").notNull(),
   companyTaxId: varchar("companyTaxId", { length: 8 }),
