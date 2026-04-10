@@ -58,6 +58,17 @@ export default function AdminDashboardLayout({
     return () => nav.removeEventListener("scroll", handler);
   }, [location]);
 
+  // ── 所有 hooks 必須在任何 early return 之前 ──
+  const isSuperAdmin = user?.role === "super_admin";
+  const isManager = user?.role === "manager";
+  const hasAdminAccess = user?.role === "super_admin" || user?.role === "manager";
+
+  // ── 來點什麼模組開關查詢（tenantId=1）──
+  const { data: orderSomeModules } = trpc.dayone.modules.list.useQuery(
+    { tenantId: 1 },
+    { enabled: !loading && hasAdminAccess }
+  );
+
   if (loading) {
     return <DashboardLayoutSkeleton />;
   }
@@ -88,7 +99,6 @@ export default function AdminDashboardLayout({
     );
   }
 
-  const hasAdminAccess = user.role === "super_admin" || user.role === "manager";
   if (!hasAdminAccess) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -108,9 +118,6 @@ export default function AdminDashboardLayout({
     );
   }
 
-  const isSuperAdmin = user.role === "super_admin";
-  const isManager = user.role === "manager";
-
   const hasPermission = (permission: string) => {
     if (!user) return false;
     if (isSuperAdmin) return true;
@@ -121,12 +128,6 @@ export default function AdminDashboardLayout({
         : user.permissions;
     return Array.isArray(permissions) && permissions.includes(permission);
   };
-
-  // ── 來點什麼模組開關查詢（tenantId=1）──
-  const { data: orderSomeModules } = trpc.dayone.modules.list.useQuery(
-    { tenantId: 1 },
-    { enabled: isManager || isSuperAdmin }
-  );
   const hasOSModule = (key: string) =>
     isSuperAdmin || (orderSomeModules?.some((m: any) => m.moduleKey === key && m.isEnabled) ?? false);
 
