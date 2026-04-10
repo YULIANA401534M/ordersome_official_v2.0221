@@ -485,6 +485,7 @@ export const appRouter = router({
         await db.updateOrderStatus(input.id, input.status);
 
         // 出貨時寄 Email 通知買家（失敗不影響主流程）
+        console.log('[Mail] 準備寄出貨通知，status:', input.status);
         if (input.status === 'shipped') {
           try {
             const order = await db.getOrderById(input.id);
@@ -501,6 +502,7 @@ export const appRouter = router({
                 <p>感謝您的購買，如有任何問題請聯絡我們。</p>
                 <p>來點什麼 OrderSome</p>
               `;
+              console.log('[Mail] 開始寄信給：', order?.recipientEmail);
               try {
                 await sendMail({
                   to: order.recipientEmail,
