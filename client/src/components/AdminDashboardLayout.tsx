@@ -264,7 +264,7 @@ function AdminDashboardLayoutContent({
   const activeMenuItem = allItems.find((item) => item.path === location);
 
   const groupLabelClass =
-    "text-xs font-semibold tracking-wider uppercase text-amber-600 px-2 pb-1";
+    "text-xs font-semibold tracking-wider uppercase text-amber-600";
 
   const renderItems = (
     items: { icon: React.ComponentType<{ className?: string }>; label: string; path: string }[]
@@ -328,73 +328,73 @@ function AdminDashboardLayoutContent({
           </SidebarHeader>
 
           {/* ── Content ── */}
-          <SidebarContent className="gap-0 overflow-y-auto py-2">
+          <SidebarContent className="overflow-y-auto">
             {/* 商城管理 */}
             {ecommerceItems.length > 0 && (
-              <SidebarGroup>
+              <SidebarGroup className="px-2 py-1">
                 <SidebarGroupLabel className={groupLabelClass}>
                   商城管理
                 </SidebarGroupLabel>
-                <SidebarMenu className="px-2">{renderItems(ecommerceItems)}</SidebarMenu>
+                <SidebarMenu>{renderItems(ecommerceItems)}</SidebarMenu>
               </SidebarGroup>
             )}
 
             {/* 內容管理 */}
             {contentItems.length > 0 && (
-              <SidebarGroup>
+              <SidebarGroup className="px-2 py-1">
                 <SidebarGroupLabel className={groupLabelClass}>
                   內容管理
                 </SidebarGroupLabel>
-                <SidebarMenu className="px-2">{renderItems(contentItems)}</SidebarMenu>
+                <SidebarMenu>{renderItems(contentItems)}</SidebarMenu>
               </SidebarGroup>
             )}
 
             {/* 人員管理 */}
             {userItems.length > 0 && (
-              <SidebarGroup>
+              <SidebarGroup className="px-2 py-1">
                 <SidebarGroupLabel className={groupLabelClass}>
                   人員管理
                 </SidebarGroupLabel>
-                <SidebarMenu className="px-2">{renderItems(userItems)}</SidebarMenu>
+                <SidebarMenu>{renderItems(userItems)}</SidebarMenu>
               </SidebarGroup>
             )}
 
             {/* 加盟管理 */}
             {franchiseItems.length > 0 && (
-              <SidebarGroup>
+              <SidebarGroup className="px-2 py-1">
                 <SidebarGroupLabel className={groupLabelClass}>
                   加盟管理
                 </SidebarGroupLabel>
-                <SidebarMenu className="px-2">{renderItems(franchiseItems)}</SidebarMenu>
+                <SidebarMenu>{renderItems(franchiseItems)}</SidebarMenu>
               </SidebarGroup>
             )}
 
             {/* 大永蛋品 ERP */}
             {erpItems.length > 0 && (
-              <SidebarGroup>
+              <SidebarGroup className="px-2 py-1">
                 <SidebarGroupLabel className={groupLabelClass}>
                   大永蛋品 ERP
                 </SidebarGroupLabel>
-                <SidebarMenu className="px-2">{renderItems(erpItems)}</SidebarMenu>
+                <SidebarMenu>{renderItems(erpItems)}</SidebarMenu>
               </SidebarGroup>
             )}
 
             {/* 系統管理 */}
             {systemItems.length > 0 && (
-              <SidebarGroup>
+              <SidebarGroup className="px-2 py-1">
                 <SidebarGroupLabel className={groupLabelClass}>
                   系統管理
                 </SidebarGroupLabel>
-                <SidebarMenu className="px-2">{renderItems(systemItems)}</SidebarMenu>
+                <SidebarMenu>{renderItems(systemItems)}</SidebarMenu>
               </SidebarGroup>
             )}
 
             {/* 底部固定項目 */}
-            <SidebarGroup>
+            <SidebarGroup className="px-2 py-1">
               <SidebarGroupLabel className={groupLabelClass}>
                 其他
               </SidebarGroupLabel>
-              <SidebarMenu className="px-2">{renderItems(bottomItems)}</SidebarMenu>
+              <SidebarMenu>{renderItems(bottomItems)}</SidebarMenu>
             </SidebarGroup>
           </SidebarContent>
 
