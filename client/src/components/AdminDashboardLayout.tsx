@@ -28,6 +28,8 @@ import {
   Puzzle,
   BookOpen,
   Home,
+  Wrench,
+  ClipboardCheck,
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
@@ -107,6 +109,7 @@ export default function AdminDashboardLayout({
   const isSuperAdmin = user.role === "super_admin";
   const isManager = user.role === "manager";
 
+  // ── 宇聯總部分組 ──
   const ecommerceItems = hasPermission("manage_products")
     ? [
         { icon: LayoutDashboard, label: "商城總覽", path: "/dashboard/admin/ecommerce" },
@@ -135,6 +138,17 @@ export default function AdminDashboardLayout({
     ? [{ icon: Store, label: "加盟詢問", path: "/dashboard/franchise-inquiries" }]
     : [];
 
+  // ── 來點什麼分組（門市管理 & 預留 ERP）──
+  const storeOperationItems =
+    isSuperAdmin || isManager
+      ? [
+          { icon: BookOpen, label: "SOP 知識庫", path: "/dashboard/sop" },
+          { icon: Wrench, label: "設備報修", path: "/dashboard/repairs" },
+          { icon: ClipboardCheck, label: "每日檢查表", path: "/dashboard/checklist" },
+        ]
+      : [];
+
+  // ── 大永蛋品 ERP ──
   const erpItems =
     isSuperAdmin || isManager
       ? [
@@ -151,6 +165,7 @@ export default function AdminDashboardLayout({
         ]
       : [];
 
+  // ── 系統管理（super_admin 限定）──
   const systemItems = isSuperAdmin
     ? [
         { icon: Building, label: "租戶管理", path: "/super-admin/tenants" },
@@ -159,7 +174,6 @@ export default function AdminDashboardLayout({
     : [];
 
   const bottomItems = [
-    { icon: BookOpen, label: "SOP 知識庫", path: "/dashboard/sop" },
     { icon: Home, label: "返回首頁", path: "/" },
   ];
 
@@ -168,6 +182,7 @@ export default function AdminDashboardLayout({
     ...contentItems,
     ...userItems,
     ...franchiseItems,
+    ...storeOperationItems,
     ...erpItems,
     ...systemItems,
     ...bottomItems,
@@ -216,6 +231,38 @@ export default function AdminDashboardLayout({
     );
   };
 
+  // 預留項目（灰色 disabled）
+  const renderComingSoonGroup = (
+    label: string,
+    items: { icon: React.ComponentType<{ className?: string }>; label: string }[]
+  ) => {
+    if (items.length === 0) return null;
+    return (
+      <div>
+        <p className={groupLabelClass}>{label}</p>
+        {items.map((item) => (
+          <div
+            key={item.label}
+            className="flex items-center gap-3 px-4 py-2 text-sm text-gray-400 cursor-not-allowed"
+            title="即將推出"
+          >
+            <item.icon className="h-4 w-4 shrink-0" />
+            <span>{item.label}</span>
+            <span className="ml-auto text-[10px] bg-gray-100 text-gray-400 rounded px-1">即將推出</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const comingSoonErpItems =
+    isSuperAdmin || isManager
+      ? [
+          { icon: Warehouse, label: "庫存管理" },
+          { icon: Users, label: "排班管理" },
+        ]
+      : [];
+
   const sidebarContent = (
     <>
       {/* Logo */}
@@ -233,11 +280,35 @@ export default function AdminDashboardLayout({
 
       {/* Menu */}
       <nav className="flex-1 overflow-y-auto py-2 space-y-1">
+        {/* 宇聯總部 */}
+        {(ecommerceItems.length > 0 || contentItems.length > 0 || userItems.length > 0 || franchiseItems.length > 0) && (
+          <div className="px-4 pt-3 pb-1">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">宇聯總部</p>
+          </div>
+        )}
         {renderGroup("商城管理", ecommerceItems)}
         {renderGroup("內容管理", contentItems)}
         {renderGroup("人員管理", userItems)}
         {renderGroup("加盟管理", franchiseItems)}
+
+        {/* 來點什麼 */}
+        {(storeOperationItems.length > 0 || comingSoonErpItems.length > 0) && (
+          <div className="px-4 pt-3 pb-1">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">來點什麼</p>
+          </div>
+        )}
+        {renderGroup("門市管理", storeOperationItems)}
+        {renderComingSoonGroup("來點什麼 ERP", comingSoonErpItems)}
+
+        {/* 大永蛋品 */}
+        {erpItems.length > 0 && (
+          <div className="px-4 pt-3 pb-1">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">大永蛋品</p>
+          </div>
+        )}
         {renderGroup("大永蛋品 ERP", erpItems)}
+
+        {/* 系統 */}
         {renderGroup("系統管理", systemItems)}
         {renderGroup("其他", bottomItems)}
       </nav>

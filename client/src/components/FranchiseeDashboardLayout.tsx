@@ -96,8 +96,8 @@ export default function FranchiseeDashboardLayout({ children }: FranchiseeDashbo
         <div className="p-4 flex items-center justify-between border-b border-green-500/30">
           {!isCollapsed && (
             <div>
-              <h2 className="text-xl font-bold">加盟主專區</h2>
-              <p className="text-sm text-green-100">{user?.name || "加盟主"}</p>
+              <h2 className="text-xl font-bold">門市夥伴專區</h2>
+              <p className="text-sm text-green-100">{user?.name || "門市夥伴"}</p>
             </div>
           )}
           <button
@@ -150,7 +150,7 @@ export default function FranchiseeDashboardLayout({ children }: FranchiseeDashbo
         <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
-              {activeMenuItem?.label || "加盟主專區"}
+              {activeMenuItem?.label || "門市夥伴專區"}
             </h1>
             <p className="text-sm text-gray-500 mt-1">
               {user?.role === "franchisee" && (user as any)?.storeId && `門市編號：${(user as any).storeId}`}

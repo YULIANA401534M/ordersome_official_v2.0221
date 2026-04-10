@@ -148,10 +148,10 @@ export default function Login() {
 
                 {/* Title */}
                 <h2 className="text-2xl font-bold text-gray-900 mb-3">
-                  加盟主 / 員工登入
+                  門市夥伴 / 員工登入
                 </h2>
                 <p className="text-gray-600 mb-8">
-                  適用於加盟主、管理員、內部員工專用
+                  適用於門市夥伴、管理員、內部員工專用
                 </p>
 
                 {/* Features */}
@@ -161,7 +161,7 @@ export default function Login() {
                       <span className="text-amber-600 text-sm">✓</span>
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">加盟主專區</p>
+                      <p className="font-medium text-gray-900">門市夥伴專區</p>
                       <p className="text-sm text-gray-600">訂單管理、庫存查詢、營運報表</p>
                     </div>
                   </div>
@@ -253,7 +253,7 @@ export default function Login() {
         {/* Info Notice */}
         <div className="mt-6 text-center text-sm text-gray-600">
           <p>
-            <strong>提示：</strong>一般顧客請使用左側 Google 或 LINE 登入，加盟主和員工請使用右側帳號密碼登入
+            <strong>提示：</strong>一般顧客請使用左側 Google 或 LINE 登入，門市夥伴和員工請使用右側帳號密碼登入
           </p>
         </div>
       </div>

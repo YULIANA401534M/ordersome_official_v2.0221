@@ -156,7 +156,7 @@ export default function AdminPermissions() {
               <option value="all">所有角色</option>
               <option value="super_admin">超級管理員</option>
               <option value="manager">經理</option>
-              <option value="franchisee">加盟主</option>
+              <option value="franchisee">門市夥伴</option>
               <option value="staff">員工</option>
               <option value="customer">一般會員</option>
             </select>
@@ -196,7 +196,7 @@ export default function AdminPermissions() {
                       <span className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full">
                         {user.role === "super_admin" && "超級管理員"}
                         {user.role === "manager" && "經理"}
-                        {user.role === "franchisee" && "加盟主"}
+                        {user.role === "franchisee" && "門市夥伴"}
                         {user.role === "staff" && "員工"}
                         {user.role === "customer" && "一般會員"}
                       </span>

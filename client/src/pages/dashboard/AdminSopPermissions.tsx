@@ -13,7 +13,7 @@ import {
 
 const ROLE_LABELS: Record<string, string> = {
   staff: "員工 (Staff)",
-  franchisee: "加盟主 (Franchisee)",
+  franchisee: "門市夥伴 (Franchisee)",
   manager: "區域主管 (Manager)",
 };
 

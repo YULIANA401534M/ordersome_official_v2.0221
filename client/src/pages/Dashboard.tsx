@@ -17,6 +17,8 @@ import {
   Briefcase,
   LogOut,
   ChevronRight,
+  Wrench,
+  ClipboardCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -32,7 +34,7 @@ function getGreeting(): string {
 const ROLE_LABELS: Record<string, string> = {
   super_admin: "超級管理員",
   manager: "管理員",
-  franchisee: "加盟主",
+  franchisee: "門市夥伴",
   staff: "員工",
   customer: "一般會員",
   driver: "司機",
@@ -85,15 +87,15 @@ type SmallCard = {
   title: string;
   description: string;
   href: string;
-  iconColor: string;  // text color
-  iconBg: string;     // bg color
-  borderColor: string; // left border color
+  iconColor: string;
+  iconBg: string;
+  borderColor: string;
   Icon: React.ComponentType<{ className?: string }>;
-  roles: string[];    // empty = all authenticated
+  roles: string[];
 };
 
 const ALL_SMALL_CARDS: SmallCard[] = [
-  // super_admin / manager only
+  // super_admin / manager
   {
     id: "orders-admin",
     title: "訂單管理",
@@ -160,30 +162,96 @@ const ALL_SMALL_CARDS: SmallCard[] = [
     Icon: BookOpen,
     roles: ["super_admin", "manager"],
   },
-  // franchisee
   {
-    id: "franchise-zone",
-    title: "加盟專區",
-    description: "營收報表與原物料訂貨",
-    href: "/dashboard/franchise",
-    iconColor: "text-orange-600",
-    iconBg: "bg-orange-100",
-    borderColor: "border-l-orange-500",
-    Icon: Store,
+    id: "repairs-admin",
+    title: "設備報修",
+    description: "查看與處理報修申請",
+    href: "/dashboard/repairs",
+    iconColor: "text-red-600",
+    iconBg: "bg-red-100",
+    borderColor: "border-l-red-500",
+    Icon: Wrench,
+    roles: ["super_admin", "manager"],
+  },
+  {
+    id: "checklist-admin",
+    title: "每日檢查表",
+    description: "查看門市每日檢查記錄",
+    href: "/dashboard/checklist",
+    iconColor: "text-green-600",
+    iconBg: "bg-green-100",
+    borderColor: "border-l-green-500",
+    Icon: ClipboardCheck,
+    roles: ["super_admin", "manager"],
+  },
+  {
+    id: "profile-admin",
+    title: "個人中心",
+    description: "編輯個人資料與設定",
+    href: "/member/profile",
+    iconColor: "text-gray-600",
+    iconBg: "bg-gray-100",
+    borderColor: "border-l-gray-400",
+    Icon: User,
+    roles: ["super_admin", "manager"],
+  },
+  // franchisee（門市夥伴）小卡片
+  {
+    id: "sop-franchisee",
+    title: "SOP 知識庫",
+    description: "查閱作業手冊與規範",
+    href: "/dashboard/sop",
+    iconColor: "text-teal-600",
+    iconBg: "bg-teal-100",
+    borderColor: "border-l-teal-600",
+    Icon: BookOpen,
     roles: ["franchisee"],
   },
-  // staff
   {
-    id: "staff-zone",
-    title: "員工專區",
-    description: "設備報修與班表查詢",
-    href: "/dashboard/staff",
-    iconColor: "text-cyan-600",
-    iconBg: "bg-cyan-100",
-    borderColor: "border-l-cyan-500",
-    Icon: Briefcase,
-    roles: ["staff"],
+    id: "repairs-franchisee",
+    title: "設備報修",
+    description: "提交設備維修申請",
+    href: "/dashboard/repairs",
+    iconColor: "text-red-600",
+    iconBg: "bg-red-100",
+    borderColor: "border-l-red-500",
+    Icon: Wrench,
+    roles: ["franchisee"],
   },
+  {
+    id: "checklist-franchisee",
+    title: "每日檢查表",
+    description: "填寫開店/閉店檢查表",
+    href: "/dashboard/checklist",
+    iconColor: "text-green-600",
+    iconBg: "bg-green-100",
+    borderColor: "border-l-green-500",
+    Icon: ClipboardCheck,
+    roles: ["franchisee"],
+  },
+  {
+    id: "shop-franchisee",
+    title: "線上商城",
+    description: "前往商城購物",
+    href: "/shop",
+    iconColor: "text-amber-600",
+    iconBg: "bg-amber-100",
+    borderColor: "border-l-amber-500",
+    Icon: ShoppingBag,
+    roles: ["franchisee"],
+  },
+  {
+    id: "profile-franchisee",
+    title: "個人中心",
+    description: "編輯個人資料與設定",
+    href: "/member/profile",
+    iconColor: "text-gray-600",
+    iconBg: "bg-gray-100",
+    borderColor: "border-l-gray-400",
+    Icon: User,
+    roles: ["franchisee"],
+  },
+  // staff 小卡片
   {
     id: "sop-staff",
     title: "SOP 知識庫",
@@ -195,9 +263,8 @@ const ALL_SMALL_CARDS: SmallCard[] = [
     Icon: BookOpen,
     roles: ["staff"],
   },
-  // all authenticated
   {
-    id: "shop",
+    id: "shop-staff",
     title: "線上商城",
     description: "前往商城購物",
     href: "/shop",
@@ -205,7 +272,30 @@ const ALL_SMALL_CARDS: SmallCard[] = [
     iconBg: "bg-amber-100",
     borderColor: "border-l-amber-500",
     Icon: ShoppingBag,
-    roles: [],
+    roles: ["staff"],
+  },
+  {
+    id: "profile-staff",
+    title: "個人中心",
+    description: "編輯個人資料與設定",
+    href: "/member/profile",
+    iconColor: "text-gray-600",
+    iconBg: "bg-gray-100",
+    borderColor: "border-l-gray-400",
+    Icon: User,
+    roles: ["staff"],
+  },
+  // customer / driver 小卡片
+  {
+    id: "shop-customer",
+    title: "線上商城",
+    description: "前往商城購物",
+    href: "/shop",
+    iconColor: "text-amber-600",
+    iconBg: "bg-amber-100",
+    borderColor: "border-l-amber-500",
+    Icon: ShoppingBag,
+    roles: ["customer", "driver"],
   },
   {
     id: "my-orders",
@@ -216,10 +306,10 @@ const ALL_SMALL_CARDS: SmallCard[] = [
     iconBg: "bg-blue-100",
     borderColor: "border-l-blue-500",
     Icon: ClipboardList,
-    roles: ["franchisee", "customer", "driver"],
+    roles: ["customer", "driver"],
   },
   {
-    id: "profile",
+    id: "profile-customer",
     title: "個人中心",
     description: "編輯個人資料與設定",
     href: "/member/profile",
@@ -227,7 +317,7 @@ const ALL_SMALL_CARDS: SmallCard[] = [
     iconBg: "bg-gray-100",
     borderColor: "border-l-gray-400",
     Icon: User,
-    roles: [],
+    roles: ["customer", "driver"],
   },
 ];
 
@@ -238,7 +328,6 @@ function HeroCardItem({ card }: { card: HeroCard }) {
       href={card.href}
       className={`group relative overflow-hidden rounded-2xl bg-gradient-to-br ${card.gradient} p-6 flex flex-col justify-between min-h-[140px] shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-200`}
     >
-      {/* decorative circle */}
       <div className="absolute -right-6 -bottom-6 w-32 h-32 rounded-full bg-white/10 pointer-events-none" />
       <div className="absolute -right-2 -bottom-10 w-20 h-20 rounded-full bg-white/5 pointer-events-none" />
 
@@ -309,7 +398,7 @@ export default function Dashboard() {
   const greeting = getGreeting();
 
   const visibleSmallCards = ALL_SMALL_CARDS.filter(
-    (c) => c.roles.length === 0 || c.roles.includes(userRole)
+    (c) => c.roles.includes(userRole)
   );
 
   const handleLogout = async () => {
@@ -322,13 +411,11 @@ export default function Dashboard() {
       {/* ── Header ── */}
       <header className="bg-gradient-to-b from-[#FFF9E6] to-white border-b border-amber-100 sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
-          {/* Left: Brand */}
           <div className="flex items-center gap-2 shrink-0">
             <span className="text-lg font-black tracking-tight text-amber-600">來點什麼</span>
             <span className="hidden sm:inline text-xs text-gray-400 font-medium">OrderSome</span>
           </div>
 
-          {/* Center: Greeting */}
           <div className="flex-1 text-center min-w-0">
             <p className="text-base font-bold text-gray-900 truncate">
               {user?.name ?? "用戶"} 👋 {greeting}
@@ -340,7 +427,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Right: Actions */}
           <div className="flex items-center gap-1.5 shrink-0">
             <Button
               variant="ghost"
@@ -369,12 +455,12 @@ export default function Dashboard() {
           </section>
         )}
 
-        {/* franchisee: 大卡片（加盟專區） */}
+        {/* franchisee: 大卡片（門市夥伴專區） */}
         {userRole === "franchisee" && (
           <section className="mb-6">
             <a
               href="/dashboard/franchise"
-              className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-orange-500 to-orange-700 p-6 flex flex-col justify-between min-h-[140px] shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-200 block"
+              className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500 to-amber-700 p-6 flex flex-col justify-between min-h-[140px] shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-200 block"
             >
               <div className="absolute -right-6 -bottom-6 w-32 h-32 rounded-full bg-white/10 pointer-events-none" />
               <div className="flex items-start justify-between">
@@ -384,8 +470,8 @@ export default function Dashboard() {
                 <span className="text-white/50 text-xs font-medium tracking-widest uppercase">Franchise</span>
               </div>
               <div className="mt-4">
-                <h2 className="text-white font-bold text-lg">加盟專區</h2>
-                <p className="text-white/70 text-sm mt-0.5">營收報表與原物料訂貨</p>
+                <h2 className="text-white font-bold text-lg">門市夥伴專區</h2>
+                <p className="text-white/70 text-sm mt-0.5">SOP 文件、設備報修、每日檢查表</p>
               </div>
               <div className="mt-3 flex items-center gap-1 text-white/80 text-xs font-medium group-hover:text-white transition-colors">
                 進入 <ChevronRight className="h-3.5 w-3.5" />
@@ -399,7 +485,7 @@ export default function Dashboard() {
           <section className="mb-6">
             <a
               href="/dashboard/staff"
-              className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-cyan-500 to-cyan-700 p-6 flex flex-col justify-between min-h-[140px] shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-200 block"
+              className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 p-6 flex flex-col justify-between min-h-[140px] shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-200 block"
             >
               <div className="absolute -right-6 -bottom-6 w-32 h-32 rounded-full bg-white/10 pointer-events-none" />
               <div className="flex items-start justify-between">
@@ -450,7 +536,6 @@ export default function Dashboard() {
             <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
               快速入口
             </h2>
-            {/* 桌面 2 欄，手機 1 欄 */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {visibleSmallCards.map((card) => (
                 <SmallCardItem key={card.id} card={card} />

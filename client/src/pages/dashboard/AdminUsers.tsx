@@ -20,7 +20,7 @@ const PERMISSIONS = [
 const ROLE_LABELS: Record<UserRole, string> = {
   super_admin: "超級管理員",
   manager: "經理",
-  franchisee: "加盟主",
+  franchisee: "門市夥伴",
   staff: "員工",
   customer: "顧客",
 };

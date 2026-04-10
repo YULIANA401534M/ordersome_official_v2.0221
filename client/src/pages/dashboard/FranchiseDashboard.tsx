@@ -9,7 +9,7 @@ export default function FranchiseDashboard() {
         <div className="max-w-7xl mx-auto">
           {/* Welcome Section */}
           <div className="bg-gradient-to-r from-green-600 to-green-700 text-white rounded-2xl p-8 mb-8 shadow-xl">
-            <h1 className="text-3xl font-bold mb-2">歡迎回到加盟主專區</h1>
+            <h1 className="text-3xl font-bold mb-2">歡迎回到門市夥伴專區</h1>
             <p className="text-green-100">管理您的門市、查看營運報表、下載 SOP 文件</p>
           </div>
 

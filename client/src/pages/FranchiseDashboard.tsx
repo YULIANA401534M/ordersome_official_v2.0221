@@ -60,7 +60,7 @@ export default function FranchiseDashboard() {
                 <ArrowLeft className="h-6 w-6" />
               </a>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">加盟主專區</h1>
+                <h1 className="text-2xl font-bold text-gray-900">門市夥伴專區</h1>
                 <p className="text-gray-600">歡迎回來，{user.name || user.email}</p>
               </div>
             </div>
@@ -159,7 +159,7 @@ export default function FranchiseDashboard() {
         <div className="mt-8 bg-amber-50 border border-amber-200 rounded-xl p-6">
           <h3 className="font-semibold text-amber-900 mb-2">🚀 功能開發中</h3>
           <p className="text-amber-800">
-            加盟主專區的完整功能（訂單管理、庫存查詢、營運報表等）正在開發中，敬請期待！
+            門市夥伴專區的完整功能（訂單管理、庫存查詢、營運報表等）正在開發中，敬請期待！
           </p>
         </div>
       </div>
