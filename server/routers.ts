@@ -484,7 +484,7 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         await db.updateOrderStatus(input.id, input.status);
 
-        // 出貨時寄 Email 通知買家
+        // 出貨時寄 Email 通知買家（失敗不影響主流程）
         if (input.status === 'shipped') {
           try {
             const order = await db.getOrderById(input.id);
@@ -501,16 +501,22 @@ export const appRouter = router({
                 <p>感謝您的購買，如有任何問題請聯絡我們。</p>
                 <p>來點什麼 OrderSome</p>
               `;
-              await sendMail({
-                to: order.recipientEmail,
-                subject: '您的訂單已出貨！',
-                html,
-              });
+              try {
+                await sendMail({
+                  to: order.recipientEmail,
+                  subject: '您的訂單已出貨！',
+                  html,
+                });
+              } catch (mailErr) {
+                console.error('[Mail] 出貨通知寄送失敗', mailErr);
+              }
             }
           } catch (e) {
-            console.error('[Mail] 出貨通知寄送失敗', e);
+            console.error('[Mail] 出貨通知查詢訂單失敗', e);
           }
         }
+
+        return { success: true };
       }),
     uploadShippingProof: adminProcedure
       .input(z.object({
