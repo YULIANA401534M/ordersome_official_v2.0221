@@ -13,6 +13,7 @@ import { storageRouter } from "./routers/storage";
 import { sopRouter } from "./routers/sop";
 import { tenantRouter } from "./routers/tenant";
 import { dayoneRouter } from "./routers/dayone";
+import { aiWriterRouter } from "./routers/ai-writer";
 import { sendMail } from "./mail";
 import { users } from "../drizzle/schema";
 import { inArray } from "drizzle-orm";
@@ -801,6 +802,8 @@ export const appRouter = router({
   tenant: tenantRouter,
   // 大永蛋品 ERP 系統
   dayone: dayoneRouter,
+  // AI 文章助手
+  aiWriter: aiWriterRouter,
 });
 
 export type AppRouter = typeof appRouter;

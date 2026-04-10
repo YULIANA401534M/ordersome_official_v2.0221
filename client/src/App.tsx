@@ -66,6 +66,7 @@ import AdminPermissions from "./pages/dashboard/AdminPermissions";
 import AdminSopPermissions from "./pages/dashboard/AdminSopPermissions";
 import ContentManagement from "./pages/dashboard/ContentManagement";
 import ContentEditor from "./pages/dashboard/ContentEditor";
+import AIWriter from "./pages/dashboard/AIWriter";
 import FranchiseInquiries from "./pages/dashboard/FranchiseInquiries";
 import News from "./pages/News";
 import NewsArticle from "./pages/NewsArticle";
@@ -201,6 +202,7 @@ function Router() {
       <Route path="/dashboard/content" component={ContentManagement} />
       <Route path="/dashboard/content/new" component={ContentEditor} />
       <Route path="/dashboard/content/edit/:id" component={ContentEditor} />
+      <Route path="/dashboard/ai-writer" component={AIWriter} />
       <Route path="/dashboard/franchise-inquiries" component={FranchiseInquiries} />
       
       {/* Franchisee Routes */}

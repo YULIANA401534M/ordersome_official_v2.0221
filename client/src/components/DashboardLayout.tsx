@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, KeyRound, Egg, ClipboardList, Package, Truck, BarChart3, ShoppingCart, MapPin, Shield } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, KeyRound, Egg, ClipboardList, Package, Truck, BarChart3, ShoppingCart, MapPin, Shield, FileText, Sparkles } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import ChangePasswordDialog from "@/components/ChangePasswordDialog";
 import { useLocation } from "wouter";
@@ -31,6 +31,11 @@ import { Button } from "./ui/button";
 const menuItems = [
   { icon: LayoutDashboard, label: "後台總覽", path: "/dashboard" },
   { icon: Users, label: "用戶管理", path: "/dashboard/admin/users" },
+];
+
+const contentMenuItems = [
+  { icon: FileText, label: "內容管理", path: "/dashboard/content" },
+  { icon: Sparkles, label: "AI 文章助手", path: "/dashboard/ai-writer" },
 ];
 
 const dayoneMenuItems = [
@@ -130,7 +135,7 @@ function DashboardLayoutContent({
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const allItems = [...menuItems, ...dayoneMenuItems, ...superAdminItems];
+  const allItems = [...menuItems, ...contentMenuItems, ...dayoneMenuItems, ...superAdminItems];
   const activeMenuItem = allItems.find(item => item.path === location);
   const isMobile = useIsMobile();
 
@@ -209,6 +214,30 @@ function DashboardLayoutContent({
                       onClick={() => setLocation(item.path)}
                       tooltip={item.label}
                       className={`h-10 transition-all font-normal`}
+                    >
+                      <item.icon className={`h-4 w-4 ${isActive ? "text-primary" : ""}`} />
+                      <span>{item.label}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+            {/* Content Section */}
+            <div className="px-3 pt-3 pb-1">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground group-data-[collapsible=icon]:hidden flex items-center gap-1">
+                <FileText className="h-3 w-3" /> 內容管理
+              </p>
+            </div>
+            <SidebarMenu className="px-2 pb-1">
+              {contentMenuItems.map(item => {
+                const isActive = location === item.path || location.startsWith(item.path + "/");
+                return (
+                  <SidebarMenuItem key={item.path}>
+                    <SidebarMenuButton
+                      isActive={isActive}
+                      onClick={() => setLocation(item.path)}
+                      tooltip={item.label}
+                      className={`h-9 transition-all font-normal`}
                     >
                       <item.icon className={`h-4 w-4 ${isActive ? "text-primary" : ""}`} />
                       <span>{item.label}</span>
