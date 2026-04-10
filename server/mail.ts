@@ -1,23 +1,14 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: 465,
-  secure: true,
-  family: 4,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function sendMail({ to, subject, html }: {
   to: string;
   subject: string;
   html: string;
 }) {
-  await transporter.sendMail({
-    from: process.env.SMTP_FROM || 'noreply@ordersome.com.tw',
+  await resend.emails.send({
+    from: '來點什麼 <onboarding@resend.dev>',
     to,
     subject,
     html,
