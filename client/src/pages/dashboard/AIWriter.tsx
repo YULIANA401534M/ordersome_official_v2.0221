@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/collapsible";
 import { Loader2, Sparkles, ChevronDown, X, Plus } from "lucide-react";
 import { toast } from "sonner";
-import DashboardLayout from "@/components/DashboardLayout";
+import AdminDashboardLayout from "@/components/AdminDashboardLayout";
 
 type Style = "brand" | "franchise";
 
@@ -128,7 +128,7 @@ export default function AIWriter() {
   }
 
   return (
-    <DashboardLayout>
+    <AdminDashboardLayout>
       <div className="flex flex-col lg:flex-row gap-6 min-h-screen">
         {/* 左欄：設定區 */}
         <div className="w-full lg:w-[40%] flex flex-col gap-4">
@@ -466,6 +466,6 @@ export default function AIWriter() {
           )}
         </div>
       </div>
-    </DashboardLayout>
+    </AdminDashboardLayout>
   );
 }
