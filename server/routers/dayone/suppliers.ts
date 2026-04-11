@@ -40,13 +40,13 @@ export const dySuppliersRouter = router({
       const client = (db as any).$client;
       if (input.id) {
         await client.execute(
-          `UPDATE dy_suppliers SET name=?, contact=?, phone=?, address=?, bankAccount=?, status=?, updatedAt=NOW() WHERE id=? AND tenantId=?`,
+          `UPDATE dy_suppliers SET name=?, contact=?, phone=?, address=?, bankAccount=?, status=? WHERE id=? AND tenantId=?`,
           [input.name, input.contact ?? null, input.phone ?? null, input.address ?? null, input.bankAccount ?? null, input.status, input.id, input.tenantId]
         );
         return { id: input.id };
       } else {
         const [result] = await client.execute(
-          `INSERT INTO dy_suppliers (tenantId, name, contact, phone, address, bankAccount, status, createdAt, updatedAt) VALUES (?,?,?,?,?,?,?,NOW(),NOW())`,
+          `INSERT INTO dy_suppliers (tenantId, name, contact, phone, address, bankAccount, status, createdAt) VALUES (?,?,?,?,?,?,?,NOW())`,
           [input.tenantId, input.name, input.contact ?? null, input.phone ?? null, input.address ?? null, input.bankAccount ?? null, input.status]
         );
         return { id: (result as any).insertId };
@@ -59,7 +59,7 @@ export const dySuppliersRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       await (db as any).$client.execute(
-        `UPDATE dy_suppliers SET status=?, updatedAt=NOW() WHERE id=? AND tenantId=?`,
+        `UPDATE dy_suppliers SET status=? WHERE id=? AND tenantId=?`,
         [input.status, input.id, input.tenantId]
       );
       return { success: true };
