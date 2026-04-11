@@ -6,8 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Trash2, Edit2, Plus } from 'lucide-react';
+import { DayoneLayout } from '@/pages/dayone/DayoneLayout';
+
+const TENANT_ID = 90004;
+
 export default function SupplierList() {
-  const [tenantId] = useState(2); // 大永蛋品 tenantId
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState({
@@ -19,7 +22,7 @@ export default function SupplierList() {
     status: 'active' as const,
   });
 
-  const { data: suppliers, refetch } = trpc.dayone.suppliers.list.useQuery({ tenantId });
+  const { data: suppliers, refetch } = trpc.dayone.suppliers.list.useQuery({ tenantId: TENANT_ID });
   const createMutation = trpc.dayone.suppliers.upsert.useMutation({
     onSuccess: () => {
       alert(editingId ? '供應商已更新' : '供應商已新增');
@@ -62,7 +65,7 @@ export default function SupplierList() {
     }
     await createMutation.mutateAsync({
       id: editingId ?? undefined,
-      tenantId,
+      tenantId: TENANT_ID,
       ...form,
     });
   };
@@ -81,129 +84,130 @@ export default function SupplierList() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">供應商管理</h1>
-        <Button onClick={() => { resetForm(); setIsOpen(true); }} className="gap-2">
-          <Plus className="h-4 w-4" />
-          新增供應商
-        </Button>
-      </div>
+    <DayoneLayout>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold">供應商管理</h1>
+          <Button onClick={() => { resetForm(); setIsOpen(true); }} className="gap-2">
+            <Plus className="h-4 w-4" />
+            新增供應商
+          </Button>
+        </div>
 
-      <div className="grid gap-4">
-        {suppliers?.map((supplier: any) => (
-          <Card key={supplier.id} className={supplier.status === 'inactive' ? 'opacity-60' : ''}>
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <CardTitle className="text-lg">{supplier.name}</CardTitle>
-                  <p className="text-sm text-gray-600">聯絡人：{supplier.contact || '-'}</p>
-                  <p className="text-sm text-gray-600">電話：{supplier.phone || '-'}</p>
+        <div className="grid gap-4">
+          {suppliers?.length === 0 && (
+            <p className="text-gray-500 text-center py-8">尚無供應商資料</p>
+          )}
+          {suppliers?.map((supplier: any) => (
+            <Card key={supplier.id} className={supplier.status === 'inactive' ? 'opacity-60' : ''}>
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <CardTitle className="text-lg">{supplier.name}</CardTitle>
+                    <p className="text-sm text-gray-600">聯絡人：{supplier.contact || '-'}</p>
+                    <p className="text-sm text-gray-600">電話：{supplier.phone || '-'}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => handleEdit(supplier)}>
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => deleteMutation.mutate({ id: supplier.id, tenantId: TENANT_ID })}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEdit(supplier)}
-                  >
-                    <Edit2 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => deleteMutation.mutate({ id: supplier.id, tenantId })}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <p className="text-sm">地址：{supplier.address || '-'}</p>
+                <p className="text-sm">銀行帳戶：{supplier.bankAccount || '-'}</p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => toggleMutation.mutate({
+                    id: supplier.id,
+                    tenantId: TENANT_ID,
+                    status: supplier.status === 'active' ? 'inactive' : 'active',
+                  })}
+                >
+                  {supplier.status === 'active' ? '停用' : '啟用'}
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{editingId ? '編輯供應商' : '新增供應商'}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">供應商名稱 *</label>
+                <Input
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="輸入供應商名稱"
+                />
               </div>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <p className="text-sm">地址：{supplier.address || '-'}</p>
-              <p className="text-sm">銀行帳戶：{supplier.bankAccount || '-'}</p>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => toggleMutation.mutate({
-                  id: supplier.id,
-                  tenantId,
-                  status: supplier.status === 'active' ? 'inactive' : 'active',
-                })}
-              >
-                {supplier.status === 'active' ? '停用' : '啟用'}
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
+              <div>
+                <label className="text-sm font-medium">聯絡人</label>
+                <Input
+                  value={form.contact}
+                  onChange={(e) => setForm({ ...form, contact: e.target.value })}
+                  placeholder="輸入聯絡人名稱"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">電話</label>
+                <Input
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  placeholder="輸入電話"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">地址</label>
+                <Input
+                  value={form.address}
+                  onChange={(e) => setForm({ ...form, address: e.target.value })}
+                  placeholder="輸入地址"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">銀行帳戶</label>
+                <Input
+                  value={form.bankAccount}
+                  onChange={(e) => setForm({ ...form, bankAccount: e.target.value })}
+                  placeholder="輸入銀行帳戶"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">狀態</label>
+                <Select value={form.status} onValueChange={(value: any) => setForm({ ...form, status: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">啟用</SelectItem>
+                    <SelectItem value="inactive">停用</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={resetForm}>取消</Button>
+                <Button onClick={handleSubmit} disabled={createMutation.isPending}>
+                  {createMutation.isPending ? '處理中...' : '保存'}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
-
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingId ? '編輯供應商' : '新增供應商'}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">供應商名稱 *</label>
-              <Input
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="輸入供應商名稱"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">聯絡人</label>
-              <Input
-                value={form.contact}
-                onChange={(e) => setForm({ ...form, contact: e.target.value })}
-                placeholder="輸入聯絡人名稱"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">電話</label>
-              <Input
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                placeholder="輸入電話"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">地址</label>
-              <Input
-                value={form.address}
-                onChange={(e) => setForm({ ...form, address: e.target.value })}
-                placeholder="輸入地址"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">銀行帳戶</label>
-              <Input
-                value={form.bankAccount}
-                onChange={(e) => setForm({ ...form, bankAccount: e.target.value })}
-                placeholder="輸入銀行帳戶"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">狀態</label>
-              <Select value={form.status} onValueChange={(value: any) => setForm({ ...form, status: value })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">啟用</SelectItem>
-                  <SelectItem value="inactive">停用</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={resetForm}>取消</Button>
-              <Button onClick={handleSubmit} disabled={createMutation.isPending}>
-                {createMutation.isPending ? '處理中...' : '保存'}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+    </DayoneLayout>
   );
 }
