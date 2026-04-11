@@ -75,6 +75,8 @@ export default function AdminDashboardLayout({
       refetchOnMount: true,
     }
   );
+  console.log('[debug] user.tenantId:', (user as any)?.tenantId, typeof (user as any)?.tenantId);
+  console.log('[debug] orderSomeModules:', orderSomeModules);
   const { data: dayoneModules } = trpc.dayone.modules.list.useQuery(
     { tenantId: 90004 },
     {
