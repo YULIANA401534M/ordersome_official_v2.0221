@@ -71,6 +71,7 @@ export default function AdminDashboardLayout({
     {
       enabled: !!user && isOSTenant,
       staleTime: 0,
+      gcTime: 0,
       refetchOnWindowFocus: true,
       refetchOnMount: true,
     }
@@ -80,6 +81,7 @@ export default function AdminDashboardLayout({
     {
       enabled: !!user && isDYTenant,
       staleTime: 0,
+      gcTime: 0,
       refetchOnWindowFocus: true,
       refetchOnMount: true,
     }
