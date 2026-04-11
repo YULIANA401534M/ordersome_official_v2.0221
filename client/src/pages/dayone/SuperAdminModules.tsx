@@ -40,7 +40,8 @@ export default function SuperAdminModules() {
   const toggleMutation = trpc.dayone.modules.toggle.useMutation({
     onSuccess: () => {
       refetch();
-      utils.dayone.modules.list.invalidate();
+      utils.dayone.modules.list.invalidate({ tenantId: 1 });
+      utils.dayone.modules.list.invalidate({ tenantId: 90004 });
     },
   });
   const [toggling, setToggling] = useState<string | null>(null);
