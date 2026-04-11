@@ -1,6 +1,6 @@
 # CLAUDE.md — OrderSome 工作主檔
 
-> 最後更新：2026-04-10 | 文件版本：v4.0
+> 最後更新：2026-04-11 | 文件版本：v5.0
 > 詳細參考（路由/API/DB表/架構）→ 見 `CLAUDE_REFERENCE.md`
 
 ---
@@ -96,6 +96,10 @@ pnpm db:push      # 生成並執行 Drizzle migration
 - ✅ Google Maps 修復
 - ✅ LINE@ 接單整合（Make → Gemini → 後端 → LINE Reply）
 - ✅ **LIFF 客戶下單**（多租戶，/liff/order?tenant=dayone）
+- ✅ 大永獨立登入入口：/dayone/login
+- ✅ 庫存管理通用化：DayoneInventoryContent 接受 tenantId prop
+- ✅ DayoneLayout.tsx TENANT_ID 修正為 90004
+- ✅ dy_inventory 補入 17 筆初始庫存記錄
 - ⏳ 帳務管理（應收應付、月結對帳）
 - ⏳ 積欠款提醒
 
@@ -117,6 +121,7 @@ pnpm db:push      # 生成並執行 Drizzle migration
 - ✅ AI 文章助手（半自動，Gemini 2.5 Flash）
 - ✅ 後台 UI 統一（側邊欄重組，三大分組）
 - ✅ 入口頁依角色顯示功能卡片
+- ✅ 來點什麼 ERP 路由補齊：/dashboard/inventory、/dashboard/scheduling、/dashboard/daily-report
 
 ### 階段 B — 宇聯 ERP（大永穩定後）
 - 庫存管理、排班、門市日報、異常警報
@@ -126,7 +131,19 @@ pnpm db:push      # 生成並執行 Drizzle migration
 
 ---
 
-## 八、最近變更（2026-04-10）
+## 八、最近變更（2026-04-11）
+
+| 檔案 | 變更摘要 |
+|------|---------|
+| `client/src/pages/dayone/DayoneLayout.tsx` | **TENANT_ID 從 2 改為 90004**（影響全部大永頁面，根本性修復） |
+| `client/src/pages/dayone/DayoneInventory.tsx` | 重構為 wrapper，傳入 TENANT_ID prop |
+| `client/src/pages/dayone/DayoneInventoryContent.tsx` | 抽出為通用元件，接受 tenantId prop |
+| `dy_inventory`（TiDB） | 補入 17 筆初始庫存記錄（productId 30001-30017，currentQty=0） |
+| `scripts/check-dy-inventory.mjs` | 新增 DB 查詢確認腳本 |
+
+---
+
+## 八-B、舊變更紀錄（2026-04-10）
 
 | 檔案 | 變更摘要 |
 |------|---------|
@@ -144,7 +161,7 @@ pnpm db:push      # 生成並執行 Drizzle migration
 
 ---
 
-## 八-B、舊變更紀錄（2026-04-08）
+## 八-C、舊變更紀錄（2026-04-08）
 
 | 檔案 | 變更摘要 |
 |------|---------|
@@ -159,7 +176,7 @@ pnpm db:push      # 生成並執行 Drizzle migration
 
 ---
 
-## 八-C、舊變更紀錄（2026-04-07）
+## 八-D、舊變更紀錄（2026-04-07）
 
 | 檔案 | 變更摘要 |
 |------|---------|
@@ -188,9 +205,15 @@ pnpm db:push      # 生成並執行 Drizzle migration
 - 改完 schema.ts 後，寫一個 `scripts/migrate-xxx.mjs` 腳本，在本機跑即可
 
 ### 待處理任務
-- ⏳ 帳務管理（應收應付、月結對帳）
-- ⏳ 積欠款提醒
-- ⏳ LIFF 正式上線：蛋博用自己的 LINE 後台建立 LIFF，更新前端 `TENANT_CONFIG` 的 liffId
+1. ⏳ 模組 toggle 後側邊欄即時連動
+2. ⏳ 供應商管理頁面空白（調查原因）
+3. ⏳ 加盟主功能範圍定義
+4. ⏳ 大永帳號建立流程（tenantId=90004 的 manager 帳號）
+5. ⏳ 來點什麼排班管理、門市日報功能開發
+6. ⏳ 庫存管理 UI 優化
+7. ⏳ 帳務管理（應收應付、月結對帳）
+8. ⏳ 積欠款提醒
+9. ⏳ LIFF 正式上線：蛋博用自己的 LINE 後台建立 LIFF，更新前端 `TENANT_CONFIG` 的 liffId
 
 ---
 
@@ -210,6 +233,9 @@ pnpm db:push      # 生成並執行 Drizzle migration
 - `DayoneLayout` 元件要加入 git（untracked 檔案 Railway build 找不到）
 - Tiptap `RichTextEditor` 的 `content` prop 只在初始化時讀取，需在 useEffect 裡用 `editor.commands.setContent()` 更新
 - SOP `uploadPdf` 已從 Manus `storagePut` 改為 `r2Put`（Cloudflare R2）
+- **`DayoneLayout.tsx` 的 `TENANT_ID` 曾被錯誤設為 `2`，正確值是 `90004`**（已修正，commit 6fb3df0）
+- **`dy_inventory` 初始為空**，需執行 seed INSERT 為每個 dy_products 建立初始記錄
+- `mysql2` 連接 TiDB 不能直接傳 DATABASE_URL 字串（SSL profile boolean 錯誤），需手動解析 URL 並設 `ssl: { rejectUnauthorized: false }`
 
 ---
 
@@ -234,20 +260,35 @@ pnpm db:push      # 生成並執行 Drizzle migration
 └── 人員管理
 ```
 
-### 五種用戶角色
+### 多租戶隔離（2026-04-11 更新）
 
-| 角色 | 權限範圍 |
-|------|---------|
-| `super_admin` | 全部功能 + 可調整所有人的模組權限 |
-| `manager` | 宇聯商城/內容/人員 + 來點什麼門市 + 來點什麼ERP（依模組開關）+ 大永ERP |
-| `franchisee`（門市夥伴） | SOP/報修/檢查表/線上商城 |
-| `staff` | SOP/線上商城 |
-| `customer` | 線上商城/我的訂單 |
-| `driver` | 司機App（`/driver/`） |
+- `AdminDashboardLayout` 加入 `isOSTenant` / `isDYTenant` 判斷
+- `manager` 只看自己租戶的功能，`super_admin` 跨租戶看全部
+- `tenant_modules` 各租戶記錄乾淨隔離（來點什麼 10 筆、大永 10 筆）
 
-### 模組開關（tenant_modules 表）
+### 用戶角色與 tenantId 對應
 
-`moduleKey` 清單：`delivery` / `crm_customers` / `inventory` / `purchasing` / `accounting` / `scheduling` / `daily_report` / `equipment_repair`
+| 角色 | tenantId | 權限範圍 |
+|------|----------|---------|
+| `super_admin` | NULL（跨租戶） | 全部功能 + 可調整所有人的模組權限 |
+| `manager`（來點什麼） | 1 | 宇聯商城/內容/人員 + 來點什麼門市 + ERP（依模組開關） |
+| `manager`（大永） | 90004 | 大永 ERP（**帳號尚未建立**） |
+| `franchisee`（門市夥伴） | 1 | SOP/報修/檢查表/線上商城 |
+| `staff` | 1 | SOP/線上商城 |
+| `customer` | 1 | 線上商城/我的訂單 |
+| `driver` | 90004 | 司機 App（`/driver/`） |
+
+### 模組開關（module_definitions + tenant_modules 表）
+
+- `module_definitions` 表：15 個模組定義，3 個 category
+  - `store_ops`：門市營運相關
+  - `erp`：來點什麼 ERP
+  - `dayone`：大永蛋品 ERP
+- `moduleKey` 清單：`delivery` / `crm_customers` / `inventory` / `purchasing` / `accounting` / `scheduling` / `daily_report` / `equipment_repair`
+- `createTenant` 建立新租戶時自動 INSERT 所有模組定義（預設全關）
+- `SuperAdminModules.tsx`：label/category 全部來自 DB（非 hardcode）
+- `allTenantModules` 改為 JOIN（非 CROSS JOIN），每租戶只顯示自己的模組
+- toggle 後 invalidate modules cache，側邊欄快取失效
 
 查詢：`trpc.dayone.modules.list({ tenantId })`
 前端 hook：`useModules()`（`client/src/hooks/useModules.ts`）
@@ -257,6 +298,7 @@ pnpm db:push      # 生成並執行 Drizzle migration
 - 服務：Resend（resend.com）
 - 環境變數：`RESEND_API_KEY`
 - 觸發時機：訂單狀態改為 `shipped` → 寄給買家；新訂單建立 → 寄給所有 `manager`/`super_admin`
+- 重設密碼信件 URL 從 localhost:3000 改為讀取環境變數 `BASE_URL`
 
 ### AI 文章助手
 
@@ -272,4 +314,4 @@ pnpm db:push      # 生成並執行 Drizzle migration
 
 ---
 
-*CLAUDE.md v4.0 — 精簡主檔，詳細參考見 CLAUDE_REFERENCE.md*
+*CLAUDE.md v5.0 — 精簡主檔，詳細參考見 CLAUDE_REFERENCE.md*
