@@ -3,6 +3,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
+import AdminDashboardLayout from "./components/AdminDashboardLayout";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { useEffect } from "react";
 
@@ -249,8 +250,12 @@ function Router() {
       {/* LIFF Routes */}
       <Route path="/liff/order" component={LiffOrder} />
       {/* Super Admin Routes */}
-      <Route path="/super-admin/tenants" component={SuperAdminTenants} />
-      <Route path="/super-admin/modules" component={SuperAdminModules} />
+      <Route path="/super-admin/tenants">
+        <AdminDashboardLayout><SuperAdminTenants /></AdminDashboardLayout>
+      </Route>
+      <Route path="/super-admin/modules">
+        <AdminDashboardLayout><SuperAdminModules /></AdminDashboardLayout>
+      </Route>
       {/* Smart Dashboard Entry */}
       <Route path="/dashboard" component={Dashboard} />
       
