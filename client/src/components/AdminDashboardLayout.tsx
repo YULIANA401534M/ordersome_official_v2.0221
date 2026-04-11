@@ -66,11 +66,21 @@ export default function AdminDashboardLayout({
   // ── 模組開關查詢（兩個 useQuery 必須在所有 early return 之前）──
   const { data: orderSomeModules } = trpc.dayone.modules.list.useQuery(
     { tenantId: 1 },
-    { enabled: !!user && (user.role === "super_admin" || user.role === "manager") }
+    {
+      enabled: !!user && (user.role === "super_admin" || user.role === "manager"),
+      refetchOnWindowFocus: true,
+      refetchOnMount: true,
+      staleTime: 0,
+    }
   );
   const { data: dayoneModules } = trpc.dayone.modules.list.useQuery(
     { tenantId: 90004 },
-    { enabled: !!user && (user.role === "super_admin" || user.role === "manager") }
+    {
+      enabled: !!user && (user.role === "super_admin" || user.role === "manager"),
+      refetchOnWindowFocus: true,
+      refetchOnMount: true,
+      staleTime: 0,
+    }
   );
 
   if (loading) {

@@ -5,41 +5,43 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 
-const MODULE_LABELS: Record<string, string> = {
-  // ── 通用功能模組 ──
-  inventory:        "庫存管理",
-  delivery:         "配送管理",
-  crm_customers:    "客戶管理",
-  purchasing:       "進貨管理",
-  accounting:       "帳務管理",
-  scheduling:       "排班系統",
-  daily_report:     "門市日報",
-  equipment_repair: "設備報修",
-  sop:              "SOP 知識庫",
-  checklist:        "每日檢查表",
-  // ── 大永專屬模組 ──
-  erp_dashboard:    "ERP 總覽",
-  driver_mgmt:      "司機管理",
-  products:         "品項管理",
-  districts:        "行政區管理",
-  liff_orders:      "LIFF 訂單",
+const CATEGORY_LABELS: Record<string, string> = {
+  store_ops: "門市管理",
+  erp:       "ERP 模組",
+  dayone:    "大永蛋品",
 };
 
-type TenantRow = {
+type TenantModuleRow = {
   id: number;
   name: string;
   slug: string;
   plan: string;
   isActive: boolean;
-  modules: Record<string, boolean>;
+  moduleKey: string;
+  label: string;
+  category: string;
+  sortOrder: number;
+  isEnabled: boolean;
+};
+
+type TenantData = {
+  id: number;
+  name: string;
+  slug: string;
+  plan: string;
+  isActive: boolean;
+  modules: Record<string, { label: string; category: string; sortOrder: number; isEnabled: boolean }>;
 };
 
 export default function SuperAdminModules() {
   const { data, isLoading, refetch } = trpc.dayone.modules.allTenantModules.useQuery();
+  const utils = trpc.useUtils();
   const toggleMutation = trpc.dayone.modules.toggle.useMutation({
-    onSuccess: () => refetch(),
+    onSuccess: () => {
+      refetch();
+      utils.dayone.modules.list.invalidate();
+    },
   });
-
   const [toggling, setToggling] = useState<string | null>(null);
 
   if (isLoading) {
@@ -50,39 +52,31 @@ export default function SuperAdminModules() {
     );
   }
 
-  // group by tenantId
-  const tenants: TenantRow[] = [];
-  const tenantMap = new Map<number, TenantRow>();
-
-  for (const row of data ?? []) {
+  // 組裝租戶資料（從 DB JOIN 結果動態生成，不依賴前端白名單）
+  const tenantMap = new Map<number, TenantData>();
+  for (const row of (data ?? []) as TenantModuleRow[]) {
     if (!tenantMap.has(row.id)) {
-      const t: TenantRow = {
-        id: row.id,
-        name: row.name,
-        slug: row.slug,
-        plan: row.plan,
-        isActive: row.isActive,
-        modules: {},
-      };
-      tenantMap.set(row.id, t);
-      tenants.push(t);
+      tenantMap.set(row.id, {
+        id: row.id, name: row.name, slug: row.slug,
+        plan: row.plan, isActive: row.isActive, modules: {},
+      });
     }
     if (row.moduleKey) {
-      tenantMap.get(row.id)!.modules[row.moduleKey] = !!row.isEnabled;
+      tenantMap.get(row.id)!.modules[row.moduleKey] = {
+        label: row.label,
+        category: row.category,
+        sortOrder: row.sortOrder,
+        isEnabled: !!row.isEnabled,
+      };
     }
   }
-
-  const moduleKeys = Object.keys(MODULE_LABELS);
+  const tenants = Array.from(tenantMap.values());
 
   const handleToggle = async (tenantId: number, moduleKey: string, current: boolean) => {
     const key = `${tenantId}-${moduleKey}`;
     setToggling(key);
     try {
-      await toggleMutation.mutateAsync({
-        tenantId,
-        moduleKey,
-        isEnabled: !current,
-      });
+      await toggleMutation.mutateAsync({ tenantId, moduleKey, isEnabled: !current });
     } finally {
       setToggling(null);
     }
@@ -95,45 +89,58 @@ export default function SuperAdminModules() {
         <p className="text-sm text-gray-500 mt-1">控制每個租戶可使用的功能模組</p>
       </div>
 
-      <div className="space-y-4">
-        {tenants.map((tenant) => (
-          <Card key={tenant.id}>
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-3">
-                <CardTitle className="text-base">{tenant.name}</CardTitle>
-                <Badge variant="outline" className="text-xs">{tenant.slug}</Badge>
-                <Badge variant={tenant.isActive ? "default" : "secondary"} className="text-xs">
-                  {tenant.isActive ? "營運中" : "停用"}
-                </Badge>
-                <span className="text-xs text-gray-400 ml-auto">方案：{tenant.plan}</span>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {moduleKeys.map((moduleKey) => {
-                  const isEnabled = tenant.modules[moduleKey] ?? false;
-                  const key = `${tenant.id}-${moduleKey}`;
-                  const isToggling = toggling === key;
-                  return (
-                    <div
-                      key={moduleKey}
-                      className="flex items-center justify-between p-3 rounded-lg border bg-gray-50"
-                    >
-                      <span className="text-sm text-gray-700">
-                        {MODULE_LABELS[moduleKey]}
-                      </span>
-                      <Switch
-                        checked={isEnabled}
-                        disabled={isToggling}
-                        onCheckedChange={() => handleToggle(tenant.id, moduleKey, isEnabled)}
-                      />
+      <div className="space-y-6">
+        {tenants.map((tenant) => {
+          // 按 category 分組
+          const byCategory: Record<string, Array<{ moduleKey: string; label: string; category: string; sortOrder: number; isEnabled: boolean }>> = {};
+          for (const [key, mod] of Object.entries(tenant.modules)) {
+            if (!byCategory[mod.category]) byCategory[mod.category] = [];
+            byCategory[mod.category].push({ ...mod, moduleKey: key });
+          }
+
+          return (
+            <Card key={tenant.id}>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <CardTitle className="text-base">{tenant.name}</CardTitle>
+                  <Badge variant="outline" className="text-xs">{tenant.slug}</Badge>
+                  <Badge variant={tenant.isActive ? "default" : "secondary"} className="text-xs">
+                    {tenant.isActive ? "營運中" : "停用"}
+                  </Badge>
+                  <span className="text-xs text-gray-400 ml-auto">方案：{tenant.plan}</span>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {Object.entries(byCategory).map(([category, mods]) => (
+                  <div key={category}>
+                    <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-2">
+                      {CATEGORY_LABELS[category] ?? category}
+                    </p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {mods.sort((a, b) => a.sortOrder - b.sortOrder).map((mod) => {
+                        const isEnabled = mod.isEnabled;
+                        const toggleKey = `${tenant.id}-${mod.moduleKey}`;
+                        return (
+                          <div
+                            key={mod.moduleKey}
+                            className="flex items-center justify-between p-3 rounded-lg border bg-gray-50"
+                          >
+                            <span className="text-sm text-gray-700">{mod.label}</span>
+                            <Switch
+                              checked={isEnabled}
+                              disabled={toggling === toggleKey}
+                              onCheckedChange={() => handleToggle(tenant.id, mod.moduleKey, isEnabled)}
+                            />
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );
