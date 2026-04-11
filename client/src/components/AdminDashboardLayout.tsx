@@ -33,7 +33,7 @@ import {
   CalendarDays,
   ClipboardList,
 } from "lucide-react";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import { Button } from "./ui/button";
@@ -200,55 +200,52 @@ export default function AdminDashboardLayout({
       : [];
 
   // ── 來點什麼 ERP 模組開關項目 ──
+  // 每個模組：有開 → 可點連結，沒開 → 灰色「即將推出」
   type OsErpItem = { icon: React.ComponentType<{ className?: string }>; label: string; path?: string };
-  const { osErpEnabled, osErpComingSoon } = useMemo(() => {
-    const enabled: OsErpItem[] = [];
-    const comingSoon: { icon: React.ComponentType<{ className?: string }>; label: string }[] = [];
-    if (isOSTenant && (isSuperAdmin || isManager)) {
-      const osModuleDefs = [
-        { key: "inventory",    icon: Warehouse,    label: "庫存管理", path: "/dashboard/inventory" },
-        { key: "scheduling",   icon: CalendarDays, label: "排班管理", path: "/dashboard/scheduling" },
-        { key: "daily_report", icon: ClipboardList, label: "門市日報", path: "/dashboard/daily-report" },
-      ];
-      for (const def of osModuleDefs) {
-        if (hasOSModule(def.key)) {
-          enabled.push({ icon: def.icon, label: def.label, path: def.path });
-        } else {
-          comingSoon.push({ icon: def.icon, label: def.label });
-        }
+  const osErpEnabled: OsErpItem[] = [];
+  const osErpComingSoon: { icon: React.ComponentType<{ className?: string }>; label: string }[] = [];
+
+  if (isOSTenant && (isSuperAdmin || isManager)) {
+    const osModuleDefs: { key: string; icon: React.ComponentType<{ className?: string }>; label: string; path: string }[] = [
+      { key: "inventory",    icon: Warehouse,    label: "庫存管理", path: "/dashboard/inventory" },
+      { key: "scheduling",   icon: CalendarDays, label: "排班管理", path: "/dashboard/scheduling" },
+      { key: "daily_report", icon: ClipboardList, label: "門市日報", path: "/dashboard/daily-report" },
+    ];
+    for (const def of osModuleDefs) {
+      if (hasOSModule(def.key)) {
+        osErpEnabled.push({ icon: def.icon, label: def.label, path: def.path });
+      } else {
+        osErpComingSoon.push({ icon: def.icon, label: def.label });
       }
     }
-    return { osErpEnabled: enabled, osErpComingSoon: comingSoon };
-  }, [orderSomeModules, isOSTenant, isSuperAdmin, isManager]);
+  }
 
   // ── 大永蛋品 ERP ── 接模組開關
   type DyErpItem = { icon: React.ComponentType<{ className?: string }>; label: string; path: string };
-  const { dyErpEnabled, dyErpComingSoon } = useMemo(() => {
-    const enabled: DyErpItem[] = [];
-    const comingSoon: { icon: React.ComponentType<{ className?: string }>; label: string }[] = [];
-    if (isDYTenant && (isSuperAdmin || isManager)) {
-      const dyModuleDefs = [
-        { key: "erp_dashboard", icon: Package2,    label: "ERP 總覽",   path: "/dayone" },
-        { key: "delivery",      icon: Truck,       label: "配送訂單",   path: "/dayone/orders" },
-        { key: "crm_customers", icon: Users,       label: "客戶管理",   path: "/dayone/customers" },
-        { key: "driver_mgmt",   icon: Car,         label: "司機管理",   path: "/dayone/drivers" },
-        { key: "products",      icon: Egg,         label: "品項管理",   path: "/dayone/products" },
-        { key: "inventory",     icon: Warehouse,   label: "庫存管理",   path: "/dayone/inventory" },
-        { key: "purchasing",    icon: ShoppingBag, label: "進貨管理",   path: "/dayone/purchase" },
-        { key: "districts",     icon: Map,         label: "行政區管理", path: "/dayone/districts" },
-        { key: "liff_orders",   icon: Smartphone,  label: "LIFF 訂單", path: "/dayone/liff-orders" },
-        { key: "accounting",    icon: CreditCard,  label: "應收帳款",   path: "/dayone/ar" },
-      ];
-      for (const def of dyModuleDefs) {
-        if (hasDYModule(def.key)) {
-          enabled.push({ icon: def.icon, label: def.label, path: def.path });
-        } else {
-          comingSoon.push({ icon: def.icon, label: def.label });
-        }
+  const dyErpEnabled: DyErpItem[] = [];
+  const dyErpComingSoon: { icon: React.ComponentType<{ className?: string }>; label: string }[] = [];
+
+  if (isDYTenant && (isSuperAdmin || isManager)) {
+    const dyModuleDefs: { key: string; icon: React.ComponentType<{ className?: string }>; label: string; path: string }[] = [
+      { key: "erp_dashboard", icon: Package2,    label: "ERP 總覽",   path: "/dayone" },
+      { key: "delivery",      icon: Truck,       label: "配送訂單",   path: "/dayone/orders" },
+      { key: "crm_customers", icon: Users,       label: "客戶管理",   path: "/dayone/customers" },
+      { key: "driver_mgmt",   icon: Car,         label: "司機管理",   path: "/dayone/drivers" },
+      { key: "products",      icon: Egg,         label: "品項管理",   path: "/dayone/products" },
+      { key: "inventory",     icon: Warehouse,   label: "庫存管理",   path: "/dayone/inventory" },
+      { key: "purchasing",    icon: ShoppingBag, label: "進貨管理",   path: "/dayone/purchase" },
+      { key: "districts",     icon: Map,         label: "行政區管理", path: "/dayone/districts" },
+      { key: "liff_orders",   icon: Smartphone,  label: "LIFF 訂單", path: "/dayone/liff-orders" },
+      { key: "accounting",    icon: CreditCard,  label: "應收帳款",   path: "/dayone/ar" },
+    ];
+    for (const def of dyModuleDefs) {
+      if (hasDYModule(def.key)) {
+        dyErpEnabled.push({ icon: def.icon, label: def.label, path: def.path });
+      } else {
+        dyErpComingSoon.push({ icon: def.icon, label: def.label });
       }
     }
-    return { dyErpEnabled: enabled, dyErpComingSoon: comingSoon };
-  }, [dayoneModules, isDYTenant, isSuperAdmin, isManager]);
+  }
 
   const showDyErpSection = (isSuperAdmin || isManager) && (dyErpEnabled.length > 0 || dyErpComingSoon.length > 0);
 
