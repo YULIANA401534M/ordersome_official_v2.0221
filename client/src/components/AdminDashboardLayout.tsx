@@ -149,13 +149,13 @@ export default function AdminDashboardLayout({
   const hasOSModule = (key: string) => {
     if (isSuperAdmin) return true;
     if ((user as any)?.tenantId !== 1) return false;
-    return orderSomeModules?.some((m: any) => m.moduleKey === key && m.isEnabled) ?? false;
+    return orderSomeModules?.some((m: any) => m.moduleKey === key && !!m.isEnabled) ?? false;
   };
 
   const hasDYModule = (key: string) => {
     if (isSuperAdmin) return true;
     if ((user as any)?.tenantId !== 90004) return false;
-    return dayoneModules?.some((m: any) => m.moduleKey === key && m.isEnabled) ?? false;
+    return dayoneModules?.some((m: any) => m.moduleKey === key && !!m.isEnabled) ?? false;
   };
 
   // ── 宇聯總部分組 ──

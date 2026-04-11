@@ -71,18 +71,16 @@ export const dyModulesRouter = router({
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const [rows] = await (db as any).$client.execute(
         `SELECT t.id, t.name, t.slug, t.plan, t.isActive,
-                md.moduleKey, md.label, md.category, md.sortOrder,
-                COALESCE(tm.isEnabled, 0) AS isEnabled
+                tm.moduleKey,
+                COALESCE(md.label, tm.moduleKey)   AS label,
+                COALESCE(md.category, 'other')     AS category,
+                COALESCE(md.sortOrder, 0)          AS sortOrder,
+                tm.isEnabled
          FROM tenants t
-         CROSS JOIN module_definitions md
-         LEFT JOIN tenant_modules tm
-           ON tm.tenantId = t.id AND tm.moduleKey = md.moduleKey
+         JOIN tenant_modules tm ON tm.tenantId = t.id
+         LEFT JOIN module_definitions md ON md.moduleKey = tm.moduleKey
          ORDER BY t.id, md.category, md.sortOrder`
       );
-      if ((rows as any[]).length > 0) {
-        console.log('[allTenantModules] first row keys:', Object.keys((rows as any[])[0]));
-        console.log('[allTenantModules] first row:', (rows as any[])[0]);
-      }
       return rows as any[];
     }),
 
