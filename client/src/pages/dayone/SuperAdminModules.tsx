@@ -9,6 +9,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   store_ops: "門市管理",
   erp:       "ERP 模組",
   dayone:    "大永蛋品",
+  other:     "其他",
 };
 
 type TenantModuleRow = {
@@ -63,9 +64,9 @@ export default function SuperAdminModules() {
     }
     if (row.moduleKey) {
       tenantMap.get(row.id)!.modules[row.moduleKey] = {
-        label: row.label,
-        category: row.category,
-        sortOrder: row.sortOrder,
+        label: row.label ?? row.moduleKey,
+        category: row.category ?? "other",
+        sortOrder: row.sortOrder ?? 0,
         isEnabled: !!row.isEnabled,
       };
     }

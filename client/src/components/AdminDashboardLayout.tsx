@@ -137,6 +137,8 @@ export default function AdminDashboardLayout({
   const hasPermission = (permission: string) => {
     if (!user) return false;
     if (isSuperAdmin) return true;
+    // manager 預設擁有所有來點什麼的後台權限
+    if (isManager && isOSTenant) return true;
     if (!user.permissions) return false;
     const permissions =
       typeof user.permissions === "string"
