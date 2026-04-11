@@ -75,11 +75,15 @@ import EquipmentRepairs from "./pages/dashboard/EquipmentRepairs";
 import DailyChecklist from "./pages/dashboard/DailyChecklist";
 import Dashboard from "./pages/Dashboard";
 import AdminTenants from "./pages/dashboard/AdminTenants";
+import OSInventory from "./pages/dashboard/OSInventory";
+import OSScheduling from "./pages/dashboard/OSScheduling";
+import OSDailyReport from "./pages/dashboard/OSDailyReport";
 
 // Landing Page
 import Home from "./pages/Home";
 
 // DaYong ERP Pages
+import DayoneLogin from "./pages/dayone/DayoneLogin";
 import DayoneDashboard from "./pages/dayone/DayoneDashboard";
 import DayoneOrders from "./pages/dayone/DayoneOrders";
 import DayoneCustomers from "./pages/dayone/DayoneCustomers";
@@ -215,11 +219,12 @@ function Router() {
       <Route path="/dashboard/sop" component={SOPKnowledgeBase} />
       <Route path="/dashboard/repairs" component={EquipmentRepairs} />
       <Route path="/dashboard/checklist" component={DailyChecklist} />
-      {/* 來點什麼 ERP 模組路由（暫以大永頁面代替，待開發專屬頁面） */}
-      <Route path="/dashboard/inventory" component={DayoneInventory} />
-      <Route path="/dashboard/scheduling" component={DailyChecklist} />
-      <Route path="/dashboard/daily-report" component={DailyChecklist} />
+      {/* 來點什麼 ERP 模組路由 */}
+      <Route path="/dashboard/inventory" component={OSInventory} />
+      <Route path="/dashboard/scheduling" component={OSScheduling} />
+      <Route path="/dashboard/daily-report" component={OSDailyReport} />
       {/* DaYong ERP Routes */}
+      <Route path="/dayone/login" component={DayoneLogin} />
       <Route path="/dayone" component={DayoneDashboard} />
       <Route path="/dayone/orders" component={DayoneOrders} />
       <Route path="/dayone/customers" component={DayoneCustomers} />

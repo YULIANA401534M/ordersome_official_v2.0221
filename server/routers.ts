@@ -82,7 +82,7 @@ export const appRouter = router({
           maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
         });
         
-        return { success: true, user: { id: user.id, name: user.name, email: user.email, role: user.role } };
+        return { success: true, user: { id: user.id, name: user.name, email: user.email, role: user.role, tenantId: user.tenantId } };
       }),
     updateProfile: protectedProcedure
       .input(z.object({

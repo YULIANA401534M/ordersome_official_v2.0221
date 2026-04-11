@@ -62,24 +62,26 @@ export default function AdminDashboardLayout({
   const isSuperAdmin = user?.role === "super_admin";
   const isManager = user?.role === "manager";
   const hasAdminAccess = user?.role === "super_admin" || user?.role === "manager";
+  const isOSTenant = isSuperAdmin || (user as any)?.tenantId === 1;
+  const isDYTenant = isSuperAdmin || (user as any)?.tenantId === 90004;
 
   // ── 模組開關查詢（兩個 useQuery 必須在所有 early return 之前）──
   const { data: orderSomeModules } = trpc.dayone.modules.list.useQuery(
     { tenantId: 1 },
     {
-      enabled: !!user && (user.role === "super_admin" || user.role === "manager"),
+      enabled: !!user && isOSTenant,
+      staleTime: 0,
       refetchOnWindowFocus: true,
       refetchOnMount: true,
-      staleTime: 0,
     }
   );
   const { data: dayoneModules } = trpc.dayone.modules.list.useQuery(
     { tenantId: 90004 },
     {
-      enabled: !!user && (user.role === "super_admin" || user.role === "manager"),
+      enabled: !!user && isDYTenant,
+      staleTime: 0,
       refetchOnWindowFocus: true,
       refetchOnMount: true,
-      staleTime: 0,
     }
   );
 
@@ -142,14 +144,20 @@ export default function AdminDashboardLayout({
         : user.permissions;
     return Array.isArray(permissions) && permissions.includes(permission);
   };
-  const hasOSModule = (key: string) =>
-    isSuperAdmin || (orderSomeModules?.some((m: any) => m.moduleKey === key && m.isEnabled) ?? false);
+  const hasOSModule = (key: string) => {
+    if (isSuperAdmin) return true;
+    if ((user as any)?.tenantId !== 1) return false;
+    return orderSomeModules?.some((m: any) => m.moduleKey === key && m.isEnabled) ?? false;
+  };
 
-  const hasDYModule = (key: string) =>
-    isSuperAdmin || (dayoneModules?.some((m: any) => m.moduleKey === key && m.isEnabled) ?? false);
+  const hasDYModule = (key: string) => {
+    if (isSuperAdmin) return true;
+    if ((user as any)?.tenantId !== 90004) return false;
+    return dayoneModules?.some((m: any) => m.moduleKey === key && m.isEnabled) ?? false;
+  };
 
   // ── 宇聯總部分組 ──
-  const ecommerceItems = hasPermission("manage_products")
+  const ecommerceItems = isOSTenant && hasPermission("manage_products")
     ? [
         { icon: LayoutDashboard, label: "商城總覽", path: "/dashboard/admin/ecommerce" },
         { icon: Package, label: "商品管理", path: "/dashboard/admin/products" },
@@ -158,14 +166,14 @@ export default function AdminDashboardLayout({
       ]
     : [];
 
-  const contentItems = hasPermission("publish_content")
+  const contentItems = isOSTenant && hasPermission("publish_content")
     ? [
         { icon: FileText, label: "內容管理", path: "/dashboard/content" },
         { icon: Sparkles, label: "AI 文章助手", path: "/dashboard/ai-writer" },
       ]
     : [];
 
-  const userItems = hasPermission("manage_users")
+  const userItems = isOSTenant && hasPermission("manage_users")
     ? [
         { icon: Users, label: "用戶管理", path: "/dashboard/admin/users" },
         { icon: Shield, label: "權限管理", path: "/dashboard/admin/permissions" },
@@ -173,13 +181,13 @@ export default function AdminDashboardLayout({
       ]
     : [];
 
-  const franchiseItems = hasPermission("manage_franchise")
+  const franchiseItems = isOSTenant && hasPermission("manage_franchise")
     ? [{ icon: Store, label: "加盟詢問", path: "/dashboard/franchise-inquiries" }]
     : [];
 
   // ── 來點什麼分組（門市管理）── 接模組開關
   const storeOperationItems =
-    isSuperAdmin || isManager
+    isOSTenant && (isSuperAdmin || isManager)
       ? ([
           hasOSModule("sop")              ? { icon: BookOpen,       label: "SOP 知識庫", path: "/dashboard/sop" }      : null,
           hasOSModule("equipment_repair") ? { icon: Wrench,         label: "設備報修",   path: "/dashboard/repairs" }  : null,
@@ -193,7 +201,7 @@ export default function AdminDashboardLayout({
   const osErpEnabled: OsErpItem[] = [];
   const osErpComingSoon: { icon: React.ComponentType<{ className?: string }>; label: string }[] = [];
 
-  if (isSuperAdmin || isManager) {
+  if (isOSTenant && (isSuperAdmin || isManager)) {
     const osModuleDefs: { key: string; icon: React.ComponentType<{ className?: string }>; label: string; path: string }[] = [
       { key: "inventory",    icon: Warehouse,    label: "庫存管理", path: "/dashboard/inventory" },
       { key: "scheduling",   icon: CalendarDays, label: "排班管理", path: "/dashboard/scheduling" },
@@ -213,7 +221,7 @@ export default function AdminDashboardLayout({
   const dyErpEnabled: DyErpItem[] = [];
   const dyErpComingSoon: { icon: React.ComponentType<{ className?: string }>; label: string }[] = [];
 
-  if (isSuperAdmin || isManager) {
+  if (isDYTenant && (isSuperAdmin || isManager)) {
     const dyModuleDefs: { key: string; icon: React.ComponentType<{ className?: string }>; label: string; path: string }[] = [
       { key: "erp_dashboard", icon: Package2,    label: "ERP 總覽",   path: "/dayone" },
       { key: "delivery",      icon: Truck,       label: "配送訂單",   path: "/dayone/orders" },
