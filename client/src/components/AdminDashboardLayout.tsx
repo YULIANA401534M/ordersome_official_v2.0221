@@ -96,6 +96,7 @@ export default function AdminDashboardLayout({
   const [dyErpComingSoon, setDyErpComingSoon] = useState<{ icon: React.ComponentType<{ className?: string }>; label: string }[]>([]);
 
   useEffect(() => {
+    console.log("OS modules:", orderSomeModules);
     const enabled: OsErpItem[] = [];
     const comingSoon: { icon: React.ComponentType<{ className?: string }>; label: string }[] = [];
     if (isOSTenant && (isSuperAdmin || isManager)) {
@@ -118,6 +119,7 @@ export default function AdminDashboardLayout({
   }, [orderSomeModules, isOSTenant, isSuperAdmin, isManager]);
 
   useEffect(() => {
+    console.log("DY modules:", dayoneModules);
     const enabled: DyErpItem[] = [];
     const comingSoon: { icon: React.ComponentType<{ className?: string }>; label: string }[] = [];
     if (isDYTenant && (isSuperAdmin || isManager)) {
