@@ -119,6 +119,7 @@ export default function AdminDashboardLayout({
   }, [orderSomeModules, isOSTenant, isSuperAdmin, isManager]);
 
   useEffect(() => {
+    console.log("DY useEffect", { isDYTenant, isSuperAdmin, isManager, dayoneModules });
     if (!dayoneModules) return;
     const enabled: DyErpItem[] = [];
     const comingSoon: { icon: React.ComponentType<{ className?: string }>; label: string }[] = [];
