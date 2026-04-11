@@ -32,6 +32,7 @@ import {
   ClipboardCheck,
   CalendarDays,
   ClipboardList,
+  Receipt,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
@@ -101,9 +102,13 @@ export default function AdminDashboardLayout({
     const comingSoon: { icon: React.ComponentType<{ className?: string }>; label: string }[] = [];
     if (isOSTenant && (isSuperAdmin || isManager)) {
       const osModuleDefs = [
-        { key: "inventory",    icon: Warehouse,    label: "庫存管理", path: "/dashboard/inventory" },
-        { key: "scheduling",   icon: CalendarDays, label: "排班管理", path: "/dashboard/scheduling" },
-        { key: "daily_report", icon: ClipboardList, label: "門市日報", path: "/dashboard/daily-report" },
+        { key: "inventory",     icon: Warehouse,    label: "庫存管理", path: "/dashboard/inventory" },
+        { key: "scheduling",    icon: CalendarDays, label: "排班管理", path: "/dashboard/scheduling" },
+        { key: "daily_report",  icon: ClipboardList, label: "門市日報", path: "/dashboard/daily-report" },
+        { key: "delivery",      icon: Truck,        label: "配送管理", path: "/dashboard/delivery" },
+        { key: "crm_customers", icon: Users,        label: "客戶管理", path: "/dashboard/customers" },
+        { key: "purchasing",    icon: ShoppingCart, label: "進貨管理", path: "/dashboard/purchasing" },
+        { key: "accounting",    icon: Receipt,      label: "帳務管理", path: "/dashboard/accounting" },
       ];
       for (const def of osModuleDefs) {
         const isEnabled = isSuperAdmin || (orderSomeModules?.some((m: any) => m.moduleKey === def.key && !!m.isEnabled) ?? false);
@@ -119,7 +124,6 @@ export default function AdminDashboardLayout({
   }, [orderSomeModules, isOSTenant, isSuperAdmin, isManager]);
 
   useEffect(() => {
-    console.log("DY useEffect", { isDYTenant, isSuperAdmin, isManager, dayoneModules });
     if (!dayoneModules) return;
     const enabled: DyErpItem[] = [];
     const comingSoon: { icon: React.ComponentType<{ className?: string }>; label: string }[] = [];
