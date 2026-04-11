@@ -64,18 +64,54 @@ export const dyModulesRouter = router({
       return row?.isEnabled === 1 || row?.isEnabled === true;
     }),
 
-  // Super admin: list all tenants with their modules
+  // Super admin: list all tenants with their modules (JOIN module_definitions for label/category)
   allTenantModules: superAdminProcedure
     .query(async () => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const [rows] = await (db as any).$client.execute(
         `SELECT t.id, t.name, t.slug, t.plan, t.isActive,
-                tm.moduleKey, tm.isEnabled
+                md.moduleKey, md.label, md.category, md.sortOrder,
+                COALESCE(tm.isEnabled, 0) AS isEnabled
          FROM tenants t
-         LEFT JOIN tenant_modules tm ON t.id = tm.tenantId
-         ORDER BY t.id, tm.moduleKey`
+         CROSS JOIN module_definitions md
+         LEFT JOIN tenant_modules tm
+           ON tm.tenantId = t.id AND tm.moduleKey = md.moduleKey
+         ORDER BY t.id, md.category, md.sortOrder`
       );
+      if ((rows as any[]).length > 0) {
+        console.log('[allTenantModules] first row keys:', Object.keys((rows as any[])[0]));
+        console.log('[allTenantModules] first row:', (rows as any[])[0]);
+      }
       return rows as any[];
+    }),
+
+  // 取得所有模組定義（super_admin 用）
+  allDefinitions: superAdminProcedure
+    .query(async () => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
+      const [rows] = await (db as any).$client.execute(
+        `SELECT * FROM module_definitions ORDER BY category, sortOrder`
+      );
+      return rows as { moduleKey: string; label: string; category: string; description: string | null; sortOrder: number }[];
+    }),
+
+  // 取得特定租戶已開通模組（含定義資訊）
+  listWithDefinitions: dyAdminProcedure
+    .input(z.object({ tenantId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
+      const [rows] = await (db as any).$client.execute(
+        `SELECT md.moduleKey, md.label, md.category, md.sortOrder,
+                COALESCE(tm.isEnabled, 0) AS isEnabled
+         FROM module_definitions md
+         LEFT JOIN tenant_modules tm
+           ON tm.moduleKey = md.moduleKey AND tm.tenantId = ?
+         ORDER BY md.category, md.sortOrder`,
+        [input.tenantId]
+      );
+      return rows as { moduleKey: string; label: string; category: string; sortOrder: number; isEnabled: boolean }[];
     }),
 });
