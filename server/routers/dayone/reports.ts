@@ -63,8 +63,8 @@ export const dyReportsRouter = router({
         `SELECT c.name, c.phone, COUNT(o.id) as orderCount, SUM(o.totalAmount) as totalSpending
          FROM dy_customers c JOIN dy_orders o ON c.id = o.customerId
          WHERE c.tenantId=? AND o.status='delivered'
-         GROUP BY c.id, c.name, c.phone ORDER BY totalSpending DESC LIMIT ?`,
-        [input.tenantId, input.limit]
+         GROUP BY c.id, c.name, c.phone ORDER BY totalSpending DESC LIMIT ${input.limit}`,
+        [input.tenantId]
       );
       return rows as any[];
     }),
