@@ -124,7 +124,8 @@ export const appRouter = router({
 
         // TODO: Send email with reset link
         // For now, log the reset link
-        const resetLink = `${process.env.VITE_FRONTEND_URL || 'http://localhost:3000'}/reset-password/${token}`;
+        const baseUrl = process.env.BASE_URL || process.env.VITE_FRONTEND_URL || "https://ordersome.com.tw";
+        const resetLink = `${baseUrl}/reset-password/${token}`;
         console.log(`[Password Reset] Reset link for ${input.email}: ${resetLink}`);
 
         return { success: true, message: "如果該電子郵件存在，我們已發送重設密碼連結", resetLink };

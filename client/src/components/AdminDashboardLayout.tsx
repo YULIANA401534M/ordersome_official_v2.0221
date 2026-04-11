@@ -75,8 +75,6 @@ export default function AdminDashboardLayout({
       refetchOnMount: true,
     }
   );
-  console.log('[debug] user.tenantId:', (user as any)?.tenantId, typeof (user as any)?.tenantId);
-  console.log('[debug] orderSomeModules:', orderSomeModules);
   const { data: dayoneModules } = trpc.dayone.modules.list.useQuery(
     { tenantId: 90004 },
     {
@@ -211,7 +209,6 @@ export default function AdminDashboardLayout({
       { key: "scheduling",   icon: CalendarDays, label: "排班管理", path: "/dashboard/scheduling" },
       { key: "daily_report", icon: ClipboardList, label: "門市日報", path: "/dashboard/daily-report" },
     ];
-    console.log('[osErp] orderSomeModules at render:', orderSomeModules?.length, 'isOSTenant:', isOSTenant, 'isManager:', isManager);
     for (const def of osModuleDefs) {
       if (hasOSModule(def.key)) {
         osErpEnabled.push({ icon: def.icon, label: def.label, path: def.path });
