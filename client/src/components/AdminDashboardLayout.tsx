@@ -97,7 +97,6 @@ export default function AdminDashboardLayout({
   const [dyErpComingSoon, setDyErpComingSoon] = useState<{ icon: React.ComponentType<{ className?: string }>; label: string }[]>([]);
 
   useEffect(() => {
-    console.log("OS useEffect fired", { orderSomeModules, isOSTenant, isManager, isSuperAdmin });
     if (!orderSomeModules) return;
     const enabled: OsErpItem[] = [];
     const comingSoon: { icon: React.ComponentType<{ className?: string }>; label: string }[] = [];

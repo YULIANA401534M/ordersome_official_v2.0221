@@ -66,7 +66,7 @@ pnpm db:push      # 生成並執行 Drizzle migration
 ## 五、核心規則（違反會出 bug）
 
 - 所有 DB 查詢必須帶 `tenantId`，**禁止 hardcode**
-- 密碼欄位：登入用 `pwd`、重設用 `newPwd`（Cloudflare WAF 規避）
+- 密碼欄位：DB 實際欄位為 `passwordHash`；API 傳參用 `pwd`（登入）、`newPwd`（重設），Cloudflare WAF 規避
 - 司機路由是 `/driver/`，不是 `/dayone/driver/`
 - 圖片上傳走 `trpc.storage.uploadImage`（R2），R2 key 用 `R2_ACCESS_KEY_ID`
 - 大永 raw SQL 用 `(db as any).$client.execute(...)`
@@ -131,7 +131,22 @@ pnpm db:push      # 生成並執行 Drizzle migration
 
 ---
 
-## 八、最近變更（2026-04-11）
+## 八、最近變更（2026-04-12）
+
+| 檔案 | 變更摘要 |
+|------|---------|
+| `client/src/pages/dayone/SupplierList.tsx` | tenantId hardcode 2→90004、包 DayoneLayout、加空狀態 |
+| `server/routers/dayone/suppliers.ts` | 移除 updatedAt 欄位（dy_suppliers 表無此欄） |
+| `client/src/pages/admin/SuperAdminTenants.tsx` | tenantMap 組裝邏輯修正，欄位對齊後端 |
+| `client/src/pages/admin/SuperAdminModules.tsx` | toggle onSuccess invalidate 兩個 tenantId |
+| `client/src/components/AdminDashboardLayout.tsx` | useEffect+useState 取代 render 陣列、osModuleDefs 補齊 7 筆、super-admin 路由包入 Layout |
+| `client/src/App.tsx` | super-admin 路由包 AdminDashboardLayout |
+| `server/routers/dayone/reports.ts` | topCustomers LIMIT 改內插避免 TiDB 綁定錯誤 |
+| `users`（TiDB） | 新增 osmanager@ordersome.com.tw（tenantId=1, manager）、dayonevip@dayone.com（tenantId=90004, manager） |
+
+---
+
+## 八-B-2、舊變更紀錄（2026-04-11）
 
 | 檔案 | 變更摘要 |
 |------|---------|
@@ -205,15 +220,16 @@ pnpm db:push      # 生成並執行 Drizzle migration
 - 改完 schema.ts 後，寫一個 `scripts/migrate-xxx.mjs` 腳本，在本機跑即可
 
 ### 待處理任務
-1. ⏳ 模組 toggle 後側邊欄即時連動
-2. ⏳ 供應商管理頁面空白（調查原因）
-3. ⏳ 加盟主功能範圍定義
-4. ⏳ 大永帳號建立流程（tenantId=90004 的 manager 帳號）
-5. ⏳ 來點什麼排班管理、門市日報功能開發
-6. ⏳ 庫存管理 UI 優化
-7. ⏳ 帳務管理（應收應付、月結對帳）
-8. ⏳ 積欠款提醒
-9. ⏳ LIFF 正式上線：蛋博用自己的 LINE 後台建立 LIFF，更新前端 `TENANT_CONFIG` 的 liffId
+1. ⏳ 模組 toggle 側邊欄連動驗證中（osmanager console.log debug 進行中）
+2. ⏳ `/dashboard/delivery`、`/dashboard/customers`、`/dashboard/purchasing`、`/dashboard/accounting` 頁面尚未建立（點擊 404）
+3. ⏳ 供應商管理複用給來點什麼（需新增 moduleKey + 頁面）
+4. ⏳ 大永側邊欄模組控制（DayoneLayout 架構債，第二個外部客戶簽約前處理）
+5. ⏳ 加盟主功能範圍定義
+6. ⏳ 來點什麼排班管理、門市日報功能開發
+7. ⏳ 庫存管理 UI 優化
+8. ⏳ 帳務管理（應收應付、月結對帳）
+9. ⏳ 積欠款提醒
+10. ⏳ LIFF 正式上線：蛋博用自己的 LINE 後台建立 LIFF，更新前端 `TENANT_CONFIG` 的 liffId
 
 ---
 
@@ -236,6 +252,11 @@ pnpm db:push      # 生成並執行 Drizzle migration
 - **`DayoneLayout.tsx` 的 `TENANT_ID` 曾被錯誤設為 `2`，正確值是 `90004`**（已修正，commit 6fb3df0）
 - **`dy_inventory` 初始為空**，需執行 seed INSERT 為每個 dy_products 建立初始記錄
 - `mysql2` 連接 TiDB 不能直接傳 DATABASE_URL 字串（SSL profile boolean 錯誤），需手動解析 URL 並設 `ssl: { rejectUnauthorized: false }`
+- `dy_suppliers` 表無 `updatedAt` 欄位，upsert/toggle SQL 不可包含此欄
+- TiDB `LIMIT ?` 參數綁定會報 `Incorrect arguments to LIMIT`，改用 `LIMIT ${input.limit}` 內插
+- `useMemo` 內不可呼叫會變動 reference 的 function，改用 `useEffect + useState`
+- super-admin 路由若不包 `AdminDashboardLayout`，invalidate 發出後無組件監聽，側邊欄不連動
+- `users` 表密碼欄位實際為 `passwordHash`（非 `pwd`），登入 email 需為合法格式（openId 不能重複）
 
 ---
 
