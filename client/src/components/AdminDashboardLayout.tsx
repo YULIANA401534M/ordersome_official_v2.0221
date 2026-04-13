@@ -88,6 +88,23 @@ export default function AdminDashboardLayout({
     }
   );
 
+  // Badge counts for DY ERP sidebar
+  const { data: overdueAR = [] } = trpc.dayone.ar.listReceivables.useQuery(
+    { page: 1, status: "overdue" },
+    { enabled: !!user && isDYTenant, refetchInterval: 60000 }
+  );
+  const { data: todayDispatch = [] } = trpc.dayone.dispatch.listDispatchOrders.useQuery(
+    { page: 1 },
+    { enabled: !!user && isDYTenant, refetchInterval: 60000 }
+  );
+  const { data: pendingReceipts = [] } = trpc.dayone.purchaseReceipt.list.useQuery(
+    { status: "pending" },
+    { enabled: !!user && isDYTenant, refetchInterval: 60000 }
+  );
+  const overdueARCount = (overdueAR as any[]).length;
+  const activeDispatchCount = (todayDispatch as any[]).filter((d: any) => d.status === "in_progress").length;
+  const pendingReceiptCount = (pendingReceipts as any[]).length;
+
   // ── 模組陣列 state（hooks 必須在 early return 之前）──
   type OsErpItem = { icon: React.ComponentType<{ className?: string }>; label: string; path?: string };
   type DyErpItem = { icon: React.ComponentType<{ className?: string }>; label: string; path: string };
@@ -137,8 +154,10 @@ export default function AdminDashboardLayout({
         { key: "inventory",     icon: Warehouse,   label: "庫存管理",   path: "/dayone/inventory" },
         { key: "purchasing",    icon: ShoppingBag, label: "進貨管理",   path: "/dayone/purchase" },
         { key: "districts",     icon: Map,         label: "行政區管理", path: "/dayone/districts" },
-        { key: "liff_orders",   icon: Smartphone,  label: "LIFF 訂單", path: "/dayone/liff-orders" },
-        { key: "accounting",    icon: CreditCard,  label: "應收帳款",   path: "/dayone/ar" },
+        { key: "liff_orders",        icon: Smartphone,  label: "LIFF 訂單",  path: "/dayone/liff-orders" },
+        { key: "accounting",         icon: CreditCard,  label: "帳務管理",   path: "/dayone/ar" },
+        { key: "dispatch",           icon: Truck,       label: "派車管理",   path: "/dayone/dispatch" },
+        { key: "purchase_receipts",  icon: Receipt,     label: "進貨簽收",   path: "/dayone/purchase-receipts" },
       ];
       for (const def of dyModuleDefs) {
         const isEnabled = isSuperAdmin || (dayoneModules?.some((m: any) => m.moduleKey === def.key && !!m.isEnabled) ?? false);
@@ -412,17 +431,29 @@ export default function AdminDashboardLayout({
         {showDyErpSection && (
           <div>
             <p className={groupLabelClass}>大永蛋品 ERP</p>
-            {dyErpEnabled.map((item) => (
-              <Link key={item.path} href={item.path}>
-                <a
-                  className={menuItemClass(item.path)}
-                  onClick={() => setMobileOpen(false)}
-                >
-                  <item.icon className="h-4 w-4 shrink-0" />
-                  <span>{item.label}</span>
-                </a>
-              </Link>
-            ))}
+            {dyErpEnabled.map((item) => {
+              const badge =
+                item.path === "/dayone/ar" && overdueARCount > 0 ? overdueARCount :
+                item.path === "/dayone/dispatch" && activeDispatchCount > 0 ? activeDispatchCount :
+                item.path === "/dayone/purchase-receipts" && pendingReceiptCount > 0 ? pendingReceiptCount :
+                0;
+              return (
+                <Link key={item.path} href={item.path}>
+                  <a
+                    className={menuItemClass(item.path)}
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <item.icon className="h-4 w-4 shrink-0" />
+                    <span className="flex-1">{item.label}</span>
+                    {badge > 0 && (
+                      <span className="ml-auto min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                        {badge}
+                      </span>
+                    )}
+                  </a>
+                </Link>
+              );
+            })}
             {renderComingSoonItems(dyErpComingSoon)}
           </div>
         )}

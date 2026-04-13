@@ -692,7 +692,25 @@ export async function getTenantBySlug(slug: string) {
 export async function createTenant(data: InsertTenant) {
   const db = await getDb();
   if (!db) return;
+
+  // 建立租戶
   await db.insert(tenants).values(data);
+
+  // 取得剛建立的租戶 ID
+  const [result] = await (db as any).$client.execute(
+    `SELECT id FROM tenants WHERE slug = ? LIMIT 1`,
+    [data.slug]
+  );
+  const newTenantId = (result as any[])[0]?.id;
+  if (!newTenantId) return;
+
+  // 根據方案自動分配基礎模組（全部預設關閉，由 super_admin 手動開啟）
+  await (db as any).$client.execute(
+    `INSERT INTO tenant_modules (tenantId, moduleKey, isEnabled, createdAt, updatedAt)
+     SELECT ?, moduleKey, 0, NOW(), NOW()
+     FROM module_definitions`,
+    [newTenantId]
+  );
 }
 
 export async function updateTenant(id: number, data: Partial<InsertTenant>) {

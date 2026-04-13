@@ -2,7 +2,7 @@
 
 > 這份文件是「查閱用」，不是每次都要讀。
 > 開新對話時只需讀 `CLAUDE.md`，有需要才查這裡。
-> 最後更新：2026-04-10
+> 最後更新：2026-04-13
 
 ---
 
@@ -128,7 +128,15 @@ ordersome_official_v2/
 | `/dashboard/ai-writer` | `AIWriter`（AI 文章助手） |
 
 ### 大永 ERP（管理端）
-`/dayone` / `/dayone/orders` / `/dayone/customers` / `/dayone/drivers` / `/dayone/products` / `/dayone/inventory` / `/dayone/purchase` / `/dayone/districts` / `/dayone/reports` / `/dayone/suppliers` / `/dayone/liff-orders`
+`/dayone` / `/dayone/orders` / `/dayone/customers` / `/dayone/drivers` / `/dayone/products` / `/dayone/inventory` / `/dayone/purchase` / `/dayone/districts` / `/dayone/reports` / `/dayone/suppliers` / `/dayone/liff-orders` / `/dayone/ar` / `/dayone/dispatch` / `/dayone/purchase-receipts`
+
+### 大永客戶 Portal（公開，不包 DayoneLayout）
+`/dayone/portal` → `DayonePortalHome`
+`/dayone/portal/login` → `DayonePortalLogin`
+`/dayone/portal/register` → `DayonePortalRegister`
+`/dayone/portal/orders` → `DayonePortalOrders`
+`/dayone/portal/statement` → `DayonePortalStatement`
+`/dayone/portal/account` → `DayonePortalAccount`
 
 ### LIFF（LINE 前台）
 `/liff/order?tenant=dayone`
@@ -238,6 +246,11 @@ Procedures: `uploadImage` / `uploadPdf`
 | `dayone.purchase` | `list` / `create` / `receive` / `suppliers` / `upsertSupplier` |
 | `dayone.reports` | `dailySummary` / `monthlyRevenue` / `topCustomers` / `inventoryAlerts` |
 | `dayone.suppliers` | `list` / `upsert` / `toggleStatus` / `delete` |
+| `dayone.ar` | `listReceivables` / `markPaid` / `addAdminNote` / `listDriverCashReports` / `createDriverCashReport` / `resolveAnomaly` / `monthlyStatement` |
+| `dayone.ap` | `listPayables` / `markPaid` / `supplierPriceList` / `upsertSupplierPrice` |
+| `dayone.purchaseReceipt` | `list` / `create` / `sign` / `detail` / `reportAnomaly` |
+| `dayone.dispatch` | `generateDispatch` / `listDispatchOrders` / `getDispatchDetail` / `updateDispatchItem` / `completeDispatch` / `manualAddStop` / `updateDispatchStatus` |
+| `dayone.portal` | `register` / `loginWithLine` / `me` / `myOrders` / `myReceivables` / `addCustomerNote` / `myStatement` / `myPrices` / `changePassword` / `bindLine` |
 
 ---
 

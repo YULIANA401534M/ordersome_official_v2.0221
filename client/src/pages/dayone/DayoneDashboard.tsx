@@ -1,7 +1,7 @@
 import { DayoneLayout, TENANT_ID } from "./DayoneLayout";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShoppingCart, Users, Package, AlertTriangle, TrendingUp, Truck } from "lucide-react";
+import { ShoppingCart, Users, AlertTriangle, TrendingUp, Truck, CreditCard, Receipt, AlertOctagon } from "lucide-react";
 import { useState } from "react";
 
 function todayStr() {
@@ -20,12 +20,81 @@ export default function DayoneDashboard() {
   const { data: monthlyRevenue } = trpc.dayone.reports.monthlyRevenue.useQuery({ tenantId: TENANT_ID, year, month });
   const totalMonthly = monthlyRevenue?.reduce((sum: number, r: any) => sum + Number(r.revenue || 0), 0) ?? 0;
 
+  // Finance KPIs
+  const { data: arList = [] } = trpc.dayone.ar.listReceivables.useQuery({ page: 1, status: "unpaid" });
+  const { data: arOverdue = [] } = trpc.dayone.ar.listReceivables.useQuery({ page: 1, status: "overdue" });
+  const { data: cashReports = [] } = trpc.dayone.ar.listDriverCashReports.useQuery({ date: today });
+  const { data: pendingReceipts = [] } = trpc.dayone.purchaseReceipt.list.useQuery({ status: "pending" });
+
+  const todayArSum = (arList as any[])
+    .filter((r: any) => (r.createdAt ?? "").startsWith(today))
+    .reduce((s: number, r: any) => s + Number(r.amount), 0);
+  const overdueSum = (arOverdue as any[]).reduce((s: number, r: any) => s + Number(r.amount) - Number(r.paidAmount ?? 0), 0);
+  const anomalyDrivers = (cashReports as any[]).filter((r: any) => r.hasAnomaly).length;
+  const pendingReceiptCount = (pendingReceipts as any[]).length;
+
   return (
     <DayoneLayout>
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">總覽</h1>
           <p className="text-sm text-gray-500 mt-1">{today} 今日配送概況</p>
+        </div>
+
+        {/* Finance KPI Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="pt-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <CreditCard className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <div className="text-xl font-bold">${todayArSum.toLocaleString()}</div>
+                  <div className="text-xs text-gray-500">今日應收</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
+                  <AlertOctagon className="w-5 h-5 text-red-600" />
+                </div>
+                <div>
+                  <div className="text-xl font-bold text-red-600">${overdueSum.toLocaleString()}</div>
+                  <div className="text-xs text-gray-500">逾期未付</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-orange-600" />
+                </div>
+                <div>
+                  <div className={`text-xl font-bold ${anomalyDrivers > 0 ? "text-orange-600" : "text-gray-700"}`}>{anomalyDrivers}</div>
+                  <div className="text-xs text-gray-500">今日異常司機</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                  <Receipt className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <div className="text-xl font-bold">{pendingReceiptCount}</div>
+                  <div className="text-xs text-gray-500">待簽收進貨</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* KPI Cards */}

@@ -1,10 +1,11 @@
-import { useState, useMemo } from "react";
-import { DayoneLayout } from "./DayoneLayout";
+import { useState, useMemo, useRef } from "react";
+import { DayoneLayout, TENANT_ID } from "./DayoneLayout";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +19,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import * as XLSX from "xlsx";
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -27,165 +30,91 @@ function fmtMoney(v: number | string | null | undefined) {
   return `$${n.toLocaleString("zh-TW", { minimumFractionDigits: 0 })}`;
 }
 
-function fmtDate(v: string | null | undefined) {
+function fmtDate(v: string | Date | null | undefined) {
   if (!v) return "-";
   return new Date(v).toLocaleDateString("zh-TW");
 }
 
-function fmtDateTime(v: string | null | undefined) {
-  if (!v) return "-";
-  const d = new Date(v);
-  return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
 }
 
-const PAYMENT_TYPE_LABELS: Record<string, string> = {
-  monthly: "月結",
+function thisMonthStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+const AR_STATUS: Record<string, { label: string; cls: string }> = {
+  unpaid:  { label: "未付",   cls: "bg-gray-100 text-gray-700" },
+  partial: { label: "部分付款", cls: "bg-orange-100 text-orange-700" },
+  paid:    { label: "已付",   cls: "bg-green-100 text-green-700" },
+  overdue: { label: "逾期",   cls: "bg-red-100 text-red-700" },
+};
+
+const CYCLE_LABELS: Record<string, string> = {
+  per_delivery: "現付",
   weekly: "週結",
-  cash: "現付",
+  monthly: "月結",
 };
 
-const PAYMENT_STATUS_CONFIG: Record<
-  string,
-  { label: string; cls: string }
-> = {
-  paid: { label: "已付", cls: "bg-green-100 text-green-700" },
-  partial: { label: "部分付款", cls: "bg-amber-100 text-amber-700" },
-  unpaid: { label: "未付", cls: "bg-red-100 text-red-700" },
+const DRIVER_STATUS: Record<string, { label: string; cls: string; icon: string }> = {
+  normal:   { label: "正常", cls: "bg-green-100 text-green-700", icon: "✓" },
+  anomaly:  { label: "異常待處理", cls: "bg-red-100 text-red-700", icon: "⚠️" },
+  resolved: { label: "已解決", cls: "bg-gray-100 text-gray-500", icon: "✓" },
 };
 
-const METHOD_LABELS: Record<string, string> = {
-  cash: "現金",
-  transfer: "銀行轉帳",
-  offset: "沖帳",
-};
+// ── PayDialog ──────────────────────────────────────────────────────────────
 
-// ── PaymentDialog ──────────────────────────────────────────────────────────
-
-function PaymentDialog({
-  customer,
-  unpaidOrders,
-  onClose,
-  onSuccess,
-}: {
-  customer: any;
-  unpaidOrders: any[];
-  onClose: () => void;
-  onSuccess: () => void;
-}) {
-  const [amount, setAmount] = useState("");
-  const [orderId, setOrderId] = useState<string>("none");
-  const [method, setMethod] = useState<"cash" | "transfer" | "offset">("cash");
+function PayDialog({ record, onClose, onSuccess }: { record: any; onClose: () => void; onSuccess: () => void }) {
+  const [amount, setAmount] = useState(
+    String(Math.max(0, Number(record.amount) - Number(record.paidAmount)))
+  );
+  const [method, setMethod] = useState<"cash" | "transfer">("cash");
   const [note, setNote] = useState("");
 
-  const recordPayment = trpc.dayone.ar.recordPayment.useMutation({
-    onSuccess: () => {
-      toast.success("收款記錄成功");
-      onSuccess();
-      onClose();
-    },
+  const mut = trpc.dayone.ar.markPaid.useMutation({
+    onSuccess: () => { toast.success("收款記錄成功"); onSuccess(); onClose(); },
     onError: (e) => toast.error(e.message),
   });
 
-  function handleSubmit(e: React.FormEvent) {
+  function submit(e: React.FormEvent) {
     e.preventDefault();
     const amt = parseFloat(amount);
-    if (!amt || amt <= 0) {
-      toast.error("請輸入有效金額");
-      return;
-    }
-    recordPayment.mutate({
-      customerId: customer.customerId,
-      orderId: orderId !== "none" ? Number(orderId) : undefined,
-      amount: amt,
-      paymentMethod: method,
-      note: note || undefined,
-    });
+    if (!amt || amt <= 0) { toast.error("請輸入有效金額"); return; }
+    mut.mutate({ id: record.id, tenantId: TENANT_ID, paymentMethod: method, paidAmount: amt, adminNote: note || undefined });
   }
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>記錄收款 — {customer.customerName}</DialogTitle>
+          <DialogTitle>收款 — {record.customerName}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* 金額 */}
-          <div>
-            <label className="text-sm font-medium text-gray-700 mb-1 block">
-              收款金額 <span className="text-red-500">*</span>
-            </label>
-            <Input
-              type="number"
-              min="1"
-              step="0.01"
-              placeholder="請輸入金額"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              required
-            />
-          </div>
-
-          {/* 關聯訂單 */}
-          {unpaidOrders.length > 0 && (
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">
-                關聯訂單（可選）
+        <form onSubmit={submit} className="space-y-4 pt-1">
+          <div className="flex gap-4">
+            {(["cash", "transfer"] as const).map((m) => (
+              <label key={m} className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="method" value={m} checked={method === m}
+                  onChange={() => setMethod(m)} className="accent-amber-500" />
+                <span className="text-sm">{m === "cash" ? "💵 現金" : "🏦 匯款"}</span>
               </label>
-              <Select value={orderId} onValueChange={setOrderId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="選擇訂單（可不選）" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">不指定訂單</SelectItem>
-                  {unpaidOrders.map((o: any) => (
-                    <SelectItem key={o.id} value={String(o.id)}>
-                      {o.orderNo} — {fmtDate(o.deliveryDate)} —{" "}
-                      {fmtMoney(Number(o.totalAmount) - Number(o.paidAmount))} 未付
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {/* 收款方式 */}
-          <div>
-            <label className="text-sm font-medium text-gray-700 mb-1 block">
-              收款方式
-            </label>
-            <Select
-              value={method}
-              onValueChange={(v) => setMethod(v as typeof method)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="cash">現金</SelectItem>
-                <SelectItem value="transfer">銀行轉帳</SelectItem>
-                <SelectItem value="offset">沖帳</SelectItem>
-              </SelectContent>
-            </Select>
+            ))}
           </div>
-
-          {/* 備註 */}
           <div>
-            <label className="text-sm font-medium text-gray-700 mb-1 block">
-              備註
-            </label>
-            <Input
-              placeholder="備註（選填）"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-            />
+            <label className="text-sm font-medium mb-1 block">收款金額 <span className="text-red-500">*</span></label>
+            <Input type="number" min="0.01" step="0.01" value={amount}
+              onChange={(e) => setAmount(e.target.value)} required />
           </div>
-
-          <div className="flex gap-2 justify-end pt-2">
-            <Button type="button" variant="outline" onClick={onClose}>
-              取消
-            </Button>
-            <Button type="submit" disabled={recordPayment.isPending}>
-              {recordPayment.isPending ? "送出中..." : "確認收款"}
+          <div>
+            <label className="text-sm font-medium mb-1 block">備註</label>
+            <Textarea placeholder="備註（選填）" value={note}
+              onChange={(e) => setNote(e.target.value)} rows={2} />
+          </div>
+          <div className="flex gap-2 justify-end">
+            <Button type="button" variant="outline" size="sm" onClick={onClose}>取消</Button>
+            <Button type="submit" size="sm" disabled={mut.isPending}
+              className="bg-amber-500 hover:bg-amber-600 text-white">
+              {mut.isPending ? "送出中..." : "確認收款"}
             </Button>
           </div>
         </form>
@@ -194,481 +123,656 @@ function PaymentDialog({
   );
 }
 
-// ── CustomerDetailDialog ───────────────────────────────────────────────────
+// ── ResolveDialog ──────────────────────────────────────────────────────────
 
-function CustomerDetailDialog({
-  customer,
-  onClose,
-}: {
-  customer: any;
-  onClose: () => void;
-}) {
-  const [showPaymentForm, setShowPaymentForm] = useState(false);
+function ResolveDialog({ report, onClose, onSuccess }: { report: any; onClose: () => void; onSuccess: () => void }) {
+  const [note, setNote] = useState("");
+  const mut = trpc.dayone.ar.resolveAnomaly.useMutation({
+    onSuccess: () => { toast.success("已標記解決"); onSuccess(); onClose(); },
+    onError: (e) => toast.error(e.message),
+  });
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader><DialogTitle>解決異常 — {report.driverName}</DialogTitle></DialogHeader>
+        <div className="space-y-3 pt-1">
+          <div className="text-sm text-gray-600 bg-red-50 rounded p-3">
+            差額：<span className="font-bold text-red-600">{fmtMoney(report.diff)}</span>
+          </div>
+          <Textarea placeholder="請填寫解決說明..." value={note}
+            onChange={(e) => setNote(e.target.value)} rows={3} />
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" size="sm" onClick={onClose}>取消</Button>
+            <Button size="sm" disabled={!note || mut.isPending}
+              onClick={() => mut.mutate({ id: report.id, tenantId: TENANT_ID, adminNote: note })}
+              className="bg-red-600 hover:bg-red-700 text-white">
+              {mut.isPending ? "送出中..." : "確認解決"}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
-  const {
-    data: orders,
-    isLoading: ordersLoading,
-    refetch: refetchOrders,
-  } = trpc.dayone.ar.getCustomerOrders.useQuery(
-    { customerId: customer.customerId },
-    { enabled: !!customer }
+// ── CreateCashReportDialog ─────────────────────────────────────────────────
+
+function CreateCashReportDialog({ reportDate, onClose, onSuccess }: { reportDate: string; onClose: () => void; onSuccess: () => void }) {
+  const [driverId, setDriverId] = useState("");
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+  const { data: drivers } = trpc.dayone.drivers.list.useQuery({ tenantId: TENANT_ID });
+  const mut = trpc.dayone.ar.createDriverCashReport.useMutation({
+    onSuccess: (data) => {
+      toast.success(`新增成功，差額 ${fmtMoney(data.diff)}，狀態：${data.status === "normal" ? "正常" : "異常"}`);
+      onSuccess(); onClose();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader><DialogTitle>新增司機日報 — {fmtDate(reportDate)}</DialogTitle></DialogHeader>
+        <div className="space-y-4 pt-1">
+          <div>
+            <label className="text-sm font-medium mb-1 block">司機</label>
+            <Select value={driverId} onValueChange={setDriverId}>
+              <SelectTrigger><SelectValue placeholder="選擇司機..." /></SelectTrigger>
+              <SelectContent>
+                {(drivers ?? []).map((d: any) => (
+                  <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1 block">實收金額</label>
+            <Input type="number" min="0" step="0.01" placeholder="0" value={amount}
+              onChange={(e) => setAmount(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1 block">備註</label>
+            <Textarea placeholder="備註..." value={note}
+              onChange={(e) => setNote(e.target.value)} rows={2} />
+          </div>
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" size="sm" onClick={onClose}>取消</Button>
+            <Button size="sm" disabled={!driverId || !amount || mut.isPending}
+              onClick={() => mut.mutate({
+                tenantId: TENANT_ID, driverId: Number(driverId), reportDate,
+                actualAmount: parseFloat(amount), driverNote: note || undefined,
+              })}
+              className="bg-amber-500 hover:bg-amber-600 text-white">
+              {mut.isPending ? "新增中..." : "新增回報"}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Tab1: 應收帳款 ─────────────────────────────────────────────────────────
+
+function TabAR() {
+  const [customerId, setCustomerId] = useState<string>("all");
+  const [status, setStatus] = useState("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [page, setPage] = useState(1);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [payTarget, setPayTarget] = useState<any>(null);
+
+  const { data: customers } = trpc.dayone.customers.list.useQuery({ tenantId: TENANT_ID });
+  const { data: records = [], isLoading, refetch } = trpc.dayone.ar.listReceivables.useQuery({
+    tenantId: TENANT_ID,
+    status: status !== "all" ? status : undefined,
+    customerId: customerId !== "all" ? Number(customerId) : undefined,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+    page,
+  });
+
+  const kpi = useMemo(() => {
+    const unpaidSum = records.filter((r: any) => r.status === "unpaid" || r.status === "partial")
+      .reduce((s: number, r: any) => s + Number(r.amount) - Number(r.paidAmount), 0);
+    const overdueSum = records.filter((r: any) => r.status === "overdue")
+      .reduce((s: number, r: any) => s + Number(r.amount) - Number(r.paidAmount), 0);
+    const paidSum = records.filter((r: any) => r.status === "paid")
+      .reduce((s: number, r: any) => s + Number(r.paidAmount), 0);
+    return { unpaidSum, overdueSum, paidSum };
+  }, [records]);
+
+  return (
+    <div className="space-y-5">
+      {/* KPI */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card><CardContent className="pt-5">
+          <p className="text-xs text-gray-500 mb-1">應收未付總額</p>
+          <p className="text-2xl font-bold text-amber-600">{fmtMoney(kpi.unpaidSum)}</p>
+        </CardContent></Card>
+        <Card><CardContent className="pt-5">
+          <p className="text-xs text-gray-500 mb-1">逾期未收</p>
+          <p className={`text-2xl font-bold ${kpi.overdueSum > 0 ? "text-red-600" : "text-gray-400"}`}>{fmtMoney(kpi.overdueSum)}</p>
+        </CardContent></Card>
+        <Card><CardContent className="pt-5">
+          <p className="text-xs text-gray-500 mb-1">本頁已收</p>
+          <p className="text-2xl font-bold text-green-600">{fmtMoney(kpi.paidSum)}</p>
+        </CardContent></Card>
+      </div>
+
+      {/* 篩選 */}
+      <div className="flex flex-wrap gap-3">
+        <Select value={customerId} onValueChange={(v) => { setCustomerId(v); setPage(1); }}>
+          <SelectTrigger className="w-44"><SelectValue placeholder="所有客戶" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">所有客戶</SelectItem>
+            {(customers ?? []).map((c: any) => (
+              <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
+          <SelectTrigger className="w-36"><SelectValue placeholder="全部狀態" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">全部狀態</SelectItem>
+            <SelectItem value="unpaid">未付</SelectItem>
+            <SelectItem value="overdue">逾期</SelectItem>
+            <SelectItem value="partial">部分付款</SelectItem>
+            <SelectItem value="paid">已付</SelectItem>
+          </SelectContent>
+        </Select>
+        <Input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
+          className="w-40" placeholder="開始日期" />
+        <Input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
+          className="w-40" placeholder="結束日期" />
+      </div>
+
+      {/* 桌面表格 */}
+      {isLoading ? (
+        <div className="flex justify-center py-12"><div className="animate-spin h-7 w-7 rounded-full border-b-2 border-amber-500" /></div>
+      ) : !records.length ? (
+        <Card><CardContent className="py-12 text-center text-gray-400">無符合條件的帳款記錄</CardContent></Card>
+      ) : (
+        <>
+          <div className="hidden md:block rounded-xl border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-amber-50 text-gray-600 border-b">
+                  <th className="text-left px-4 py-3 font-medium">客戶名稱</th>
+                  <th className="text-center px-4 py-3 font-medium">結算週期</th>
+                  <th className="text-right px-4 py-3 font-medium">金額</th>
+                  <th className="text-right px-4 py-3 font-medium">已付</th>
+                  <th className="text-right px-4 py-3 font-medium">未付</th>
+                  <th className="text-center px-4 py-3 font-medium">到期日</th>
+                  <th className="text-center px-4 py-3 font-medium">狀態</th>
+                  <th className="text-center px-4 py-3 font-medium">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {records.map((r: any) => {
+                  const sc = AR_STATUS[r.status] ?? AR_STATUS.unpaid;
+                  const unpaid = Number(r.amount) - Number(r.paidAmount);
+                  const isExpanded = expandedId === r.id;
+                  return [
+                    <tr key={r.id}
+                      className={`border-b transition-colors cursor-pointer ${r.status === "overdue" ? "bg-red-50" : "hover:bg-gray-50"}`}
+                      onClick={() => setExpandedId(isExpanded ? null : r.id)}>
+                      <td className="px-4 py-3 font-medium text-gray-900">{r.customerName}</td>
+                      <td className="px-4 py-3 text-center">
+                        <Badge variant="outline" className="text-xs">
+                          {CYCLE_LABELS[r.settlementCycle ?? ""] ?? "-"}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 text-right text-gray-700">{fmtMoney(r.amount)}</td>
+                      <td className="px-4 py-3 text-right text-green-700">{fmtMoney(r.paidAmount)}</td>
+                      <td className={`px-4 py-3 text-right font-semibold ${unpaid > 0 ? "text-red-600" : "text-gray-400"}`}>{fmtMoney(unpaid)}</td>
+                      <td className="px-4 py-3 text-center text-gray-600">{fmtDate(r.dueDate)}</td>
+                      <td className="px-4 py-3 text-center">
+                        <Badge className={`${sc.cls} border-0 text-xs`}>{sc.label}</Badge>
+                      </td>
+                      <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                        {r.status !== "paid" && (
+                          <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white text-xs h-7"
+                            onClick={() => setPayTarget(r)}>收款</Button>
+                        )}
+                      </td>
+                    </tr>,
+                    isExpanded && (
+                      <tr key={`${r.id}-detail`} className="bg-amber-50/40">
+                        <td colSpan={8} className="px-6 py-3">
+                          <div className="flex gap-6 text-xs text-gray-600">
+                            {r.adminNote && (
+                              <div><span className="font-medium text-gray-700">管理員備註：</span>{r.adminNote}</div>
+                            )}
+                            {r.customerNote && (
+                              <div><span className="font-medium text-blue-600">客戶備註：</span>{r.customerNote}</div>
+                            )}
+                            {!r.adminNote && !r.customerNote && <div className="text-gray-400">無備註</div>}
+                          </div>
+                        </td>
+                      </tr>
+                    ),
+                  ];
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* 手機卡片 */}
+          <div className="md:hidden space-y-3">
+            {records.map((r: any) => {
+              const sc = AR_STATUS[r.status] ?? AR_STATUS.unpaid;
+              const unpaid = Number(r.amount) - Number(r.paidAmount);
+              return (
+                <Card key={r.id} className={r.status === "overdue" ? "border-l-4 border-l-red-500" : ""}>
+                  <CardContent className="pt-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="font-semibold text-gray-900">{r.customerName}</p>
+                      <Badge className={`${sc.cls} border-0 text-xs`}>{sc.label}</Badge>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-sm">
+                      <div><p className="text-xs text-gray-400">應收</p><p className="font-medium">{fmtMoney(r.amount)}</p></div>
+                      <div><p className="text-xs text-gray-400">已付</p><p className="font-medium text-green-700">{fmtMoney(r.paidAmount)}</p></div>
+                      <div><p className="text-xs text-gray-400">未付</p><p className={`font-bold ${unpaid > 0 ? "text-red-600" : "text-gray-400"}`}>{fmtMoney(unpaid)}</p></div>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                      <span>到期：{fmtDate(r.dueDate)}</span>
+                      <Badge variant="outline" className="text-xs">{CYCLE_LABELS[r.settlementCycle ?? ""] ?? "-"}</Badge>
+                    </div>
+                    {(r.adminNote || r.customerNote) && (
+                      <div className="text-xs space-y-1 bg-gray-50 rounded p-2">
+                        {r.adminNote && <p><span className="text-gray-500">備註：</span>{r.adminNote}</p>}
+                        {r.customerNote && <p><span className="text-blue-500">客戶備註：</span>{r.customerNote}</p>}
+                      </div>
+                    )}
+                    {r.status !== "paid" && (
+                      <Button size="sm" className="w-full bg-amber-500 hover:bg-amber-600 text-white"
+                        onClick={() => setPayTarget(r)}>收款</Button>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* 分頁 */}
+          <div className="flex justify-center gap-2 pt-1">
+            <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>上一頁</Button>
+            <span className="text-sm text-gray-500 self-center">第 {page} 頁</span>
+            <Button variant="outline" size="sm" disabled={records.length < 20} onClick={() => setPage(p => p + 1)}>下一頁</Button>
+          </div>
+        </>
+      )}
+
+      {payTarget && (
+        <PayDialog record={payTarget} onClose={() => setPayTarget(null)} onSuccess={() => refetch()} />
+      )}
+    </div>
+  );
+}
+
+// ── Tab2: 司機日報 ─────────────────────────────────────────────────────────
+
+function TabDriverCash() {
+  const [date, setDate] = useState(todayStr);
+  const [resolveTarget, setResolveTarget] = useState<any>(null);
+  const [showCreate, setShowCreate] = useState(false);
+
+  const { data: reports = [], isLoading, refetch } = trpc.dayone.ar.listDriverCashReports.useQuery({
+    tenantId: TENANT_ID, reportDate: date,
+  });
+
+  const anomalyCount = (reports as any[]).filter((r: any) => r.status === "anomaly").length;
+
+  return (
+    <div className="space-y-5">
+      {/* 頂部 */}
+      <div className="flex flex-wrap items-center gap-3">
+        <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-44" />
+        {anomalyCount > 0 && (
+          <Badge className="bg-red-600 text-white text-sm px-3 py-1">⚠️ {anomalyCount} 筆異常待處理</Badge>
+        )}
+        <div className="ml-auto">
+          <Button size="sm" variant="outline" onClick={() => setShowCreate(true)}>+ 新增回報</Button>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center py-12"><div className="animate-spin h-7 w-7 rounded-full border-b-2 border-amber-500" /></div>
+      ) : !(reports as any[]).length ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-gray-400 mb-4">當日無繳款記錄</p>
+            <Button size="sm" variant="outline" onClick={() => setShowCreate(true)}>+ 新增回報</Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {/* 桌面表格 */}
+          <div className="hidden md:block rounded-xl border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-amber-50 text-gray-600 border-b">
+                  <th className="text-left px-4 py-3 font-medium">司機</th>
+                  <th className="text-right px-4 py-3 font-medium">應收</th>
+                  <th className="text-right px-4 py-3 font-medium">實收</th>
+                  <th className="text-right px-4 py-3 font-medium">差額</th>
+                  <th className="text-center px-4 py-3 font-medium">狀態</th>
+                  <th className="text-left px-4 py-3 font-medium">備註</th>
+                  <th className="text-center px-4 py-3 font-medium">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(reports as any[]).map((r: any) => {
+                  const sc = DRIVER_STATUS[r.status] ?? DRIVER_STATUS.normal;
+                  const diff = Number(r.diff);
+                  return (
+                    <tr key={r.id} className={`border-b transition-colors ${r.status === "anomaly" ? "bg-red-50" : "hover:bg-gray-50"}`}>
+                      <td className="px-4 py-3 font-medium text-gray-900">{r.driverName}</td>
+                      <td className="px-4 py-3 text-right text-gray-700">{fmtMoney(r.expectedAmount)}</td>
+                      <td className="px-4 py-3 text-right text-gray-700">{fmtMoney(r.actualAmount)}</td>
+                      <td className={`px-4 py-3 text-right font-bold ${diff > 0 ? "text-green-600" : diff < 0 ? "text-red-600" : "text-gray-400"}`}>
+                        {diff >= 0 ? "+" : ""}{fmtMoney(diff)}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <Badge className={`${sc.cls} border-0 text-xs`}>{sc.icon} {sc.label}</Badge>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-500 max-w-[180px] truncate">
+                        {r.adminNote || r.driverNote || "-"}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {r.status === "anomaly" && (
+                          <Button size="sm" variant="destructive" className="text-xs h-7"
+                            onClick={() => setResolveTarget(r)}>解決</Button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* 手機卡片 */}
+          <div className="md:hidden space-y-3">
+            {(reports as any[]).map((r: any) => {
+              const sc = DRIVER_STATUS[r.status] ?? DRIVER_STATUS.normal;
+              const diff = Number(r.diff);
+              return (
+                <Card key={r.id} className={r.status === "anomaly" ? "border-l-4 border-l-red-500" : ""}>
+                  <CardContent className="pt-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="font-semibold text-gray-900">{r.driverName}</p>
+                      <Badge className={`${sc.cls} border-0 text-xs`}>{sc.icon} {sc.label}</Badge>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-sm">
+                      <div><p className="text-xs text-gray-400">應收</p><p className="font-medium">{fmtMoney(r.expectedAmount)}</p></div>
+                      <div><p className="text-xs text-gray-400">實收</p><p className="font-medium">{fmtMoney(r.actualAmount)}</p></div>
+                      <div>
+                        <p className="text-xs text-gray-400">差額</p>
+                        <p className={`font-bold ${diff > 0 ? "text-green-600" : diff < 0 ? "text-red-600" : "text-gray-400"}`}>
+                          {diff >= 0 ? "+" : ""}{fmtMoney(diff)}
+                        </p>
+                      </div>
+                    </div>
+                    {(r.adminNote || r.driverNote) && (
+                      <p className="text-xs text-gray-500 bg-gray-50 rounded px-2 py-1">
+                        {r.adminNote || r.driverNote}
+                      </p>
+                    )}
+                    {r.status === "anomaly" && (
+                      <Button size="sm" variant="destructive" className="w-full"
+                        onClick={() => setResolveTarget(r)}>解決異常</Button>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {resolveTarget && (
+        <ResolveDialog report={resolveTarget} onClose={() => setResolveTarget(null)} onSuccess={() => refetch()} />
+      )}
+      {showCreate && (
+        <CreateCashReportDialog reportDate={date} onClose={() => setShowCreate(false)} onSuccess={() => refetch()} />
+      )}
+    </div>
+  );
+}
+
+// ── Tab3: 月結對帳單 ───────────────────────────────────────────────────────
+
+function TabStatement() {
+  const [customerId, setCustomerId] = useState<string>("");
+  const [yearMonth, setYearMonth] = useState(thisMonthStr);
+  const [queried, setQueried] = useState(false);
+  const printRef = useRef<HTMLDivElement>(null);
+
+  const { data: customers } = trpc.dayone.customers.list.useQuery({ tenantId: TENANT_ID });
+
+  const [year, month] = yearMonth.split("-").map(Number);
+  const { data: stmt, isLoading, refetch } = trpc.dayone.ar.monthlyStatement.useQuery(
+    { tenantId: TENANT_ID, customerId: Number(customerId), year, month },
+    { enabled: queried && !!customerId }
   );
 
-  const { data: history, isLoading: historyLoading, refetch: refetchHistory } =
-    trpc.dayone.ar.getPaymentHistory.useQuery(
-      { customerId: customer.customerId },
-      { enabled: !!customer }
-    );
+  function handleQuery() {
+    if (!customerId) { toast.error("請選擇客戶"); return; }
+    setQueried(true);
+    refetch();
+  }
 
-  const unpaidOrders = useMemo(
-    () =>
-      (orders ?? []).filter(
-        (o: any) => o.paymentStatus === "unpaid" || o.paymentStatus === "partial"
-      ),
-    [orders]
-  );
+  function handlePrint() {
+    window.print();
+  }
 
-  function handlePaymentSuccess() {
-    refetchOrders();
-    refetchHistory();
+  function handleExcel() {
+    if (!stmt) return;
+    const rows: any[] = [];
+    rows.push(["大永蛋品有限公司", `對帳單 ${yearMonth}`]);
+    rows.push(["客戶：", stmt.customer?.name ?? ""]);
+    rows.push([]);
+    rows.push(["日期", "訂單", "金額", "已付", "狀態"]);
+    for (const ar of (stmt.arRecords ?? [])) {
+      rows.push([
+        fmtDate(ar.dueDate),
+        `#${ar.orderId}`,
+        Number(ar.amount),
+        Number(ar.paidAmount),
+        AR_STATUS[ar.status]?.label ?? ar.status,
+      ]);
+    }
+    rows.push([]);
+    rows.push(["", "總金額", stmt.totalAmount, "", ""]);
+    rows.push(["", "已付", stmt.paidAmount, "", ""]);
+    rows.push(["", "未付", stmt.unpaidAmount, "", ""]);
+    rows.push(["空箱餘額", stmt.boxBalance]);
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "對帳單");
+    XLSX.writeFile(wb, `大永對帳單_${stmt.customer?.name ?? "客戶"}_${yearMonth}.xlsx`);
   }
 
   return (
-    <>
-      <Dialog open onOpenChange={onClose}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>客戶帳務詳情</DialogTitle>
-          </DialogHeader>
+    <div className="space-y-5">
+      {/* 篩選 */}
+      <div className="flex flex-wrap gap-3 items-end">
+        <div>
+          <label className="text-xs text-gray-500 mb-1 block">客戶</label>
+          <Select value={customerId} onValueChange={setCustomerId}>
+            <SelectTrigger className="w-48"><SelectValue placeholder="選擇客戶..." /></SelectTrigger>
+            <SelectContent>
+              {(customers ?? []).map((c: any) => (
+                <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <label className="text-xs text-gray-500 mb-1 block">年月</label>
+          <Input type="month" value={yearMonth} onChange={(e) => setYearMonth(e.target.value)} className="w-40" />
+        </div>
+        <Button onClick={handleQuery} className="bg-amber-500 hover:bg-amber-600 text-white">查詢</Button>
+      </div>
 
-          {/* 客戶資訊卡 */}
-          <div className="bg-slate-50 rounded-lg p-4 grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <span className="text-gray-500">客戶名稱</span>
-              <p className="font-semibold text-gray-900">{customer.customerName}</p>
-            </div>
-            <div>
-              <span className="text-gray-500">電話</span>
-              <p className="text-gray-800">{customer.phone ?? "-"}</p>
-            </div>
-            <div className="col-span-2">
-              <span className="text-gray-500">地址</span>
-              <p className="text-gray-800">{customer.address ?? "-"}</p>
-            </div>
-            <div>
-              <span className="text-gray-500">付款方式</span>
-              <p className="text-gray-800">
-                {PAYMENT_TYPE_LABELS[customer.paymentType] ?? customer.paymentType}
-              </p>
-            </div>
-            <div>
-              <span className="text-gray-500">信用額度</span>
-              <p className="text-gray-800">{fmtMoney(customer.creditLimit)}</p>
-            </div>
-            <div>
-              <span className="text-gray-500">未付金額</span>
-              <p className={`font-bold text-base ${Number(customer.outstanding) > 0 ? "text-red-600" : "text-green-600"}`}>
-                {fmtMoney(customer.outstanding)}
-              </p>
-            </div>
-            <div>
-              <span className="text-gray-500">逾期訂單數</span>
-              <p className={`font-semibold ${Number(customer.overdueOrders) > 0 ? "text-red-600" : "text-gray-700"}`}>
-                {customer.overdueOrders} 筆
-              </p>
-            </div>
+      {isLoading && queried && (
+        <div className="flex justify-center py-12"><div className="animate-spin h-7 w-7 rounded-full border-b-2 border-amber-500" /></div>
+      )}
+
+      {stmt && (
+        <>
+          {/* 操作按鈕（列印時隱藏）*/}
+          <div className="flex gap-2 no-print">
+            <Button variant="outline" size="sm" onClick={handlePrint}>🖨️ 列印 / PDF</Button>
+            <Button variant="outline" size="sm" onClick={handleExcel}>📊 匯出 Excel</Button>
           </div>
 
-          {/* 記錄收款按鈕 */}
-          <div className="flex justify-end">
-            <Button onClick={() => setShowPaymentForm(true)} className="bg-blue-600 hover:bg-blue-700">
-              + 記錄收款
-            </Button>
-          </div>
+          {/* 對帳單主體 */}
+          <div ref={printRef} className="print-target bg-white rounded-xl border p-6 space-y-6">
+            {/* 標頭 */}
+            <div className="flex items-start justify-between border-b pb-4">
+              <div>
+                <p className="text-lg font-bold text-amber-700">大永蛋品有限公司</p>
+                <p className="text-sm text-gray-500">DayOne Egg Products Co., Ltd.</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xl font-bold text-gray-900">月結對帳單</p>
+                <p className="text-sm text-gray-500">{year} 年 {month} 月</p>
+              </div>
+            </div>
 
-          {/* 訂單列表 */}
-          <div>
-            <h3 className="font-semibold text-gray-800 mb-2">訂單記錄</h3>
-            {ordersLoading ? (
-              <div className="text-center py-6 text-gray-400">載入中...</div>
-            ) : !orders?.length ? (
-              <div className="text-center py-6 text-gray-400 text-sm">尚無訂單</div>
-            ) : (
-              <div className="overflow-x-auto rounded-lg border border-gray-200">
-                <table className="w-full text-sm">
+            {/* 客戶資訊 */}
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-xs text-gray-400">客戶名稱</p>
+                <p className="font-semibold text-gray-900">{stmt.customer?.name}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400">電話</p>
+                <p className="text-gray-700">{stmt.customer?.phone ?? "-"}</p>
+              </div>
+              <div className="col-span-2">
+                <p className="text-xs text-gray-400">地址</p>
+                <p className="text-gray-700">{stmt.customer?.address ?? "-"}</p>
+              </div>
+            </div>
+
+            {/* 帳款明細 */}
+            <div>
+              <h3 className="font-semibold text-gray-800 mb-3 text-sm">帳款明細</h3>
+              {!(stmt.arRecords ?? []).length ? (
+                <p className="text-gray-400 text-sm">本月無帳款記錄</p>
+              ) : (
+                <table className="w-full text-sm border rounded overflow-hidden">
                   <thead>
                     <tr className="bg-gray-50 border-b text-gray-600">
-                      <th className="text-left px-3 py-2 font-medium">訂單編號</th>
-                      <th className="text-left px-3 py-2 font-medium">配送日</th>
-                      <th className="text-right px-3 py-2 font-medium">總金額</th>
+                      <th className="text-left px-3 py-2 font-medium">到期日</th>
+                      <th className="text-left px-3 py-2 font-medium">訂單</th>
+                      <th className="text-right px-3 py-2 font-medium">金額</th>
                       <th className="text-right px-3 py-2 font-medium">已付</th>
-                      <th className="text-center px-3 py-2 font-medium">付款狀態</th>
+                      <th className="text-center px-3 py-2 font-medium">狀態</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {orders.map((o: any) => {
-                      const sc =
-                        PAYMENT_STATUS_CONFIG[o.paymentStatus] ??
-                        PAYMENT_STATUS_CONFIG.unpaid;
+                    {(stmt.arRecords ?? []).map((ar: any) => {
+                      const sc = AR_STATUS[ar.status] ?? AR_STATUS.unpaid;
                       return (
-                        <tr key={o.id} className="border-b hover:bg-gray-50">
-                          <td className="px-3 py-2 font-mono text-xs text-gray-600">
-                            {o.orderNo}
-                          </td>
-                          <td className="px-3 py-2 text-gray-700">
-                            {fmtDate(o.deliveryDate)}
-                          </td>
-                          <td className="px-3 py-2 text-right text-gray-800">
-                            {fmtMoney(o.totalAmount)}
-                          </td>
-                          <td className="px-3 py-2 text-right text-gray-800">
-                            {fmtMoney(o.paidAmount)}
-                          </td>
+                        <tr key={ar.id} className="border-b">
+                          <td className="px-3 py-2 text-gray-600">{fmtDate(ar.dueDate)}</td>
+                          <td className="px-3 py-2 text-gray-500 font-mono text-xs">#{ar.orderId}</td>
+                          <td className="px-3 py-2 text-right text-gray-800">{fmtMoney(ar.amount)}</td>
+                          <td className="px-3 py-2 text-right text-green-700">{fmtMoney(ar.paidAmount)}</td>
                           <td className="px-3 py-2 text-center">
-                            <Badge className={`${sc.cls} border-0 text-xs`}>
-                              {sc.label}
-                            </Badge>
+                            <Badge className={`${sc.cls} border-0 text-xs`}>{sc.label}</Badge>
                           </td>
                         </tr>
                       );
                     })}
                   </tbody>
                 </table>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
 
-          {/* 收款紀錄歷史 */}
-          <div>
-            <h3 className="font-semibold text-gray-800 mb-2">收款紀錄</h3>
-            {historyLoading ? (
-              <div className="text-center py-4 text-gray-400">載入中...</div>
-            ) : !history?.length ? (
-              <div className="text-center py-4 text-gray-400 text-sm">尚無收款紀錄</div>
-            ) : (
-              <div className="space-y-2">
-                {history.map((h: any) => (
-                  <div
-                    key={h.id}
-                    className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2 text-sm"
-                  >
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-green-700">
-                          {fmtMoney(h.amount)}
-                        </span>
-                        <Badge className="bg-blue-50 text-blue-700 border-0 text-xs">
-                          {METHOD_LABELS[h.paymentMethod] ?? h.paymentMethod}
-                        </Badge>
-                        {h.orderNo && (
-                          <span className="text-gray-500 text-xs">
-                            #{h.orderNo}
-                          </span>
-                        )}
-                      </div>
-                      {h.note && (
-                        <p className="text-gray-500 text-xs">{h.note}</p>
-                      )}
-                    </div>
-                    <span className="text-gray-400 text-xs whitespace-nowrap">
-                      {fmtDateTime(h.createdAt)}
-                    </span>
-                  </div>
-                ))}
+            {/* 空箱台帳 */}
+            <div className="bg-amber-50 rounded-lg p-4">
+              <h3 className="font-semibold text-gray-800 mb-2 text-sm">空箱台帳</h3>
+              <div className="flex gap-8 text-sm">
+                <div><p className="text-xs text-gray-400">目前餘箱</p><p className="text-xl font-bold text-amber-700">{stmt.boxBalance}</p></div>
               </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+            </div>
 
-      {showPaymentForm && (
-        <PaymentDialog
-          customer={customer}
-          unpaidOrders={unpaidOrders}
-          onClose={() => setShowPaymentForm(false)}
-          onSuccess={handlePaymentSuccess}
-        />
+            {/* 合計 */}
+            <div className="border-t pt-4 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600">總應收金額</span>
+                <span className="font-semibold text-gray-900">{fmtMoney(stmt.totalAmount)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">已付金額</span>
+                <span className="font-semibold text-green-700">{fmtMoney(stmt.paidAmount)}</span>
+              </div>
+              <div className="flex justify-between border-t pt-2">
+                <span className="font-semibold text-gray-800">尚欠金額</span>
+                <span className={`font-bold text-lg ${stmt.unpaidAmount > 0 ? "text-red-600" : "text-green-600"}`}>
+                  {fmtMoney(stmt.unpaidAmount)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </>
       )}
-    </>
+    </div>
   );
 }
 
-// ── Main Page ──────────────────────────────────────────────────────────────
+// ── Main ───────────────────────────────────────────────────────────────────
 
 export default function DayoneAR() {
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<"all" | "unpaid" | "overdue">("all");
-  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
-
-  const { data: summary, isLoading, refetch } = trpc.dayone.ar.getARSummary.useQuery();
-
-  // ── 統計卡片數值 ──
-  const stats = useMemo(() => {
-    if (!summary) return { totalAmount: 0, totalOutstanding: 0, overdueCount: 0, thisMonthPaid: 0 };
-    const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-    return {
-      totalAmount: summary.reduce((s: number, c: any) => s + Number(c.totalAmount), 0),
-      totalOutstanding: summary.reduce((s: number, c: any) => s + Number(c.outstanding), 0),
-      overdueCount: summary.filter((c: any) => Number(c.overdueOrders) > 0).length,
-      // 本月收款：暫用前端統計（後端未開獨立查詢）
-      thisMonthPaid: 0,
-    };
-  }, [summary]);
-
-  // ── 篩選後列表 ──
-  const filtered = useMemo(() => {
-    if (!summary) return [];
-    return summary.filter((c: any) => {
-      const matchSearch =
-        !search ||
-        c.customerName.toLowerCase().includes(search.toLowerCase());
-      const matchFilter =
-        filter === "all" ||
-        (filter === "unpaid" && Number(c.outstanding) > 0) ||
-        (filter === "overdue" && Number(c.overdueOrders) > 0);
-      return matchSearch && matchFilter;
-    });
-  }, [summary, search, filter]);
-
   return (
-    <DayoneLayout>
-      <div className="p-4 md:p-6 space-y-6">
-        <h1 className="text-xl md:text-2xl font-bold text-gray-900">應收帳款</h1>
+    <>
+      <style>{`
+        @media print {
+          body > * { display: none !important; }
+          .print-target { display: block !important; }
+          .no-print { display: none !important; }
+        }
+      `}</style>
 
-        {/* ── 統計卡片 ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-5">
-              <p className="text-xs text-gray-500 mb-1">總應收金額</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {fmtMoney(stats.totalAmount)}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-5">
-              <p className="text-xs text-gray-500 mb-1">未收金額</p>
-              <p className={`text-2xl font-bold ${stats.totalOutstanding > 0 ? "text-red-600" : "text-gray-900"}`}>
-                {fmtMoney(stats.totalOutstanding)}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-5">
-              <p className="text-xs text-gray-500 mb-1">逾期客戶數</p>
-              <p className={`text-2xl font-bold ${stats.overdueCount > 0 ? "text-red-600" : "text-gray-900"}`}>
-                {stats.overdueCount} 位
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-5">
-              <p className="text-xs text-gray-500 mb-1">本月收款</p>
-              <p className="text-2xl font-bold text-green-700">
-                {fmtMoney(stats.thisMonthPaid)}
-              </p>
-            </CardContent>
-          </Card>
+      <DayoneLayout>
+        <div className="p-4 md:p-6 space-y-5">
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900">帳務管理</h1>
+
+          <Tabs defaultValue="ar">
+            <TabsList className="bg-amber-50 border border-amber-200">
+              <TabsTrigger value="ar" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white">
+                應收帳款
+              </TabsTrigger>
+              <TabsTrigger value="driver" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white">
+                司機日報
+              </TabsTrigger>
+              <TabsTrigger value="statement" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white">
+                月結對帳單
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="ar" className="mt-5">
+              <TabAR />
+            </TabsContent>
+
+            <TabsContent value="driver" className="mt-5">
+              <TabDriverCash />
+            </TabsContent>
+
+            <TabsContent value="statement" className="mt-5">
+              <TabStatement />
+            </TabsContent>
+          </Tabs>
         </div>
-
-        {/* ── 搜尋 & 篩選 ── */}
-        <div className="flex flex-wrap gap-3 items-center">
-          <Input
-            placeholder="搜尋客戶名稱..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="max-w-xs"
-          />
-          <div className="flex gap-2">
-            {(["all", "unpaid", "overdue"] as const).map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
-                  filter === f
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "text-gray-600 border-gray-300 hover:bg-gray-50"
-                }`}
-              >
-                {{ all: "全部", unpaid: "未付", overdue: "逾期" }[f]}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* ── 客戶列表 ── */}
-        {isLoading ? (
-          <div className="flex justify-center py-16">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-          </div>
-        ) : !filtered.length ? (
-          <Card>
-            <CardContent className="py-12 text-center text-gray-500">
-              無符合條件的客戶
-            </CardContent>
-          </Card>
-        ) : (
-          <>
-            {/* 桌面表格 */}
-            <Card className="hidden lg:block">
-              <CardHeader>
-                <CardTitle className="text-sm text-gray-500 font-normal">
-                  共 {filtered.length} 位客戶
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b bg-gray-50 text-gray-600">
-                        <th className="text-left px-4 py-3 font-medium">客戶名稱</th>
-                        <th className="text-left px-4 py-3 font-medium">電話</th>
-                        <th className="text-center px-4 py-3 font-medium">付款方式</th>
-                        <th className="text-right px-4 py-3 font-medium">總應收</th>
-                        <th className="text-right px-4 py-3 font-medium">已付</th>
-                        <th className="text-right px-4 py-3 font-medium">未付</th>
-                        <th className="text-center px-4 py-3 font-medium">逾期訂單</th>
-                        <th className="text-center px-4 py-3 font-medium">最後下單日</th>
-                        <th className="text-center px-4 py-3 font-medium">操作</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filtered.map((c: any) => {
-                        const isOverdue = Number(c.overdueOrders) > 0;
-                        return (
-                          <tr
-                            key={c.customerId}
-                            className={`border-b transition-colors ${
-                              isOverdue
-                                ? "bg-red-50 border-l-4 border-l-red-500"
-                                : "hover:bg-gray-50"
-                            }`}
-                          >
-                            <td className="px-4 py-3 font-medium text-gray-900">
-                              {c.customerName}
-                            </td>
-                            <td className="px-4 py-3 text-gray-600">
-                              {c.phone ?? "-"}
-                            </td>
-                            <td className="px-4 py-3 text-center text-gray-600">
-                              {PAYMENT_TYPE_LABELS[c.paymentType] ?? c.paymentType}
-                            </td>
-                            <td className="px-4 py-3 text-right text-gray-800">
-                              {fmtMoney(c.totalAmount)}
-                            </td>
-                            <td className="px-4 py-3 text-right text-green-700">
-                              {fmtMoney(c.totalPaid)}
-                            </td>
-                            <td className={`px-4 py-3 text-right font-semibold ${Number(c.outstanding) > 0 ? "text-red-600" : "text-gray-400"}`}>
-                              {fmtMoney(c.outstanding)}
-                            </td>
-                            <td className={`px-4 py-3 text-center font-medium ${isOverdue ? "text-red-600" : "text-gray-400"}`}>
-                              {c.overdueOrders}
-                            </td>
-                            <td className="px-4 py-3 text-center text-gray-500">
-                              {fmtDate(c.lastOrderDate)}
-                            </td>
-                            <td className="px-4 py-3 text-center">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setSelectedCustomer(c)}
-                              >
-                                查看
-                              </Button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* 平板 / 手機卡片 */}
-            <div className="lg:hidden grid sm:grid-cols-2 gap-3">
-              {filtered.map((c: any) => {
-                const isOverdue = Number(c.overdueOrders) > 0;
-                return (
-                  <Card
-                    key={c.customerId}
-                    className={`${isOverdue ? "border-l-4 border-l-red-500" : ""}`}
-                  >
-                    <CardContent className="pt-4 space-y-3">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <p className="font-semibold text-gray-900">
-                            {c.customerName}
-                          </p>
-                          <p className="text-xs text-gray-500">{c.phone ?? "-"}</p>
-                        </div>
-                        <Badge
-                          className={`text-xs border-0 ${
-                            PAYMENT_TYPE_LABELS[c.paymentType] === "月結"
-                              ? "bg-blue-50 text-blue-700"
-                              : "bg-gray-100 text-gray-700"
-                          }`}
-                        >
-                          {PAYMENT_TYPE_LABELS[c.paymentType] ?? c.paymentType}
-                        </Badge>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-2 text-sm">
-                        <div>
-                          <p className="text-xs text-gray-400">總應收</p>
-                          <p className="font-medium text-gray-800">
-                            {fmtMoney(c.totalAmount)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-400">已付</p>
-                          <p className="font-medium text-green-700">
-                            {fmtMoney(c.totalPaid)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-400">未付</p>
-                          <p className={`font-bold ${Number(c.outstanding) > 0 ? "text-red-600" : "text-gray-400"}`}>
-                            {fmtMoney(c.outstanding)}
-                          </p>
-                        </div>
-                      </div>
-
-                      {isOverdue && (
-                        <p className="text-xs text-red-600 font-medium">
-                          ⚠ 逾期 {c.overdueOrders} 筆訂單
-                        </p>
-                      )}
-
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full"
-                        onClick={() => setSelectedCustomer(c)}
-                      >
-                        查看詳情
-                      </Button>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* 客戶詳細 Dialog */}
-      {selectedCustomer && (
-        <CustomerDetailDialog
-          customer={selectedCustomer}
-          onClose={() => {
-            setSelectedCustomer(null);
-            refetch();
-          }}
-        />
-      )}
-    </DayoneLayout>
+      </DayoneLayout>
+    </>
   );
 }

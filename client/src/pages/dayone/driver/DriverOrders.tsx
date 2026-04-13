@@ -1,10 +1,12 @@
 import DriverLayout from "./DriverLayout";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
-import { MapPin, Phone, ChevronDown, ChevronUp } from "lucide-react";
+import { MapPin, Phone, ChevronDown, ChevronUp, Plus, Minus } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
-const TENANT_ID = 2;
+const TENANT_ID = 90004;
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; next?: string; nextLabel?: string }> = {
   pending:    { label: "待配送", color: "bg-blue-100 text-blue-700", next: "delivering", nextLabel: "開始配送" },
@@ -13,8 +15,19 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; next?: strin
   failed:     { label: "配送失敗", color: "bg-red-100 text-red-700" },
 };
 
+interface ConfirmState {
+  orderId: number;
+  dispatchItemId: number | null;
+  isMonthly: boolean;
+  deliverBoxes: number;
+  returnBoxes: number;
+  cashCollected: number;
+  note: string;
+}
+
 export default function DriverOrders() {
   const [expanded, setExpanded] = useState<number | null>(null);
+  const [confirmState, setConfirmState] = useState<ConfirmState | null>(null);
   const todayDate = new Date().toISOString().slice(0, 10);
   const utils = trpc.useUtils();
 
@@ -24,6 +37,41 @@ export default function DriverOrders() {
     onSuccess: () => { toast.success("狀態已更新"); utils.dayone.drivers.myOrders.invalidate(); },
     onError: (e) => toast.error(e.message),
   });
+
+  const updateDispatchItem = trpc.dayone.dispatch.updateDispatchItem.useMutation({
+    onSuccess: () => { toast.success("配送完成，資料已更新"); utils.dayone.drivers.myOrders.invalidate(); setConfirmState(null); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  function openConfirm(order: any) {
+    const isMonthly = ["monthly", "weekly"].includes(order.settlementCycle ?? order.paymentType ?? "");
+    setConfirmState({
+      orderId: order.id,
+      dispatchItemId: order.dispatchItemId ?? null,
+      isMonthly,
+      deliverBoxes: order.items?.reduce((s: number, i: any) => s + (i.qty ?? 0), 0) ?? 0,
+      returnBoxes: 0,
+      cashCollected: isMonthly ? 0 : Number(order.totalAmount ?? 0),
+      note: "",
+    });
+  }
+
+  async function handleConfirmDelivery() {
+    if (!confirmState) return;
+    if (confirmState.dispatchItemId) {
+      await updateDispatchItem.mutateAsync({
+        dispatchItemId: confirmState.dispatchItemId,
+        deliverBoxes: confirmState.deliverBoxes,
+        returnBoxes: confirmState.returnBoxes,
+        cashCollected: confirmState.isMonthly ? 0 : confirmState.cashCollected,
+        note: confirmState.note,
+      });
+    } else {
+      // fallback: just update order status
+      await updateStatus.mutateAsync({ id: confirmState.orderId, tenantId: TENANT_ID, status: "delivered" });
+      setConfirmState(null);
+    }
+  }
 
   if (isLoading) return (
     <DriverLayout>
@@ -83,13 +131,21 @@ export default function DriverOrders() {
                       </div>
                     )}
                     {order.note && <p className="text-xs text-gray-500 bg-yellow-50 rounded p-2">備註：{order.note}</p>}
-                    {st.next && (
+                    {order.status === "pending" && (
                       <button
-                        className="w-full bg-amber-600 text-white py-2.5 rounded-xl font-semibold text-sm"
-                        onClick={() => updateStatus.mutate({ id: order.id, tenantId: TENANT_ID, status: st.next as any })}
+                        className="w-full bg-blue-600 text-white py-2.5 rounded-xl font-semibold text-sm"
+                        onClick={() => updateStatus.mutate({ id: order.id, tenantId: TENANT_ID, status: "delivering" })}
                         disabled={updateStatus.isPending}
                       >
-                        {updateStatus.isPending ? "更新中..." : st.nextLabel}
+                        開始配送
+                      </button>
+                    )}
+                    {order.status === "delivering" && (
+                      <button
+                        className="w-full bg-amber-600 text-white py-2.5 rounded-xl font-semibold text-sm"
+                        onClick={() => openConfirm(order)}
+                      >
+                        完成配送
                       </button>
                     )}
                   </div>
@@ -99,6 +155,79 @@ export default function DriverOrders() {
           })
         )}
       </div>
+
+      {/* Confirm Delivery Modal */}
+      {confirmState && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center p-0">
+          <div className="bg-white rounded-t-2xl w-full max-w-md p-5 space-y-4">
+            <h3 className="text-base font-bold text-gray-900">完成配送確認</h3>
+
+            <div className="space-y-3">
+              {/* Deliver Boxes */}
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-1">送出箱數</p>
+                <div className="flex items-center gap-3">
+                  <button className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center"
+                    onClick={() => setConfirmState(s => s ? { ...s, deliverBoxes: Math.max(0, s.deliverBoxes - 1) } : s)}>
+                    <Minus className="w-4 h-4" />
+                  </button>
+                  <span className="text-2xl font-bold w-12 text-center">{confirmState.deliverBoxes}</span>
+                  <button className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center"
+                    onClick={() => setConfirmState(s => s ? { ...s, deliverBoxes: s.deliverBoxes + 1 } : s)}>
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Return Boxes */}
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-1">收回空箱數</p>
+                <div className="flex items-center gap-3">
+                  <button className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center"
+                    onClick={() => setConfirmState(s => s ? { ...s, returnBoxes: Math.max(0, s.returnBoxes - 1) } : s)}>
+                    <Minus className="w-4 h-4" />
+                  </button>
+                  <span className="text-2xl font-bold w-12 text-center">{confirmState.returnBoxes}</span>
+                  <button className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center"
+                    onClick={() => setConfirmState(s => s ? { ...s, returnBoxes: s.returnBoxes + 1 } : s)}>
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Cash (only for non-monthly) */}
+              {!confirmState.isMonthly && (
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-1">收款金額（現付）</p>
+                  <Input type="number" value={confirmState.cashCollected}
+                    onChange={e => setConfirmState(s => s ? { ...s, cashCollected: Number(e.target.value) } : s)} />
+                </div>
+              )}
+              {confirmState.isMonthly && (
+                <div className="bg-blue-50 rounded-lg px-3 py-2 text-sm text-blue-700">月結客戶 — 無需現場收款</div>
+              )}
+
+              {/* Note */}
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-1">備註（選填）</p>
+                <textarea className="w-full border rounded p-2 text-sm h-16 resize-none"
+                  value={confirmState.note}
+                  onChange={e => setConfirmState(s => s ? { ...s, note: e.target.value } : s)}
+                  placeholder="異常、缺貨等備註..." />
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <Button variant="outline" className="flex-1" onClick={() => setConfirmState(null)}>取消</Button>
+              <Button className="flex-1 bg-amber-600 hover:bg-amber-700 text-white"
+                onClick={handleConfirmDelivery}
+                disabled={updateDispatchItem.isPending || updateStatus.isPending}>
+                {(updateDispatchItem.isPending || updateStatus.isPending) ? "更新中..." : "確認完成"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </DriverLayout>
   );
 }

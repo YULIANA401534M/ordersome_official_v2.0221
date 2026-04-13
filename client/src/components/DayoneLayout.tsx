@@ -28,7 +28,9 @@ const NAV_ITEMS = [
   { icon: Building2, label: "供應商管理", path: "/dayone/suppliers" },
   { icon: BarChart3, label: "報表", path: "/dayone/reports" },
   { icon: Smartphone, label: "LIFF訂單", path: "/dayone/liff-orders" },
-  { icon: CreditCard, label: "應收帳款", path: "/dayone/ar" },
+  { icon: CreditCard, label: "帳務管理", path: "/dayone/ar" },
+  { icon: Truck, label: "派車管理", path: "/dayone/dispatch" },
+  { icon: Package, label: "進貨簽收", path: "/dayone/purchase-receipts" },
 ];
 
 export default function DayoneLayout({ children }: { children: React.ReactNode }) {

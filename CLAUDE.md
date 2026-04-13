@@ -1,6 +1,6 @@
 # CLAUDE.md — OrderSome 工作主檔
 
-> 最後更新：2026-04-11 | 文件版本：v5.0
+> 最後更新：2026-04-13 | 文件版本：v5.1
 > 詳細參考（路由/API/DB表/架構）→ 見 `CLAUDE_REFERENCE.md`
 
 ---
@@ -100,8 +100,11 @@ pnpm db:push      # 生成並執行 Drizzle migration
 - ✅ 庫存管理通用化：DayoneInventoryContent 接受 tenantId prop
 - ✅ DayoneLayout.tsx TENANT_ID 修正為 90004
 - ✅ dy_inventory 補入 17 筆初始庫存記錄
-- ⏳ 帳務管理（應收應付、月結對帳）
-- ⏳ 積欠款提醒
+- ✅ 帳務管理（應收應付、月結對帳）— Phase 2
+- ✅ 派車管理（自動/手動派車、完成配送）— Phase 2
+- ✅ 進貨簽收（Canvas 簽名 + R2 上傳）— Phase 2
+- ✅ 客戶門戶 Portal（LINE 登入、查帳、月結）— Phase 2
+- ⏳ 積欠款 LINE 推播通知（portal.ts 已建 cron 基礎）
 
 ### 階段 A-2 — 宇聯官網/電商優化（進行中）
 - ✅ AdminOrders：來源篩選（中文）、刪除功能（super_admin）、時間顯示到分鐘
@@ -131,7 +134,38 @@ pnpm db:push      # 生成並執行 Drizzle migration
 
 ---
 
-## 八、最近變更（2026-04-12）
+## 八、最近變更（2026-04-13）— 大永帳務 + 客戶 Portal 全套
+
+| 檔案 | 變更摘要 |
+|------|---------|
+| `scripts/migrate-dayone-phase2.mjs` | 新增 10 張 dy_ 表（ar/ap/driver_cash/purchase_receipts/dispatch/box_ledger 等），ALTER dy_customers/users |
+| `server/routers/dayone/ar.ts` | 改寫為 7 procedures：listReceivables/markPaid/addAdminNote/listDriverCashReports/createDriverCashReport/resolveAnomaly/monthlyStatement |
+| `server/routers/dayone/ap.ts` | 新增 4 procedures：listPayables/markPaid/supplierPriceList/upsertSupplierPrice |
+| `server/routers/dayone/purchaseReceipt.ts` | 新增 5 procedures：list/create/sign/detail/reportAnomaly（含 R2 簽名上傳） |
+| `server/routers/dayone/dispatch.ts` | 新增 7 procedures：generateDispatch/listDispatchOrders/getDispatchDetail/updateDispatchItem/completeDispatch/manualAddStop/updateDispatchStatus |
+| `server/routers/dayone/portal.ts` | 新增 10 procedures：register/loginWithLine/me/myOrders/myReceivables/addCustomerNote/myStatement/myPrices/changePassword/bindLine |
+| `server/routers/dayone/index.ts` | 新增 ap/purchaseReceipt/dispatch/portal 子路由 |
+| `server/_core/index.ts` | 新增每日 07:00 台灣時間自動派車 cron |
+| `client/src/pages/dayone/DayoneAR.tsx` | 完整改寫：3 Tabs（AR列表/司機現金/月結對帳），Excel/Print 匯出 |
+| `client/src/pages/dayone/DayoneDispatch.tsx` | 新建：派車單列表、詳情 Sheet、手動加停靠點 |
+| `client/src/pages/dayone/DayonePurchaseReceipts.tsx` | 新建：進貨簽收，Canvas 簽名，供應商價格預填 |
+| `client/src/pages/dayone/portal/DayonePortalLayout.tsx` | 新建：Portal 版型（桌面側欄 + 手機底部導覽列） |
+| `client/src/pages/dayone/portal/DayonePortalLogin.tsx` | 新建：LINE LIFF + Email/密碼 登入 |
+| `client/src/pages/dayone/portal/DayonePortalRegister.tsx` | 新建：客戶自助註冊 |
+| `client/src/pages/dayone/portal/DayonePortalHome.tsx` | 新建：Portal 首頁（未付/本月訂單/空箱摘要） |
+| `client/src/pages/dayone/portal/DayonePortalOrders.tsx` | 新建：客戶訂單查詢（月份篩選/分頁/展開明細） |
+| `client/src/pages/dayone/portal/DayonePortalStatement.tsx` | 新建：月結對帳單（可列印/加備註） |
+| `client/src/pages/dayone/portal/DayonePortalAccount.tsx` | 新建：帳戶頁（基本資料/空箱/價目表/改密碼/LINE綁定） |
+| `client/src/pages/dayone/DayoneCustomers.tsx` | 新增：customerLevel Badge/settlementCycle/Portal設定Tab/客戶專屬價格Tab |
+| `client/src/pages/dayone/DayoneDashboard.tsx` | 新增：4 張財務 KPI 卡片（今日應收/逾期未付/異常司機/待簽收進貨） |
+| `client/src/pages/dayone/driver/DriverOrders.tsx` | 完成配送時新增：空箱 Stepper/收款金額/備註，呼叫 dispatch.updateDispatchItem |
+| `client/src/App.tsx` | 新增 /dayone/purchase-receipts + 6 portal 路由 |
+| `client/src/components/DayoneLayout.tsx` | 側邊欄新增「進貨簽收」入口 |
+| `client/src/components/AdminDashboardLayout.tsx` | DY ERP 新增 dispatch/purchase_receipts 入口，ar/dispatch/pending 紅色 badge 計數 |
+
+---
+
+## 八-舊、舊變更紀錄（2026-04-12）
 
 | 檔案 | 變更摘要 |
 |------|---------|
@@ -227,9 +261,10 @@ pnpm db:push      # 生成並執行 Drizzle migration
 5. ⏳ 加盟主功能範圍定義
 6. ⏳ 來點什麼排班管理、門市日報功能開發
 7. ⏳ 庫存管理 UI 優化
-8. ⏳ 帳務管理（應收應付、月結對帳）
-9. ⏳ 積欠款提醒
-10. ⏳ LIFF 正式上線：蛋博用自己的 LINE 後台建立 LIFF，更新前端 `TENANT_CONFIG` 的 liffId
+8. ⏳ 積欠款 LINE 推播通知（portal.ts 已建 cron 基礎）
+9. ⏳ LIFF 正式上線：蛋博用自己的 LINE 後台建立 LIFF，更新前端 `TENANT_CONFIG` 的 liffId
+10. ⏳ Portal 客戶重設密碼 email（adminResetPassword procedure 前端已呼叫，後端尚未實作發信）
+11. ⏳ dy_customers upsert procedure 需接受新欄位（customerLevel/settlementCycle/overdueDays/loginEmail/isPortalActive/portalNote）— 目前前端已送但後端可能忽略
 
 ---
 
@@ -257,6 +292,13 @@ pnpm db:push      # 生成並執行 Drizzle migration
 - `useMemo` 內不可呼叫會變動 reference 的 function，改用 `useEffect + useState`
 - super-admin 路由若不包 `AdminDashboardLayout`，invalidate 發出後無組件監聽，側邊欄不連動
 - `users` 表密碼欄位實際為 `passwordHash`（非 `pwd`），登入 email 需為合法格式（openId 不能重複）
+- Map/Set iteration (`for...of map`) 在 TS `downlevelIteration` 未啟用時報 TS2802，改用 `Array.from(map.entries())`
+- Portal 路由（`/dayone/portal/...`）不可包 `DayoneLayout`（需驗 dyAdmin），應直接在 App.tsx 作 public Route
+- DayoneDashboard 的新 Finance KPI 查詢（listReceivables/listDispatchOrders/purchaseReceipt.list）若後端 procedure 尚未建立會報 trpc type error；需確認 portal.ts/dispatch.ts/purchaseReceipt.ts 已匯入 index.ts
+- Portal 路由（`/dayone/portal/...`）不能包 `DayoneLayout`，DayoneLayout 內部驗證 dyAdmin，Portal 是公開給客戶用的，直接在 App.tsx 放 public Route
+- `dy_customers.upsert` 後端需接受新欄位（customerLevel/settlementCycle/overdueDays/loginEmail/isPortalActive/portalNote），否則前端送出後欄位被靜默忽略
+- `dy_driver_cash_reports` / `dy_ar_records` 等 Phase 2 新表在執行 `migrate-dayone-phase2.mjs` 前不存在，先執行 migration 再 push 前端程式碼
+- Canvas 簽名（DayonePurchaseReceipts）在 iOS Safari 上 touch event 座標需要用 `e.touches[0]`，不是 `e.clientX`
 
 ---
 
@@ -305,7 +347,7 @@ pnpm db:push      # 生成並執行 Drizzle migration
   - `store_ops`：門市營運相關
   - `erp`：來點什麼 ERP
   - `dayone`：大永蛋品 ERP
-- `moduleKey` 清單：`delivery` / `crm_customers` / `inventory` / `purchasing` / `accounting` / `scheduling` / `daily_report` / `equipment_repair`
+- `moduleKey` 清單：`delivery` / `crm_customers` / `inventory` / `purchasing` / `accounting` / `scheduling` / `daily_report` / `equipment_repair` / `ar_management` / `dispatch` / `purchase_receipts` / `customer_portal`
 - `createTenant` 建立新租戶時自動 INSERT 所有模組定義（預設全關）
 - `SuperAdminModules.tsx`：label/category 全部來自 DB（非 hardcode）
 - `allTenantModules` 改為 JOIN（非 CROSS JOIN），每租戶只顯示自己的模組

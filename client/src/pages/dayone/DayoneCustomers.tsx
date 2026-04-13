@@ -5,33 +5,117 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Search, Pencil } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Search, Pencil, Minus } from "lucide-react";
 import { toast } from "sonner";
 
-const emptyForm = { name: "", phone: "", address: "", districtId: "", paymentType: "monthly" as const, creditLimit: 0, status: "active" as const };
+const LEVEL_CFG: Record<string, { label: string; cls: string }> = {
+  supplier: { label: "供應商", cls: "bg-purple-100 text-purple-700" },
+  store:    { label: "合作店家", cls: "bg-amber-100 text-amber-700" },
+  retail:   { label: "散戶",   cls: "bg-gray-100 text-gray-600" },
+};
+const CYCLE_LABELS: Record<string, string> = {
+  per_delivery: "每次現付",
+  weekly: "週結",
+  monthly: "月結",
+};
+
+const emptyForm = {
+  name: "", phone: "", address: "", districtId: "", paymentType: "monthly" as const,
+  creditLimit: 0, status: "active" as const,
+  customerLevel: "retail", settlementCycle: "monthly", overdueDays: 30,
+  loginEmail: "", isPortalActive: false, portalNote: "",
+};
+
+function fmtMoney(v: number | string | null | undefined) {
+  return `$${Number(v ?? 0).toLocaleString("zh-TW")}`;
+}
 
 export default function DayoneCustomers() {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState(emptyForm);
+  const [priceRows, setPriceRows] = useState<{ productId: number; productName: string; price: string }[]>([]);
 
   const utils = trpc.useUtils();
   const { data: customers, isLoading } = trpc.dayone.customers.list.useQuery({ tenantId: TENANT_ID });
   const { data: districts } = trpc.dayone.districts.list.useQuery({ tenantId: TENANT_ID });
+  const { data: products = [] } = trpc.dayone.products.list.useQuery({ tenantId: TENANT_ID });
 
   const upsert = trpc.dayone.customers.upsert.useMutation({
-    onSuccess: () => { toast.success(editing ? "客戶已更新" : "客戶已新增"); setOpen(false); utils.dayone.customers.list.invalidate(); },
+    onSuccess: () => {
+      toast.success(editing ? "客戶已更新" : "客戶已新增");
+      setOpen(false);
+      utils.dayone.customers.list.invalidate();
+    },
     onError: (e) => toast.error(e.message),
   });
 
-  function openCreate() { setEditing(null); setForm(emptyForm); setOpen(true); }
+  const upsertPrice = trpc.dayone.ap.upsertSupplierPrice.useMutation({
+    onError: (e) => toast.error(e.message),
+  });
+
+  const resetPortalPwd = trpc.dayone.portal.adminResetPassword?.useMutation?.({
+    onSuccess: () => toast.success("已重設密碼並發送通知"),
+    onError: (e) => toast.error(e.message),
+  });
+
+  function openCreate() {
+    setEditing(null);
+    setForm(emptyForm);
+    setPriceRows([]);
+    setOpen(true);
+  }
+
   function openEdit(c: any) {
     setEditing(c);
-    setForm({ name: c.name, phone: c.phone ?? "", address: c.address ?? "", districtId: c.districtId ? String(c.districtId) : "", paymentType: c.paymentType, creditLimit: c.creditLimit, status: c.status });
+    setForm({
+      name: c.name, phone: c.phone ?? "", address: c.address ?? "",
+      districtId: c.districtId ? String(c.districtId) : "",
+      paymentType: c.paymentType, creditLimit: c.creditLimit, status: c.status,
+      customerLevel: c.customerLevel ?? "retail",
+      settlementCycle: c.settlementCycle ?? "monthly",
+      overdueDays: c.overdueDays ?? 30,
+      loginEmail: c.loginEmail ?? "",
+      isPortalActive: !!c.isPortalActive,
+      portalNote: c.portalNote ?? "",
+    });
+    setPriceRows([]);
     setOpen(true);
+  }
+
+  function addPriceRow() {
+    const prod = (products as any[])[0];
+    if (!prod) return;
+    setPriceRows(r => [...r, { productId: prod.id, productName: prod.name, price: "" }]);
+  }
+
+  async function handleSave() {
+    if (!form.name) { toast.error("請填寫客戶名稱"); return; }
+    await upsert.mutateAsync({
+      ...form,
+      tenantId: TENANT_ID,
+      id: editing?.id,
+      districtId: form.districtId ? Number(form.districtId) : undefined,
+      creditLimit: Number(form.creditLimit),
+      overdueDays: Number(form.overdueDays),
+    });
+    // save custom prices
+    for (const row of priceRows) {
+      if (row.price && editing?.id) {
+        await upsertPrice.mutateAsync({
+          tenantId: TENANT_ID,
+          entityType: "customer",
+          entityId: editing.id,
+          productId: row.productId,
+          price: Number(row.price),
+        }).catch(() => {});
+      }
+    }
   }
 
   const filtered = (customers as any[] ?? []).filter((c: any) =>
@@ -61,29 +145,39 @@ export default function DayoneCustomers() {
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50 border-b">
                     <tr>
-                      {["客戶名稱", "電話", "地址", "區域", "付款方式", "狀態", ""].map(h => (
+                      {["客戶名稱", "電話", "地址", "等級", "結算", "Portal", "狀態", ""].map(h => (
                         <th key={h} className="text-left px-4 py-3 font-medium text-gray-600">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered.map((c: any) => (
-                      <tr key={c.id} className="border-b hover:bg-gray-50">
-                        <td className="px-4 py-3 font-medium">{c.name}</td>
-                        <td className="px-4 py-3 text-gray-600">{c.phone ?? "-"}</td>
-                        <td className="px-4 py-3 text-gray-600 max-w-[180px] truncate">{c.address ?? "-"}</td>
-                        <td className="px-4 py-3">{c.districtName ?? "-"}</td>
-                        <td className="px-4 py-3">{c.paymentType === "monthly" ? "月結" : c.paymentType === "weekly" ? "週結" : "現金"}</td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${c.status === "active" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                            {c.status === "active" ? "正常" : "停用"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <Button variant="ghost" size="sm" onClick={() => openEdit(c)}><Pencil className="w-4 h-4" /></Button>
-                        </td>
-                      </tr>
-                    ))}
+                    {filtered.map((c: any) => {
+                      const lvl = LEVEL_CFG[c.customerLevel ?? "retail"] ?? LEVEL_CFG.retail;
+                      return (
+                        <tr key={c.id} className="border-b hover:bg-gray-50">
+                          <td className="px-4 py-3 font-medium">{c.name}</td>
+                          <td className="px-4 py-3 text-gray-600">{c.phone ?? "-"}</td>
+                          <td className="px-4 py-3 text-gray-600 max-w-[160px] truncate">{c.address ?? "-"}</td>
+                          <td className="px-4 py-3">
+                            <Badge className={`${lvl.cls} border-0 text-xs`}>{lvl.label}</Badge>
+                          </td>
+                          <td className="px-4 py-3 text-gray-600">
+                            {CYCLE_LABELS[c.settlementCycle ?? ""] ?? "-"}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-block w-2 h-2 rounded-full ${c.isPortalActive ? "bg-green-500" : "bg-gray-300"}`} title={c.isPortalActive ? "Portal 啟用" : "Portal 未啟用"} />
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${c.status === "active" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                              {c.status === "active" ? "正常" : "停用"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <Button variant="ghost" size="sm" onClick={() => openEdit(c)}><Pencil className="w-4 h-4" /></Button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -92,47 +186,130 @@ export default function DayoneCustomers() {
         </Card>
 
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>{editing ? "編輯客戶" : "新增客戶"}</DialogTitle></DialogHeader>
-            <div className="space-y-3">
-              <div><Label>客戶名稱 *</Label><Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} /></div>
-              <div><Label>電話</Label><Input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} /></div>
-              <div><Label>地址</Label><Input value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} /></div>
-              <div>
-                <Label>配送區域</Label>
-                <Select value={form.districtId} onValueChange={v => setForm(p => ({ ...p, districtId: v }))}>
-                  <SelectTrigger><SelectValue placeholder="選擇區域" /></SelectTrigger>
-                  <SelectContent>
-                    {(districts as any[] ?? []).map((d: any) => <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>付款方式</Label>
-                <Select value={form.paymentType} onValueChange={v => setForm(p => ({ ...p, paymentType: v as any }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="monthly">月結</SelectItem>
-                    <SelectItem value="weekly">週結</SelectItem>
-                    <SelectItem value="cash">現金</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>狀態</Label>
-                <Select value={form.status} onValueChange={v => setForm(p => ({ ...p, status: v as any }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">正常</SelectItem>
-                    <SelectItem value="suspended">停用</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <Button className="w-full bg-amber-600 hover:bg-amber-700 mt-2" onClick={() => {
-              if (!form.name) { toast.error("請填寫客戶名稱"); return; }
-              upsert.mutate({ ...form, tenantId: TENANT_ID, id: editing?.id, districtId: form.districtId ? Number(form.districtId) : undefined, creditLimit: Number(form.creditLimit) });
-            }} disabled={upsert.isPending}>
+            <Tabs defaultValue="basic">
+              <TabsList className="w-full">
+                <TabsTrigger value="basic" className="flex-1">基本資料</TabsTrigger>
+                <TabsTrigger value="portal" className="flex-1">Portal 設定</TabsTrigger>
+                <TabsTrigger value="prices" className="flex-1">客戶專屬價格</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="basic" className="space-y-3 pt-2">
+                <div><Label>客戶名稱 *</Label><Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} /></div>
+                <div><Label>電話</Label><Input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} /></div>
+                <div><Label>地址</Label><Input value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} /></div>
+                <div>
+                  <Label>配送區域</Label>
+                  <Select value={form.districtId} onValueChange={v => setForm(p => ({ ...p, districtId: v }))}>
+                    <SelectTrigger><SelectValue placeholder="選擇區域" /></SelectTrigger>
+                    <SelectContent>
+                      {(districts as any[] ?? []).map((d: any) => <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>客戶等級</Label>
+                  <Select value={form.customerLevel} onValueChange={v => setForm(p => ({ ...p, customerLevel: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="supplier">供應商</SelectItem>
+                      <SelectItem value="store">合作店家</SelectItem>
+                      <SelectItem value="retail">散戶</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>結算週期</Label>
+                  <Select value={form.settlementCycle} onValueChange={v => setForm(p => ({ ...p, settlementCycle: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="per_delivery">每次現付</SelectItem>
+                      <SelectItem value="weekly">週結</SelectItem>
+                      <SelectItem value="monthly">月結</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div><Label>寬限天數</Label><Input type="number" value={form.overdueDays} onChange={e => setForm(p => ({ ...p, overdueDays: Number(e.target.value) }))} /></div>
+                <div>
+                  <Label>付款方式（舊欄位）</Label>
+                  <Select value={form.paymentType} onValueChange={v => setForm(p => ({ ...p, paymentType: v as any }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monthly">月結</SelectItem>
+                      <SelectItem value="weekly">週結</SelectItem>
+                      <SelectItem value="cash">現金</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>狀態</Label>
+                  <Select value={form.status} onValueChange={v => setForm(p => ({ ...p, status: v as any }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">正常</SelectItem>
+                      <SelectItem value="suspended">停用</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="portal" className="space-y-3 pt-2">
+                <div><Label>Portal 登入 Email</Label><Input type="email" value={form.loginEmail} onChange={e => setForm(p => ({ ...p, loginEmail: e.target.value }))} placeholder="customer@example.com" /></div>
+                <div className="flex items-center gap-3">
+                  <Label>Portal 啟用</Label>
+                  <button
+                    type="button"
+                    onClick={() => setForm(p => ({ ...p, isPortalActive: !p.isPortalActive }))}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${form.isPortalActive ? "bg-green-500" : "bg-gray-300"}`}>
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${form.isPortalActive ? "translate-x-6" : "translate-x-1"}`} />
+                  </button>
+                  <span className="text-sm text-gray-500">{form.isPortalActive ? "已啟用" : "未啟用"}</span>
+                </div>
+                <div><Label>Portal 備註（僅內部可見）</Label>
+                  <textarea className="w-full border rounded p-2 text-sm h-20 resize-none"
+                    value={form.portalNote} onChange={e => setForm(p => ({ ...p, portalNote: e.target.value }))} />
+                </div>
+                {editing && (
+                  <Button variant="outline" size="sm" className="text-orange-600 border-orange-300"
+                    onClick={() => (resetPortalPwd as any)?.mutate?.({ customerId: editing.id })}
+                    disabled={(resetPortalPwd as any)?.isPending}>
+                    重設 Portal 密碼
+                  </Button>
+                )}
+              </TabsContent>
+
+              <TabsContent value="prices" className="space-y-3 pt-2">
+                <p className="text-xs text-gray-500">設定此客戶的專屬售價，留空則沿用標準定價。{!editing && "（新增客戶後才能設定）"}</p>
+                {editing && (
+                  <>
+                    {priceRows.map((row, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <Select value={String(row.productId)} onValueChange={v => {
+                          const prod = (products as any[]).find((p: any) => p.id === Number(v));
+                          setPriceRows(r => r.map((x, j) => j === i ? { ...x, productId: Number(v), productName: prod?.name ?? "" } : x));
+                        }}>
+                          <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {(products as any[]).map((p: any) => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <Input type="number" className="w-28" placeholder="單價" value={row.price}
+                          onChange={e => setPriceRows(r => r.map((x, j) => j === i ? { ...x, price: e.target.value } : x))} />
+                        <Button variant="ghost" size="sm" onClick={() => setPriceRows(r => r.filter((_, j) => j !== i))}>
+                          <Minus className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button variant="outline" size="sm" onClick={addPriceRow} className="gap-1">
+                      <Plus className="w-4 h-4" /> 新增價格列
+                    </Button>
+                  </>
+                )}
+              </TabsContent>
+            </Tabs>
+
+            <Button className="w-full bg-amber-600 hover:bg-amber-700 mt-2" onClick={handleSave} disabled={upsert.isPending}>
               {upsert.isPending ? "儲存中..." : "儲存"}
             </Button>
           </DialogContent>

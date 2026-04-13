@@ -445,6 +445,19 @@ export type StoreSettings = typeof storeSettings.$inferSelect;
 
 
 // ===== Module Control System =====
+
+export const moduleDefinitions = mysqlTable("module_definitions", {
+  moduleKey:   varchar("moduleKey",   { length: 64  }).primaryKey(),
+  label:       varchar("label",       { length: 128 }).notNull(),
+  category:    varchar("category",    { length: 64  }).notNull(),
+  description: varchar("description", { length: 255 }),
+  sortOrder:   int("sortOrder").default(0).notNull(),
+  createdAt:   timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ModuleDefinition       = typeof moduleDefinitions.$inferSelect;
+export type InsertModuleDefinition = typeof moduleDefinitions.$inferInsert;
+
 /**
  * Tenant module toggles (Lego architecture)
  */

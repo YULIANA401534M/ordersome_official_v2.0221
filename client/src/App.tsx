@@ -97,7 +97,16 @@ import DayoneDistricts from "./pages/dayone/DayoneDistricts";
 import DayoneReports from "./pages/dayone/DayoneReports";
 import DayoneLiffOrders from "./pages/dayone/DayoneLiffOrders";
 import DayoneAR from "./pages/dayone/DayoneAR";
+import DayoneDispatch from "./pages/dayone/DayoneDispatch";
+import DayonePurchaseReceipts from "./pages/dayone/DayonePurchaseReceipts";
 import SupplierList from "./pages/erp/dayone/SupplierList";
+// DaYone Customer Portal
+import DayonePortalHome from "./pages/dayone/portal/DayonePortalHome";
+import DayonePortalLogin from "./pages/dayone/portal/DayonePortalLogin";
+import DayonePortalRegister from "./pages/dayone/portal/DayonePortalRegister";
+import DayonePortalOrders from "./pages/dayone/portal/DayonePortalOrders";
+import DayonePortalStatement from "./pages/dayone/portal/DayonePortalStatement";
+import DayonePortalAccount from "./pages/dayone/portal/DayonePortalAccount";
 // Driver Mobile Pages
 import DriverHome from "./pages/dayone/driver/DriverHome";
 import DriverOrders from "./pages/dayone/driver/DriverOrders";
@@ -243,6 +252,15 @@ function Router() {
       <Route path="/dayone/suppliers" component={SupplierList} />
       <Route path="/dayone/liff-orders" component={DayoneLiffOrders} />
       <Route path="/dayone/ar" component={DayoneAR} />
+      <Route path="/dayone/dispatch" component={DayoneDispatch} />
+      <Route path="/dayone/purchase-receipts" component={DayonePurchaseReceipts} />
+      {/* DaYone Customer Portal Routes */}
+      <Route path="/dayone/portal" component={DayonePortalHome} />
+      <Route path="/dayone/portal/login" component={DayonePortalLogin} />
+      <Route path="/dayone/portal/register" component={DayonePortalRegister} />
+      <Route path="/dayone/portal/orders" component={DayonePortalOrders} />
+      <Route path="/dayone/portal/statement" component={DayonePortalStatement} />
+      <Route path="/dayone/portal/account" component={DayonePortalAccount} />
       {/* Driver Mobile Routes */}
       <Route path="/driver" component={DriverHome} />
       <Route path="/driver/today" component={DriverToday} />

@@ -13,6 +13,10 @@ import { dySuppliersRouter } from "./suppliers";
 import { dyUnitsRouter } from "./units";
 import { liffRouter } from "../../liff";
 import { dyArRouter } from "./ar";
+import { dyApRouter } from "./ap";
+import { dyPurchaseReceiptRouter } from "./purchaseReceipt";
+import { dyDispatchRouter } from "./dispatch";
+import { dyPortalRouter } from "./portal";
 
 export const dayoneRouter = router({
   products: dyProductsRouter,
@@ -29,4 +33,8 @@ export const dayoneRouter = router({
   units: dyUnitsRouter,
   liff: liffRouter,
   ar: dyArRouter,
+  ap: dyApRouter,
+  purchaseReceipt: dyPurchaseReceiptRouter,
+  dispatch: dyDispatchRouter,
+  portal: dyPortalRouter,
 });

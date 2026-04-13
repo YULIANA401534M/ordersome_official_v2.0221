@@ -261,6 +261,110 @@ async function startServer() {
         console.error("[Scheduler] publishScheduled error", e);
       }
     }, 60 * 1000);
+
+    // 每天 07:00 台灣時間（UTC 23:00）自動產生大永派車單
+    setInterval(async () => {
+      try {
+        const now = new Date();
+        // 台灣時間 = UTC + 8
+        const twHour = (now.getUTCHours() + 8) % 24;
+        const twMinute = now.getUTCMinutes();
+        if (twHour !== 7 || twMinute !== 0) return;
+
+        const database = await db.getDb();
+        if (!database) return;
+        const client = (database as any).$client;
+
+        // 派車單產生對象：今天（台灣時間）
+        const twNow = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+        const dispatchDate = twNow.toISOString().slice(0, 10);
+        const tenantId = 90004;
+
+        // 查當日訂單
+        const [orderRows] = await client.execute(
+          `SELECT o.*, c.settlementCycle, c.overdueDays, c.customerLevel,
+                  dist.driverId, dist.sortOrder, dist.routeCode
+           FROM dy_orders o
+           JOIN dy_customers c ON o.customerId = c.id
+           LEFT JOIN dy_districts dist ON o.districtId = dist.id
+           WHERE o.tenantId=? AND o.deliveryDate=? AND o.status != 'cancelled'
+           ORDER BY dist.driverId, dist.sortOrder`,
+          [tenantId, dispatchDate]
+        );
+        const orders = orderRows as any[];
+
+        if (orders.length === 0) {
+          console.log(`[Cron] 07:00 dispatch: 當日無訂單 (${dispatchDate})`);
+          return;
+        }
+
+        // 依 driverId 分組
+        const driverMap = new Map<number, any[]>();
+        for (const o of orders) {
+          const driverId = o.driverId ?? 0;
+          if (!driverMap.has(driverId)) driverMap.set(driverId, []);
+          driverMap.get(driverId)!.push(o);
+        }
+
+        const generated: number[] = [];
+        for (const [driverId, driverOrders] of Array.from(driverMap.entries())) {
+          const routeCode = driverOrders[0]?.routeCode ?? "R00";
+          const [doResult] = await client.execute(
+            `INSERT INTO dy_dispatch_orders
+             (tenantId, dispatchDate, driverId, routeCode, status, generatedAt, createdAt, updatedAt)
+             VALUES (?,?,?,?,'draft',NOW(),NOW(),NOW())`,
+            [tenantId, dispatchDate, driverId, routeCode]
+          );
+          const dispatchOrderId = (doResult as any).insertId;
+
+          let stopSeq = 1;
+          for (const order of driverOrders) {
+            const [boxRows] = await client.execute(
+              `SELECT currentBalance FROM dy_box_ledger WHERE tenantId=? AND customerId=?`,
+              [tenantId, order.customerId]
+            );
+            const prevBoxes = (boxRows as any[])[0]?.currentBalance ?? 0;
+            const settlementCycle = order.settlementCycle ?? "monthly";
+            let paymentStatus = "unpaid";
+            if (settlementCycle === "monthly") paymentStatus = "monthly";
+            else if (settlementCycle === "weekly") paymentStatus = "weekly";
+
+            await client.execute(
+              `INSERT INTO dy_dispatch_items
+               (dispatchOrderId, tenantId, orderId, customerId, stopSequence,
+                prevBoxes, deliverBoxes, returnBoxes, remainBoxes, paymentStatus, cashCollected, createdAt)
+               VALUES (?,?,?,?,?,?,0,0,?,?,0,NOW())`,
+              [dispatchOrderId, tenantId, order.id, order.customerId, stopSeq++, prevBoxes, prevBoxes, paymentStatus]
+            );
+
+            // 建立 AR
+            let dueDate = dispatchDate;
+            if (settlementCycle === "monthly") {
+              const d = new Date(dispatchDate);
+              const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+              lastDay.setDate(lastDay.getDate() + (order.overdueDays ?? 5));
+              dueDate = lastDay.toISOString().slice(0, 10);
+            } else if (settlementCycle === "weekly") {
+              const d = new Date(dispatchDate);
+              d.setDate(d.getDate() + 7);
+              dueDate = d.toISOString().slice(0, 10);
+            }
+
+            await client.execute(
+              `INSERT INTO dy_ar_records
+               (tenantId, orderId, customerId, amount, paidAmount, status, dueDate, createdAt, updatedAt)
+               VALUES (?,?,?,?,0,'unpaid',?,NOW(),NOW())`,
+              [tenantId, order.id, order.customerId, order.totalAmount, dueDate]
+            );
+          }
+          generated.push(dispatchOrderId);
+        }
+
+        console.log(`[Cron] 07:00 dispatch generated for ${dispatchDate}:`, generated);
+      } catch (e) {
+        console.error("[Cron] 07:00 dispatch error", e);
+      }
+    }, 60 * 1000); // 每分鐘檢查一次時間是否到達 07:00
   });
 }
 
