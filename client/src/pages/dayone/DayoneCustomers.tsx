@@ -145,7 +145,7 @@ export default function DayoneCustomers() {
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50 border-b">
                     <tr>
-                      {["客戶名稱", "電話", "地址", "等級", "結算", "Portal", "狀態", ""].map(h => (
+                      {["客戶名稱", "電話", "地址", "等級", "結算", "客戶入口", "狀態", ""].map(h => (
                         <th key={h} className="text-left px-4 py-3 font-medium text-gray-600">{h}</th>
                       ))}
                     </tr>
@@ -165,7 +165,7 @@ export default function DayoneCustomers() {
                             {CYCLE_LABELS[c.settlementCycle ?? ""] ?? "-"}
                           </td>
                           <td className="px-4 py-3">
-                            <span className={`inline-block w-2 h-2 rounded-full ${c.isPortalActive ? "bg-green-500" : "bg-gray-300"}`} title={c.isPortalActive ? "Portal 啟用" : "Portal 未啟用"} />
+                            <span className={`inline-block w-2 h-2 rounded-full ${c.isPortalActive ? "bg-green-500" : "bg-gray-300"}`} title={c.isPortalActive ? "客戶入口已啟用" : "客戶入口未啟用"} />
                           </td>
                           <td className="px-4 py-3">
                             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${c.status === "active" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
@@ -191,7 +191,7 @@ export default function DayoneCustomers() {
             <Tabs defaultValue="basic">
               <TabsList className="w-full">
                 <TabsTrigger value="basic" className="flex-1">基本資料</TabsTrigger>
-                <TabsTrigger value="portal" className="flex-1">Portal 設定</TabsTrigger>
+                <TabsTrigger value="portal" className="flex-1">客戶入口設定</TabsTrigger>
                 <TabsTrigger value="prices" className="flex-1">客戶專屬價格</TabsTrigger>
               </TabsList>
 
@@ -255,9 +255,9 @@ export default function DayoneCustomers() {
               </TabsContent>
 
               <TabsContent value="portal" className="space-y-3 pt-2">
-                <div><Label>Portal 登入 Email</Label><Input type="email" value={form.loginEmail} onChange={e => setForm(p => ({ ...p, loginEmail: e.target.value }))} placeholder="customer@example.com" /></div>
+                <div><Label>客戶入口登入 Email</Label><Input type="email" value={form.loginEmail} onChange={e => setForm(p => ({ ...p, loginEmail: e.target.value }))} placeholder="customer@example.com" /></div>
                 <div className="flex items-center gap-3">
-                  <Label>Portal 啟用</Label>
+                  <Label>客戶入口啟用</Label>
                   <button
                     type="button"
                     onClick={() => setForm(p => ({ ...p, isPortalActive: !p.isPortalActive }))}
@@ -266,7 +266,7 @@ export default function DayoneCustomers() {
                   </button>
                   <span className="text-sm text-gray-500">{form.isPortalActive ? "已啟用" : "未啟用"}</span>
                 </div>
-                <div><Label>Portal 備註（僅內部可見）</Label>
+                <div><Label>客戶入口備註（僅內部可見）</Label>
                   <textarea className="w-full border rounded p-2 text-sm h-20 resize-none"
                     value={form.portalNote} onChange={e => setForm(p => ({ ...p, portalNote: e.target.value }))} />
                 </div>
@@ -274,7 +274,7 @@ export default function DayoneCustomers() {
                   <Button variant="outline" size="sm" className="text-orange-600 border-orange-300"
                     onClick={() => (resetPortalPwd as any)?.mutate?.({ customerId: editing.id })}
                     disabled={(resetPortalPwd as any)?.isPending}>
-                    重設 Portal 密碼
+                    重設客戶入口密碼
                   </Button>
                 )}
               </TabsContent>

@@ -395,11 +395,15 @@ export default function Dashboard() {
   const roleLabel = ROLE_LABELS[userRole] ?? "會員";
   const roleBadge = ROLE_BADGE[userRole] ?? "bg-gray-100 text-gray-600 border-gray-200";
   const isAdmin = userRole === "super_admin" || userRole === "manager";
+  const isDayoneManager = userRole === "manager" && user?.tenantId === 90004;
   const greeting = getGreeting();
 
-  const visibleSmallCards = ALL_SMALL_CARDS.filter(
-    (c) => c.roles.includes(userRole)
-  );
+  const visibleSmallCards = ALL_SMALL_CARDS.filter((c) => {
+    if (!c.roles.includes(userRole)) return false;
+    // 大永 manager 只顯示個人中心
+    if (isDayoneManager) return c.id === "profile-admin";
+    return true;
+  });
 
   const handleLogout = async () => {
     await logout();
@@ -445,13 +449,38 @@ export default function Dashboard() {
       <main className="max-w-5xl mx-auto px-4 py-6 pb-12">
 
         {/* Admin: 大卡片區 */}
-        {isAdmin && (
+        {isAdmin && !isDayoneManager && (
           <section className="mb-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {HERO_CARDS_ADMIN.map((card) => (
                 <HeroCardItem key={card.id} card={card} />
               ))}
             </div>
+          </section>
+        )}
+
+        {/* 大永 Manager: 只顯示大永 ERP 卡片 */}
+        {isDayoneManager && (
+          <section className="mb-6">
+            <a
+              href="/dayone"
+              className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1a4731] to-[#2d7a4f] p-6 flex flex-col justify-between min-h-[140px] shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-200 block"
+            >
+              <div className="absolute -right-6 -bottom-6 w-32 h-32 rounded-full bg-white/10 pointer-events-none" />
+              <div className="flex items-start justify-between">
+                <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
+                  <Package className="h-6 w-6 text-white" />
+                </div>
+                <span className="text-white/50 text-xs font-medium tracking-widest uppercase">DaYone ERP</span>
+              </div>
+              <div className="mt-4">
+                <h2 className="text-white font-bold text-lg">大永蛋品 ERP</h2>
+                <p className="text-white/70 text-sm mt-0.5">配送、庫存、客戶管理</p>
+              </div>
+              <div className="mt-3 flex items-center gap-1 text-white/80 text-xs font-medium group-hover:text-white transition-colors">
+                進入 <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
+              </div>
+            </a>
           </section>
         )}
 

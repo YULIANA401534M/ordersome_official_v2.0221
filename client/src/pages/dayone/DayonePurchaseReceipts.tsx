@@ -48,6 +48,86 @@ const STATUS_CFG: Record<string, { label: string; cls: string }> = {
   anomaly: { label: "異常",   cls: "bg-red-100 text-red-700" },
 };
 
+// ── ReceiptSummaryDialog ───────────────────────────────────────────────────
+
+function ReceiptSummaryDialog({ data, onClose }: {
+  data: {
+    supplierName: string;
+    receiptDate: string;
+    licensePlate: string;
+    batchNo: string;
+    items: { name: string; qty: number; unitPrice: number }[];
+    signatureUrl: string;
+  };
+  onClose: () => void;
+}) {
+  const totalAmount = data.items.reduce((s, i) => s + i.qty * i.unitPrice, 0);
+  const totalQty = data.items.reduce((s, i) => s + i.qty, 0);
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader><DialogTitle>✅ 收貨明細</DialogTitle></DialogHeader>
+        <div id="receipt-print-area" className="space-y-4 text-sm">
+          <div className="grid grid-cols-2 gap-3">
+            <div><p className="text-xs text-gray-400">供應商</p><p className="font-medium">{data.supplierName}</p></div>
+            <div><p className="text-xs text-gray-400">收貨時間</p><p>{data.receiptDate ? new Date(data.receiptDate).toLocaleString("zh-TW") : "-"}</p></div>
+            <div><p className="text-xs text-gray-400">車牌</p><p>{data.licensePlate || "-"}</p></div>
+            <div><p className="text-xs text-gray-400">批次號</p><p>{data.batchNo || "-"}</p></div>
+          </div>
+
+          <div>
+            <p className="text-xs text-gray-400 mb-2">品項明細</p>
+            <table className="w-full text-xs border rounded overflow-hidden">
+              <thead><tr className="bg-gray-50 border-b">
+                <th className="text-left px-3 py-2">品項</th>
+                <th className="text-right px-3 py-2">數量</th>
+                <th className="text-right px-3 py-2">單價</th>
+                <th className="text-right px-3 py-2">小計</th>
+              </tr></thead>
+              <tbody>
+                {data.items.filter(i => i.qty > 0).map((item, i) => (
+                  <tr key={i} className="border-b">
+                    <td className="px-3 py-1.5">{item.name}</td>
+                    <td className="px-3 py-1.5 text-right">{item.qty}</td>
+                    <td className="px-3 py-1.5 text-right">{fmtMoney(item.unitPrice)}</td>
+                    <td className="px-3 py-1.5 text-right">{fmtMoney(item.qty * item.unitPrice)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot><tr className="bg-gray-50 font-semibold">
+                <td colSpan={2} className="px-3 py-2">合計</td>
+                <td className="px-3 py-2 text-right">{totalQty} 箱</td>
+                <td className="px-3 py-2 text-right">{fmtMoney(totalAmount)}</td>
+              </tr></tfoot>
+            </table>
+          </div>
+
+          {data.signatureUrl && (
+            <div>
+              <p className="text-xs text-gray-400 mb-2">供應商簽名</p>
+              <img src={data.signatureUrl} alt="簽名" className="border rounded max-h-28 bg-white" />
+            </div>
+          )}
+        </div>
+
+        <style>{`
+          @media print {
+            body > *:not(#receipt-print-area) { display: none !important; }
+            #receipt-print-area { display: block !important; }
+            .no-print { display: none !important; }
+          }
+        `}</style>
+
+        <div className="flex gap-2 pt-2 no-print">
+          <Button variant="outline" className="flex-1" onClick={() => window.print()}>🖨️ 列印</Button>
+          <Button className="flex-1 bg-amber-500 hover:bg-amber-600 text-white" onClick={onClose}>關閉</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ── AnomalyDialog ──────────────────────────────────────────────────────────
 
 function AnomalyDialog({ receipt, onClose, onSuccess }: { receipt: any; onClose: () => void; onSuccess: () => void }) {
@@ -149,23 +229,25 @@ function DetailDialog({ receipt, onClose }: { receipt: any; onClose: () => void 
 
 function SignatureSheet({
   receiptId,
+  receiptMeta,
   items,
   onClose,
   onSuccess,
 }: {
   receiptId: number;
-  items: { name: string; qty: number }[];
+  receiptMeta?: { supplierName: string; batchNo: string; licensePlate: string; receiptDate: string };
+  items: { name: string; qty: number; unitPrice?: number }[];
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (signatureUrl: string) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawing = useRef(false);
   const lastPos = useRef<{ x: number; y: number } | null>(null);
 
   const sign = trpc.dayone.purchaseReceipt.sign.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast.success("簽收完成，庫存已更新，應付帳款已建立");
-      onSuccess();
+      onSuccess(data.supplierSignatureUrl ?? "");
       onClose();
     },
     onError: (e) => toast.error(e.message),
@@ -173,10 +255,19 @@ function SignatureSheet({
 
   function getPos(e: React.MouseEvent | React.TouchEvent, canvas: HTMLCanvasElement) {
     const rect = canvas.getBoundingClientRect();
+    // 縮放比例：canvas 實際像素 vs CSS 顯示大小
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
     if ("touches" in e) {
-      return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+      return {
+        x: (e.touches[0].clientX - rect.left) * scaleX,
+        y: (e.touches[0].clientY - rect.top) * scaleY,
+      };
     }
-    return { x: (e as React.MouseEvent).clientX - rect.left, y: (e as React.MouseEvent).clientY - rect.top };
+    return {
+      x: ((e as React.MouseEvent).clientX - rect.left) * scaleX,
+      y: ((e as React.MouseEvent).clientY - rect.top) * scaleY,
+    };
   }
 
   function startDraw(e: React.MouseEvent | React.TouchEvent) {
@@ -288,7 +379,11 @@ function SignatureSheet({
 
 function CreateDialog({ onClose, onSignNeeded }: {
   onClose: () => void;
-  onSignNeeded: (receiptId: number, items: { name: string; qty: number }[]) => void;
+  onSignNeeded: (
+    receiptId: number,
+    meta: { supplierName: string; batchNo: string; licensePlate: string; receiptDate: string },
+    items: { name: string; qty: number; unitPrice: number }[]
+  ) => void;
 }) {
   const [supplierId, setSupplierId] = useState("");
   const [receiptDate, setReceiptDate] = useState(nowLocalDatetime());
@@ -321,11 +416,18 @@ function CreateDialog({ onClose, onSignNeeded }: {
 
   const create = trpc.dayone.purchaseReceipt.create.useMutation({
     onSuccess: (data) => {
+      const selectedSupplier = (suppliers as any[] ?? []).find((s: any) => String(s.id) === supplierId);
       const itemsForSign = (products as any[] ?? [])
         .filter((p: any) => (quantities[p.id] ?? 0) > 0)
-        .map((p: any) => ({ name: p.name, qty: quantities[p.id] }));
+        .map((p: any) => ({ name: p.name, qty: quantities[p.id], unitPrice: prices[p.id] ?? 0 }));
+      const meta = {
+        supplierName: selectedSupplier?.name ?? "",
+        batchNo,
+        licensePlate,
+        receiptDate,
+      };
       onClose();
-      onSignNeeded(data.id, itemsForSign);
+      onSignNeeded(data.id, meta, itemsForSign);
     },
     onError: (e) => toast.error(e.message),
   });
@@ -413,13 +515,22 @@ function CreateDialog({ onClose, onSignNeeded }: {
                         />
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="flex items-center gap-1 flex-shrink-0">
                       <button type="button"
-                        className="w-11 h-11 rounded-lg border border-gray-300 bg-white text-lg font-bold text-gray-600 hover:bg-gray-100 active:bg-gray-200 flex items-center justify-center"
+                        className="w-9 h-9 rounded-lg border border-gray-300 bg-white text-base font-bold text-gray-600 hover:bg-gray-100 active:bg-gray-200 flex items-center justify-center"
                         onClick={() => adjustQty(p.id, -1)}>－</button>
-                      <span className={`w-8 text-center text-lg font-bold ${hasQty ? "text-amber-700" : "text-gray-400"}`}>{qty}</span>
+                      <input
+                        type="number"
+                        min={0}
+                        className={`w-14 h-9 text-center text-base font-bold border rounded-lg bg-white ${hasQty ? "border-amber-400 text-amber-700" : "border-gray-200 text-gray-400"}`}
+                        value={qty}
+                        onChange={(e) => {
+                          const v = Math.max(0, parseInt(e.target.value) || 0);
+                          setQuantities(prev => ({ ...prev, [p.id]: v }));
+                        }}
+                      />
                       <button type="button"
-                        className="w-11 h-11 rounded-lg border border-amber-400 bg-amber-50 text-lg font-bold text-amber-700 hover:bg-amber-100 active:bg-amber-200 flex items-center justify-center"
+                        className="w-9 h-9 rounded-lg border border-amber-400 bg-amber-50 text-base font-bold text-amber-700 hover:bg-amber-100 active:bg-amber-200 flex items-center justify-center"
                         onClick={() => adjustQty(p.id, 1)}>＋</button>
                     </div>
                   </div>
@@ -454,7 +565,16 @@ export default function DayonePurchaseReceipts() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [showCreate, setShowCreate] = useState(false);
-  const [signTarget, setSignTarget] = useState<{ id: number; items: { name: string; qty: number }[] } | null>(null);
+  const [signTarget, setSignTarget] = useState<{
+    id: number;
+    meta: { supplierName: string; batchNo: string; licensePlate: string; receiptDate: string };
+    items: { name: string; qty: number; unitPrice: number }[];
+  } | null>(null);
+  const [receiptSummary, setReceiptSummary] = useState<{
+    supplierName: string; receiptDate: string; licensePlate: string; batchNo: string;
+    items: { name: string; qty: number; unitPrice: number }[];
+    signatureUrl: string;
+  } | null>(null);
   const [anomalyTarget, setAnomalyTarget] = useState<any>(null);
   const [detailTarget, setDetailTarget] = useState<any>(null);
 
@@ -600,15 +720,29 @@ export default function DayonePurchaseReceipts() {
       {showCreate && (
         <CreateDialog
           onClose={() => setShowCreate(false)}
-          onSignNeeded={(id, items) => setSignTarget({ id, items })}
+          onSignNeeded={(id, meta, items) => setSignTarget({ id, meta, items })}
         />
       )}
       {signTarget && (
         <SignatureSheet
           receiptId={signTarget.id}
+          receiptMeta={signTarget.meta}
           items={signTarget.items}
           onClose={() => setSignTarget(null)}
-          onSuccess={() => refetch()}
+          onSuccess={(signatureUrl) => {
+            refetch();
+            setReceiptSummary({
+              ...signTarget.meta,
+              items: signTarget.items,
+              signatureUrl,
+            });
+          }}
+        />
+      )}
+      {receiptSummary && (
+        <ReceiptSummaryDialog
+          data={receiptSummary}
+          onClose={() => setReceiptSummary(null)}
         />
       )}
       {anomalyTarget && (
