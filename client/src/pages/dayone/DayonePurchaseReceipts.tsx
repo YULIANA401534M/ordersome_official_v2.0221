@@ -253,9 +253,27 @@ function SignatureSheet({
     onError: (e) => toast.error(e.message),
   });
 
+  // ── 同步 canvas attribute 尺寸到實際渲染尺寸，消除 scaleX/scaleY 偏移 ──
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const syncSize = () => {
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        canvas.width = Math.round(rect.width);
+        canvas.height = Math.round(rect.height);
+      }
+    };
+    // Sheet 動畫約 500ms，等動畫完成後再同步
+    const timer = setTimeout(syncSize, 550);
+    const ro = new ResizeObserver(syncSize);
+    ro.observe(canvas);
+    return () => { clearTimeout(timer); ro.disconnect(); };
+  }, []);
+
   function getPos(e: React.MouseEvent | React.TouchEvent, canvas: HTMLCanvasElement) {
     const rect = canvas.getBoundingClientRect();
-    // 縮放比例：canvas 實際像素 vs CSS 顯示大小
+    // canvas attribute 尺寸已同步到渲染尺寸，scale 近似 1
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
     if ("touches" in e) {
@@ -350,7 +368,7 @@ function SignatureSheet({
               width={600}
               height={260}
               className="w-full touch-none"
-              style={{ height: "min(260px, 40vw)" }}
+              style={{ height: "min(260px, 40vw)", display: "block" }}
               onMouseDown={startDraw}
               onMouseMove={draw}
               onMouseUp={endDraw}

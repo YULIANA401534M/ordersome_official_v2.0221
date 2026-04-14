@@ -202,6 +202,12 @@ export default function AdminDashboardLayout({
     );
   }
 
+  // ── 大永 manager 訪問非 /dayone 路由時攔截 ──
+  if (isManager && (user as any)?.tenantId === 90004 && !location.startsWith("/dayone")) {
+    window.location.replace("/dayone");
+    return null;
+  }
+
   if (!hasAdminAccess) {
     return (
       <div className="flex items-center justify-center min-h-screen">

@@ -391,6 +391,12 @@ export default function Dashboard() {
     return null;
   }
 
+  // 大永 manager 直接進 ERP，不停留在 /dashboard
+  if (user?.role === "manager" && (user as any)?.tenantId === 90004) {
+    window.location.replace("/dayone");
+    return null;
+  }
+
   const userRole = user?.role ?? "customer";
   const roleLabel = ROLE_LABELS[userRole] ?? "會員";
   const roleBadge = ROLE_BADGE[userRole] ?? "bg-gray-100 text-gray-600 border-gray-200";
