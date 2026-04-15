@@ -111,15 +111,13 @@ export default function OrderComplete() {
           )}
 
           {/* 超商取貨提示（付款成功時才顯示）*/}
-          {isPaid && (order as any).shippingMethod && (order as any).shippingMethod !== "home_delivery" && (order as any).cvsStoreName && (
+          {isPaid && (order as any).shippingMethod?.startsWith("cvs_") && (order as any).cvsStoreName && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
               <p className="text-sm text-blue-800 font-medium mb-1">取貨通知</p>
               <p className="text-sm text-blue-700">
                 您的商品將配送至
                 <span className="font-semibold">
-                  {(order as any).shippingMethod === "cvs_fami" && " 全家 "}
-                  {(order as any).shippingMethod === "cvs_unimart" && " 7-ELEVEN "}
-                  {(order as any).shippingMethod === "cvs_hilife" && " 萊爾富 "}
+                  {({"cvs_fami": " 全家 ", "cvs_unimart": " 7-ELEVEN ", "cvs_hilife": " 萊爾富 "} as Record<string, string>)[(order as any).shippingMethod]}
                   {(order as any).cvsStoreName}
                 </span>
                 ，請留意手機簡訊通知取貨。
