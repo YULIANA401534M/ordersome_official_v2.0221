@@ -13,6 +13,11 @@ import { Link } from "wouter";
 import { toast } from "sonner";
 import AdminDashboardLayout from "@/components/AdminDashboardLayout";
 
+const STATUS_LABEL: Record<string, string> = {
+  pending: "待處理", paid: "已付款", processing: "處理中",
+  shipped: "已出貨", delivered: "已送達", cancelled: "已取消", refunded: "已退款",
+};
+
 const statusMap: Record<string, { label: string; color: string }> = {
   pending: { label: "待處理", color: "bg-yellow-50 text-yellow-700 border-yellow-200" },
   paid: { label: "已付款", color: "bg-blue-50 text-blue-700 border-blue-200" },
@@ -55,6 +60,16 @@ export default function AdminOrders() {
   const [sourceFilter, setSourceFilter] = useState("all");
 
   const { data: orders, isLoading, refetch } = trpc.order.listAll.useQuery();
+
+  const [detailOrderId, setDetailOrderId] = useState<number | null>(null);
+  const { data: orderDetail } = trpc.order.getById.useQuery(
+    { id: detailOrderId! },
+    { enabled: detailOrderId !== null }
+  );
+  const { data: auditLogs = [] } = trpc.order.getAuditLogs.useQuery(
+    { orderId: detailOrderId! },
+    { enabled: detailOrderId !== null }
+  );
 
   const [isUploadingProof, setIsUploadingProof] = useState(false);
 
@@ -110,6 +125,7 @@ export default function AdminOrders() {
 
   const viewOrderDetail = (order: any) => {
     setSelectedOrder(order);
+    setDetailOrderId(order.id);
     setIsDetailOpen(true);
   };
 
@@ -276,7 +292,7 @@ export default function AdminOrders() {
 
         {/* 訂單詳情 Dialog */}
         <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
             <DialogHeader><DialogTitle>訂單詳情</DialogTitle></DialogHeader>
             {selectedOrder && (() => {
               const companyLabel = getOrderSourceLabel(selectedOrder.orderSource);
@@ -307,6 +323,33 @@ export default function AdminOrders() {
                       </div>
                     )}
                   </div>
+                  {/* 品項明細 */}
+                  {orderDetail?.items && orderDetail.items.length > 0 && (
+                    <div className="border-t pt-4">
+                      <p className="text-sm font-medium text-gray-700 mb-2">品項明細</p>
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="text-gray-500 text-xs border-b">
+                            <th className="text-left pb-1">品名</th>
+                            <th className="text-right pb-1">數量</th>
+                            <th className="text-right pb-1">單價</th>
+                            <th className="text-right pb-1">小計</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {orderDetail.items.map((item: any) => (
+                            <tr key={item.id} className="border-b last:border-0">
+                              <td className="py-1">{item.productName}</td>
+                              <td className="text-right py-1">x{item.quantity}</td>
+                              <td className="text-right py-1">NT$ {item.unitPrice}</td>
+                              <td className="text-right py-1 font-medium">NT$ {(Number(item.unitPrice) * item.quantity).toLocaleString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
                   {/* 出貨證明上傳 */}
                   <div className="border-t pt-4">
                     <p className="text-sm font-medium text-gray-700 mb-2">出貨證明</p>
@@ -329,6 +372,35 @@ export default function AdminOrders() {
                       </label>
                     )}
                   </div>
+
+                  {/* 操作歷史紀錄 */}
+                  {auditLogs.length > 0 && (
+                    <div className="border-t pt-4">
+                      <p className="text-sm font-medium text-gray-700 mb-2">操作歷史</p>
+                      <div className="space-y-1.5">
+                        {auditLogs.map((log: any) => (
+                          <div key={log.id} className="flex items-start gap-2 text-xs text-gray-600">
+                            <span className="text-gray-400 whitespace-nowrap">
+                              {new Date(log.createdAt).toLocaleString("zh-TW", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}
+                            </span>
+                            <span className="font-medium text-gray-700">{log.performedByName ?? `#${log.performedBy}`}</span>
+                            {log.action === "status_change" ? (
+                              <span>
+                                狀態變更：
+                                <span className="text-gray-500">{STATUS_LABEL[log.fromValue] ?? log.fromValue}</span>
+                                {" → "}
+                                <span className="font-medium text-blue-600">{STATUS_LABEL[log.toValue] ?? log.toValue}</span>
+                              </span>
+                            ) : log.action === "delete" ? (
+                              <span className="text-red-500">刪除訂單</span>
+                            ) : (
+                              <span>{log.action}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })()}

@@ -506,3 +506,18 @@ export const dyDistricts = mysqlTable("dy_districts", {
 });
 export type DyDistrict = typeof dyDistricts.$inferSelect;
 export type InsertDyDistrict = typeof dyDistricts.$inferInsert;
+
+/** 訂單操作歷史紀錄 */
+export const orderAuditLogs = mysqlTable("order_audit_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  orderId: int("orderId").notNull(),
+  action: varchar("action", { length: 50 }).notNull(), // status_change / delete / create / update
+  fromValue: varchar("fromValue", { length: 100 }),
+  toValue: varchar("toValue", { length: 100 }),
+  performedBy: int("performedBy").notNull(),
+  performedByName: varchar("performedByName", { length: 100 }),
+  note: text("note"),
+  createdAt: timestamp("createdAt").defaultNow(),
+});
+export type OrderAuditLog = typeof orderAuditLogs.$inferSelect;
+export type InsertOrderAuditLog = typeof orderAuditLogs.$inferInsert;

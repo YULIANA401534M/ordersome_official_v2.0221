@@ -15,7 +15,7 @@ import { tenantRouter } from "./routers/tenant";
 import { dayoneRouter } from "./routers/dayone";
 import { aiWriterRouter } from "./routers/ai-writer";
 import { sendMail } from "./mail";
-import { users } from "../drizzle/schema";
+import { users, orderAuditLogs } from "../drizzle/schema";
 import { inArray } from "drizzle-orm";
 
 // Admin procedure
@@ -483,8 +483,25 @@ export const appRouter = router({
         id: z.number(),
         status: z.enum(['pending', 'paid', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded']),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        // 記錄舊狀態
+        const prevOrder = await db.getOrderById(input.id);
+        const fromValue = prevOrder?.status ?? null;
+
         await db.updateOrderStatus(input.id, input.status);
+
+        // 寫入操作歷史
+        const database = await db.getDb();
+        if (database) {
+          await database.insert(orderAuditLogs).values({
+            orderId: input.id,
+            action: "status_change",
+            fromValue,
+            toValue: input.status,
+            performedBy: ctx.user.id,
+            performedByName: ctx.user.name ?? undefined,
+          });
+        }
 
         // 出貨時寄 Email 通知買家（失敗不影響主流程）
         if (input.status === 'shipped') {
@@ -531,7 +548,30 @@ export const appRouter = router({
       }),
     delete: adminProcedure
       .input(z.object({ id: z.number() }))
-      .mutation(({ input, ctx }) => db.deleteOrder(input.id, ctx.tenantId)),
+      .mutation(async ({ input, ctx }) => {
+        const database = await db.getDb();
+        if (database) {
+          await database.insert(orderAuditLogs).values({
+            orderId: input.id,
+            action: "delete",
+            performedBy: ctx.user.id,
+            performedByName: ctx.user.name ?? undefined,
+          });
+        }
+        await db.deleteOrder(input.id, ctx.tenantId);
+      }),
+    getAuditLogs: adminProcedure
+      .input(z.object({ orderId: z.number() }))
+      .query(async ({ input }) => {
+        const database = await db.getDb();
+        if (!database) return [];
+        const { desc } = await import("drizzle-orm");
+        return database
+          .select()
+          .from(orderAuditLogs)
+          .where((await import("drizzle-orm")).eq(orderAuditLogs.orderId, input.orderId))
+          .orderBy(desc(orderAuditLogs.createdAt));
+      }),
   }),
 
   // Stores
