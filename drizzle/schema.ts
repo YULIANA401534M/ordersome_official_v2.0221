@@ -32,8 +32,8 @@ export const users = mysqlTable("users", {
   phone: varchar("phone", { length: 20 }),
   address: text("address"),
   loginMethod: varchar("loginMethod", { length: 64 }),
-  // Role-based access control: 5 roles (super_admin, manager, franchisee, staff, customer)
-  role: mysqlEnum("role", ["super_admin", "manager", "franchisee", "staff", "customer"]).default("customer").notNull(),
+  // Role-based access control: 6 roles (super_admin, manager, franchisee, staff, customer, driver)
+  role: mysqlEnum("role", ["super_admin", "manager", "franchisee", "staff", "customer", "driver"]).default("customer").notNull(),
   // Additional profile fields
   fullName: text("fullName"),
   shippingAddress: text("shippingAddress"),

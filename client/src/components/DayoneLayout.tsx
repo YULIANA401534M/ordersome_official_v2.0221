@@ -15,6 +15,7 @@ import {
   CreditCard,
   Menu,
   X,
+  UserCog,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ const NAV_ITEMS = [
   { icon: MapPin, label: "行政區管理", path: "/dayone/districts" },
   { icon: Building2, label: "供應商管理", path: "/dayone/suppliers" },
   { icon: BarChart3, label: "報表", path: "/dayone/reports" },
+  { icon: UserCog, label: "用戶管理", path: "/dayone/users" },
   { icon: Smartphone, label: "LIFF訂單", path: "/dayone/liff-orders" },
   { icon: CreditCard, label: "帳務管理", path: "/dayone/ar" },
   { icon: Truck, label: "派車管理", path: "/dayone/dispatch" },

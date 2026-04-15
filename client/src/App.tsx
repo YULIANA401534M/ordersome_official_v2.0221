@@ -99,6 +99,7 @@ import DayoneLiffOrders from "./pages/dayone/DayoneLiffOrders";
 import DayoneAR from "./pages/dayone/DayoneAR";
 import DayoneDispatch from "./pages/dayone/DayoneDispatch";
 import DayonePurchaseReceipts from "./pages/dayone/DayonePurchaseReceipts";
+import DayoneUsers from "./pages/dayone/DayoneUsers";
 import SupplierList from "./pages/erp/dayone/SupplierList";
 // DaYone Customer Portal
 import DayonePortalHome from "./pages/dayone/portal/DayonePortalHome";
@@ -254,6 +255,7 @@ function Router() {
       <Route path="/dayone/ar" component={DayoneAR} />
       <Route path="/dayone/dispatch" component={DayoneDispatch} />
       <Route path="/dayone/purchase-receipts" component={DayonePurchaseReceipts} />
+      <Route path="/dayone/users" component={DayoneUsers} />
       {/* DaYone Customer Portal Routes */}
       <Route path="/dayone/portal" component={DayonePortalHome} />
       <Route path="/dayone/portal/login" component={DayonePortalLogin} />
