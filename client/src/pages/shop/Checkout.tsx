@@ -131,9 +131,47 @@ export default function Checkout() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, (user as any)?.id]);
 
+  // 監聽綠界電子地圖選店結果
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type !== "ecpay-map-result") return;
+      const { storeId, storeName, storeAddress } = event.data;
+      setForm(prev => ({
+        ...prev,
+        cvsStoreId: storeId || "",
+        cvsStoreName: storeName || "",
+        cvsStoreAddress: storeAddress || "",
+      }));
+      setErrors(prev => {
+        const next = { ...prev };
+        delete next.cvsStoreId;
+        return next;
+      });
+      toast.success(`已選擇門市：${storeName}`);
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
+
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // 電子地圖選店
+  const [isLoadingMap, setIsLoadingMap] = useState(false);
+  const cvsSubTypeMap = {
+    cvs_fami: "FAMI" as const,
+    cvs_unimart: "UNIMART" as const,
+    cvs_hilife: "HILIFE" as const,
+  };
+  const currentSubType = form.shippingMethod !== "home_delivery"
+    ? (cvsSubTypeMap as Record<string, "FAMI" | "UNIMART" | "HILIFE">)[form.shippingMethod] ?? null
+    : null;
+
+  const { refetch: fetchMapParams } = trpc.logistics.getMapParams.useQuery(
+    { subType: currentSubType ?? "FAMI" },
+    { enabled: false }
+  );
 
   // ─── 即時驗證（onChange + onBlur 雙觸發）────────────────────
   const validate = useCallback(
@@ -225,6 +263,39 @@ export default function Checkout() {
       setIsSubmitting(false);
     },
   });
+
+  const openEcpayMap = async () => {
+    if (!currentSubType) return;
+    setIsLoadingMap(true);
+    try {
+      const result = await fetchMapParams();
+      if (!result.data) {
+        toast.error("無法取得電子地圖參數，請稍後再試");
+        return;
+      }
+      const { url, params } = result.data;
+
+      // 建立隱藏 form 以 POST 方式開啟新視窗
+      const mapForm = document.createElement("form");
+      mapForm.method = "POST";
+      mapForm.action = url;
+      mapForm.target = "_blank";
+      Object.entries(params).forEach(([key, value]) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = key;
+        input.value = String(value);
+        mapForm.appendChild(input);
+      });
+      document.body.appendChild(mapForm);
+      mapForm.submit();
+      document.body.removeChild(mapForm);
+    } catch {
+      toast.error("取得電子地圖失敗，請確認已登入");
+    } finally {
+      setIsLoadingMap(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -644,21 +715,67 @@ export default function Checkout() {
                       {touched.recipientEmail && <FieldError msg={errors.recipientEmail} />}
                     </div>
 
-                    {/* 收件地址 */}
-                    <div className="mt-4">
-                      <Label htmlFor="shippingAddress" className="mb-1.5 block">
-                        收件地址 <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="shippingAddress"
-                        placeholder="縣市 + 鄉鎮區 + 路街 + 號"
-                        value={form.shippingAddress}
-                        onChange={(e) => setField("shippingAddress", e.target.value)}
-                        onBlur={() => handleBlur("shippingAddress")}
-                        className={errors.shippingAddress && touched.shippingAddress ? "border-red-400 focus-visible:ring-red-400" : ""}
-                      />
-                      {touched.shippingAddress && <FieldError msg={errors.shippingAddress} />}
-                    </div>
+                    {/* 收件地址（宅配）或取貨門市（超商）*/}
+                    {form.shippingMethod === "home_delivery" ? (
+                      <div className="mt-4">
+                        <Label htmlFor="shippingAddress" className="mb-1.5 block">
+                          收件地址 <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="shippingAddress"
+                          placeholder="縣市 + 鄉鎮區 + 路街 + 號"
+                          value={form.shippingAddress}
+                          onChange={(e) => setField("shippingAddress", e.target.value)}
+                          onBlur={() => handleBlur("shippingAddress")}
+                          className={errors.shippingAddress && touched.shippingAddress ? "border-red-400 focus-visible:ring-red-400" : ""}
+                        />
+                        {touched.shippingAddress && <FieldError msg={errors.shippingAddress} />}
+                      </div>
+                    ) : (
+                      <div className="mt-4">
+                        <Label className="mb-1.5 block">
+                          取貨門市 <span className="text-red-500">*</span>
+                        </Label>
+                        {form.cvsStoreId ? (
+                          <div className="flex items-start justify-between gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <div className="flex items-start gap-2">
+                              <MapPin className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+                              <div>
+                                <p className="font-semibold text-sm text-green-800">{form.cvsStoreName}</p>
+                                <p className="text-xs text-green-600 mt-0.5">{form.cvsStoreAddress}</p>
+                              </div>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={openEcpayMap}
+                              disabled={isLoadingMap}
+                              className="shrink-0 text-xs"
+                            >
+                              重新選擇
+                            </Button>
+                          </div>
+                        ) : (
+                          <div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={openEcpayMap}
+                              disabled={isLoadingMap || !isAuthenticated}
+                              className="gap-2"
+                            >
+                              <MapPin className="h-4 w-4" />
+                              {isLoadingMap ? "開啟中..." : "選擇門市"}
+                            </Button>
+                            {!isAuthenticated && (
+                              <p className="text-xs text-amber-600 mt-1">請先登入才能使用電子地圖選店</p>
+                            )}
+                            {errors.cvsStoreId && touched.cvsStoreId && <FieldError msg={errors.cvsStoreId} />}
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* 備註 */}
                     <div className="mt-4">
