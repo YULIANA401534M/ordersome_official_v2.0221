@@ -166,6 +166,9 @@ export default function Checkout() {
       if (isCvs && !data.cvsStoreId) {
         e.cvsStoreId = "請選擇取貨門市";
       }
+      if (isCvs && data.cvsStoreId && !data.cvsStoreAddress.trim()) {
+        e.cvsStoreId = "門市資料異常，請重新選擇門市";
+      }
 
       // 發票驗證
       if (data.invoiceType === "company") {
