@@ -376,6 +376,10 @@ export const appRouter = router({
         companyTaxId: z.string().nullable().optional(),
         companyName: z.string().nullable().optional(),
         orderSource: z.string().optional().default('general'),
+        shippingMethod: z.enum(["home_delivery", "cvs_fami", "cvs_unimart", "cvs_hilife"]).default("home_delivery"),
+        cvsStoreId: z.string().optional(),
+        cvsStoreName: z.string().optional(),
+        cvsStoreAddress: z.string().optional(),
         items: z.array(z.object({
           id: z.number(),
           name: z.string(),
@@ -396,12 +400,22 @@ export const appRouter = router({
         const storeSettings = await db.getStoreSettings(ctx.tenantId);
         const baseShippingFee = storeSettings?.baseShippingFee ?? 100;
         const freeShippingThreshold = storeSettings?.freeShippingThreshold ?? 1000;
-        
+
         // Calculate totals
         const subtotal = cartItems.reduce((sum, item) => {
           return sum + (item.price * item.quantity);
         }, 0);
-        const shippingFee = subtotal >= freeShippingThreshold ? 0 : baseShippingFee;
+
+        // 運費邏輯：超商取貨固定 60 元（未達免運門檻）；宅配維持原邏輯
+        const isCvs = input.shippingMethod !== "home_delivery";
+        let shippingFee: number;
+        if (subtotal >= freeShippingThreshold) {
+          shippingFee = 0;
+        } else if (isCvs) {
+          shippingFee = 60;
+        } else {
+          shippingFee = baseShippingFee;
+        }
         const total = subtotal + shippingFee;
 
         // Create order
@@ -422,6 +436,10 @@ export const appRouter = router({
           invoiceType: input.invoiceType,
           companyTaxId: input.companyTaxId,
           companyName: input.companyName,
+          shippingMethod: input.shippingMethod,
+          cvsStoreId: input.cvsStoreId,
+          cvsStoreName: input.cvsStoreName,
+          cvsStoreAddress: input.cvsStoreAddress,
         });
 
         if (!order) {
@@ -741,6 +759,71 @@ export const appRouter = router({
         });
         
         return paymentData;
+      }),
+  }),
+
+  // ─── 物流相關 ───
+  logistics: router({
+    getMapParams: protectedProcedure
+      .input(z.object({
+        subType: z.enum(["FAMI", "UNIMART", "HILIFE"]),
+      }))
+      .query(async ({ input }) => {
+        const { getMapFormParams } = await import("./ecpay-logistics");
+        const baseUrl = process.env.BASE_URL || "https://ordersome.com.tw";
+        return getMapFormParams({
+          subType: input.subType,
+          serverReplyURL: `${baseUrl}/api/ecpay/map-result`,
+        });
+      }),
+
+    createLogisticsOrder: adminProcedure
+      .input(z.object({
+        orderId: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        const database = await db.getDb();
+        if (!database) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+        const order = await db.getOrderById(input.orderId);
+        if (!order) throw new TRPCError({ code: "NOT_FOUND", message: "訂單不存在" });
+        if (!order.cvsStoreId) throw new TRPCError({ code: "BAD_REQUEST", message: "此訂單未選擇超商門市" });
+
+        const subTypeMap: Record<string, "FAMI" | "UNIMART" | "HILIFE"> = {
+          cvs_fami: "FAMI",
+          cvs_unimart: "UNIMART",
+          cvs_hilife: "HILIFE",
+        };
+        const subType = subTypeMap[order.shippingMethod || ""] || "FAMI";
+        const itemName = `來點什麼訂單 ${order.orderNumber}`;
+
+        const { createCvsLogisticsOrder } = await import("./ecpay-logistics");
+        const { orders: ordersTable } = await import("../drizzle/schema");
+        const { eq } = await import("drizzle-orm");
+        const baseUrl = process.env.BASE_URL || "https://ordersome.com.tw";
+        const result = await createCvsLogisticsOrder({
+          orderNumber: order.orderNumber,
+          amount: Number(order.total),
+          goodsName: itemName,
+          receiverName: order.recipientName,
+          receiverPhone: order.recipientPhone,
+          receiverStoreId: order.cvsStoreId,
+          subType,
+          serverReplyURL: `${baseUrl}/api/ecpay/logistics-notify`,
+        });
+
+        if (result.success) {
+          await database
+            .update(ordersTable)
+            .set({
+              logisticsId: result.logisticsId,
+              logisticsStatus: "300",
+              logisticsStatusMsg: "訂單處理中",
+            })
+            .where(eq(ordersTable.id, input.orderId));
+        }
+
+        return result;
       }),
   }),
 

@@ -98,6 +98,74 @@ async function startServer() {
     }
   });
 
+  // ─── ECPay 物流：電子地圖選店結果 ───
+  app.post("/api/ecpay/map-result", express.urlencoded({ extended: true }), (req, res) => {
+    const { CVSStoreID, CVSStoreName, CVSAddress, LogisticsSubType } = req.body;
+    console.log("[ECPay Map]", { CVSStoreID, CVSStoreName, CVSAddress, LogisticsSubType });
+    // 回傳 HTML 關閉電子地圖視窗，並用 postMessage 傳資料回父頁面
+    res.send(`
+      <script>
+        window.opener?.postMessage({
+          type: 'ecpay-map-result',
+          storeId: '${CVSStoreID || ""}',
+          storeName: '${(CVSStoreName || "").replace(/'/g, "\\'")}',
+          storeAddress: '${(CVSAddress || "").replace(/'/g, "\\'")}',
+          subType: '${LogisticsSubType || ""}'
+        }, '*');
+        window.close();
+      </script>
+    `);
+  });
+
+  // ─── ECPay 物流：物流狀態通知 ───
+  app.post("/api/ecpay/logistics-notify", express.urlencoded({ extended: true }), async (req, res) => {
+    try {
+      const { verifyLogisticsCheckMacValue } = await import("../ecpay-logistics");
+      if (!verifyLogisticsCheckMacValue(req.body)) {
+        console.error("[ECPay Logistics] CheckMacValue 驗證失敗");
+        return res.status(400).send("Invalid");
+      }
+
+      const { AllPayLogisticsID, RtnCode, RtnMsg, MerchantTradeNo } = req.body;
+      console.log(`[ECPay Logistics] ID=${AllPayLogisticsID} Code=${RtnCode} Msg=${RtnMsg} TradeNo=${MerchantTradeNo}`);
+
+      // 更新訂單物流狀態
+      const database = await db.getDb();
+      if (database) {
+        const { orders } = await import("../../drizzle/schema");
+        const { eq } = await import("drizzle-orm");
+        if (AllPayLogisticsID) {
+          await database
+            .update(orders)
+            .set({
+              logisticsStatus: RtnCode,
+              logisticsStatusMsg: RtnMsg,
+            })
+            .where(eq(orders.logisticsId, AllPayLogisticsID));
+        }
+      }
+
+      // 物流狀態碼對照
+      // 300 = 訂單處理中
+      // 2067 = 消費者已取貨（7-ELEVEN）
+      // 3022 = 消費者已取貨（全家/萊爾富）
+      if (RtnCode === "2067" || RtnCode === "3022") {
+        if (database && AllPayLogisticsID) {
+          const { orders } = await import("../../drizzle/schema");
+          const { eq } = await import("drizzle-orm");
+          await database
+            .update(orders)
+            .set({ status: "delivered", deliveredAt: new Date() })
+            .where(eq(orders.logisticsId, AllPayLogisticsID));
+        }
+      }
+    } catch (e) {
+      console.error("[ECPay Logistics] Error:", e);
+    }
+    // 必須回應 1|OK，否則綠界會重試
+    res.type("text").send("1|OK");
+  });
+
   // LINE Order from Make webhook
   app.post("/api/dayone/line-order", async (req, res) => {
     try {

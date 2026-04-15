@@ -164,6 +164,14 @@ export const orders = mysqlTable("orders", {
   invoiceType: mysqlEnum("invoiceType", ["personal", "company"]).default("personal").notNull(),
   companyTaxId: varchar("companyTaxId", { length: 8 }),
   companyName: varchar("companyName", { length: 200 }),
+  // 物流相關欄位
+  shippingMethod: mysqlEnum("shippingMethod", ["home_delivery", "cvs_fami", "cvs_unimart", "cvs_hilife"]).default("home_delivery"),
+  cvsStoreId: varchar("cvsStoreId", { length: 20 }),
+  cvsStoreName: varchar("cvsStoreName", { length: 100 }),
+  cvsStoreAddress: varchar("cvsStoreAddress", { length: 200 }),
+  logisticsId: varchar("logisticsId", { length: 50 }),
+  logisticsStatus: varchar("logisticsStatus", { length: 50 }),
+  logisticsStatusMsg: varchar("logisticsStatusMsg", { length: 200 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
