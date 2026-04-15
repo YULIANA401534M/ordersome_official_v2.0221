@@ -1,6 +1,6 @@
 # CLAUDE.md — OrderSome 工作主檔
 
-> 最後更新：2026-04-13 | 文件版本：v5.1
+> 最後更新：2026-04-15 | 文件版本：v5.2
 > 詳細參考（路由/API/DB表/架構）→ 見 `CLAUDE_REFERENCE.md`
 
 ---
@@ -126,6 +126,16 @@ pnpm db:push      # 生成並執行 Drizzle migration
 - ✅ 入口頁依角色顯示功能卡片
 - ✅ 來點什麼 ERP 路由補齊：/dashboard/inventory、/dashboard/scheduling、/dashboard/daily-report
 
+### 階段 A-3 — 大永蛋品 P0-P3 完善（已完成，2026-04-15）
+- ✅ schema.ts role enum 加入 driver
+- ✅ 大永用戶管理（TenantUserManagement 通用元件，可複用給來點什麼）
+- ✅ Seed 17 家供應商
+- ✅ Portal 測試帳號（test@dayone.com / test1234）
+- ✅ 積欠款紅色警示（AR 頁面逾期篩選 tab + 司機端紅色橫幅）
+- ✅ 報表 CSV 匯出（通用 exportCSV 工具，BOM 中文相容）
+- ✅ 收款統計 tab + Recharts 柱狀圖（已收/未收月度趨勢）
+- ✅ 系統驗證腳本（16 項全通過）
+
 ### 階段 B — 宇聯 ERP（大永穩定後）
 - 庫存管理、排班、門市日報、異常警報
 
@@ -134,7 +144,27 @@ pnpm db:push      # 生成並執行 Drizzle migration
 
 ---
 
-## 八、最近變更（2026-04-13）— 大永帳務 + 客戶 Portal 全套
+## 八、最近變更（2026-04-15）— 大永 P0-P3 完善（Batch 1-3）
+
+| 檔案 | 變更摘要 |
+|------|---------|
+| `drizzle/schema.ts` | role enum 加入 driver |
+| `server/routers/dayone/tenantUsers.ts` | 租戶用戶管理（listUsers/createUser/updateUser/resetPassword/deleteUser），createUser(driver) 自動同步 dy_drivers |
+| `server/routers/dayone/ar.ts` | 新增 customerOverdueStats（按客戶聚合逾期天數）/ monthlyCollectionStats（月度已收/未收） |
+| `server/routers/dayone/driver.ts` | getMyTodayOrders 加入 customerUnpaidAmount 子查詢 |
+| `client/src/components/TenantUserManagement.tsx` | 通用用戶管理元件（接受 tenantId prop，來點什麼可直接複用） |
+| `client/src/pages/dayone/DayoneUsers.tsx` | 大永用戶管理頁 |
+| `client/src/pages/dayone/DayoneAR.tsx` | 逾期篩選 tab（全部/逾期/正常）+ 紅色 ⚠️ badge |
+| `client/src/pages/dayone/DayoneReports.tsx` | 改為 Tabs 結構，四報表各加 CSV 匯出按鈕，新增收款統計 tab + Recharts 柱狀圖 |
+| `client/src/pages/dayone/driver/DriverOrderDetail.tsx` | 客戶有逾期帳款時顯示紅色警示橫幅 |
+| `client/src/utils/exportCSV.ts` | 通用 CSV 匯出工具（含 BOM，支援 Excel 中文） |
+| `client/src/components/DayoneLayout.tsx` | 側邊欄補「用戶管理」（UserCog 圖示） |
+| `scripts/migrate-add-driver-role.mjs` | ALTER TABLE users MODIFY COLUMN role 加入 driver |
+| `scripts/seed-dayone-suppliers.mjs` | Seed 17 家供應商（已執行） |
+| `scripts/create-portal-test-account.mjs` | Portal 測試帳號（已執行） |
+| `scripts/verify-dayone-system.mjs` | 16 項系統健康度驗證腳本（全通過） |
+
+## 八-舊、最近變更（2026-04-13）— 大永帳務 + 客戶 Portal 全套
 
 | 檔案 | 變更摘要 |
 |------|---------|
@@ -254,17 +284,24 @@ pnpm db:push      # 生成並執行 Drizzle migration
 - 改完 schema.ts 後，寫一個 `scripts/migrate-xxx.mjs` 腳本，在本機跑即可
 
 ### 待處理任務
-1. ⏳ 模組 toggle 側邊欄連動驗證中（osmanager console.log debug 進行中）
-2. ⏳ `/dashboard/delivery`、`/dashboard/customers`、`/dashboard/purchasing`、`/dashboard/accounting` 頁面尚未建立（點擊 404）
-3. ⏳ 供應商管理複用給來點什麼（需新增 moduleKey + 頁面）
-4. ⏳ 大永側邊欄模組控制（DayoneLayout 架構債，第二個外部客戶簽約前處理）
-5. ⏳ 加盟主功能範圍定義
-6. ⏳ 來點什麼排班管理、門市日報功能開發
-7. ⏳ 庫存管理 UI 優化
-8. ⏳ 積欠款 LINE 推播通知（portal.ts 已建 cron 基礎）
-9. ⏳ LIFF 正式上線：蛋博用自己的 LINE 後台建立 LIFF，更新前端 `TENANT_CONFIG` 的 liffId
-10. ⏳ Portal 客戶重設密碼 email（adminResetPassword procedure 前端已呼叫，後端尚未實作發信）
-11. ⏳ dy_customers upsert procedure 需接受新欄位（customerLevel/settlementCycle/overdueDays/loginEmail/isPortalActive/portalNote）— 目前前端已送但後端可能忽略
+
+#### 大永蛋品（進入蛋博實測階段）
+1. ✅ Phase 2 全功能 + P0-P3 完善（Batch 1-3，2026-04-15）
+2. ⏳ LIFF 正式上線：蛋博用自己的 LINE 後台建立 LIFF，更新前端 `TENANT_CONFIG` 的 liffId
+3. ⏳ 蛋博實測回饋 + 客戶真實資料匯入
+4. ⏳ 積欠款 LINE 推播通知（portal.ts 已建 cron 基礎）
+5. ⏳ Portal 客戶重設密碼 email（後端尚未實作發信）
+6. ⏳ dy_customers upsert procedure 需接受新欄位（customerLevel/settlementCycle 等）
+
+#### 來點什麼 ERP（下一優先）
+7. ⏳ 來點什麼 ERP 四模組（配送/客戶/進貨/帳務）— 複用大永通用元件（TenantUserManagement 傳 tenantId=1）
+8. ⏳ 來點什麼門市 ERP（排班/日報/食材庫存）
+9. ⏳ `/dashboard/delivery`、`/dashboard/customers`、`/dashboard/purchasing`、`/dashboard/accounting` 頁面尚未建立（點擊 404）
+10. ⏳ 供應商管理複用給來點什麼（需新增 moduleKey + 頁面）
+
+#### 架構債
+11. ⏳ 大永側邊欄模組控制（DayoneLayout，第二個外部客戶簽約前處理）
+12. ⏳ 加盟主功能範圍定義
 
 ---
 
@@ -299,6 +336,10 @@ pnpm db:push      # 生成並執行 Drizzle migration
 - `dy_customers.upsert` 後端需接受新欄位（customerLevel/settlementCycle/overdueDays/loginEmail/isPortalActive/portalNote），否則前端送出後欄位被靜默忽略
 - `dy_driver_cash_reports` / `dy_ar_records` 等 Phase 2 新表在執行 `migrate-dayone-phase2.mjs` 前不存在，先執行 migration 再 push 前端程式碼
 - Canvas 簽名（DayonePurchaseReceipts）在 iOS Safari 上 touch event 座標需要用 `e.touches[0]`，不是 `e.clientX`
+- `users` 表 role enum 原本沒有 `driver`，需執行 `ALTER TABLE users MODIFY COLUMN role ENUM(...)` 加入，不能只改 schema.ts
+- `createUser(role='driver')` 需同步 INSERT `dy_drivers` 表，否則司機管理頁（DayoneDrivers）查不到該司機
+- CSV 匯出需加 BOM（`\uFEFF`）否則 Excel 開啟中文亂碼；用 `exportCSV.ts` 工具統一處理
+- `TenantUserManagement` 是通用元件，來點什麼複用只需傳 `tenantId={1} tenantName="來點什麼"`，無需重寫
 
 ---
 
@@ -347,7 +388,7 @@ pnpm db:push      # 生成並執行 Drizzle migration
   - `store_ops`：門市營運相關
   - `erp`：來點什麼 ERP
   - `dayone`：大永蛋品 ERP
-- `moduleKey` 清單：`delivery` / `crm_customers` / `inventory` / `purchasing` / `accounting` / `scheduling` / `daily_report` / `equipment_repair` / `ar_management` / `dispatch` / `purchase_receipts` / `customer_portal`
+- `moduleKey` 清單：`delivery` / `crm_customers` / `inventory` / `purchasing` / `accounting` / `scheduling` / `daily_report` / `equipment_repair` / `ar_management` / `dispatch` / `purchase_receipts` / `customer_portal` / `erp_dashboard` / `products` / `districts` / `liff_orders` / `driver_mgmt`
 - `createTenant` 建立新租戶時自動 INSERT 所有模組定義（預設全關）
 - `SuperAdminModules.tsx`：label/category 全部來自 DB（非 hardcode）
 - `allTenantModules` 改為 JOIN（非 CROSS JOIN），每租戶只顯示自己的模組
