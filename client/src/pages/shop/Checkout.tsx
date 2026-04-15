@@ -81,10 +81,6 @@ export default function Checkout() {
 
   const totalPrice = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const { data: storeSettings, isLoading: isSettingsLoading } = trpc.storeSettings.get.useQuery();
-  const baseShippingFee = storeSettings?.baseShippingFee ?? 100;
-  const freeShippingThreshold = storeSettings?.freeShippingThreshold ?? 1000;
-  const shippingFee = totalPrice >= freeShippingThreshold ? 0 : baseShippingFee;
-  const grandTotal = totalPrice + shippingFee;
 
   // ─── 表單狀態 ─────────────────────────────────────────────
   const [form, setForm] = useState({
@@ -107,6 +103,18 @@ export default function Checkout() {
     cvsStoreName: "",
     cvsStoreAddress: "",
   });
+
+  // ─── 運費計算邏輯 ─────────────────────────────────────────
+  const baseShippingFee = storeSettings?.baseShippingFee ?? 100;
+  const freeShippingThreshold = storeSettings?.freeShippingThreshold ?? 1000;
+  const isCvsMethod = form.shippingMethod !== "home_delivery";
+  const cvsFee = 60;
+  const shippingFee = totalPrice >= freeShippingThreshold
+    ? 0
+    : isCvsMethod
+      ? cvsFee
+      : baseShippingFee;
+  const grandTotal = totalPrice + shippingFee;
 
   // 登入狀態自動帶入用戶資料（OAuth 回跳後自動填充）
   useEffect(() => {
@@ -403,7 +411,9 @@ export default function Checkout() {
                     </div>
                     {!isSettingsLoading && totalPrice < freeShippingThreshold && (
                       <p className="text-xs text-amber-600">
-                        再購 NT$ {(freeShippingThreshold - totalPrice).toLocaleString()} 即享免運費
+                        {isCvsMethod
+                          ? `超商取貨運費 NT$ ${cvsFee}，再購 NT$ ${(freeShippingThreshold - totalPrice).toLocaleString()} 即享免運費`
+                          : `再購 NT$ ${(freeShippingThreshold - totalPrice).toLocaleString()} 即享免運費`}
                       </p>
                     )}
                     <Separator />
