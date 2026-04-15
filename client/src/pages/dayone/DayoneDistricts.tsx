@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
@@ -16,12 +16,18 @@ export default function DayoneDistricts() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState(emptyForm);
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
 
   const utils = trpc.useUtils();
   const { data: districts, isLoading } = trpc.dayone.districts.list.useQuery({ tenantId: TENANT_ID });
 
   const upsert = trpc.dayone.districts.upsert.useMutation({
     onSuccess: () => { toast.success(editing ? "區域已更新" : "區域已新增"); setOpen(false); utils.dayone.districts.list.invalidate(); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const deleteDistrict = trpc.dayone.districts.delete.useMutation({
+    onSuccess: () => { toast.success("區域已刪除"); setDeleteTarget(null); utils.dayone.districts.list.invalidate(); },
     onError: (e) => toast.error(e.message),
   });
 
@@ -79,8 +85,9 @@ export default function DayoneDistricts() {
                         <td className="px-4 py-3 font-medium">{d.name}</td>
                         <td className="px-4 py-3 text-gray-600">{formatDays(d.deliveryDays)}</td>
                         <td className="px-4 py-3">{d.sortOrder ?? 0}</td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 flex gap-1">
                           <Button variant="ghost" size="sm" onClick={() => openEdit(d)}><Pencil className="w-4 h-4" /></Button>
+                          <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => setDeleteTarget(d)}><Trash2 className="w-4 h-4" /></Button>
                         </td>
                       </tr>
                     ))}
@@ -122,6 +129,21 @@ export default function DayoneDistricts() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* 刪除確認 Dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={v => { if (!v) setDeleteTarget(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>確認刪除區域</DialogTitle></DialogHeader>
+          <p className="text-sm text-gray-600">確定要刪除區域「<strong>{deleteTarget?.name}</strong>」？此操作無法復原。</p>
+          <div className="flex gap-2 justify-end mt-2">
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>取消</Button>
+            <Button className="bg-red-600 hover:bg-red-700 text-white" disabled={deleteDistrict.isPending}
+              onClick={() => deleteDistrict.mutate({ id: deleteTarget.id, tenantId: TENANT_ID })}>
+              {deleteDistrict.isPending ? "刪除中..." : "確認刪除"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DayoneLayout>
   );
 }

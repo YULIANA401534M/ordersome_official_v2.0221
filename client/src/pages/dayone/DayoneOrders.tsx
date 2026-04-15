@@ -1,6 +1,7 @@
 import { DayoneLayout, TENANT_ID } from "./DayoneLayout";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Search, Eye } from "lucide-react";
+import { Plus, Search, Eye, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
@@ -29,6 +30,9 @@ export default function DayoneOrders() {
   const [search, setSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [viewOrder, setViewOrder] = useState<any>(null);
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const { user } = useAuth();
+  const canDelete = user?.role === "manager" || user?.role === "super_admin";
 
   // New order form state
   const [newOrder, setNewOrder] = useState({ customerId: "", driverId: "", deliveryDate: todayStr(), note: "" });
@@ -55,6 +59,11 @@ export default function DayoneOrders() {
 
   const updateStatus = trpc.dayone.orders.updateStatus.useMutation({
     onSuccess: () => { toast.success("狀態已更新"); utils.dayone.orders.list.invalidate(); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const deleteOrder = trpc.dayone.orders.deleteOrder.useMutation({
+    onSuccess: () => { toast.success("訂單已刪除"); setDeleteTarget(null); utils.dayone.orders.list.invalidate(); },
     onError: (e) => toast.error(e.message),
   });
 
@@ -200,14 +209,21 @@ export default function DayoneOrders() {
                             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${st.color}`}>{st.label}</span>
                           </td>
                           <td className="px-4 py-3">
-                            <Select value={o.status} onValueChange={(v) => updateStatus.mutate({ id: o.id, tenantId: TENANT_ID, status: v as any })}>
-                              <SelectTrigger className="w-28 h-7 text-xs"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                {Object.entries(STATUS_MAP).map(([k, v]) => (
-                                  <SelectItem key={k} value={k}>{v.label}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <div className="flex items-center gap-1">
+                              <Select value={o.status} onValueChange={(v) => updateStatus.mutate({ id: o.id, tenantId: TENANT_ID, status: v as any })}>
+                                <SelectTrigger className="w-28 h-7 text-xs"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  {Object.entries(STATUS_MAP).map(([k, v]) => (
+                                    <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              {canDelete && (
+                                <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0" onClick={() => setDeleteTarget(o)}>
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -219,6 +235,21 @@ export default function DayoneOrders() {
           </CardContent>
         </Card>
       </div>
+
+      {/* 刪除確認 Dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={v => { if (!v) setDeleteTarget(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>確認刪除訂單</DialogTitle></DialogHeader>
+          <p className="text-sm text-gray-600">確定要刪除訂單 <strong>#{deleteTarget?.orderNo}</strong>（{deleteTarget?.customerName}）？此操作無法復原。</p>
+          <div className="flex gap-2 justify-end mt-2">
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>取消</Button>
+            <Button className="bg-red-600 hover:bg-red-700 text-white" disabled={deleteOrder.isPending}
+              onClick={() => deleteOrder.mutate({ id: deleteTarget.id, tenantId: TENANT_ID })}>
+              {deleteOrder.isPending ? "刪除中..." : "確認刪除"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DayoneLayout>
   );
 }

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 const emptyForm = { name: "", code: "", unit: "箱", defaultPrice: 0, isActive: true };
@@ -16,6 +16,7 @@ export default function DayoneProducts() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState(emptyForm);
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const [unitOpen, setUnitOpen] = useState(false);
   const [unitForm, setUnitForm] = useState({ name: "", sortOrder: 0 });
   const [editingUnit, setEditingUnit] = useState<any>(null);
@@ -34,6 +35,11 @@ export default function DayoneProducts() {
 
   const upsert = trpc.dayone.products.upsert.useMutation({
     onSuccess: () => { toast.success(editing ? "品項已更新" : "品項已新增"); setOpen(false); utils.dayone.products.list.invalidate(); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const deleteProduct = trpc.dayone.products.delete.useMutation({
+    onSuccess: () => { toast.success("品項已刪除"); setDeleteTarget(null); utils.dayone.products.list.invalidate(); },
     onError: (e) => toast.error(e.message),
   });
 
@@ -84,8 +90,9 @@ export default function DayoneProducts() {
                             {p.isActive !== false ? "上架" : "下架"}
                           </span>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 flex gap-1">
                           <Button variant="ghost" size="sm" onClick={() => openEdit(p)}><Pencil className="w-4 h-4" /></Button>
+                          <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => setDeleteTarget(p)}><Trash2 className="w-4 h-4" /></Button>
                         </td>
                       </tr>
                     ))}
@@ -113,6 +120,7 @@ export default function DayoneProducts() {
                   </SelectContent>
                 </Select>
               </div>
+              <div><Label>預設單價</Label><Input type="number" min={0} value={form.defaultPrice} onChange={e => setForm(p => ({ ...p, defaultPrice: Number(e.target.value) }))} /></div>
               <div>
                 <Label>狀態</Label>
                 <Select value={form.isActive ? "active" : "inactive"} onValueChange={v => setForm(p => ({ ...p, isActive: v === "active" }))}>
@@ -132,6 +140,21 @@ export default function DayoneProducts() {
             </Button>
           </DialogContent>
         </Dialog>
+        {/* 刪除確認 Dialog */}
+        <Dialog open={!!deleteTarget} onOpenChange={v => { if (!v) setDeleteTarget(null); }}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader><DialogTitle>確認刪除品項</DialogTitle></DialogHeader>
+            <p className="text-sm text-gray-600">確定要刪除「<strong>{deleteTarget?.name}</strong>」？此操作無法復原。</p>
+            <div className="flex gap-2 justify-end mt-2">
+              <Button variant="outline" onClick={() => setDeleteTarget(null)}>取消</Button>
+              <Button className="bg-red-600 hover:bg-red-700 text-white" disabled={deleteProduct.isPending}
+                onClick={() => deleteProduct.mutate({ id: deleteTarget.id, tenantId: TENANT_ID })}>
+                {deleteProduct.isPending ? "刪除中..." : "確認刪除"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {/* 單位管理 Dialog */}
         <Dialog open={unitOpen} onOpenChange={setUnitOpen}>
           <DialogContent className="max-w-md">

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 const emptyForm = { name: "", phone: "", lineId: "", vehicleNo: "", status: "active" as const };
@@ -16,6 +16,7 @@ export default function DayoneDrivers() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState(emptyForm);
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
 
   const utils = trpc.useUtils();
   const { data: drivers, isLoading } = trpc.dayone.drivers.list.useQuery({ tenantId: TENANT_ID });
@@ -23,6 +24,11 @@ export default function DayoneDrivers() {
 
   const upsert = trpc.dayone.drivers.upsert.useMutation({
     onSuccess: () => { toast.success(editing ? "司機已更新" : "司機已新增"); setOpen(false); utils.dayone.drivers.list.invalidate(); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const deleteDriver = trpc.dayone.drivers.delete.useMutation({
+    onSuccess: () => { toast.success("司機已刪除"); setDeleteTarget(null); utils.dayone.drivers.list.invalidate(); },
     onError: (e) => toast.error(e.message),
   });
 
@@ -68,8 +74,9 @@ export default function DayoneDrivers() {
                             {d.status === "active" ? "在職" : "離職"}
                           </span>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 flex gap-1">
                           <Button variant="ghost" size="sm" onClick={() => openEdit(d)}><Pencil className="w-4 h-4" /></Button>
+                          <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => setDeleteTarget(d)}><Trash2 className="w-4 h-4" /></Button>
                         </td>
                       </tr>
                     ))}
@@ -108,6 +115,21 @@ export default function DayoneDrivers() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* 刪除確認 Dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={v => { if (!v) setDeleteTarget(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>確認刪除司機</DialogTitle></DialogHeader>
+          <p className="text-sm text-gray-600">確定要刪除司機「<strong>{deleteTarget?.name}</strong>」？此操作無法復原。</p>
+          <div className="flex gap-2 justify-end mt-2">
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>取消</Button>
+            <Button className="bg-red-600 hover:bg-red-700 text-white" disabled={deleteDriver.isPending}
+              onClick={() => deleteDriver.mutate({ id: deleteTarget.id, tenantId: TENANT_ID })}>
+              {deleteDriver.isPending ? "刪除中..." : "確認刪除"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DayoneLayout>
   );
 }

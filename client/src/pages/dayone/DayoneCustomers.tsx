@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, Pencil, Minus } from "lucide-react";
+import { Plus, Search, Pencil, Minus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 const LEVEL_CFG: Record<string, { label: string; cls: string }> = {
@@ -40,6 +40,7 @@ export default function DayoneCustomers() {
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState(emptyForm);
   const [priceRows, setPriceRows] = useState<{ productId: number; productName: string; price: string }[]>([]);
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
 
   const utils = trpc.useUtils();
   const { data: customers, isLoading } = trpc.dayone.customers.list.useQuery({ tenantId: TENANT_ID });
@@ -52,6 +53,11 @@ export default function DayoneCustomers() {
       setOpen(false);
       utils.dayone.customers.list.invalidate();
     },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const deleteCustomer = trpc.dayone.customers.delete.useMutation({
+    onSuccess: () => { toast.success("客戶已刪除"); setDeleteTarget(null); utils.dayone.customers.list.invalidate(); },
     onError: (e) => toast.error(e.message),
   });
 
@@ -172,8 +178,9 @@ export default function DayoneCustomers() {
                               {c.status === "active" ? "正常" : "停用"}
                             </span>
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3 flex gap-1">
                             <Button variant="ghost" size="sm" onClick={() => openEdit(c)}><Pencil className="w-4 h-4" /></Button>
+                            <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => setDeleteTarget(c)}><Trash2 className="w-4 h-4" /></Button>
                           </td>
                         </tr>
                       );
@@ -315,6 +322,21 @@ export default function DayoneCustomers() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* 刪除確認 Dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={v => { if (!v) setDeleteTarget(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>確認刪除客戶</DialogTitle></DialogHeader>
+          <p className="text-sm text-gray-600">確定要刪除客戶「<strong>{deleteTarget?.name}</strong>」？此操作無法復原。</p>
+          <div className="flex gap-2 justify-end mt-2">
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>取消</Button>
+            <Button className="bg-red-600 hover:bg-red-700 text-white" disabled={deleteCustomer.isPending}
+              onClick={() => deleteCustomer.mutate({ id: deleteTarget.id, tenantId: TENANT_ID })}>
+              {deleteCustomer.isPending ? "刪除中..." : "確認刪除"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DayoneLayout>
   );
 }

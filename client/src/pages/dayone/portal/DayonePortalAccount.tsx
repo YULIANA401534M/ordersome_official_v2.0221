@@ -70,7 +70,7 @@ export default function DayonePortalAccount() {
   const [showPrices, setShowPrices] = useState(false);
   const [lineBinding, setLineBinding] = useState(false);
 
-  const { data: me, refetch: refetchMe } = trpc.dayone.portal.me.useQuery();
+  const { data: me, isLoading: meLoading, isError: meError, refetch: refetchMe } = trpc.dayone.portal.me.useQuery();
   const { data: prices = [] } = trpc.dayone.portal.myPrices.useQuery();
 
   const bindLine = trpc.dayone.portal.bindLine.useMutation({
@@ -105,11 +105,23 @@ export default function DayonePortalAccount() {
       <div className="p-4 space-y-4">
         <h1 className="text-lg font-bold text-gray-900">我的帳戶</h1>
 
+        {meError && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-600">
+            載入帳戶資料失敗，請重新整理頁面或稍後再試。
+          </div>
+        )}
+
         {/* 客戶資料 */}
         <Card>
           <CardContent className="pt-4 space-y-3">
             <p className="text-sm font-semibold text-gray-700">基本資料</p>
-            {customer ? (
+            {meLoading ? (
+              <div className="space-y-2">
+                <div className="animate-pulse h-4 bg-gray-100 rounded w-3/4" />
+                <div className="animate-pulse h-4 bg-gray-100 rounded w-1/2" />
+                <div className="animate-pulse h-4 bg-gray-100 rounded w-2/3" />
+              </div>
+            ) : customer ? (
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-500">姓名</span>
@@ -141,7 +153,7 @@ export default function DayonePortalAccount() {
                 </div>
               </div>
             ) : (
-              <div className="animate-pulse h-20 bg-gray-100 rounded" />
+              <p className="text-sm text-gray-400">無法取得資料</p>
             )}
           </CardContent>
         </Card>

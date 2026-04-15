@@ -1,6 +1,7 @@
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Home, ClipboardList, Wallet, User, LogOut } from "lucide-react";
+import { useCallback } from "react";
 
 const NAV = [
   { icon: Home,          label: "首頁",   path: "/dayone/portal" },
@@ -13,6 +14,11 @@ export default function DayonePortalLayout({ children }: { children: React.React
   const [location, navigate] = useLocation();
   const { user, logout } = useAuth();
 
+  const handleLogout = useCallback(() => {
+    logout();
+    navigate("/dayone/portal/login");
+  }, [logout, navigate]);
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
@@ -24,7 +30,7 @@ export default function DayonePortalLayout({ children }: { children: React.React
           </div>
           <div className="flex items-center gap-3">
             {user && <span className="text-sm text-gray-600 hidden sm:inline">{user.name}</span>}
-            <button onClick={logout}
+            <button onClick={handleLogout}
               className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-500 transition-colors">
               <LogOut className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">登出</span>

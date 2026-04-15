@@ -70,6 +70,13 @@ export default function DayonePortalStatement() {
             </div>
           )}
 
+          {queried && !isLoading && !stmt && (
+            <div className="flex flex-col items-center py-12 text-gray-400">
+              <p className="text-base font-medium">目前無帳單資料</p>
+              <p className="text-xs mt-1">{y} 年 {m} 月無帳款記錄</p>
+            </div>
+          )}
+
           {stmt && (
             <>
               <div className="no-print flex gap-2">

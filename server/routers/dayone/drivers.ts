@@ -54,6 +54,18 @@ export const dyDriversRouter = router({
       }
     }),
 
+  delete: dyAdminProcedure
+    .input(z.object({ id: z.number(), tenantId: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
+      await (db as any).$client.execute(
+        `DELETE FROM dy_drivers WHERE id=? AND tenantId=?`,
+        [input.id, input.tenantId]
+      );
+      return { success: true };
+    }),
+
   // Driver self-access: get own orders for the day
   myOrders: protectedProcedure
     .input(z.object({ tenantId: z.number(), deliveryDate: z.string() }))

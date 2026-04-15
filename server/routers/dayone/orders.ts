@@ -133,6 +133,17 @@ export const dyOrdersRouter = router({
       return rows as any[];
     }),
 
+  deleteOrder: dyAdminProcedure
+    .input(z.object({ id: z.number(), tenantId: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
+      const client = (db as any).$client;
+      await client.execute(`DELETE FROM dy_order_items WHERE orderId=? AND tenantId=?`, [input.id, input.tenantId]);
+      await client.execute(`DELETE FROM dy_orders WHERE id=? AND tenantId=?`, [input.id, input.tenantId]);
+      return { success: true };
+    }),
+
   // Driver: update delivery result (signature, photo, boxes)
   confirmDelivery: protectedProcedure
     .input(z.object({
