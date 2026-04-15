@@ -33,7 +33,13 @@ export const dyDriverRouter = router({
       if (!driver) throw new TRPCError({ code: 'NOT_FOUND', message: '找不到司機資料，請聯絡管理員' });
       const [rows] = await (db as any).$client.execute(
         `SELECT o.*, c.name as customerName, c.address as customerAddress, c.phone as customerPhone,
-                dist.name as districtName
+                dist.name as districtName,
+                (SELECT COALESCE(SUM(uo.totalAmount - uo.paidAmount), 0)
+                 FROM dy_orders uo
+                 WHERE uo.customerId = o.customerId AND uo.tenantId = o.tenantId
+                   AND uo.paymentStatus != 'paid' AND uo.status = 'delivered'
+                   AND uo.id != o.id
+                ) AS customerUnpaidAmount
          FROM dy_orders o
          JOIN dy_customers c ON o.customerId = c.id
          LEFT JOIN dy_districts dist ON o.districtId = dist.id

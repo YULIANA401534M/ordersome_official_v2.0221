@@ -57,6 +57,8 @@ export default function DriverOrderDetail() {
     setShowSig(false);
   }
 
+  const unpaidAmt = Number(order.customerUnpaidAmount ?? 0);
+
   return (
     <DriverLayout title="訂單詳情">
       <div className="p-4 space-y-4">
@@ -64,6 +66,16 @@ export default function DriverOrderDetail() {
         <button onClick={() => navigate('/driver/orders')} className="flex items-center gap-1 text-sm text-gray-500">
           <ChevronLeft className="w-4 h-4" /> 返回列表
         </button>
+
+        {/* 逾期帳款警示橫幅 */}
+        {unpaidAmt > 0 && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-start gap-2">
+            <span className="text-red-500 text-lg leading-none mt-0.5">⚠️</span>
+            <p className="text-sm text-red-700 font-medium">
+              此客戶有逾期未付帳款 NT$ {unpaidAmt.toLocaleString()}，請提醒客戶
+            </p>
+          </div>
+        )}
 
         {/* Order header */}
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">

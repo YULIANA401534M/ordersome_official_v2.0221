@@ -222,8 +222,10 @@ function TabAR() {
   const [page, setPage] = useState(1);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [payTarget, setPayTarget] = useState<any>(null);
+  const [overdueFilter, setOverdueFilter] = useState<"all" | "overdue" | "normal">("all");
 
   const { data: customers } = trpc.dayone.customers.list.useQuery({ tenantId: TENANT_ID });
+  const { data: overdueStats = [] } = trpc.dayone.ar.customerOverdueStats.useQuery({ tenantId: TENANT_ID });
   const { data: records = [], isLoading, refetch } = trpc.dayone.ar.listReceivables.useQuery({
     tenantId: TENANT_ID,
     status: status !== "all" ? status : undefined,
@@ -232,6 +234,17 @@ function TabAR() {
     endDate: endDate || undefined,
     page,
   });
+
+  // 逾期客戶對應 map（customerId → overdueDays）
+  const overdueMap = useMemo(() => {
+    const map = new Map<number, number>();
+    (overdueStats as any[]).forEach((s: any) => {
+      if (s.isOverdue) map.set(s.customerId, s.overdueDays);
+    });
+    return map;
+  }, [overdueStats]);
+
+  const overdueCount = (overdueStats as any[]).filter((s: any) => s.isOverdue).length;
 
   const kpi = useMemo(() => {
     const unpaidSum = records.filter((r: any) => r.status === "unpaid" || r.status === "partial")
@@ -246,7 +259,7 @@ function TabAR() {
   return (
     <div className="space-y-5">
       {/* KPI */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card><CardContent className="pt-5">
           <p className="text-xs text-gray-500 mb-1">應收未付總額</p>
           <p className="text-2xl font-bold text-amber-600">{fmtMoney(kpi.unpaidSum)}</p>
@@ -256,9 +269,27 @@ function TabAR() {
           <p className={`text-2xl font-bold ${kpi.overdueSum > 0 ? "text-red-600" : "text-gray-400"}`}>{fmtMoney(kpi.overdueSum)}</p>
         </CardContent></Card>
         <Card><CardContent className="pt-5">
+          <p className="text-xs text-gray-500 mb-1">逾期客戶數</p>
+          <p className={`text-2xl font-bold ${overdueCount > 0 ? "text-red-600" : "text-gray-400"}`}>{overdueCount} 家</p>
+        </CardContent></Card>
+        <Card><CardContent className="pt-5">
           <p className="text-xs text-gray-500 mb-1">本頁已收</p>
           <p className="text-2xl font-bold text-green-600">{fmtMoney(kpi.paidSum)}</p>
         </CardContent></Card>
+      </div>
+
+      {/* 逾期篩選 tab */}
+      <div className="flex gap-2">
+        {([["all", "全部"], ["overdue", `逾期 (${overdueCount})`], ["normal", "正常"]] as const).map(([v, label]) => (
+          <button key={v} onClick={() => setOverdueFilter(v)}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              overdueFilter === v
+                ? v === "overdue" ? "bg-red-600 text-white" : "bg-amber-500 text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}>
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* 篩選 */}
@@ -310,15 +341,28 @@ function TabAR() {
                 </tr>
               </thead>
               <tbody>
-                {records.map((r: any) => {
+                {records.filter((r: any) => {
+                  const isOD = overdueMap.has(r.customerId);
+                  if (overdueFilter === "overdue") return isOD;
+                  if (overdueFilter === "normal") return !isOD;
+                  return true;
+                }).map((r: any) => {
                   const sc = AR_STATUS[r.status] ?? AR_STATUS.unpaid;
                   const unpaid = Number(r.amount) - Number(r.paidAmount);
                   const isExpanded = expandedId === r.id;
+                  const odDays = overdueMap.get(r.customerId);
+                  const isOD = odDays !== undefined;
                   return [
                     <tr key={r.id}
-                      className={`border-b transition-colors cursor-pointer ${r.status === "overdue" ? "bg-red-50" : "hover:bg-gray-50"}`}
+                      className={`border-b transition-colors cursor-pointer ${isOD ? "bg-red-50" : "hover:bg-gray-50"}`}
                       onClick={() => setExpandedId(isExpanded ? null : r.id)}>
-                      <td className="px-4 py-3 font-medium text-gray-900">{r.customerName}</td>
+                      <td className="px-4 py-3 font-medium text-gray-900">
+                        <div className="flex items-center gap-2">
+                          {isOD && <span className="text-red-500" title={`逾期 ${odDays} 天`}>⚠️</span>}
+                          {r.customerName}
+                          {isOD && <Badge className="bg-red-100 text-red-700 border-0 text-xs ml-1">逾 {odDays} 天</Badge>}
+                        </div>
+                      </td>
                       <td className="px-4 py-3 text-center">
                         <Badge variant="outline" className="text-xs">
                           {CYCLE_LABELS[r.settlementCycle ?? ""] ?? "-"}
@@ -361,14 +405,25 @@ function TabAR() {
 
           {/* 手機卡片 */}
           <div className="md:hidden space-y-3">
-            {records.map((r: any) => {
+            {records.filter((r: any) => {
+              const isOD = overdueMap.has(r.customerId);
+              if (overdueFilter === "overdue") return isOD;
+              if (overdueFilter === "normal") return !isOD;
+              return true;
+            }).map((r: any) => {
               const sc = AR_STATUS[r.status] ?? AR_STATUS.unpaid;
               const unpaid = Number(r.amount) - Number(r.paidAmount);
+              const odDays = overdueMap.get(r.customerId);
+              const isOD = odDays !== undefined;
               return (
-                <Card key={r.id} className={r.status === "overdue" ? "border-l-4 border-l-red-500" : ""}>
+                <Card key={r.id} className={isOD ? "border-l-4 border-l-red-500" : ""}>
                   <CardContent className="pt-4 space-y-3">
                     <div className="flex items-center justify-between">
-                      <p className="font-semibold text-gray-900">{r.customerName}</p>
+                      <div className="flex items-center gap-2">
+                        {isOD && <span className="text-red-500">⚠️</span>}
+                        <p className="font-semibold text-gray-900">{r.customerName}</p>
+                        {isOD && <Badge className="bg-red-100 text-red-700 border-0 text-xs">逾 {odDays} 天</Badge>}
+                      </div>
                       <Badge className={`${sc.cls} border-0 text-xs`}>{sc.label}</Badge>
                     </div>
                     <div className="grid grid-cols-3 gap-2 text-sm">

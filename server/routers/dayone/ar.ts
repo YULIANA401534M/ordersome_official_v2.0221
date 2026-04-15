@@ -213,6 +213,64 @@ export const dyArRouter = router({
       return { success: true };
     }),
 
+  // 7a. 客戶逾期統計（按客戶聚合，含最早未付訂單日期、未付總額）
+  customerOverdueStats: dyAdminProcedure
+    .input(z.object({ tenantId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      const client = (db as any).$client;
+      // 每個客戶的未付帳款總額 + 最早一筆未付訂單距今天數
+      const [rows] = await client.execute(
+        `SELECT
+           c.id AS customerId,
+           c.name AS customerName,
+           c.settlementCycle,
+           COUNT(ar.id) AS unpaidCount,
+           COALESCE(SUM(ar.amount - ar.paidAmount), 0) AS unpaidAmount,
+           DATEDIFF(NOW(), MIN(ar.dueDate)) AS daysSinceOldest
+         FROM dy_customers c
+         LEFT JOIN dy_ar_records ar
+           ON ar.customerId = c.id AND ar.tenantId = c.tenantId AND ar.status IN ('unpaid', 'overdue', 'partial')
+         WHERE c.tenantId = ?
+         GROUP BY c.id, c.name, c.settlementCycle
+         HAVING unpaidCount > 0
+         ORDER BY daysSinceOldest DESC`,
+        [input.tenantId]
+      );
+      return (rows as any[]).map((r: any) => {
+        const days = Number(r.daysSinceOldest ?? 0);
+        const cycle = r.settlementCycle;
+        let threshold = 30;
+        if (cycle === "weekly") threshold = 7;
+        else if (cycle === "per_delivery" || cycle === "cash") threshold = 0;
+        const isOverdue = days > threshold;
+        return { ...r, daysSinceOldest: days, isOverdue, overdueDays: isOverdue ? days - threshold : 0 };
+      });
+    }),
+
+  // 7b. 每月收款統計（含已收/未收）
+  monthlyCollectionStats: dyAdminProcedure
+    .input(z.object({ tenantId: z.number(), year: z.number().optional() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      const year = input.year ?? new Date().getFullYear();
+      const [rows] = await (db as any).$client.execute(
+        `SELECT
+           MONTH(dueDate) AS month,
+           SUM(amount) AS totalAmount,
+           SUM(CASE WHEN status = 'paid' THEN paidAmount ELSE 0 END) AS paidAmount,
+           SUM(CASE WHEN status != 'paid' THEN (amount - paidAmount) ELSE 0 END) AS unpaidAmount
+         FROM dy_ar_records
+         WHERE tenantId = ? AND YEAR(dueDate) = ?
+         GROUP BY MONTH(dueDate)
+         ORDER BY month ASC`,
+        [input.tenantId, year]
+      );
+      return rows as any[];
+    }),
+
   // 7. 月結對帳單
   monthlyStatement: dyAdminProcedure
     .input(
