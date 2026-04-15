@@ -2,7 +2,7 @@
 
 > 這份文件是「查閱用」，不是每次都要讀。
 > 開新對話時只需讀 `CLAUDE.md`，有需要才查這裡。
-> 最後更新：2026-04-13
+> 最後更新：2026-04-16
 
 ---
 
@@ -370,6 +370,105 @@ useCartStore().getTotalPrice() / .getTotalItems() / .getItemQuantity(id, specs)
 | `useArticleSchema()` | 文章頁 JSON-LD |
 | `useProductSchema()` | 商品頁 JSON-LD |
 | `useRestaurantSchema()` | 餐廳 JSON-LD |
+
+---
+
+---
+
+## R13、多租戶系統架構
+
+### 租戶層級圖
+
+```
+宇聯國際（母公司）
+├── 商城管理（官網電商，tenantId=1）
+├── 內容管理（官網文章，tenantId=1）
+├── 人員管理（系統層級）
+└── 系統管理（租戶/模組開關）
+
+來點什麼（tenantId=1，子系統）
+├── 門市管理（SOP/報修/檢查表）
+├── 人員管理（來點什麼自己的）
+└── ERP 模組（依模組開關啟用）
+
+大永蛋品（tenantId=90004，子系統）
+├── 完整 ERP
+└── 人員管理
+```
+
+### 多租戶隔離
+
+- `AdminDashboardLayout` 加入 `isOSTenant` / `isDYTenant` 判斷
+- `manager` 只看自己租戶的功能，`super_admin` 跨租戶看全部
+- `tenant_modules` 各租戶記錄乾淨隔離（來點什麼 10 筆、大永 10 筆）
+
+### 用戶角色與 tenantId 對應
+
+| 角色 | tenantId | 權限範圍 |
+|------|----------|---------|
+| `super_admin` | NULL（跨租戶） | 全部功能 + 可調整所有人的模組權限 |
+| `manager`（來點什麼） | 1 | 宇聯商城/內容/人員 + 來點什麼門市 + ERP（依模組開關） |
+| `manager`（大永） | 90004 | 大永 ERP |
+| `franchisee`（門市夥伴） | 1 | SOP/報修/檢查表/線上商城 |
+| `staff` | 1 | SOP/線上商城 |
+| `customer` | 1 | 線上商城/我的訂單 |
+| `driver` | 90004 | 司機 App（`/driver/`） |
+| `portal_customer` | 90004 | 大永客戶 Portal |
+
+---
+
+## R14、模組開關（module_definitions + tenant_modules）
+
+- `module_definitions` 表：15 個模組定義，3 個 category
+  - `store_ops`：門市營運相關
+  - `erp`：來點什麼 ERP
+  - `dayone`：大永蛋品 ERP
+- `moduleKey` 清單：`delivery` / `crm_customers` / `inventory` / `purchasing` / `accounting` / `scheduling` / `daily_report` / `equipment_repair` / `ar_management` / `dispatch` / `purchase_receipts` / `customer_portal` / `erp_dashboard` / `products` / `districts` / `liff_orders` / `driver_mgmt`
+- `createTenant` 建立新租戶時自動 INSERT 所有模組定義（預設全關）
+- `SuperAdminModules.tsx`：label/category 全部來自 DB（非 hardcode）
+- toggle 後 invalidate modules cache，側邊欄快取失效
+
+查詢：`trpc.dayone.modules.list({ tenantId })`
+前端 hook：`useModules()`（`client/src/hooks/useModules.ts`）
+
+---
+
+## R15、Email 發信
+
+- 服務：Resend（resend.com）
+- 環境變數：`RESEND_API_KEY`
+- 觸發時機：訂單狀態改為 `shipped` → 寄給買家；新訂單建立 → 寄給所有 `manager`/`super_admin`
+- 重設密碼信件 URL 讀取環境變數 `BASE_URL`
+
+---
+
+## R16、AI 文章助手
+
+| 項目 | 說明 |
+|------|------|
+| 後端 | `server/routers/ai-writer.ts` |
+| 前端 | `client/src/pages/dashboard/AIWriter.tsx` |
+| 路由 | `/dashboard/ai-writer` |
+| 模型 | Gemini 2.5 Flash（`gemini-2.5-flash`） |
+| 新聞來源 | NewsAPI（`NEWS_API_KEY`） |
+| 品牌資訊 | 已內建完整 Prompt（來點什麼品牌故事/產品/加盟資訊） |
+| 模式 | 半自動（AI 生成草稿，人工審核後發布） |
+
+---
+
+## R17、綠界物流（ecpay-logistics.ts）
+
+| 項目 | 說明 |
+|------|------|
+| 加密方式 | **MD5**（注意：金流用 SHA256，物流用 MD5，不可混用） |
+| Webhook（選擇店鋪） | `POST /api/ecpay/map-result` |
+| Webhook（物流通知） | `POST /api/ecpay/logistics-notify` |
+| 回應格式 | 必須回應 `1\|OK` |
+| env var fallback | `ECPAY_LOGISTICS_*` → 找不到時 fallback `ECPAY_*` |
+| 超商取貨 | UNIMART 需額外傳 `CollectionAmount` |
+| 超商取貨費用 | 超過 60 件：超重費，超過金額上限：必須分批 |
+| 前端選擇地圖 | postMessage 回傳給父視窗 |
+| 物流狀態回調 | 訂單 7 個欄位更新（參見 orders router） |
 
 ---
 
