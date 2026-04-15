@@ -114,6 +114,18 @@ export default function AdminOrders() {
     onError: (error) => { toast.error("刪除失敗: " + error.message); },
   });
 
+  const createLogisticsMutation = trpc.logistics.createLogisticsOrder.useMutation({
+    onSuccess: (result) => {
+      if (result.success) {
+        toast.success(`物流單建立成功，物流編號：${result.logisticsId}`);
+      } else {
+        toast.error(`建立物流單失敗：${result.message}`);
+      }
+      refetch();
+    },
+    onError: (error) => { toast.error("建立物流單失敗: " + error.message); },
+  });
+
   // 動態產生 orderSource 唯一值清單
   const orderSourceOptions = orders
     ? [...new Set(orders.map((o) => (o as any).orderSource).filter(Boolean))]
@@ -210,6 +222,7 @@ export default function AdminOrders() {
                       <TableHead>金額</TableHead>
                       <TableHead>狀態</TableHead>
                       <TableHead>建立時間</TableHead>
+                      <TableHead>配送</TableHead>
                       <TableHead>操作</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -258,10 +271,38 @@ export default function AdminOrders() {
                             }) : "-"}
                           </TableCell>
                           <TableCell>
+                            {(order as any).shippingMethod === "home_delivery" || !(order as any).shippingMethod ? (
+                              <span className="text-gray-500 text-sm">宅配</span>
+                            ) : (
+                              <div className="text-sm">
+                                <span className="font-medium">
+                                  {(order as any).shippingMethod === "cvs_fami" && "全家"}
+                                  {(order as any).shippingMethod === "cvs_unimart" && "7-11"}
+                                  {(order as any).shippingMethod === "cvs_hilife" && "萊爾富"}
+                                </span>
+                                {(order as any).cvsStoreName && (
+                                  <span className="text-gray-500 text-xs ml-1">{(order as any).cvsStoreName}</span>
+                                )}
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell>
                             <div className="flex items-center gap-1">
                               <Button variant="ghost" size="sm" onClick={() => viewOrderDetail(order)}>
                                 <Eye className="h-4 w-4" />
                               </Button>
+                              {(order as any).shippingMethod && (order as any).shippingMethod !== "home_delivery" && !(order as any).logisticsId && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  title="建立物流單"
+                                  onClick={() => createLogisticsMutation.mutate({ orderId: order.id })}
+                                  disabled={createLogisticsMutation.isPending}
+                                  className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                                >
+                                  <Truck className="h-4 w-4" />
+                                </Button>
+                              )}
                               {user?.role === "super_admin" && (
                                 <Button
                                   variant="ghost"
@@ -347,6 +388,58 @@ export default function AdminOrders() {
                           ))}
                         </tbody>
                       </table>
+                    </div>
+                  )}
+
+                  {/* 物流資訊 */}
+                  {(selectedOrder.shippingMethod && selectedOrder.shippingMethod !== "home_delivery") && (
+                    <div className="border-t pt-4">
+                      <p className="text-sm font-medium text-gray-700 mb-2">物流資訊</p>
+                      <div className="space-y-1.5 text-sm">
+                        <div>
+                          <span className="text-gray-500">配送方式：</span>
+                          {selectedOrder.shippingMethod === "cvs_fami" && "全家取貨"}
+                          {selectedOrder.shippingMethod === "cvs_unimart" && "7-ELEVEN 取貨"}
+                          {selectedOrder.shippingMethod === "cvs_hilife" && "萊爾富取貨"}
+                        </div>
+                        {selectedOrder.cvsStoreName && (
+                          <div>
+                            <span className="text-gray-500">取貨門市：</span>
+                            {selectedOrder.cvsStoreName}
+                          </div>
+                        )}
+                        {selectedOrder.cvsStoreAddress && (
+                          <div>
+                            <span className="text-gray-500">門市地址：</span>
+                            {selectedOrder.cvsStoreAddress}
+                          </div>
+                        )}
+                        {selectedOrder.logisticsId ? (
+                          <>
+                            <div>
+                              <span className="text-gray-500">物流編號：</span>
+                              <span className="font-mono">{selectedOrder.logisticsId}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">物流狀態：</span>
+                              {selectedOrder.logisticsStatusMsg || selectedOrder.logisticsStatus || "—"}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="flex items-center gap-2 mt-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => createLogisticsMutation.mutate({ orderId: selectedOrder.id })}
+                              disabled={createLogisticsMutation.isPending}
+                              className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                            >
+                              <Truck className="h-4 w-4 mr-1" />
+                              {createLogisticsMutation.isPending ? "建立中..." : "建立物流單"}
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
 
