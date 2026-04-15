@@ -65,7 +65,7 @@ export const storageRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "需要管理員權限" });
       }
       try {
-        const base64Data = input.fileData.replace(/^data:application\/pdf;base64,/, "");
+        const base64Data = input.fileData.replace(/^data:[^;]+;base64,/, "");
         const buffer = Buffer.from(base64Data, "base64");
         const uniqueFileName = `sop-pdfs/${Date.now()}-${Math.random().toString(36).slice(2)}.pdf`;
         const result = await r2Put(uniqueFileName, buffer, "application/pdf");

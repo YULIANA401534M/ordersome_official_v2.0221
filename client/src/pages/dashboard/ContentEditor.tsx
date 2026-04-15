@@ -134,7 +134,7 @@ export default function ContentEditor() {
       excerpt,
       content,
       coverImage,
-      status,
+      status: scheduledAt ? "draft" as const : status,
       publishTargets,
       category: category || undefined,
       scheduledAt: scheduledAt || undefined,
