@@ -4,7 +4,7 @@ import { Link, useLocation } from "wouter";
 import {
   ArrowLeft, CreditCard, Building, Store, FileText,
   AlertCircle, ShoppingCart, User, Package, ChevronRight,
-  Mail, Phone, CheckCircle2, Minus, Plus, Trash2
+  Mail, Phone, CheckCircle2, Minus, Plus, Trash2, Truck, MapPin
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -551,6 +551,42 @@ export default function Checkout() {
                 <div className="h-1 bg-amber-500" />
                 <CardContent className="p-6">
                   <StepHeader num={3} icon={Package} title="付款與運送方式" />
+
+                  {/* 3-A 配送方式 */}
+                  <div className="mb-8">
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-4">配送方式</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {[
+                        { value: "home_delivery", icon: Truck, label: "宅配到府", desc: "送到指定地址" },
+                        { value: "cvs_fami", icon: Store, label: "全家取貨", desc: "FamilyMart" },
+                        { value: "cvs_unimart", icon: Store, label: "7-ELEVEN", desc: "統一超商" },
+                        { value: "cvs_hilife", icon: Store, label: "萊爾富取貨", desc: "Hi-Life" },
+                      ].map(({ value, icon: Icon, label, desc }) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => setField("shippingMethod", value as typeof form.shippingMethod)}
+                          className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 cursor-pointer transition-all text-center
+                            ${form.shippingMethod === value
+                              ? "border-amber-500 bg-amber-50 shadow-sm"
+                              : "border-gray-200 hover:border-gray-300 bg-white"}`}
+                        >
+                          {form.shippingMethod === value && (
+                            <CheckCircle2 className="absolute top-2 right-2 h-4 w-4 text-amber-500" />
+                          )}
+                          <Icon className={`h-6 w-6 ${form.shippingMethod === value ? "text-amber-600" : "text-gray-400"}`} />
+                          <div>
+                            <p className={`font-semibold text-sm ${form.shippingMethod === value ? "text-amber-800" : "text-gray-800"}`}>
+                              {label}
+                            </p>
+                            <p className="text-xs text-gray-400 mt-0.5">{desc}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Separator className="mb-8" />
 
                   {/* 3-A 收件資訊 */}
                   <div className="mb-8">
