@@ -101,6 +101,11 @@ export default function Checkout() {
     invoiceType: "personal" as "personal" | "company",
     companyTaxId: "",
     companyName: "",
+    // ── 新增：物流欄位 ──
+    shippingMethod: "home_delivery" as "home_delivery" | "cvs_fami" | "cvs_unimart" | "cvs_hilife",
+    cvsStoreId: "",
+    cvsStoreName: "",
+    cvsStoreAddress: "",
   });
 
   // 登入狀態自動帶入用戶資料（OAuth 回跳後自動填充）
@@ -154,7 +159,13 @@ export default function Checkout() {
         e.recipientEmail = "請輸入有效的電子郵件格式";
       }
 
-      if (!data.shippingAddress.trim()) e.shippingAddress = "請輸入收件地址";
+      const isCvs = data.shippingMethod !== "home_delivery";
+      if (!isCvs && !data.shippingAddress.trim()) {
+        e.shippingAddress = "請輸入收件地址";
+      }
+      if (isCvs && !data.cvsStoreId) {
+        e.cvsStoreId = "請選擇取貨門市";
+      }
 
       // 發票驗證
       if (data.invoiceType === "company") {
@@ -222,17 +233,23 @@ export default function Checkout() {
     }
 
     setIsSubmitting(true);
+    const isCvsSubmit = form.shippingMethod !== "home_delivery";
+
     createOrder.mutate({
       recipientName: form.recipientName,
       recipientPhone: form.recipientPhone,
       recipientEmail: form.recipientEmail,
-      shippingAddress: form.shippingAddress,
+      shippingAddress: isCvsSubmit ? form.cvsStoreAddress : form.shippingAddress,
       note: form.note,
       paymentMethod: form.paymentMethod,
       invoiceType: form.invoiceType,
       companyTaxId: form.invoiceType === "company" ? form.companyTaxId : undefined,
       companyName: form.invoiceType === "company" ? form.companyName : undefined,
       orderSource,
+      shippingMethod: form.shippingMethod,
+      cvsStoreId: form.cvsStoreId || undefined,
+      cvsStoreName: form.cvsStoreName || undefined,
+      cvsStoreAddress: form.cvsStoreAddress || undefined,
       items: items.map((item) => ({
         id: item.id,
         name: item.name,
