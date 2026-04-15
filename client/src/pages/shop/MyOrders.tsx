@@ -4,6 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, ShoppingBag } from "lucide-react";
 import BrandLayout from "@/components/layout/BrandLayout";
 
@@ -98,6 +99,21 @@ export default function MyOrders() {
                     <p className="text-sm text-gray-600">
                       收件人：{order.recipientName}
                     </p>
+                    {(order as any).shippingMethod && (order as any).shippingMethod !== "home_delivery" && (
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <span className="text-sm text-gray-600">
+                          取貨門市：
+                          {(order as any).shippingMethod === "cvs_fami" && "全家 "}
+                          {(order as any).shippingMethod === "cvs_unimart" && "7-11 "}
+                          {(order as any).shippingMethod === "cvs_hilife" && "萊爾富 "}
+                          {(order as any).cvsStoreName || ""}
+                        </span>
+                        {(order as any).logisticsId && getLogisticsStatusBadge(
+                          (order as any).logisticsStatus,
+                          (order as any).logisticsStatusMsg
+                        )}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </Link>
@@ -120,4 +136,29 @@ function getStatusLabel(status: string): string {
     refunded: "已退款",
   };
   return labels[status] || status;
+}
+
+function getLogisticsStatusBadge(status: string | null | undefined, msg: string | null | undefined) {
+  if (!status) return null;
+  const arrivedCodes = ["2067", "3022", "3018"];
+  const pickedCodes = ["3024", "3025"];
+
+  let variant: string;
+  let label: string;
+
+  if (pickedCodes.includes(status)) {
+    variant = "bg-blue-100 text-blue-700 border-blue-300";
+    label = msg || "已取貨";
+  } else if (arrivedCodes.includes(status)) {
+    variant = "bg-green-100 text-green-700 border-green-300";
+    label = status === "2067" ? "已到店可取貨（7-11）" : "包裹已到店";
+  } else if (status === "300") {
+    variant = "bg-yellow-100 text-yellow-700 border-yellow-300";
+    label = "物流處理中";
+  } else {
+    variant = "bg-gray-100 text-gray-600 border-gray-300";
+    label = msg || `狀態 ${status}`;
+  }
+
+  return <Badge variant="outline" className={`text-xs ${variant}`}>{label}</Badge>;
 }
