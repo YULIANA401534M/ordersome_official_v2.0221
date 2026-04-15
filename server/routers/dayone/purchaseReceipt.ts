@@ -192,8 +192,8 @@ export const dyPurchaseReceiptRouter = router({
         // 連動 b: 庫存異動記錄
         await client.execute(
           `INSERT INTO dy_stock_movements
-           (tenantId, productId, type, quantity, source, sourceId, note, createdAt)
-           VALUES (?,?,'in',?,'purchase_receipt',?,NULL,NOW())`,
+           (tenantId, productId, type, qty, refId, refType, note, createdAt)
+           VALUES (?,?,'in',?,?,'purchase_receipt',NULL,NOW())`,
           [input.tenantId, item.productId, item.qty, input.id]
         );
       }
