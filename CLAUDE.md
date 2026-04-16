@@ -143,6 +143,7 @@ pnpm db:push      # 生成並執行 Drizzle migration
 | 物流 | ecpay-logistics.ts + webhook + logistics router + orders 7 欄位 |
 | 前端 | 結帳頁選擇配送 + 後台建立物流單 + 我的訂單物流狀態 Badge + 付款完成頁 |
 | 環境 | Railway 環境變數 ECPAY_LOGISTICS_* fallback 已設定 |
+| 物流 | ECPAY_LOGISTICS_* 環境變數正式啟用，解決「找不到加密金鑰」錯誤 |
 | 用戶管理 | TenantUserManagement 通用元件 + tenantUsers router |
 | 帳務 | 逾期警示 + 司機端提示 + 收款統計 |
 | 報表 | CSV 匯出（BOM 中文相容） |

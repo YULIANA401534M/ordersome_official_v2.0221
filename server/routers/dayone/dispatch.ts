@@ -37,12 +37,12 @@ export const dyDispatchRouter = router({
       const [orderRows] = await client.execute(
         `SELECT o.*, c.settlementCycle, c.overdueDays, c.address AS customerAddress,
                 c.name AS customerName, c.customerLevel,
-                dist.driverId, dist.sortOrder, dist.routeCode
+                dist.sortOrder, dist.routeCode
          FROM dy_orders o
          JOIN dy_customers c ON o.customerId = c.id
          LEFT JOIN dy_districts dist ON o.districtId = dist.id
          WHERE o.tenantId=? AND o.deliveryDate=? AND o.status != 'cancelled'
-         ORDER BY dist.driverId, dist.sortOrder`,
+         ORDER BY o.driverId, dist.sortOrder`,
         [input.tenantId, input.dispatchDate]
       );
       const orders = orderRows as any[];

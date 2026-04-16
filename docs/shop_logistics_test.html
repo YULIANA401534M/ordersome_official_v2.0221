@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>宇聯商城 — 綠界超商物流測試表 v1.1</title>
+  <style>
+    body { font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; max-width: 960px; margin: 40px auto; padding: 0 20px; color: #222; }
+    h1 { font-size: 1.4rem; border-bottom: 2px solid #333; padding-bottom: 8px; }
+    h2 { font-size: 1.1rem; background: #f0f0f0; padding: 6px 10px; border-left: 4px solid #555; margin-top: 32px; }
+    h2.warn { border-left-color: #c0392b; background: #fdf2f2; }
+    h2.ok { border-left-color: #27ae60; background: #f2fdf5; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
+    th { background: #333; color: #fff; padding: 7px 10px; text-align: left; }
+    td { border: 1px solid #ccc; padding: 7px 10px; vertical-align: top; }
+    td.check { width: 60px; text-align: center; }
+    tr:nth-child(even) td { background: #fafafa; }
+    .version { font-size: 0.8rem; color: #666; margin-bottom: 24px; }
+    .note { font-size: 0.85rem; color: #c0392b; margin: 6px 0 0 0; padding: 6px 10px; background: #fdf2f2; border: 1px solid #f5c6cb; border-radius: 4px; }
+    .pass { color: #27ae60; font-weight: bold; }
+    .fail { color: #c0392b; font-weight: bold; }
+    input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+    .section-skip { font-size: 0.85rem; color: #c0392b; font-weight: bold; margin-top: 6px; }
+  </style>
+</head>
+<body>
+
+<h1>宇聯商城 — 綠界超商物流測試表</h1>
+<p class="version">版本：v1.1 ／ 日期：2026-04-16 ／ 環境：正式站（Railway）</p>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- 第 0 區：前置環境檢查                            -->
+<!-- ════════════════════════════════════════════════ -->
+<h2 class="warn">第 0 區：前置環境檢查（所有測試開始前必須全部通過）</h2>
+<p style="font-size:0.85rem;color:#555;">⚠️ 本區任一項目未通過，請先解決再進行後續測試。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>項目</th>
+      <th>檢查說明</th>
+      <th>通過條件</th>
+      <th class="check">✓</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>0-1</td>
+      <td>綠界後台確認「超商取貨」服務已開通<br><span style="color:#888;font-size:0.82rem;">路徑：物流服務 → 廠商後台 → 服務設定 → 超商取貨</span></td>
+      <td>狀態顯示「已開通」，可截圖附檔存證</td>
+      <td class="check"><input type="checkbox" /></td>
+    </tr>
+    <tr>
+      <td>0-2</td>
+      <td>Railway 已設定以下三個物流專用環境變數<br>
+        <code>ECPAY_LOGISTICS_MERCHANT_ID</code><br>
+        <code>ECPAY_LOGISTICS_HASH_KEY</code><br>
+        <code>ECPAY_LOGISTICS_HASH_IV</code><br>
+        <span style="color:#c0392b;font-size:0.82rem;">注意：物流金鑰與金流金鑰為兩套，不可共用</span>
+      </td>
+      <td>Railway Variables 頁面三個變數皆存在且值不為空白</td>
+      <td class="check"><input type="checkbox" /></td>
+    </tr>
+    <tr>
+      <td>0-3</td>
+      <td>Railway 最新部署狀態為「Success」<br><span style="color:#888;font-size:0.82rem;">路徑：Railway 專案 → Deployments 分頁</span></td>
+      <td>最新一筆 Deployment 狀態為綠色 Success</td>
+      <td class="check"><input type="checkbox" /></td>
+    </tr>
+    <tr>
+      <td>0-4</td>
+      <td>結帳頁選超商取貨，點「選擇門市」能成功開啟綠界地圖視窗</td>
+      <td>視窗正常開啟，<strong>不出現</strong>「找不到加密金鑰，請確認是否有申請開通此物流方式」錯誤訊息</td>
+      <td class="check"><input type="checkbox" /></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- 第 1 區：結帳頁顯示                              -->
+<!-- ════════════════════════════════════════════════ -->
+<h2 class="ok">第 1 區：結帳頁超商取貨選項顯示</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>項目</th>
+      <th>測試步驟</th>
+      <th>預期結果</th>
+      <th class="check">✓</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1-1</td>
+      <td>進入 /shop/checkout，選擇「超商取貨」配送方式</td>
+      <td>頁面顯示 7-ELEVEN、全家、萊爾富 三個超商選項</td>
+      <td class="check"><input type="checkbox" /></td>
+    </tr>
+    <tr>
+      <td>1-2</td>
+      <td>選擇任一超商後，確認頁面狀態</td>
+      <td>出現「選擇門市」按鈕，尚未選店時顯示提示文字</td>
+      <td class="check"><input type="checkbox" /></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- 第 2 區：超商門市選擇                            -->
+<!-- ════════════════════════════════════════════════ -->
+<h2 class="ok">第 2 區：超商門市選擇（電子地圖）</h2>
+
+<p class="section-skip">⚠️ 若第 0 區 0-4 項失敗，跳過本區全部測試，先解決環境變數問題（設定 ECPAY_LOGISTICS_* 三個 Railway 環境變數）後再回來執行。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>項目</th>
+      <th>測試步驟</th>
+      <th>預期結果</th>
+      <th class="check">✓</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>2-1</td>
+      <td>選 7-ELEVEN，點「選擇門市」</td>
+      <td>綠界電子地圖視窗開啟，顯示 7-ELEVEN 門市地圖</td>
+      <td class="check"><input type="checkbox" /></td>
+    </tr>
+    <tr>
+      <td>2-2</td>
+      <td>在地圖上選擇一間 7-ELEVEN 門市並確認</td>
+      <td>地圖視窗關閉，結帳頁顯示所選門市名稱與門市代號</td>
+      <td class="check"><input type="checkbox" /></td>
+    </tr>
+    <tr>
+      <td>2-3</td>
+      <td>選 全家，點「選擇門市」</td>
+      <td>綠界電子地圖視窗開啟，顯示全家門市地圖</td>
+      <td class="check"><input type="checkbox" /></td>
+    </tr>
+    <tr>
+      <td>2-4</td>
+      <td>在地圖上選擇一間全家門市並確認</td>
+      <td>地圖視窗關閉，結帳頁顯示所選門市名稱與門市代號</td>
+      <td class="check"><input type="checkbox" /></td>
+    </tr>
+    <tr>
+      <td>2-5</td>
+      <td>選 萊爾富，點「選擇門市」</td>
+      <td>綠界電子地圖視窗開啟，顯示萊爾富門市地圖</td>
+      <td class="check"><input type="checkbox" /></td>
+    </tr>
+    <tr>
+      <td>2-6</td>
+      <td>在地圖上選擇一間萊爾富門市並確認</td>
+      <td>地圖視窗關閉，結帳頁顯示所選門市名稱與門市代號</td>
+      <td class="check"><input type="checkbox" /></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- 第 3 區：下單流程                                -->
+<!-- ════════════════════════════════════════════════ -->
+<h2 class="ok">第 3 區：超商取貨下單流程</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>項目</th>
+      <th>測試步驟</th>
+      <th>預期結果</th>
+      <th class="check">✓</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>3-1</td>
+      <td>選好門市後填寫收件人姓名、電話，點「送出訂單」</td>
+      <td>訂單成功建立，頁面跳轉至訂單確認頁，顯示訂單編號</td>
+      <td class="check"><input type="checkbox" /></td>
+    </tr>
+    <tr>
+      <td>3-2</td>
+      <td>確認後台訂單管理頁，找到剛建立的訂單</td>
+      <td>訂單顯示配送方式為超商取貨，門市資訊正確</td>
+      <td class="check"><input type="checkbox" /></td>
+    </tr>
+    <tr>
+      <td>3-3</td>
+      <td>確認綠界物流後台是否收到物流訂單（可選）</td>
+      <td>綠界物流後台出現對應的物流訂單</td>
+      <td class="check"><input type="checkbox" /></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- 測試結果摘要                                     -->
+<!-- ════════════════════════════════════════════════ -->
+<h2>測試結果摘要</h2>
+<table>
+  <thead>
+    <tr><th>欄位</th><th>填寫</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>測試日期</td><td></td></tr>
+    <tr><td>測試人員</td><td></td></tr>
+    <tr><td>測試環境 URL</td><td></td></tr>
+    <tr><td>通過項目數 / 總項目數</td><td>　　/ 15</td></tr>
+    <tr><td>失敗項目（填項目編號）</td><td></td></tr>
+    <tr><td>備註</td><td></td></tr>
+  </tbody>
+</table>
+
+<p style="margin-top:32px;font-size:0.8rem;color:#aaa;">宇聯商城 shop_logistics_test.html v1.1 — 2026-04-16</p>
+
+</body>
+</html>
