@@ -73,7 +73,7 @@ const SENDER = {
 // 電子地圖 — 產生表單參數（前端用 form POST 跳轉）
 // ═══════════════════════════════════════════════════════
 export interface MapParams {
-  subType: "FAMI" | "UNIMART" | "HILIFE";
+  subType: "FAMIC2C" | "UNIMARTC2C" | "HILIFEC2C";
   serverReplyURL: string;  // 選店結果回調 URL
   tradeNo?: string;
 }
@@ -113,7 +113,7 @@ export interface CreateCvsOrderParams {
   receiverName: string;
   receiverPhone: string;
   receiverStoreId: string;
-  subType: "FAMI" | "UNIMART" | "HILIFE";
+  subType: "FAMIC2C" | "UNIMARTC2C" | "HILIFEC2C";
   serverReplyURL: string;
 }
 
@@ -138,8 +138,8 @@ export const createCvsLogisticsOrder = async (params: CreateCvsOrderParams) => {
     ServerReplyURL: params.serverReplyURL,
   };
 
-  // UNIMART 額外必填 CollectionAmount
-  if (params.subType === "UNIMART") {
+  // UNIMARTC2C 額外必填 CollectionAmount
+  if (params.subType === "UNIMARTC2C") {
     input.CollectionAmount = Math.round(params.amount);
   }
 

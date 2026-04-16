@@ -766,7 +766,7 @@ export const appRouter = router({
   logistics: router({
     getMapParams: protectedProcedure
       .input(z.object({
-        subType: z.enum(["FAMI", "UNIMART", "HILIFE"]),
+        subType: z.enum(["FAMIC2C", "UNIMARTC2C", "HILIFEC2C"]),
       }))
       .query(async ({ input }) => {
         const { getMapFormParams } = await import("./ecpay-logistics");
@@ -789,12 +789,12 @@ export const appRouter = router({
         if (!order) throw new TRPCError({ code: "NOT_FOUND", message: "訂單不存在" });
         if (!order.cvsStoreId) throw new TRPCError({ code: "BAD_REQUEST", message: "此訂單未選擇超商門市" });
 
-        const subTypeMap: Record<string, "FAMI" | "UNIMART" | "HILIFE"> = {
-          cvs_fami: "FAMI",
-          cvs_unimart: "UNIMART",
-          cvs_hilife: "HILIFE",
+        const subTypeMap: Record<string, "FAMIC2C" | "UNIMARTC2C" | "HILIFEC2C"> = {
+          cvs_fami: "FAMIC2C",
+          cvs_unimart: "UNIMARTC2C",
+          cvs_hilife: "HILIFEC2C",
         };
-        const subType = subTypeMap[order.shippingMethod || ""] || "FAMI";
+        const subType = subTypeMap[order.shippingMethod || ""] || "FAMIC2C";
         const itemName = `來點什麼訂單 ${order.orderNumber}`;
 
         const { createCvsLogisticsOrder } = await import("./ecpay-logistics");

@@ -160,16 +160,16 @@ export default function Checkout() {
   // 電子地圖選店
   const [isLoadingMap, setIsLoadingMap] = useState(false);
   const cvsSubTypeMap = {
-    cvs_fami: "FAMI" as const,
-    cvs_unimart: "UNIMART" as const,
-    cvs_hilife: "HILIFE" as const,
+    cvs_fami: "FAMIC2C" as const,
+    cvs_unimart: "UNIMARTC2C" as const,
+    cvs_hilife: "HILIFEC2C" as const,
   };
   const currentSubType = form.shippingMethod !== "home_delivery"
-    ? (cvsSubTypeMap as Record<string, "FAMI" | "UNIMART" | "HILIFE">)[form.shippingMethod] ?? null
+    ? (cvsSubTypeMap as Record<string, "FAMIC2C" | "UNIMARTC2C" | "HILIFEC2C">)[form.shippingMethod] ?? null
     : null;
 
   const { refetch: fetchMapParams } = trpc.logistics.getMapParams.useQuery(
-    { subType: currentSubType ?? "FAMI" },
+    { subType: currentSubType ?? "FAMIC2C" },
     { enabled: false }
   );
 
@@ -629,10 +629,9 @@ export default function Checkout() {
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       {[
                         { value: "home_delivery", icon: Truck, label: "宅配到府", desc: "送到指定地址" },
-                        // 超商取貨暫時關閉（測標審核中）
-                        // { value: "cvs_fami", icon: Store, label: "全家取貨", desc: "FamilyMart" },
-                        // { value: "cvs_unimart", icon: Store, label: "7-ELEVEN", desc: "統一超商" },
-                        // { value: "cvs_hilife", icon: Store, label: "萊爾富取貨", desc: "Hi-Life" },
+                        { value: "cvs_fami", icon: Store, label: "全家取貨", desc: "FamilyMart" },
+                        { value: "cvs_unimart", icon: Store, label: "7-ELEVEN", desc: "統一超商" },
+                        { value: "cvs_hilife", icon: Store, label: "萊爾富取貨", desc: "Hi-Life" },
                       ].map(({ value, icon: Icon, label, desc }) => (
                         <button
                           key={value}
