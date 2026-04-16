@@ -88,6 +88,14 @@ export interface MapParams {
 
 export const getMapFormParams = (params: MapParams) => {
   const config = getLogisticsConfig();
+  console.log("[ECPay Logistics] config:", {
+    merchantId: config.merchantId,
+    hashKey: config.hashKey ? config.hashKey.substring(0, 4) + "***" : "(empty)",
+    hashIV: config.hashIV ? config.hashIV.substring(0, 4) + "***" : "(empty)",
+    baseUrl: config.baseUrl,
+    env_LOGISTICS_MID: process.env.ECPAY_LOGISTICS_MERCHANT_ID ? "set" : "NOT SET",
+    env_MID: process.env.ECPAY_MERCHANT_ID ? "set" : "NOT SET",
+  });
   const input: Record<string, string | number> = {
     MerchantID: config.merchantId,
     MerchantTradeNo: params.tradeNo || `MAP${Date.now()}`,
