@@ -115,13 +115,24 @@ async function startServer() {
     //    父頁面監聽 storage 事件取得結果
     res.send(`<!DOCTYPE html><html><body><script>
       var payload = ${payload};
-      try {
-        localStorage.setItem('ecpay_map_result', JSON.stringify(payload));
-      } catch(e) {}
-      if (window.opener) {
-        try { window.opener.postMessage(payload, '*'); } catch(e) {}
+      var sent = false;
+      function tryPost() {
+        if (sent) return;
+        if (window.opener) {
+          try {
+            window.opener.postMessage(payload, '*');
+            sent = true;
+          } catch(e) {}
+        }
+        if (!sent) {
+          try {
+            localStorage.setItem('ecpay_map_result', JSON.stringify(payload));
+            sent = true;
+          } catch(e) {}
+        }
+        setTimeout(function() { window.close(); }, 300);
       }
-      window.close();
+      tryPost();
     </script></body></html>`);
   });
 
