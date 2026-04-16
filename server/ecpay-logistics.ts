@@ -5,27 +5,19 @@ import crypto from "crypto";
 // 金流和物流共用 MerchantID/HashKey/HashIV，但加密演算法不同
 // ═══════════════════════════════════════════════════════
 
-const LOGISTICS_CONFIG = {
-  stage: {
+const getLogisticsConfig = () => {
+  const mid = process.env.ECPAY_LOGISTICS_MERCHANT_ID || process.env.ECPAY_MERCHANT_ID || "";
+  const key = process.env.ECPAY_LOGISTICS_HASH_KEY || process.env.ECPAY_HASH_KEY || "";
+  const iv = process.env.ECPAY_LOGISTICS_HASH_IV || process.env.ECPAY_HASH_IV || "";
+  if (mid && key && iv) {
+    return { merchantId: mid, hashKey: key, hashIV: iv, baseUrl: "https://logistics.ecpay.com.tw" };
+  }
+  return {
     merchantId: "2000132",
     hashKey: "5294y06JbISpM5x9",
     hashIV: "v77hoKGq4kWxNNIS",
     baseUrl: "https://logistics-stage.ecpay.com.tw",
-  },
-  production: {
-    merchantId: process.env.ECPAY_LOGISTICS_MERCHANT_ID || process.env.ECPAY_MERCHANT_ID || "",
-    hashKey: process.env.ECPAY_LOGISTICS_HASH_KEY || process.env.ECPAY_HASH_KEY || "",
-    hashIV: process.env.ECPAY_LOGISTICS_HASH_IV || process.env.ECPAY_HASH_IV || "",
-    baseUrl: "https://logistics.ecpay.com.tw",
-  },
-};
-
-const getLogisticsConfig = () => {
-  const hasKeys =
-    (process.env.ECPAY_LOGISTICS_MERCHANT_ID || process.env.ECPAY_MERCHANT_ID) &&
-    (process.env.ECPAY_LOGISTICS_HASH_KEY || process.env.ECPAY_HASH_KEY) &&
-    (process.env.ECPAY_LOGISTICS_HASH_IV || process.env.ECPAY_HASH_IV);
-  return hasKeys ? LOGISTICS_CONFIG.production : LOGISTICS_CONFIG.stage;
+  };
 };
 
 // .NET URL Encode 規範（同金流）
