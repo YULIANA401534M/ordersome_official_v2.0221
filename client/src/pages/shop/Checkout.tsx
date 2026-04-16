@@ -131,11 +131,9 @@ export default function Checkout() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, (user as any)?.id]);
 
-  // 監聽綠界電子地圖選店結果
+  // 監聽綠界電子地圖選店結果（雙重機制：postMessage + localStorage）
   useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type !== "ecpay-map-result") return;
-      const { storeId, storeName, storeAddress } = event.data;
+    const applyStoreResult = (storeId: string, storeName: string, storeAddress: string) => {
       setForm(prev => ({
         ...prev,
         cvsStoreId: storeId || "",
@@ -149,8 +147,33 @@ export default function Checkout() {
       });
       toast.success(`已選擇門市：${storeName}`);
     };
+
+    // 機制 1：postMessage（opener 存在時）
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type !== "ecpay-map-result") return;
+      const { storeId, storeName, storeAddress } = event.data;
+      applyStoreResult(storeId, storeName, storeAddress);
+    };
     window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
+
+    // 機制 2：localStorage storage 事件（跨源 navigate 後 opener 被清除時）
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key !== "ecpay_map_result" || !event.newValue) return;
+      try {
+        const data = JSON.parse(event.newValue);
+        if (data?.type !== "ecpay-map-result") return;
+        applyStoreResult(data.storeId, data.storeName, data.storeAddress);
+        localStorage.removeItem("ecpay_map_result");
+      } catch {
+        // ignore
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      window.removeEventListener("message", handleMessage);
+      window.removeEventListener("storage", handleStorage);
+    };
   }, []);
 
   const [errors, setErrors] = useState<Record<string, string>>({});

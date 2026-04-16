@@ -102,19 +102,27 @@ async function startServer() {
   app.post("/api/ecpay/map-result", express.urlencoded({ extended: true }), (req, res) => {
     const { CVSStoreID, CVSStoreName, CVSAddress, LogisticsSubType } = req.body;
     console.log("[ECPay Map]", { CVSStoreID, CVSStoreName, CVSAddress, LogisticsSubType });
-    // 回傳 HTML 關閉電子地圖視窗，並用 postMessage 傳資料回父頁面
-    res.send(`
-      <script>
-        window.opener?.postMessage({
-          type: 'ecpay-map-result',
-          storeId: '${CVSStoreID || ""}',
-          storeName: '${(CVSStoreName || "").replace(/'/g, "\\'")}',
-          storeAddress: '${(CVSAddress || "").replace(/'/g, "\\'")}',
-          subType: '${LogisticsSubType || ""}'
-        }, '*');
-        window.close();
-      </script>
-    `);
+    const payload = JSON.stringify({
+      type: 'ecpay-map-result',
+      storeId: CVSStoreID || "",
+      storeName: CVSStoreName || "",
+      storeAddress: CVSAddress || "",
+      subType: LogisticsSubType || "",
+    });
+    // 雙重機制：
+    // 1. postMessage：若 opener 仍存在（同源或舊版瀏覽器）直接傳
+    // 2. localStorage：跨源 navigate 後 opener 會被清除，改寫入 localStorage，
+    //    父頁面監聽 storage 事件取得結果
+    res.send(`<!DOCTYPE html><html><body><script>
+      var payload = ${payload};
+      try {
+        localStorage.setItem('ecpay_map_result', JSON.stringify(payload));
+      } catch(e) {}
+      if (window.opener) {
+        try { window.opener.postMessage(payload, '*'); } catch(e) {}
+      }
+      window.close();
+    </script></body></html>`);
   });
 
   // ─── ECPay 物流：物流狀態通知 ───
