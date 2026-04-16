@@ -629,9 +629,10 @@ export default function Checkout() {
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       {[
                         { value: "home_delivery", icon: Truck, label: "宅配到府", desc: "送到指定地址" },
-                        { value: "cvs_fami", icon: Store, label: "全家取貨", desc: "FamilyMart" },
-                        { value: "cvs_unimart", icon: Store, label: "7-ELEVEN", desc: "統一超商" },
-                        { value: "cvs_hilife", icon: Store, label: "萊爾富取貨", desc: "Hi-Life" },
+                        // 超商取貨暫時關閉（測標審核中）
+                        // { value: "cvs_fami", icon: Store, label: "全家取貨", desc: "FamilyMart" },
+                        // { value: "cvs_unimart", icon: Store, label: "7-ELEVEN", desc: "統一超商" },
+                        // { value: "cvs_hilife", icon: Store, label: "萊爾富取貨", desc: "Hi-Life" },
                       ].map(({ value, icon: Icon, label, desc }) => (
                         <button
                           key={value}
