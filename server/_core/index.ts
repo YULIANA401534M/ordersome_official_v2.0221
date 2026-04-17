@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
+import { CronJob } from "cron";
 
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
@@ -324,8 +325,8 @@ async function startServer() {
   server.listen(port, "0.0.0.0", () => {
     console.log(`Server running on http://0.0.0.0:${port}/`);
 
-    // 排程發布檢查（每分鐘）
-    setInterval(async () => {
+    // ─── 排程發布 cron（每分鐘）─────────────────────────────────────
+    new CronJob("* * * * *", async () => {
       try {
         const now = new Date();
         const database = await db.getDb();
@@ -345,19 +346,15 @@ async function startServer() {
             )
           );
       } catch (e) {
-        console.error("[Scheduler] publishScheduled error", e);
+        console.error("[publishScheduled cron]", e);
       }
-    }, 60 * 1000);
+    }, null, true);
 
-    // 每天 07:00 台灣時間（UTC 23:00）自動產生大永派車單
-    setInterval(async () => {
+    // ─── 每天 07:00 台灣時間（UTC 23:00）自動產生大永派車單 ────────
+    // 使用 cron 時區「Asia/Taipei」，每天 07:00 觸發
+    new CronJob("0 7 * * *", async () => {
       try {
         const now = new Date();
-        // 台灣時間 = UTC + 8
-        const twHour = (now.getUTCHours() + 8) % 24;
-        const twMinute = now.getUTCMinutes();
-        if (twHour !== 7 || twMinute !== 0) return;
-
         const database = await db.getDb();
         if (!database) return;
         const client = (database as any).$client;
@@ -451,7 +448,77 @@ async function startServer() {
       } catch (e) {
         console.error("[Cron] 07:00 dispatch error", e);
       }
-    }, 60 * 1000); // 每分鐘檢查一次時間是否到達 07:00
+    }, null, true, "Asia/Taipei");
+
+    // ─── 積欠款 LINE 推播（每小時整點，依設定決定是否推播）────────
+    new CronJob("0 * * * *", async () => {
+      try {
+        const TENANT_ID = 90004;
+
+        const database = await db.getDb();
+        if (!database) return;
+        const client = (database as any).$client;
+
+        // 讀取推播設定
+        const [enabledRows] = await client.execute(
+          "SELECT value FROM dy_settings WHERE tenantId = ? AND `key` = 'overdue_push_enabled' LIMIT 1",
+          [TENANT_ID]
+        );
+        if ((enabledRows as any[])[0]?.value !== "true") return;
+
+        const [hourRows] = await client.execute(
+          "SELECT value FROM dy_settings WHERE tenantId = ? AND `key` = 'overdue_push_hour' LIMIT 1",
+          [TENANT_ID]
+        );
+        const pushHour = parseInt((hourRows as any[])[0]?.value ?? "9");
+        // Railway 是 UTC，換算台灣時間（UTC+8）
+        const currentUTCHour = new Date().getUTCHours();
+        const targetUTCHour = (pushHour - 8 + 24) % 24;
+        if (currentUTCHour !== targetUTCHour) return;
+
+        // 查出所有逾期未付且有 lineUserId 的客戶
+        const [overdueRows] = await client.execute(
+          `SELECT
+             c.id, c.name, c.lineUserId,
+             SUM(ar.amount - ar.paidAmount) as unpaidTotal,
+             MAX(DATEDIFF(NOW(), ar.dueDate)) as maxOverdueDays
+           FROM dy_customers c
+           JOIN dy_ar_records ar ON ar.customerId = c.id
+           WHERE ar.tenantId = ?
+             AND ar.status IN ('unpaid', 'partial', 'overdue')
+             AND ar.dueDate < NOW()
+             AND c.lineUserId IS NOT NULL
+           GROUP BY c.id, c.name, c.lineUserId
+           HAVING maxOverdueDays > 0`,
+          [TENANT_ID]
+        );
+        const overdueList = overdueRows as any[];
+        if (!overdueList.length) return;
+
+        const LINE_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+        if (!LINE_TOKEN) return;
+
+        const BASE_URL = process.env.BASE_URL || "https://ordersome.com.tw";
+        for (const customer of overdueList) {
+          const msg = `【大永蛋品】帳款提醒\n\n${customer.name} 您好，\n\n您目前有逾期未付款項：\n金額：$${Number(customer.unpaidTotal).toLocaleString("zh-TW")}\n逾期：${customer.maxOverdueDays} 天\n\n請登入客戶入口查看明細：\n${BASE_URL}/dayone/portal\n\n如已付款請忽略此訊息。`;
+          await fetch("https://api.line.me/v2/bot/message/push", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${LINE_TOKEN}`,
+            },
+            body: JSON.stringify({
+              to: customer.lineUserId,
+              messages: [{ type: "text", text: msg }],
+            }),
+          }).catch((e) => console.error(`[overdue push] ${customer.name}`, e));
+        }
+
+        console.log(`[overdue push] 推播完成，共 ${overdueList.length} 位客戶`);
+      } catch (e) {
+        console.error("[overdue push cron]", e);
+      }
+    }, null, true);
   });
 }
 
