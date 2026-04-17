@@ -32,8 +32,8 @@ export const users = mysqlTable("users", {
   phone: varchar("phone", { length: 20 }),
   address: text("address"),
   loginMethod: varchar("loginMethod", { length: 64 }),
-  // Role-based access control: 6 roles (super_admin, manager, franchisee, staff, customer, driver)
-  role: mysqlEnum("role", ["super_admin", "manager", "franchisee", "staff", "customer", "driver"]).default("customer").notNull(),
+  // Role-based access control: 8 roles
+  role: mysqlEnum("role", ["super_admin", "manager", "franchisee", "staff", "store_manager", "customer", "driver", "portal_customer"]).default("customer").notNull(),
   // Additional profile fields
   fullName: text("fullName"),
   shippingAddress: text("shippingAddress"),
@@ -62,6 +62,10 @@ export const users = mysqlTable("users", {
   status: mysqlEnum("status", ["active", "suspended"]).default("active").notNull(),
   // Fine-grained permissions (JSON array of permission strings)
   permissions: json("permissions").$type<string[]>(),
+  // Procurement module access toggle (for manager / super_admin)
+  has_procurement_access: boolean("has_procurement_access").default(false).notNull(),
+  // Last login timestamp (updated on each successful login)
+  last_login_at: timestamp("last_login_at"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -69,6 +73,22 @@ export const users = mysqlTable("users", {
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
+
+/**
+ * Franchisee feature flags — per-user fine-grained feature toggles for franchisee role
+ */
+export const franchiseeFeatureFlags = mysqlTable("franchisee_feature_flags", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("user_id").notNull(),
+  tenantId: int("tenant_id").default(1).notNull(),
+  featureKey: varchar("feature_key", { length: 64 }).notNull(),
+  isEnabled: boolean("is_enabled").default(false).notNull(),
+  updatedBy: int("updated_by"),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+});
+
+export type FranchiseeFeatureFlag = typeof franchiseeFeatureFlags.$inferSelect;
+export type InsertFranchiseeFeatureFlag = typeof franchiseeFeatureFlags.$inferInsert;
 
 /**
  * Product categories
