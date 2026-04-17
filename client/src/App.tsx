@@ -80,7 +80,7 @@ import OSInventory from "./pages/dashboard/OSInventory";
 import OSScheduling from "./pages/dashboard/OSScheduling";
 import OSDailyReport from "./pages/dashboard/OSDailyReport";
 import OSProducts from "./pages/dashboard/OSProducts";
-import OSProcurement from "./pages/dashboard/OSProcurement";
+import OSPurchasing from "./pages/dashboard/OSPurchasing";
 import OSRebate from "./pages/dashboard/OSRebate";
 import OSProfitLoss from "./pages/dashboard/OSProfitLoss";
 import OSFranchiseePayments from "./pages/dashboard/OSFranchiseePayments";
@@ -243,7 +243,7 @@ function Router() {
       <Route path="/dashboard/products" component={OSProducts} />
       <Route path="/dashboard/delivery" component={OSDelivery} />
       <Route path="/dashboard/customers" component={ComingSoon} />
-      <Route path="/dashboard/purchasing" component={OSProcurement} />
+      <Route path="/dashboard/purchasing" component={OSPurchasing} />
       <Route path="/dashboard/rebate" component={OSRebate} />
       <Route path="/dashboard/profit-loss" component={OSProfitLoss} />
       <Route path="/dashboard/franchisee-payments" component={OSFranchiseePayments} />
