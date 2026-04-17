@@ -35,6 +35,7 @@ import {
   Receipt,
   ChevronDown,
   ChevronRight,
+  TrendingUp,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
@@ -137,8 +138,9 @@ export default function AdminDashboardLayout({
         { key: "delivery",      icon: Truck,        label: "配送管理",  path: "/dashboard/delivery",   costOnly: false },
         { key: "crm_customers", icon: Users,        label: "客戶管理",  path: "/dashboard/customers",  costOnly: false },
         { key: "purchasing_os", icon: ShoppingCart, label: "叫貨管理",  path: "/dashboard/purchasing", costOnly: false },
-        { key: "rebate_os",     icon: CreditCard,   label: "退佣帳款",  path: "/dashboard/rebate",     costOnly: true  },
-        { key: "accounting",    icon: Receipt,      label: "帳務管理",  path: "/dashboard/accounting", costOnly: false },
+        { key: "rebate_os",     icon: CreditCard,   label: "退佣帳款",  path: "/dashboard/rebate",      costOnly: true  },
+        { key: "profit_loss",   icon: TrendingUp,   label: "損益儀表板", path: "/dashboard/profit-loss", costOnly: true  },
+        { key: "accounting",    icon: Receipt,      label: "帳務管理",  path: "/dashboard/accounting",  costOnly: false },
       ];
       for (const def of osModuleDefs) {
         // costOnly 項目：只有 canSeeCostModules 才顯示

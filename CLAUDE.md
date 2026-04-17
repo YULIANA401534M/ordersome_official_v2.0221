@@ -1,6 +1,6 @@
 # CLAUDE.md — 宇聯國際餐飲 OrderSome 開發主檔
 
-> **版本**：v5.8。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.9。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -244,6 +244,26 @@ working tree: **有未 commit 的修改**（見下方）
 
 ---
 
+## R5 tRPC API 路由（server/routers.ts + server/routers/）
+
+### admin（adminRouter — server/routers/admin.ts）
+
+| Procedure | 類型 | 權限 | 說明 |
+|-----------|------|------|------|
+| `listUsers` | query | superAdminProcedure | 列出所有用戶 |
+| `updateUserRole` | mutation | superAdminProcedure | 更新用戶角色 |
+| `getAllFranchiseeFlags` | query | superAdminProcedure | 取得所有加盟主的 feature flags |
+| `setFranchiseeFlag` | mutation | superAdminProcedure | 設定單一加盟主的功能開關 |
+| `toggleProcurementAccess` | mutation | superAdminProcedure | 開關指定帳號的採購存取權 |
+
+### profitLoss（profitLossRouter — server/routers/profitLoss.ts）
+
+| Procedure | 類型 | 權限 | 說明 |
+|-----------|------|------|------|
+| `getProfitLoss` | query | adminProcedure | 取得指定門市指定月份的損益報表（日報加總 + 月報費用 + 退佣）|
+
+---
+
 ## 前端路由（完整清單）
 
 ### 品牌官網（來點什麼）
@@ -281,6 +301,7 @@ working tree: **有未 commit 的修改**（見下方）
 | `/dashboard/purchasing` | 叫貨管理（新）|
 | `/dashboard/products` | 品項成本（新）|
 | `/dashboard/rebate` | 退佣帳款（新）|
+| `/dashboard/profit-loss` | 損益儀表板（新）|
 
 ### 大永 ERP（/dayone）
 `/dayone` / `/dayone/orders` / `/dayone/customers` / `/dayone/drivers` / `/dayone/products` / `/dayone/inventory` / `/dayone/purchase` / `/dayone/districts` / `/dayone/reports` / `/dayone/suppliers` / `/dayone/liff-orders` / `/dayone/ar` / `/dayone/dispatch` / `/dayone/purchase-receipts`
