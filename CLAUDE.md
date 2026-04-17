@@ -1,6 +1,6 @@
 # CLAUDE.md — 宇聯國際餐飲 OrderSome 開發主檔
 
-> **版本**：v5.15。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.16。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -26,14 +26,14 @@ git status && git log --oneline -3
 
 ---
 
-### 最新 Git 狀態（2026-04-18 v5.15）
+### 最新 Git 狀態（2026-04-18 v5.16）
 
 最後三個 commit（已 push）：
-1. `(待 commit)` — fix: debug 階段一 — TS 錯誤全清 + scheduling/delivery raw SQL 修正
+1. `aabd879` — fix: debug 階段一 — TS 錯誤全清
 2. `f7a57b4` — docs: CLAUDE.md v5.14
 3. `67feed7` — feat: 加盟主管理頁 v1
 
-working tree: dirty（debug 修改尚未 commit）
+working tree: dirty（OSPurchasing.tsx + AdminPermissions.tsx + CLAUDE.md v5.16 待 commit）
 
 ---
 
@@ -47,7 +47,7 @@ working tree: dirty（debug 修改尚未 commit）
 | `/dashboard/scheduling` | `OSScheduling.tsx` | ✅ 完成 | 早/晚/機動三 Tab + 假日標示 + 月統計 + Excel 匯出 |
 | `/dashboard/delivery` | `OSDelivery.tsx` | ✅ 完成（有 TS 錯誤待修） | 派車單 + 狀態推進 + 簽收自動產生應收 |
 | `/dashboard/franchisees` | `OSCustomers.tsx` | ✅ 完成 | 加盟主列表 + 功能開關 + 採購存取 + 新增帳號 |
-| `/dashboard/purchasing` | `OSPurchasing.tsx` | ❌ **空殼** | 包著 DayonePurchaseContent，需重建 |
+| `/dashboard/purchasing` | `OSPurchasing.tsx` | ✅ 完成 | KPI 卡片 + 叫貨單列表 + 詳情展開 + 新增 Dialog + LINE 推播 + 廠商 LINE 設定 + Excel 匯出 |
 | `/dashboard/daily-report` | `OSDailyReport.tsx` | ✅ 完成 | 門市日報 |
 | `/dashboard/products` | `OSProducts.tsx` | ✅ 完成 | 品項成本 |
 | `/dashboard/rebate` | `OSRebate.tsx` | ✅ 完成 | 退佣帳款 |
@@ -57,7 +57,7 @@ working tree: dirty（debug 修改尚未 commit）
 ### 🔴 下一階段開發計畫（按優先順序）
 
 #### ✅ 階段一：Debug — 已完成（2026-04-18）
-修復了以下錯誤（非 TS7006 implicit any 的所有錯誤已清零）：
+修復了以下錯誤（非 TS7006 implicit any 的所有錯誤已清零，含 AdminPermissions TS7031）：
 - `scheduling.ts` / `delivery.ts`：`db.execute(sql, params)` → `(db as any).$client.execute(sql, params)`
 - `OSFranchiseePayments.tsx`：`isLoading` → `isPending`、`keepPreviousData` → `placeholderData`
 - `OSProfitLoss.tsx`：`keepPreviousData` → `placeholderData`
@@ -72,7 +72,7 @@ working tree: dirty（debug 修改尚未 commit）
 - `SOPKnowledgeBase.tsx`：`d` → `(d: any)`
 - `server/db.ts`：`_db` 型別 → `any`
 
-#### 階段二：進銷存重建 — OSPurchasing.tsx（中大型，1-2 小時）
+#### ✅ 階段二：進銷存重建 — OSPurchasing.tsx（已完成，2026-04-18）
 **目標**：把 `/dashboard/purchasing` 從大永殼換成來點什麼自己的採購介面
 
 後端 `procurement` router 已有完整 7 個 procedure：

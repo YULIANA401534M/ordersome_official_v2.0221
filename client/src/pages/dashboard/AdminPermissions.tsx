@@ -249,7 +249,7 @@ export default function AdminPermissions() {
                 <div className="p-8 text-center text-gray-400 text-sm">目前沒有加盟主帳號</div>
               ) : (
                 <div className="divide-y divide-gray-100">
-                  {allFlagsQuery.data?.map(({ user, flags }) => (
+                  {allFlagsQuery.data?.map(({ user, flags }: { user: any; flags: any }) => (
                     <div key={user.id} className="px-6 py-4">
                       <div className="flex items-center gap-3 mb-3">
                         <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
