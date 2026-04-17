@@ -284,7 +284,10 @@ export default function AdminDashboardLayout({
     : [];
 
   const franchiseItems = isOSTenant && hasPermission("manage_franchise")
-    ? [{ icon: Store, label: "加盟詢問", path: "/dashboard/franchise-inquiries" }]
+    ? [
+        { icon: Store, label: "加盟詢問", path: "/dashboard/franchise-inquiries" },
+        { icon: Users, label: "加盟主管理", path: "/dashboard/franchisees" },
+      ]
     : [];
 
   // ── 來點什麼分組（門市管理）── 接模組開關

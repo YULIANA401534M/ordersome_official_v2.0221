@@ -4,7 +4,8 @@ import AdminDashboardLayout from "@/components/AdminDashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Phone, Mail, MapPin, DollarSign, Briefcase, Save } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Loader2, Phone, Mail, MapPin, DollarSign, Briefcase, Save, UserPlus } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -12,6 +13,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 const statusLabels: Record<string, string> = {
@@ -30,28 +37,95 @@ const statusColors: Record<string, string> = {
   cancelled: "bg-gray-100 text-gray-800",
 };
 
+// ── ConvertDialog ─────────────────────────────────────────────────────────────
+
+function ConvertDialog({
+  inquiry,
+  onClose,
+  onSuccess,
+}: {
+  inquiry: any;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [form, setForm] = useState({
+    email: inquiry.email ?? "",
+    name: inquiry.name ?? "",
+    phone: inquiry.phone ?? "",
+    password: "",
+  });
+
+  const convert = trpc.franchisee.convertToFranchisee.useMutation({
+    onSuccess: () => {
+      toast.success("已建立加盟主帳號");
+      onSuccess();
+      onClose();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    convert.mutate({
+      inquiryId: inquiry.id,
+      email: form.email,
+      name: form.name,
+      phone: form.phone || undefined,
+      password: form.password || undefined,
+    });
+  }
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>轉為正式加盟主</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={submit} className="space-y-3">
+          <div>
+            <label className="text-sm font-medium text-gray-700">姓名 *</label>
+            <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required className="mt-1" />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-gray-700">Email *</label>
+            <Input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} required className="mt-1" />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-gray-700">電話</label>
+            <Input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className="mt-1" />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-gray-700">初始密碼</label>
+            <Input type="password" value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} className="mt-1" placeholder="留空則帳號無密碼登入" />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="ghost" onClick={onClose}>取消</Button>
+            <Button type="submit" disabled={convert.isPending}>
+              {convert.isPending ? "建立中..." : "建立帳號"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
+
 export default function FranchiseInquiries() {
   const [editingNotes, setEditingNotes] = useState<Record<number, string>>({});
+  const [convertTarget, setConvertTarget] = useState<any | null>(null);
+
   const { data: inquiries, isLoading, refetch } = trpc.franchise.listInquiries.useQuery();
+
   const updateStatus = trpc.franchise.updateInquiryStatus.useMutation({
-    onSuccess: () => {
-      toast.success("狀態已更新");
-      refetch();
-    },
-    onError: (error) => {
-      toast.error(error.message || "更新失敗");
-    },
+    onSuccess: () => { toast.success("狀態已更新"); refetch(); },
+    onError: (error) => toast.error(error.message || "更新失敗"),
   });
 
   const updateNotes = trpc.franchise.updateInquiryNotes.useMutation({
-    onSuccess: () => {
-      toast.success("備註已儲存");
-      refetch();
-      setEditingNotes({});
-    },
-    onError: (error) => {
-      toast.error(error.message || "儲存失敗");
-    },
+    onSuccess: () => { toast.success("備註已儲存"); refetch(); setEditingNotes({}); },
+    onError: (error) => toast.error(error.message || "儲存失敗"),
   });
 
   const handleStatusChange = (id: number, status: string) => {
@@ -64,9 +138,7 @@ export default function FranchiseInquiries() {
 
   const handleSaveNotes = (id: number) => {
     const notes = editingNotes[id];
-    if (notes !== undefined) {
-      updateNotes.mutate({ id, notes });
-    }
+    if (notes !== undefined) updateNotes.mutate({ id, notes });
   };
 
   if (isLoading) {
@@ -98,6 +170,17 @@ export default function FranchiseInquiries() {
                       <Badge className={statusColors[inquiry.status]}>
                         {statusLabels[inquiry.status]}
                       </Badge>
+                      {inquiry.status !== "completed" && inquiry.status !== "cancelled" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 text-xs gap-1 text-green-700 border-green-300 hover:bg-green-50"
+                          onClick={() => setConvertTarget(inquiry)}
+                        >
+                          <UserPlus className="w-3.5 h-3.5" />
+                          轉為正式加盟主
+                        </Button>
+                      )}
                       <Select
                         value={inquiry.status}
                         onValueChange={(value) => handleStatusChange(inquiry.id, value)}
@@ -157,7 +240,7 @@ export default function FranchiseInquiries() {
                   <div className="mt-4 text-sm text-gray-500">
                     提交時間：{new Date(inquiry.createdAt).toLocaleString('zh-TW')}
                   </div>
-                  
+
                   {/* 備註區塊 */}
                   <div className="mt-6 pt-4 border-t border-gray-200">
                     <div className="flex items-center justify-between mb-2">
@@ -191,6 +274,14 @@ export default function FranchiseInquiries() {
           )}
         </div>
       </div>
+
+      {convertTarget && (
+        <ConvertDialog
+          inquiry={convertTarget}
+          onClose={() => setConvertTarget(null)}
+          onSuccess={() => refetch()}
+        />
+      )}
     </AdminDashboardLayout>
   );
 }
