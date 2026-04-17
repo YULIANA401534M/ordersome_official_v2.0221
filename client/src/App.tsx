@@ -68,7 +68,7 @@ import ContentManagement from "./pages/dashboard/ContentManagement";
 import ContentEditor from "./pages/dashboard/ContentEditor";
 import AIWriter from "./pages/dashboard/AIWriter";
 import FranchiseInquiries from "./pages/dashboard/FranchiseInquiries";
-import Franchisees from "./pages/dashboard/Franchisees";
+import OSCustomers from "./pages/dashboard/OSCustomers";
 import News from "./pages/News";
 import NewsArticle from "./pages/NewsArticle";
 import SOPKnowledgeBase from "./pages/dashboard/SOPKnowledgeBase";
@@ -224,7 +224,7 @@ function Router() {
       <Route path="/dashboard/content/edit/:id" component={ContentEditor} />
       <Route path="/dashboard/ai-writer" component={AIWriter} />
       <Route path="/dashboard/franchise-inquiries" component={FranchiseInquiries} />
-      <Route path="/dashboard/franchisees" component={Franchisees} />
+      <Route path="/dashboard/franchisees" component={OSCustomers} />
 
       {/* Franchisee Routes */}
       <Route path="/dashboard/franchise" component={FranchiseDashboardPage} />
