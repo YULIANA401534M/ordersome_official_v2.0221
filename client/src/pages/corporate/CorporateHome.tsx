@@ -42,7 +42,7 @@ export default function CorporateHome() {
                   </Button>
                 </Link>
                 <Link href="/shop">
-                  <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
+                  <Button size="lg" variant="outline" className="bg-transparent border-white text-white hover:bg-white/10 hover:text-white">
                     線上商城
                   </Button>
                 </Link>

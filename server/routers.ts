@@ -883,7 +883,7 @@ export const appRouter = router({
         message: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        await db.createFranchiseInquiry(input);
+        await db.createFranchiseInquiry({ ...input, tenantId: 1 });
         // Notify owner
         await notifyOwner({
           title: `新加盟諮詢 - ${input.name}`,

@@ -65,7 +65,7 @@ const TEMPERATURE_OPTIONS = ['常溫', '冷藏', '冷凍'] as const;
 function OrderListTab() {
   const [startDate, setStartDate] = useState(weekStartStr());
   const [endDate, setEndDate] = useState(todayStr());
-  const [status, setStatus] = useState('');
+  const [status, setStatus] = useState('all');
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [pushDialogOrderId, setPushDialogOrderId] = useState<number | null>(null);
   const [pushDialogDate, setPushDialogDate] = useState('');
@@ -73,7 +73,7 @@ function OrderListTab() {
   const { data: orders = [], refetch } = trpc.procurement.list.useQuery({
     startDate,
     endDate,
-    status: status || undefined,
+    status: status === 'all' ? undefined : status || undefined,
   });
 
   const updateStatus = trpc.procurement.updateStatus.useMutation({
@@ -100,7 +100,7 @@ function OrderListTab() {
               <SelectValue placeholder="全部" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">全部</SelectItem>
+              <SelectItem value="all">全部</SelectItem>
               {Object.entries(STATUS_LABELS).map(([v, l]) => (
                 <SelectItem key={v} value={v}>{l}</SelectItem>
               ))}
