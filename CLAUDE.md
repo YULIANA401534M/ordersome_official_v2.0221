@@ -1,6 +1,6 @@
 # CLAUDE.md — 宇聯國際餐飲 OrderSome 開發主檔
 
-> **版本**：v5.13。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.14。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -16,102 +16,109 @@ git status && git log --oneline -3
 
 ## 當前開發狀態（換對話框必讀）
 
-> 最後更新：2026-04-18。新大腦拿到這份文件後，先讀這個區塊再開始工作。
+> 最後更新：2026-04-18 v5.14。**新大腦進來請從這裡開始讀，不要跳過。**
 
-### 今天完成的所有工作（2026-04-18）
+### ⚠️ 開發守則（每次換對話框都要遵守）
 
-**Migration（全部已在 TiDB 執行完畢）**
-- 0022：module_definitions 補四個 ERP 模組
-- 0023：store_manager role、has_procurement_access、last_login_at、franchisee_feature_flags
-- 0024：CA 表單三層（os_menu_items / os_oem_products / os_cost_audit_log）
-- 0025：os_franchisee_contracts / os_franchisee_payments
-- node script 直接建立：os_schedule_templates / os_schedules / os_delivery_orders / os_delivery_items
-- 宇聯總部新增至 stores 表，storeId = 401534
-
-**後端新增 Router**
-- profitLoss：getProfitLoss（日報+月報費用+退佣整合損益）
-- franchiseePayment：listPayments / createPayment / markPaid / exportPayments
-- caMenu：（整合進 osProducts，menuItemUpsert / menuIngredientSave / oemProductUpsert / costAuditLog）
-- scheduling：listTemplates / upsertTemplate / deleteTemplate / listSchedules / upsertSchedule / batchUpsertSchedules / getMonthSummary
-- delivery：listDeliveryOrders / getDeliveryDetail / createDeliveryOrder / updateStatus / getMonthStats
-- dailyReport：新增 syncFromMake publicProcedure（Make Webhook 推日報用）
-
-**前端新頁面（全部已完成，非空殼）**
-- `/dashboard/profit-loss` → `OSProfitLoss.tsx`（損益儀表板，KPI 三卡片 + 費用明細 + canSeeCostModules 遮罩）
-- `/dashboard/franchisee-payments` → `OSFranchiseePayments.tsx`（加盟主帳款，應收管理 + 標記收款 + 週結摘要 + 匯出 Excel）
-- `/dashboard/ca-menu` → `OSCaMenu.tsx`（CA 菜單成本，三 Tab：菜單品項/OEM/成本歷史）
-- `/dashboard/scheduling` → `OSScheduling.tsx`（排班管理，早/晚/機動三 Tab + 點格子編輯 + 月統計 + 員工設定 + Excel 匯出）
-- `/dashboard/delivery` → `OSDelivery.tsx`（配送管理，派車單卡片 + 狀態推進 + 簽收自動產生應收 + 新增 Dialog）
-
-**權限系統重構**
-- `AdminDashboardLayout.tsx`：側邊欄依 role 控制（super_admin / manager / store_manager / franchisee / staff）
-- `canSeeCostModules` = super_admin 或 has_procurement_access=1（退佣/品項成本/損益才能看）
-- 帳務管理選單：superAdminOnly
-- `users` 表新增採購存取權開關（toggleProcurementAccess）
-
-**路由清理**
-- 刪除重複的 `/dashboard/franchise` 舊版 route
-- `/dashboard/accounting` 改指向 `OSFranchiseePayments`
-- `/dashboard/delivery` 從 `ComingSoon` 改為 `OSDelivery`
+1. 每次 commit 前**必須更新 CLAUDE.md**，反映最新完成項目和下一步
+2. CLAUDE.md 是跨對話框的唯一記憶體，不更新等於下一個 Claude 失憶
+3. 版本號每次 +0.01，格式 v5.XX
 
 ---
 
-### 待處理清單（優先順序）
+### 最新 Git 狀態（2026-04-18）
 
-**P1 — 立刻可做，不需外部確認**
+最後三個 commit（已 push）：
+1. `67feed7` — feat: 加盟主管理頁 v1 — 列表/功能開關/採購存取/帳款連結 2026-04-18
+2. `b1b3c32` — feat: 0026 SQL版本記錄 + 假日批次查詢 + OSScheduling假日標示 2026-04-18
+3. `fdc8216` — docs: CLAUDE.md v5.12 2026-04-18
 
-1. ✅ **Migration 0026 SQL 檔案補建**（2026-04-18 完成）
-   `drizzle/0026_scheduling_delivery.sql` 已建立
+working tree: clean
 
-2. ✅ **假日批次查詢補完**（2026-04-18 完成）
-   `dailyReport.getHolidaysByMonth` procedure 已新增
-   `OSScheduling.tsx` 已改用 batch query 標示假日欄位
+---
 
-3. **OSCustomers 加盟主管理頁補強**
-   目前 `/dashboard/os-customers` 是骨架（`OSCustomers.tsx` 包裝 DayoneCustomersContent）
-   需要改為真正的加盟主管理頁面：
-   - 加盟主列表（從 `users WHERE role='franchisee'`）
-   - 合約上傳（`os_franchisee_contracts`）
-   - 帳款往來連結（到 `/dashboard/franchisee-payments` 篩選該加盟主）
-   - 功能開關設定（`franchisee_feature_flags`）
+### 已完成模組一覽（截至 2026-04-18）
+
+| 路由 | 元件 | 狀態 | 說明 |
+|------|------|------|------|
+| `/dashboard/profit-loss` | `OSProfitLoss.tsx` | ✅ 完成 | KPI 三卡片 + 費用明細 + canSeeCostModules 遮罩 |
+| `/dashboard/franchisee-payments` | `OSFranchiseePayments.tsx` | ✅ 完成（有 TS 錯誤待修） | 應收管理 + 標記收款 + 週結摘要 + 匯出 Excel |
+| `/dashboard/ca-menu` | `OSCaMenu.tsx` | ✅ 完成 | 菜單品項/OEM/成本歷史 三 Tab |
+| `/dashboard/scheduling` | `OSScheduling.tsx` | ✅ 完成 | 早/晚/機動三 Tab + 假日標示 + 月統計 + Excel 匯出 |
+| `/dashboard/delivery` | `OSDelivery.tsx` | ✅ 完成（有 TS 錯誤待修） | 派車單 + 狀態推進 + 簽收自動產生應收 |
+| `/dashboard/franchisees` | `OSCustomers.tsx` | ✅ 完成 | 加盟主列表 + 功能開關 + 採購存取 + 新增帳號 |
+| `/dashboard/purchasing` | `OSPurchasing.tsx` | ❌ **空殼** | 包著 DayonePurchaseContent，需重建 |
+| `/dashboard/daily-report` | `OSDailyReport.tsx` | ✅ 完成 | 門市日報 |
+| `/dashboard/products` | `OSProducts.tsx` | ✅ 完成 | 品項成本 |
+| `/dashboard/rebate` | `OSRebate.tsx` | ✅ 完成 | 退佣帳款 |
+
+---
+
+### 🔴 下一階段開發計畫（按優先順序）
+
+#### 階段一：Debug — 修既有 TS 錯誤（30 分鐘）
+**目標**：讓 `npx tsc --noEmit` 零錯誤
+
+已知錯誤清單：
+- `OSFranchiseePayments.tsx` L501 / L513 / L572 / L582：`isLoading` → 改為 `isPending`（TanStack Query v5 API 變更）
+- `OSDelivery.tsx` L183：`detail` possibly undefined → 加 optional chain 或 early return
+- `AdminDashboardLayout.tsx` L105 / L108 / L113：tenantId missing + listDispatchOrders → listDispatch（查 dayone router）
+- `AdminOrders.tsx` L131：Set iteration → `Array.from(set)` 或加 `--downlevelIteration`
+
+#### 階段二：進銷存重建 — OSPurchasing.tsx（中大型，1-2 小時）
+**目標**：把 `/dashboard/purchasing` 從大永殼換成來點什麼自己的採購介面
+
+後端 `procurement` router 已有完整 7 個 procedure：
+- `list`：列出叫貨單（可篩日期/狀態）
+- `create`：手動建立叫貨單
+- `getDetail`：叫貨單 + 品項明細
+- `updateStatus`：pending → sent → confirmed → received / cancelled
+- `groupBySupplier`：依廠商分組顯示
+- `pushToLine`：推播給廠商 LINE
+- `supplierLineList` / `supplierLineUpsert`：廠商 LINE 管理
+- `importFromDamai`：Make Webhook 匯入（已有，publicProcedure）
+
+前端需要的功能：
+1. 叫貨單列表（KPI 卡 + 篩選 + 狀態 Badge）
+2. 叫貨單詳情 Dialog（品項明細 + 狀態推進按鈕）
+3. 手動建立叫貨單 Dialog
+4. 依廠商分組 Tab 或視圖
+5. Excel 匯出
+
+#### 階段三：帳務系統補強（中型）
+**目標**：讓 `OSFranchiseePayments.tsx` 支援批次匯入
+
+- Excel 匯入 → 解析欄位 → 預覽確認 → 批次寫入 `os_franchisee_payments`
+- 需要確認匯入的 Excel 欄位格式（下次對話框開始前先問使用者）
+- 後端需新增 `batchCreatePayments` procedure
+
+---
+
+### 待處理清單（P1 全部完成，現在執行上方階段計畫）
 
 **P2 — 需要外部確認後才能做**
 
-4. **大永 LIFF 正式 liffId**（等蛋博用自己的 LINE 後台建立）
+1. **大永 LIFF 正式 liffId**（等蛋博用自己的 LINE 後台建立）
    建立後只需改 `client/src/pages/liff/LiffOrder.tsx` 的 `TENANT_CONFIG dayone.liffId` 一行
 
-5. **大永積欠款 LINE 推播邏輯補完**
+2. **大永積欠款 LINE 推播邏輯補完**
    cron 基礎已建（`server/_core/index.ts`），每小時整點執行
-   需實作：查 `dy_customers WHERE lineUserId IS NOT NULL` + 查積欠款 + 發 LINE push
    等蛋博確認 `dy_settings` 的 `overdue_push_enabled` / `overdue_push_hour` 設定值
 
-6. **大永 Portal 重設密碼 email**
-   後端 `requestPasswordReset` / `resetPasswordWithToken` 已建
-   前端 `DayonePortalForgotPassword.tsx` / `DayonePortalResetPassword.tsx` 已建
-   目前卡在：Resend API Key 是否已在 Railway 設定（需確認環境變數 `RESEND_API_KEY`）
+3. **大永 Portal 重設密碼 email**
+   架構已建，卡在：確認 Railway 環境變數 `RESEND_API_KEY` 是否已設定
 
 **P3 — 設計討論後才能做**
 
-7. **Make 串接實測**
-   `syncFromMake` endpoint 已建，需要在 Make 建立對應的 HTTP module
-   POST URL：`https://ordersome.com.tw/api/trpc/dailyReport.syncFromMake`
-   Body 格式：`{ "0": { "json": { "secret": "ordersome-sync-2026", "storeName": "...", ... } } }`
-   `importFromDamai` 同理：`https://ordersome.com.tw/api/trpc/procurement.importFromDamai`
+4. **Make 串接實測**（endpoint 已建，需在 Make 建立 HTTP module）
+5. **智慧排班 v2**（需 2-3 個月歷史資料後才有意義）
+6. **來點什麼客戶管理**（業務邏輯待確認）
 
-8. **智慧排班 v2**（需要歷史日報資料累積後才有意義）
-   第一版排班系統先用滿 2-3 個月，收集各門市客流量與人力資料
-   之後可做：依歷史營業額預測人力需求、自動產生排班建議
+**技術債**
 
-9. **來點什麼客戶管理**（`/dashboard/customers` 目前是 `ComingSoon`）
-   需確認：客戶管理 = 電商 B2C 客戶查詢？還是另有業務邏輯？
-
-**技術債（長期）**
-
-- 大永 26 張 `dy_` 表不在 `schema.ts`，用 raw SQL（`(db as any).$client.execute`）
-- 來點什麼 ERP 的 `os_` 表同上
-- 本機菜單圖未遷移 R2（`client/public/images/menu/korean-roll/`）
-- `has_procurement_access` 型別已補強（boolean，已移除 any cast）
-- chunk size 超標（index.js 達 6141 kB），需考慮 code splitting
+- 大永 / 來點什麼 ERP 的表不在 `schema.ts`，用 raw SQL
+- 本機菜單圖未遷移 R2
+- chunk size 超標（index.js 6141 kB），需 code splitting
 
 ---
 
@@ -271,14 +278,14 @@ git status && git log --oneline -3
 
 ---
 
-## Git 狀態（2026-04-18）
+## Git 狀態（2026-04-18 v5.14 更新）
 
 最後三個 commit（已 push）：
-1. `(待補)` — feat: 0026 SQL版本記錄 + 假日批次查詢 + OSScheduling假日標示 2026-04-18
-2. `fdc8216` — docs: CLAUDE.md v5.12 2026-04-18
-3. `22f9956` — feat: 排班管理 v1 + 配送管理 v1 — scheduling/delivery router + 前端頁面 2026-04-18
+1. `67feed7` — feat: 加盟主管理頁 v1 2026-04-18
+2. `b1b3c32` — feat: 0026 SQL + 假日批次查詢 + OSScheduling 標示 2026-04-18
+3. `fdc8216` — docs: CLAUDE.md v5.12 2026-04-18
 
-working tree: clean（commit 後）
+working tree: clean
 
 ---
 
