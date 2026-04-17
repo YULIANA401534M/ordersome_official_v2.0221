@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { useModules } from "@/hooks/useModules";
 import {
   LayoutDashboard,
   Package,
@@ -20,30 +21,37 @@ import {
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 
-const NAV_ITEMS = [
-  { icon: LayoutDashboard, label: "主控台", path: "/dayone" },
-  { icon: ShoppingCart, label: "訂單管理", path: "/dayone/orders" },
-  { icon: Users, label: "客戶管理", path: "/dayone/customers" },
-  { icon: Package, label: "品項管理", path: "/dayone/products" },
-  { icon: LayoutDashboard, label: "庫存管理", path: "/dayone/inventory" },
-  { icon: Truck, label: "採購管理", path: "/dayone/purchase" },
-  { icon: Truck, label: "司機管理", path: "/dayone/drivers" },
-  { icon: MapPin, label: "行政區管理", path: "/dayone/districts" },
-  { icon: Building2, label: "供應商管理", path: "/dayone/suppliers" },
-  { icon: BarChart3, label: "報表", path: "/dayone/reports" },
-  { icon: UserCog, label: "用戶管理", path: "/dayone/users" },
-  { icon: Smartphone, label: "LIFF訂單", path: "/dayone/liff-orders" },
-  { icon: CreditCard, label: "帳務管理", path: "/dayone/ar" },
-  { icon: Truck, label: "派車管理", path: "/dayone/dispatch" },
-  { icon: Package, label: "進貨簽收", path: "/dayone/purchase-receipts" },
+const NAV_ITEM_DEFS = [
+  { icon: LayoutDashboard, label: "主控台", path: "/dayone", moduleKey: null },
+  { icon: ShoppingCart, label: "訂單管理", path: "/dayone/orders", moduleKey: "delivery" },
+  { icon: Users, label: "客戶管理", path: "/dayone/customers", moduleKey: "crm_customers" },
+  { icon: Package, label: "品項管理", path: "/dayone/products", moduleKey: "products" },
+  { icon: LayoutDashboard, label: "庫存管理", path: "/dayone/inventory", moduleKey: "inventory" },
+  { icon: Truck, label: "採購管理", path: "/dayone/purchase", moduleKey: "purchasing" },
+  { icon: Truck, label: "司機管理", path: "/dayone/drivers", moduleKey: "driver_mgmt" },
+  { icon: MapPin, label: "行政區管理", path: "/dayone/districts", moduleKey: "districts" },
+  { icon: Building2, label: "供應商管理", path: "/dayone/suppliers", moduleKey: null },
+  { icon: BarChart3, label: "報表", path: "/dayone/reports", moduleKey: null },
+  { icon: UserCog, label: "用戶管理", path: "/dayone/users", moduleKey: null },
+  { icon: Smartphone, label: "LIFF訂單", path: "/dayone/liff-orders", moduleKey: "liff_orders" },
+  { icon: CreditCard, label: "帳務管理", path: "/dayone/ar", moduleKey: "ar_management" },
+  { icon: Truck, label: "派車管理", path: "/dayone/dispatch", moduleKey: "dispatch" },
+  { icon: Package, label: "進貨簽收", path: "/dayone/purchase-receipts", moduleKey: "purchase_receipts" },
 ];
 
 export default function DayoneLayout({ children }: { children: React.ReactNode }) {
   const { user, logout, loading } = useAuth();
   const [location, navigate] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { has } = useModules();
 
   const isSuperAdmin = user?.role === "super_admin";
+
+  const NAV_ITEMS = NAV_ITEM_DEFS.filter(item => {
+    if (isSuperAdmin) return true;
+    if (!item.moduleKey) return true;
+    return has(item.moduleKey);
+  });
 
   if (loading) {
     return (

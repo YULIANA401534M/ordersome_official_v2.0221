@@ -122,6 +122,7 @@ export default function AdminDashboardLayout({
         { key: "inventory",     icon: Warehouse,    label: "庫存管理", path: "/dashboard/inventory" },
         { key: "scheduling",    icon: CalendarDays, label: "排班管理", path: "/dashboard/scheduling" },
         { key: "daily_report",  icon: ClipboardList, label: "門市日報", path: "/dashboard/daily-report" },
+        { key: "products",      icon: Package,      label: "品項成本", path: "/dashboard/products" },
         { key: "delivery",      icon: Truck,        label: "配送管理", path: "/dashboard/delivery" },
         { key: "crm_customers", icon: Users,        label: "客戶管理", path: "/dashboard/customers" },
         { key: "purchasing",    icon: ShoppingCart, label: "進貨管理", path: "/dashboard/purchasing" },

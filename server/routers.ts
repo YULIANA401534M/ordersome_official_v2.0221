@@ -14,6 +14,9 @@ import { sopRouter } from "./routers/sop";
 import { tenantRouter } from "./routers/tenant";
 import { dayoneRouter } from "./routers/dayone";
 import { aiWriterRouter } from "./routers/ai-writer";
+import { dailyReportRouter } from "./routers/dailyReport";
+import { osProductsRouter } from "./routers/osProducts";
+import { procurementRouter } from "./routers/procurement";
 import { sendMail } from "./mail";
 import { users, orderAuditLogs } from "../drizzle/schema";
 import { inArray } from "drizzle-orm";
@@ -928,6 +931,11 @@ export const appRouter = router({
   dayone: dayoneRouter,
   // AI 文章助手
   aiWriter: aiWriterRouter,
+  // 來點什麼 ERP — 門市日報
+  dailyReport: dailyReportRouter,
+  // 來點什麼 ERP — 品項成本
+  osProducts: osProductsRouter,
+  procurement: procurementRouter,
 });
 
 export type AppRouter = typeof appRouter;

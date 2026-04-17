@@ -79,6 +79,8 @@ import AdminTenants from "./pages/dashboard/AdminTenants";
 import OSInventory from "./pages/dashboard/OSInventory";
 import OSScheduling from "./pages/dashboard/OSScheduling";
 import OSDailyReport from "./pages/dashboard/OSDailyReport";
+import OSProducts from "./pages/dashboard/OSProducts";
+import OSProcurement from "./pages/dashboard/OSProcurement";
 import ComingSoon from "./pages/dashboard/ComingSoon";
 
 // Landing Page
@@ -235,9 +237,10 @@ function Router() {
       <Route path="/dashboard/inventory" component={OSInventory} />
       <Route path="/dashboard/scheduling" component={OSScheduling} />
       <Route path="/dashboard/daily-report" component={OSDailyReport} />
+      <Route path="/dashboard/products" component={OSProducts} />
       <Route path="/dashboard/delivery" component={ComingSoon} />
       <Route path="/dashboard/customers" component={ComingSoon} />
-      <Route path="/dashboard/purchasing" component={ComingSoon} />
+      <Route path="/dashboard/purchasing" component={OSProcurement} />
       <Route path="/dashboard/accounting" component={ComingSoon} />
       {/* DaYong ERP Routes */}
       <Route path="/dayone/login" component={DayoneLogin} />
