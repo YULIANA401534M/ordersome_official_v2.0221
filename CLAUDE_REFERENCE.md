@@ -2,7 +2,7 @@
 
 > 這份文件是「查閱用」，不是每次都要讀。
 > 開新對話時只需讀 `CLAUDE.md`，有需要才查這裡。
-> 最後更新：2026-04-16
+> 最後更新：2026-04-17
 
 ---
 
@@ -192,6 +192,21 @@ ordersome_official_v2/
 | `dy_inventory` | `safetyQty` |
 | `dy_drivers` / `dy_customer_prices` / `dy_purchase_orders` / `dy_purchase_order_items` / `dy_stock_movements` / `dy_suppliers` / `dy_delivery_signatures` | — |
 
+### 來點什麼 ERP raw SQL 表（不在 schema.ts）
+
+| 表名 | 用途 |
+|------|------|
+| `os_daily_reports` | 門市日報（generated columns：totalSales/guestTotal/productivity 等）|
+| `os_tw_holidays` | 台灣行政院假日（2025-2027，isHoliday boolean）|
+| `os_monthly_reports` | 月報補充（電費/水費/薪資/業績檢討/月計畫）|
+| `os_procurement_orders` | 叫貨主表（orderNo/status/sourceType）|
+| `os_procurement_items` | 叫貨明細（supplierName/storeName/productName/quantity）|
+| `os_supplier_line` | 廠商 LINE 群組 ID（推播叫貨用）|
+| `os_suppliers` | 來點什麼供應商（rebateType/rebateRate）|
+| `os_products` | 來點什麼品項成本（unitCost/batchPrice）|
+| `os_rebate_records` | 廠商退佣記錄（廣弘 10.71%/伯享固定差價/韓濟抵貨款）|
+| `os_payables` | 應付帳款（月結廠商，含退佣抵扣後淨應付）|
+
 ---
 
 ## R5、tRPC API 路由（完整清單）
@@ -284,6 +299,8 @@ driver       — 司機（大永）
 |----------|------|
 | `POST /api/payment/callback` | 綠界 ECPay 付款回調 |
 | `POST /api/dayone/line-order` | 大永 LINE@ 接單（Make → 後端） |
+| `POST /api/trpc/procurement.importFromDamai` | Make 解析大麥 Email → 寫入叫貨系統（需 SYNC_SECRET）|
+| `POST /api/trpc/dailyReport.sync` | Make 門市自動報表 → 同步進系統（需 SYNC_SECRET）|
 
 **Make Scenario**：`Webhooks[1] → Filter(文字訊息) → Google Gemini AI[7] → HTTP[5](後端)`
 Make Webhook URL：`https://hook.us2.make.com/6ihglkavm26i29mdgg33dvxngggv1xiu`

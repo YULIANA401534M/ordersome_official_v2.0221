@@ -1,6 +1,6 @@
 # CLAUDE.md — OrderSome 工作主檔
 
-> 最後更新：2026-04-16 | 文件版本：v5.4
+> 最後更新：2026-04-17 | 文件版本：v5.5
 > 詳細參考（路由/API/DB表/架構）→ 見 `CLAUDE_REFERENCE.md`
 > 歷史變更紀錄 → 見 `DEVELOPMENT_LOG.md`
 
@@ -136,7 +136,48 @@ pnpm db:push      # 生成並執行 Drizzle migration
 
 ---
 
-## 八、最近變更（2026-04-16）— 綠界物流
+## 八、最近變更
+
+### 2026-04-17 完成項目
+
+#### 來點什麼 ERP（後台 /dashboard）
+- os_daily_reports 重建（generated columns：totalSales/guestTotal/avgPrice/productivity）
+- os_tw_holidays 台灣假日表（2025/2026 各 365 筆，來源 ruyut/TaiwanCalendar）
+- os_monthly_reports 月報補充表（電費/水費/薪資/業績檢討/月計畫）
+- 叫貨管理系統（os_procurement_orders / os_procurement_items / os_supplier_line）
+- 叫貨一鍵推播 LINE 廠商（pushToLine procedure，呼叫 LINE Messaging API）
+- 廠商退佣自動計算（os_rebate_records / os_payables）
+- 供應商與品項成本管理（os_suppliers / os_products）
+- 新增路由：/dashboard/daily-report / /dashboard/purchasing / /dashboard/products / /dashboard/rebate
+
+#### 設計系統
+- DESIGN-dashboard.md 建立（後台設計規範，暖灰底色 #f7f6f3、amber 主色 #b45309）
+- 金萱字體 jf-kamabit-1_0.otf 安裝至 client/public/fonts/
+- 後台全域 CSS 變數系統建立（index.css）
+- AdminDashboardLayout.tsx 套用深暖棕側邊欄 #1c1917、amber active 線
+- AdminDashboard.tsx KPI 數字套用品牌字體 36px
+- button.tsx 立體陰影動效（hover 上浮 1px / active 下壓 1px / 80ms）
+
+#### Bug 修復
+- exclusiveSlug 404：移除 isActive 過濾條件（server/db.ts）
+- 排程發布狀態：ContentManagement.tsx 加入第三種 badge「排程中」
+- 大永側邊欄模組控制：DayoneLayout.tsx 引入 useModules hook，super_admin 全顯示
+
+#### Railway 環境變數（2026-04-17 確認完整）
+DATABASE_URL / JWT_SECRET / VITE_APP_ID / VITE_APP_URL / OAUTH_SERVER_URL
+R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / R2_BUCKET / R2_PUBLIC_URL_PREFIX
+GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET
+LINE_CLIENT_ID / LINE_CLIENT_SECRET / LINE_CHANNEL_ACCESS_TOKEN
+ECPAY_HASH_IV / ECPAY_HASH_KEY / ECPAY_MERCHANT_ID
+ECPAY_LOGISTICS_MERCHANT_ID / ECPAY_LOGISTICS_HASH_KEY / ECPAY_LOGISTICS_HASH_IV
+GEMINI_API_KEY / NEWS_API_KEY / RESEND_API_KEY
+SMTP_FROM / SMTP_HOST / SMTP_PASS / SMTP_PORT / SMTP_USER
+VITE_GOOGLE_MAPS_API_KEY
+SYNC_SECRET（新增，Make 推資料驗證用，值：ordersome-sync-2026）
+
+---
+
+### 最近變更（2026-04-16）— 綠界物流
 
 | 類別 | 變更 |
 |------|------|
@@ -156,24 +197,19 @@ pnpm db:push      # 生成並執行 Drizzle migration
 
 ## 九、下一個任務
 
-### 待處理任務
+### 待人工確認（回家測試）
+- 加盟詢問表單送出後，後台是否看得到記錄（手腳說邏輯正確但測試報告說看不到）
+- 手機後台側邊欄是否真的可以點選（需手機實測）
 
-#### 大永蛋品（進入蛋博實測階段）
-1. ⏳ LIFF 正式上線：蛋博用自己的 LINE 後台建立 LIFF，更新前端 `TENANT_CONFIG` 的 liffId
-2. ⏳ 蛋博實測回饋 + 客戶真實資料匯入
-3. ⏳ 積欠款 LINE 推播通知（portal.ts 已建 cron 基礎）
-4. ⏳ Portal 客戶重設密碼 email（後端尚未實作發信）
-5. ⏳ dy_customers upsert procedure 需接受新欄位（customerLevel/settlementCycle 等）
-
-#### 來點什麼 ERP（下一優先）
-6. ⏳ 來點什麼 ERP 四模組（配送/客戶/進貨/帳務）— 複用大永通用元件（TenantUserManagement 傳 tenantId=1）
-7. ⏳ 來點什麼門市 ERP（排班/日報/食材庫存）
-8. ⏳ `/dashboard/delivery`、`/dashboard/customers`、`/dashboard/purchasing`、`/dashboard/accounting` 頁面尚未建立（點擊 404）
-9. ⏳ 供應商管理複用給來點什麼（需新增 moduleKey + 頁面）
-
-#### 架構債
-10. ⏳ 大永側邊欄模組控制（DayoneLayout，第二個外部客戶簽約前處理）
-11. ⏳ 加盟主功能範圍定義
+### 待開發（依序）
+1. 損益儀表板：整合日報 + 月報費用 + 退佣 → 自動算每間店損益
+2. 加盟主帳款管理：週結帳款追蹤 → 銀行明細對帳 → 未收款提醒
+3. Make 串接：門市自動報表 Webhook 直接寫進 os_daily_reports（需先設定 SYNC_SECRET）
+4. Make 串接：採購 importFromDamai → 不再走 Google Sheets
+5. 門市名稱清單改為後台可設定（目前寫死在 dailyReport.ts STORES 陣列）
+6. 供應商編輯介面確認 rebateRate 可從後台調整
+7. 官網前台動畫：Clay 等級動效 + 毛玻璃（最後一批）
+8. 大永 LIFF 正式 liffId 更新（等蛋博用自己 LINE 後台建立）
 
 ---
 
@@ -226,4 +262,4 @@ pnpm db:push      # 生成並執行 Drizzle migration
 
 ---
 
-*CLAUDE.md v5.4 — 精簡主檔，詳細參考見 CLAUDE_REFERENCE.md，歷史變更見 DEVELOPMENT_LOG.md*
+*CLAUDE.md v5.5 — 精簡主檔，詳細參考見 CLAUDE_REFERENCE.md，歷史變更見 DEVELOPMENT_LOG.md*
