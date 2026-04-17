@@ -1,6 +1,6 @@
 # CLAUDE.md — 宇聯國際餐飲 OrderSome 開發主檔
 
-> **版本**：v5.12。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.13。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -60,16 +60,12 @@ git status && git log --oneline -3
 
 **P1 — 立刻可做，不需外部確認**
 
-1. **Migration 0026 SQL 檔案補建**
-   四張表已在 TiDB 存在，但缺 `drizzle/0026_scheduling_delivery.sql` 版本記錄檔
-   內容：`os_schedule_templates` / `os_schedules` / `os_delivery_orders` / `os_delivery_items` 的 CREATE TABLE
+1. ✅ **Migration 0026 SQL 檔案補建**（2026-04-18 完成）
+   `drizzle/0026_scheduling_delivery.sql` 已建立
 
-2. **假日批次查詢補完**
-   `OSScheduling.tsx` 目前假日標示是空陣列（因 `dailyReport.checkHoliday` 只接受單日）
-   需要在 dailyReport router 新增一個 `getHolidaysByMonth` procedure：
-   input: `{ year, month }` → 查 `os_tw_holidays` WHERE year=? AND month=?
-   回傳 `{ date, isHoliday }[]`
-   前端 `OSScheduling.tsx` 用這個 procedure 標示假日欄位背景
+2. ✅ **假日批次查詢補完**（2026-04-18 完成）
+   `dailyReport.getHolidaysByMonth` procedure 已新增
+   `OSScheduling.tsx` 已改用 batch query 標示假日欄位
 
 3. **OSCustomers 加盟主管理頁補強**
    目前 `/dashboard/os-customers` 是骨架（`OSCustomers.tsx` 包裝 DayoneCustomersContent）
@@ -278,11 +274,11 @@ git status && git log --oneline -3
 ## Git 狀態（2026-04-18）
 
 最後三個 commit（已 push）：
-1. `22f9956` — feat: 排班管理 v1 + 配送管理 v1 — scheduling/delivery router + 前端頁面 2026-04-18
-2. `0fafdf6` — docs: CLAUDE.md v5.11 2026-04-18
-3. `adf0f3d` — feat: Make日報webhook + CA菜單成本前端 + 型別補強 2026-04-18
+1. `(待補)` — feat: 0026 SQL版本記錄 + 假日批次查詢 + OSScheduling假日標示 2026-04-18
+2. `fdc8216` — docs: CLAUDE.md v5.12 2026-04-18
+3. `22f9956` — feat: 排班管理 v1 + 配送管理 v1 — scheduling/delivery router + 前端頁面 2026-04-18
 
-working tree: clean
+working tree: clean（commit 後）
 
 ---
 

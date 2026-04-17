@@ -20,6 +20,27 @@ export const dailyReportRouter = router({
       return { isHoliday: row ? !!row.isHoliday : false, description: row?.description || null };
     }),
 
+  getHolidaysByMonth: protectedProcedure
+    .input(z.object({ year: z.number(), month: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return [];
+      const [rows] = await (db as any).$client.execute(
+        `SELECT date, isHoliday, description
+         FROM os_tw_holidays
+         WHERE YEAR(date) = ? AND MONTH(date) = ?
+         ORDER BY date ASC`,
+        [input.year, input.month]
+      );
+      return (rows as any[]).map(r => ({
+        date: r.date instanceof Date
+          ? r.date.toISOString().slice(0, 10)
+          : String(r.date).slice(0, 10),
+        isHoliday: !!r.isHoliday,
+        description: r.description || null,
+      }));
+    }),
+
   submit: protectedProcedure
     .input(z.object({
       tenantId: z.number().default(1),

@@ -55,7 +55,7 @@ export default function OSScheduling() {
   const { data: summary = [] } = trpc.scheduling.getMonthSummary.useQuery(
     { storeId: selectedStoreId, year, month }
   );
-  const holidays: any[] = [];
+  const { data: holidays = [] } = trpc.dailyReport.getHolidaysByMonth.useQuery({ year, month });
 
   const upsertSchedule = trpc.scheduling.upsertSchedule.useMutation({
     onSuccess: () => { refetchSchedules(); setPopoverCell(null); },
