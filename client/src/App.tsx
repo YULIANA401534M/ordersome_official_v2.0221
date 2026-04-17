@@ -84,6 +84,7 @@ import OSProducts from "./pages/dashboard/OSProducts";
 import OSProcurement from "./pages/dashboard/OSProcurement";
 import OSRebate from "./pages/dashboard/OSRebate";
 import OSProfitLoss from "./pages/dashboard/OSProfitLoss";
+import OSFranchiseePayments from "./pages/dashboard/OSFranchiseePayments";
 import ComingSoon from "./pages/dashboard/ComingSoon";
 
 // Landing Page
@@ -247,6 +248,7 @@ function Router() {
       <Route path="/dashboard/purchasing" component={OSProcurement} />
       <Route path="/dashboard/rebate" component={OSRebate} />
       <Route path="/dashboard/profit-loss" component={OSProfitLoss} />
+      <Route path="/dashboard/franchisee-payments" component={OSFranchiseePayments} />
       <Route path="/dashboard/accounting" component={ComingSoon} />
       {/* DaYong ERP Routes */}
       <Route path="/dayone/login" component={DayoneLogin} />

@@ -297,6 +297,9 @@ export default function AdminDashboardLayout({
     ? [
         { icon: Store, label: "加盟詢問", path: "/dashboard/franchise-inquiries" },
         { icon: Users, label: "加盟主管理", path: "/dashboard/franchisees" },
+        ...(isSuperAdmin || isManager
+          ? [{ icon: CreditCard, label: "加盟主帳款", path: "/dashboard/franchisee-payments" }]
+          : []),
       ]
     : [];
 
