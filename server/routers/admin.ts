@@ -227,4 +227,19 @@ export const adminRouter = router({
         return { user: u, flags: flagMap };
       });
     }),
+
+  /**
+   * Toggle procurement access for a user (super_admin only)
+   */
+  toggleProcurementAccess: superAdminProcedure
+    .input(z.object({ userId: z.number(), enabled: z.boolean() }))
+    .mutation(async ({ input }) => {
+      const database = await db.getDb();
+      if (!database) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: '資料庫連線失敗' });
+      await database
+        .update(users)
+        .set({ has_procurement_access: input.enabled ? 1 : 0 } as any)
+        .where(eq(users.id, input.userId));
+      return { success: true };
+    }),
 });

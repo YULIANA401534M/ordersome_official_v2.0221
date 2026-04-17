@@ -67,9 +67,15 @@ export default function AdminDashboardLayout({
   // ── 所有 hooks 必須在任何 early return 之前 ──
   const isSuperAdmin = user?.role === "super_admin";
   const isManager = user?.role === "manager";
-  const hasAdminAccess = user?.role === "super_admin" || user?.role === "manager";
+  const isStoreManager = user?.role === "store_manager";
+  const isFranchisee = user?.role === "franchisee";
+  const isStaff = user?.role === "staff";
+  // 可進入後台 layout 的角色
+  const hasAdminAccess = isSuperAdmin || isManager || isStoreManager || isFranchisee || isStaff;
   const isOSTenant = isSuperAdmin || (user as any)?.tenantId === 1;
   const isDYTenant = isSuperAdmin || (user as any)?.tenantId === 90004;
+  // 退佣帳款 & 品項成本：super_admin 或 has_procurement_access=1
+  const canSeeCostModules = isSuperAdmin || (user as any)?.has_procurement_access === 1;
 
   // ── 模組開關查詢（兩個 useQuery 必須在所有 early return 之前）──
   const { data: orderSomeModules } = trpc.dayone.modules.list.useQuery(
@@ -122,19 +128,21 @@ export default function AdminDashboardLayout({
     if (!orderSomeModules) return;
     const enabled: OsErpItem[] = [];
     const comingSoon: { icon: React.ComponentType<{ className?: string }>; label: string }[] = [];
+    // 只有 super_admin / manager 才顯示 ERP 區塊（門市管理的項目已在 storeOperationItems 處理）
     if (isOSTenant && (isSuperAdmin || isManager)) {
       const osModuleDefs = [
-        { key: "inventory",     icon: Warehouse,    label: "庫存管理", path: "/dashboard/inventory" },
-        { key: "scheduling",    icon: CalendarDays, label: "排班管理", path: "/dashboard/scheduling" },
-        { key: "daily_report",  icon: ClipboardList, label: "門市日報", path: "/dashboard/daily-report" },
-        { key: "products",      icon: Package,      label: "品項成本", path: "/dashboard/products" },
-        { key: "delivery",      icon: Truck,        label: "配送管理", path: "/dashboard/delivery" },
-        { key: "crm_customers", icon: Users,        label: "客戶管理", path: "/dashboard/customers" },
-        { key: "purchasing",    icon: ShoppingCart, label: "進貨管理", path: "/dashboard/purchasing" },
-        { key: "rebate",        icon: CreditCard,   label: "退佣帳款", path: "/dashboard/rebate" },
-        { key: "accounting",    icon: Receipt,      label: "帳務管理", path: "/dashboard/accounting" },
+        { key: "inventory",     icon: Warehouse,    label: "庫存管理",  path: "/dashboard/inventory",  costOnly: false },
+        { key: "scheduling",    icon: CalendarDays, label: "排班管理",  path: "/dashboard/scheduling", costOnly: false },
+        { key: "products_os",   icon: Package,      label: "品項成本",  path: "/dashboard/products",   costOnly: true  },
+        { key: "delivery",      icon: Truck,        label: "配送管理",  path: "/dashboard/delivery",   costOnly: false },
+        { key: "crm_customers", icon: Users,        label: "客戶管理",  path: "/dashboard/customers",  costOnly: false },
+        { key: "purchasing_os", icon: ShoppingCart, label: "叫貨管理",  path: "/dashboard/purchasing", costOnly: false },
+        { key: "rebate_os",     icon: CreditCard,   label: "退佣帳款",  path: "/dashboard/rebate",     costOnly: true  },
+        { key: "accounting",    icon: Receipt,      label: "帳務管理",  path: "/dashboard/accounting", costOnly: false },
       ];
       for (const def of osModuleDefs) {
+        // costOnly 項目：只有 canSeeCostModules 才顯示
+        if (def.costOnly && !canSeeCostModules) continue;
         const isEnabled = isSuperAdmin || (orderSomeModules?.some((m: any) => m.moduleKey === def.key && !!m.isEnabled) ?? false);
         if (isEnabled) {
           enabled.push({ icon: def.icon, label: def.label, path: def.path });
@@ -145,7 +153,7 @@ export default function AdminDashboardLayout({
     }
     setOsErpEnabled(enabled);
     setOsErpComingSoon(comingSoon);
-  }, [orderSomeModules, isOSTenant, isSuperAdmin, isManager]);
+  }, [orderSomeModules, isOSTenant, isSuperAdmin, isManager, canSeeCostModules]);
 
   useEffect(() => {
     if (!dayoneModules) return;
@@ -290,15 +298,27 @@ export default function AdminDashboardLayout({
       ]
     : [];
 
-  // ── 來點什麼分組（門市管理）── 接模組開關
-  const storeOperationItems =
-    isOSTenant && (isSuperAdmin || isManager)
-      ? ([
-          hasOSModule("sop")              ? { icon: BookOpen,       label: "SOP 知識庫", path: "/dashboard/sop" }      : null,
-          hasOSModule("equipment_repair") ? { icon: Wrench,         label: "設備報修",   path: "/dashboard/repairs" }  : null,
-          hasOSModule("checklist")        ? { icon: ClipboardCheck, label: "每日檢查表", path: "/dashboard/checklist" } : null,
-        ].filter(Boolean) as { icon: React.ComponentType<{ className?: string }>; label: string; path: string }[])
-      : [];
+  // ── 來點什麼分組（門市管理）── 接模組開關 + role 控制
+  // store_manager：日報 + SOP + 報修 + 檢查表
+  // franchisee：SOP + 報修 + 檢查表
+  // staff：SOP + 檢查表
+  const canSeeStoreOps = isOSTenant && (isSuperAdmin || isManager || isStoreManager || isFranchisee || isStaff);
+  const storeOperationItems = canSeeStoreOps
+    ? ([
+        (isSuperAdmin || isManager || isStoreManager) && hasOSModule("daily_report_os")
+          ? { icon: ClipboardList, label: "門市日報", path: "/dashboard/daily-report" }
+          : null,
+        hasOSModule("sop")
+          ? { icon: BookOpen, label: "SOP 知識庫", path: "/dashboard/sop" }
+          : null,
+        (isSuperAdmin || isManager || isStoreManager || isFranchisee) && hasOSModule("equipment_repair")
+          ? { icon: Wrench, label: "設備報修", path: "/dashboard/repairs" }
+          : null,
+        hasOSModule("checklist")
+          ? { icon: ClipboardCheck, label: "每日檢查表", path: "/dashboard/checklist" }
+          : null,
+      ].filter(Boolean) as { icon: React.ComponentType<{ className?: string }>; label: string; path: string }[])
+    : [];
 
   const showDyErpSection = (isSuperAdmin || isManager) && (dyErpEnabled.length > 0 || dyErpComingSoon.length > 0);
 
@@ -390,6 +410,7 @@ export default function AdminDashboardLayout({
     ));
   };
 
+  // ERP 區塊只對 super_admin / manager 顯示（其他 role 的門市項目已在「門市管理」群組呈現）
   const showOsErpSection = (isSuperAdmin || isManager) && (osErpEnabled.length > 0 || osErpComingSoon.length > 0);
 
   const sidebarContent = (
