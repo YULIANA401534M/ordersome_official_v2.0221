@@ -89,10 +89,10 @@ export default function OSDelivery() {
               {storesForDelivery.map((s:any) => <SelectItem key={s.id} value={s.id.toString()}>{s.name.replace("來點什麼 ","")}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <Select value={filterStatus || "all"} onValueChange={v => setFilterStatus(v === "all" ? "" : v)}>
             <SelectTrigger className="w-32"><SelectValue placeholder="全部狀態"/></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">全部</SelectItem>
+              <SelectItem value="all">全部</SelectItem>
               {Object.entries(STATUS_CONFIG).map(([k,v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
             </SelectContent>
           </Select>

@@ -195,10 +195,10 @@ export default function OSPurchasing() {
             <span className="text-base font-semibold w-20 text-center">{year}/{String(month).padStart(2, "0")}</span>
             <Button variant="ghost" size="sm" onClick={nextMonth}><ChevronRight className="w-4 h-4" /></Button>
           </div>
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <Select value={filterStatus || "all"} onValueChange={v => setFilterStatus(v === "all" ? "" : v)}>
             <SelectTrigger className="w-28 h-8 text-sm"><SelectValue placeholder="全部狀態" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">全部狀態</SelectItem>
+              <SelectItem value="all">全部狀態</SelectItem>
               {Object.entries(STATUS_CONFIG).map(([k, v]) => (
                 <SelectItem key={k} value={k}>{v.label}</SelectItem>
               ))}
