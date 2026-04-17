@@ -170,7 +170,7 @@ function DailyInputTab() {
     });
   }
 
-  const inputCls = "h-12 text-base text-center text-lg font-medium";
+  const inputCls = "h-12 text-base text-right text-lg font-medium";
 
   return (
     <div className="space-y-4">

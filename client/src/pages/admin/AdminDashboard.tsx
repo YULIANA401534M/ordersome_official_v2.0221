@@ -53,7 +53,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
           {stats.map((stat, i) => (
             <Card
               key={i}
@@ -61,7 +61,7 @@ export default function AdminDashboard() {
               style={{ border: '1px solid #e7e5e4', background: '#ffffff' }}
               onClick={() => setLocation(stat.link)}
             >
-              <CardContent className="p-6">
+              <CardContent className="p-4 md:p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="kpi-label">{stat.title}</p>

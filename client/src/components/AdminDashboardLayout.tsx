@@ -33,6 +33,8 @@ import {
   CalendarDays,
   ClipboardList,
   Receipt,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
@@ -47,6 +49,9 @@ export default function AdminDashboardLayout({
   const { loading, user, logout } = useAuth();
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+  const toggleGroup = (label: string) =>
+    setCollapsedGroups(prev => ({ ...prev, [label]: !prev[label] }));
 
   // ── 側邊欄滾動記憶 ──
   useEffect(() => {
@@ -334,17 +339,24 @@ export default function AdminDashboardLayout({
     }`;
 
   const groupLabelClass =
-    "text-[11px] font-semibold text-[#78716c] uppercase tracking-[0.8px] px-4 py-2";
+    "text-xs font-semibold text-amber-400/70 uppercase tracking-widest px-4 py-2 flex items-center justify-between cursor-pointer select-none hover:text-amber-400 transition-colors";
 
   const renderGroup = (
     label: string,
     items: { icon: React.ComponentType<{ className?: string }>; label: string; path: string }[]
   ) => {
     if (items.length === 0) return null;
+    const isCollapsed = !!collapsedGroups[label];
     return (
       <div>
-        <p className={groupLabelClass}>{label}</p>
-        {items.map((item) => (
+        <div className={groupLabelClass} onClick={() => toggleGroup(label)}>
+          <span>{label}</span>
+          {isCollapsed
+            ? <ChevronRight className="h-3 w-3 shrink-0" />
+            : <ChevronDown className="h-3 w-3 shrink-0" />
+          }
+        </div>
+        {!isCollapsed && items.map((item) => (
           <Link key={item.path} href={item.path}>
             <a
               className={menuItemClass(item.path)}
@@ -414,19 +426,29 @@ export default function AdminDashboardLayout({
         {renderGroup("門市管理", storeOperationItems)}
         {showOsErpSection && (
           <div>
-            <p className={groupLabelClass}>來點什麼 ERP</p>
-            {osErpEnabled.map((item) => (
-              <Link key={item.path} href={item.path!}>
-                <a
-                  className={menuItemClass(item.path!)}
-                  onClick={() => setMobileOpen(false)}
-                >
-                  <item.icon className="h-4 w-4 shrink-0" />
-                  <span>{item.label}</span>
-                </a>
-              </Link>
-            ))}
-            {renderComingSoonItems(osErpComingSoon)}
+            <div className={groupLabelClass} onClick={() => toggleGroup("來點什麼 ERP")}>
+              <span>來點什麼 ERP</span>
+              {!!collapsedGroups["來點什麼 ERP"]
+                ? <ChevronRight className="h-3 w-3 shrink-0" />
+                : <ChevronDown className="h-3 w-3 shrink-0" />
+              }
+            </div>
+            {!collapsedGroups["來點什麼 ERP"] && (
+              <>
+                {osErpEnabled.map((item) => (
+                  <Link key={item.path} href={item.path!}>
+                    <a
+                      className={menuItemClass(item.path!)}
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      <item.icon className="h-4 w-4 shrink-0" />
+                      <span>{item.label}</span>
+                    </a>
+                  </Link>
+                ))}
+                {renderComingSoonItems(osErpComingSoon)}
+              </>
+            )}
           </div>
         )}
 
@@ -438,31 +460,41 @@ export default function AdminDashboardLayout({
         )}
         {showDyErpSection && (
           <div>
-            <p className={groupLabelClass}>大永蛋品 ERP</p>
-            {dyErpEnabled.map((item) => {
-              const badge =
-                item.path === "/dayone/ar" && overdueARCount > 0 ? overdueARCount :
-                item.path === "/dayone/dispatch" && activeDispatchCount > 0 ? activeDispatchCount :
-                item.path === "/dayone/purchase-receipts" && pendingReceiptCount > 0 ? pendingReceiptCount :
-                0;
-              return (
-                <Link key={item.path} href={item.path}>
-                  <a
-                    className={menuItemClass(item.path)}
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    <item.icon className="h-4 w-4 shrink-0" />
-                    <span className="flex-1">{item.label}</span>
-                    {badge > 0 && (
-                      <span className="ml-auto min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                        {badge}
-                      </span>
-                    )}
-                  </a>
-                </Link>
-              );
-            })}
-            {renderComingSoonItems(dyErpComingSoon)}
+            <div className={groupLabelClass} onClick={() => toggleGroup("大永蛋品 ERP")}>
+              <span>大永蛋品 ERP</span>
+              {!!collapsedGroups["大永蛋品 ERP"]
+                ? <ChevronRight className="h-3 w-3 shrink-0" />
+                : <ChevronDown className="h-3 w-3 shrink-0" />
+              }
+            </div>
+            {!collapsedGroups["大永蛋品 ERP"] && (
+              <>
+                {dyErpEnabled.map((item) => {
+                  const badge =
+                    item.path === "/dayone/ar" && overdueARCount > 0 ? overdueARCount :
+                    item.path === "/dayone/dispatch" && activeDispatchCount > 0 ? activeDispatchCount :
+                    item.path === "/dayone/purchase-receipts" && pendingReceiptCount > 0 ? pendingReceiptCount :
+                    0;
+                  return (
+                    <Link key={item.path} href={item.path}>
+                      <a
+                        className={menuItemClass(item.path)}
+                        onClick={() => setMobileOpen(false)}
+                      >
+                        <item.icon className="h-4 w-4 shrink-0" />
+                        <span className="flex-1">{item.label}</span>
+                        {badge > 0 && (
+                          <span className="ml-auto min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                            {badge}
+                          </span>
+                        )}
+                      </a>
+                    </Link>
+                  );
+                })}
+                {renderComingSoonItems(dyErpComingSoon)}
+              </>
+            )}
           </div>
         )}
 

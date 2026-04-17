@@ -159,14 +159,14 @@ export default function DayoneLayout({ children }: { children: React.ReactNode }
       {/* Main content */}
       <main className="flex-1 overflow-auto min-w-0">
         {/* 手機版頂部漢堡列 */}
-        <div className="md:hidden h-12 bg-white border-b border-gray-200 flex items-center px-4 gap-3 sticky top-0 z-40">
+        <div className="md:hidden h-12 bg-white border-b border-gray-200 flex items-center px-6 gap-3 sticky top-0 z-40">
           <button
             onClick={() => setSidebarOpen(true)}
             className="p-1.5 text-gray-600 hover:text-gray-900"
           >
             <Menu className="h-5 w-5" />
           </button>
-          <span className="font-semibold text-gray-800 text-sm">🥚 大永蛋品 ERP</span>
+          <span className="font-semibold text-gray-800 text-base">🥚 大永蛋品 ERP</span>
         </div>
         {children}
       </main>
