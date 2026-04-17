@@ -1,6 +1,6 @@
 # CLAUDE.md — 宇聯國際餐飲 OrderSome 開發主檔
 
-> **版本**：v5.9。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.10。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -153,67 +153,55 @@ git status && git log --oneline -3
 ## Git 狀態（2026-04-18）
 
 最後三個 commit（已 push）：
-1. `feat: 第四批 — 加盟主管理頁 2026-04-18`
-2. `feat: CA 表單數位化 — 菜單品項成本（第二層）+ OEM 品項（第三層）2026-04-18`
-3. `feat: 用戶與權限系統重構 — store_manager role、franchisee feature flags 2026-04-17`
+1. `cf4bb2a` — feat: 損益儀表板 2026-04-18
+2. `c439842` — feat: 權限系統前端 2026-04-18
+3. `a4c18ac` — refactor: 大永頁面抽 Content 元件 2026-04-18
 
-working tree: **有未 commit 的修改**（見下方）
-
-### 未 commit 的修改（2026-04-18 現況）
-
-**Modified（已追蹤）：**
-- `CLAUDE.md` — 本次整理
-- `client/src/pages/dayone/DayoneAR.tsx`
-- `client/src/pages/dayone/DayoneCustomers.tsx`
-- `client/src/pages/dayone/DayonePurchase.tsx`
-- `client/src/pages/dayone/SuperAdminModules.tsx`
-- `client/src/pages/dayone/portal/DayonePortalLogin.tsx`
-- `package.json` / `pnpm-lock.yaml`
-- `server/_core/index.ts`
-- `server/routers/dayone/index.ts`
-- `server/routers/dayone/portal.ts`
-
-**Untracked（新檔）：**
-- `AC.md` / `Ordersome_UAT_Test.html`
-- `client/src/pages/dashboard/OSAccounting.tsx`
-- `client/src/pages/dashboard/OSCustomers.tsx`
-- `client/src/pages/dashboard/OSDelivery.tsx`
-- `client/src/pages/dashboard/OSPurchasing.tsx`
-- `client/src/pages/dayone/DayoneARContent.tsx`
-- `client/src/pages/dayone/DayoneCustomersContent.tsx`
-- `client/src/pages/dayone/DayonePurchaseContent.tsx`
-- `client/src/pages/dayone/DayoneSettings.tsx`
-- `client/src/pages/dayone/portal/DayonePortalForgotPassword.tsx`
-- `client/src/pages/dayone/portal/DayonePortalResetPassword.tsx`
-- `drizzle/0022_os_erp_modules.sql`（migration，待 TiDB 執行）
-- `scripts/migrate-add-lineUserId.mjs`
-- `scripts/migrate-dy-settings.mjs`
-- `scripts/migrate-portal-reset-token.mjs`
-- `scripts/seed-os-erp-modules.mjs`
-- `server/routers/dayone/settings.ts`
-- `tests/`
+working tree: 只剩 `OSDelivery.tsx` / `OSPurchasing.tsx`（佔位殼）/ `package.json` / `pnpm-lock.yaml`（LF/CRLF）
 
 ---
 
 ## 後續事項
 
-### 立即待辦：TiDB Migration
+### Migration 標準驗證程序（每次必做）
 
-依序執行（不能跳）：
-1. `drizzle/0022_os_erp_modules.sql`
-2. `drizzle/0023_role_and_permission_expansion.sql`（⚠️ 執行後確認 users.role 欄位值正常）
-3. `drizzle/0024_ca_menu_cost_tables.sql`
-4. `drizzle/0025_franchisee_management.sql`
+執行任何 migration 後，**必須**用以下指令確認欄位真的存在於 TiDB，不能只看 SQL 跑完沒報錯：
 
-### 第五批（下一個開發批次）：損益儀表板
+```bash
+node -e "
+const mysql = require('mysql2/promise');
+require('dotenv').config();
+async function check() {
+  const url = new URL(process.env.DATABASE_URL);
+  const conn = await mysql.createConnection({
+    host: url.hostname, port: parseInt(url.port)||4000,
+    user: url.username, password: url.password,
+    database: url.pathname.slice(1).split('?')[0],
+    ssl: { rejectUnauthorized: false },
+  });
+  const [rows] = await conn.execute('DESCRIBE 表名');
+  console.log(rows.map(r => r.Field).join(', '));
+  await conn.end();
+}
+check().catch(console.error);
+"
+```
 
-整合日報 + 月報費用 + 退佣 → 每間店自動損益
-- 設計尚未最終確認，等 Leo 確認後執行
+> **背景**：2026-04-18 因 0023 migration 未實際執行，TiDB 缺 `has_procurement_access` / `last_login_at` 兩欄，導致登入崩潰。SQL 跑完沒報錯不等於欄位已存在，必須 DESCRIBE 驗證。
 
-### 第六批：加盟主帳款週結追蹤
+---
 
-銀行明細對帳 + 未收款提醒
-- 基礎：`os_franchisee_payments` 已在 0025 建立
+### TiDB Migration 狀態
+
+全部已執行完畢（0022 ～ 0025），無待辦。
+
+### 第五批（損益儀表板）：✅ 已完成（cf4bb2a）
+- `/dashboard/profit-loss`
+- profitLoss router + OSProfitLoss.tsx
+
+### 第六批（加盟主帳款週結）：設計討論中，尚未開發
+- 需先確認叫貨流程與大麥系統的連動方式
+- `os_franchisee_payments` 表已建，等設計定案後執行
 
 ### 大永待辦（等蛋博確認）
 
@@ -302,6 +290,7 @@ working tree: **有未 commit 的修改**（見下方）
 | `/dashboard/products` | 品項成本（新）|
 | `/dashboard/rebate` | 退佣帳款（新）|
 | `/dashboard/profit-loss` | 損益儀表板（新）|
+| `/dashboard/franchisee-payments` | 加盟主帳款（待開發）|
 
 ### 大永 ERP（/dayone）
 `/dayone` / `/dayone/orders` / `/dayone/customers` / `/dayone/drivers` / `/dayone/products` / `/dayone/inventory` / `/dayone/purchase` / `/dayone/districts` / `/dayone/reports` / `/dayone/suppliers` / `/dayone/liff-orders` / `/dayone/ar` / `/dayone/dispatch` / `/dayone/purchase-receipts`
@@ -331,6 +320,23 @@ working tree: **有未 commit 的修改**（見下方）
 
 Make Webhook URL：`https://hook.us2.make.com/6ihglkavm26i29mdgg33dvxngggv1xiu`
 SYNC_SECRET：`ordersome-sync-2026`（Make 推資料到 OrderSome API 驗證用）
+
+---
+
+## 來點什麼採購流程背景
+
+目前叫貨主流程（已跑兩個月，穩定運作）：
+1. 加盟主 / 門市店長在大麥系統叫貨
+2. 大麥系統寄送含 Excel 附件的 Email
+3. Make 工作流一（統整）：解析 Excel → 彙整叫貨清單 → 寫入 `os_procurement_orders`
+4. Make 工作流二（派發）：依廠商分組 → 推播 LINE 給對應供應商
+
+OrderSome 的 `/dashboard/purchasing` 是這個流程的查看介面，
+`importFromDamai` webhook 是 Make 寫入的端點。
+
+加盟主帳款應收的來源 = 叫貨單確認出貨後自動產生，不是手動輸入。
+`os_procurement_orders` 的 status 流程：
+`pending → sent → confirmed → received`（可取消：`cancelled`）
 
 ---
 
