@@ -1,6 +1,6 @@
 # CLAUDE.md — 宇聯國際餐飲 OrderSome 開發主檔
 
-> **版本**：v5.6。**最後更新**：2026-04-17。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.8。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -94,114 +94,145 @@ git status && git log --oneline -3
 
 ---
 
-## 2026-04-17 完成項目（本次 session）
+## 完成批次紀錄（累積）
 
-### 來點什麼 ERP（後台 /dashboard）
+### 2026-04-17 完成（第一~設計系統批）
+
+**來點什麼 ERP（後台 /dashboard）**
 - `os_daily_reports` 重建（generated columns：totalSales/guestTotal/avgPrice/productivity）
-- `os_tw_holidays` 台灣假日表（2025/2026 各 365 筆）
+- `os_tw_holidays` 台灣假日表（2025/2026）
 - `os_monthly_reports` 月報補充表（電費/水費/薪資/業績檢討/月計畫）
 - 叫貨管理系統（`os_procurement_orders` / `os_procurement_items` / `os_supplier_line`）
-- 叫貨一鍵推播 LINE 廠商（pushToLine procedure）
 - 廠商退佣自動計算（`os_rebate_records` / `os_payables`）
 - 供應商與品項成本管理（`os_suppliers` / `os_products`）
-- 新增路由：`/dashboard/daily-report` / `/dashboard/purchasing` / `/dashboard/products` / `/dashboard/rebate`
+- 路由：`/dashboard/daily-report` / `/dashboard/purchasing` / `/dashboard/products` / `/dashboard/rebate`
 
-### 設計系統
-- `DESIGN-dashboard.md` 建立（後台設計規範，暖灰底色 #f7f6f3、amber 主色 #b45309）
-- 金萱字體 jf-kamabit-1_0.otf 安裝至 client/public/fonts/
-- 後台全域 CSS 變數系統建立（index.css）
-- `AdminDashboardLayout.tsx` 套用深暖棕側邊欄 #1c1917、amber active 線、**側邊欄各組可收合**
-- `button.tsx` 立體陰影動效（hover 上浮 1px / active 下壓 1px / 80ms）
+**設計系統**
+- `DESIGN-dashboard.md` 建立、金萱字體、後台全域 CSS 變數
+- `AdminDashboardLayout.tsx` 深暖棕側邊欄、側邊欄各組可收合
+- `button.tsx` 立體陰影動效
 
-### Bug 修復
-- `/dashboard/purchasing` 崩潰：`SelectItem value=""` → `value="all"`
-- 首頁「線上點餐」按鈕透明：`CorporateHome.tsx` 加 `bg-transparent`
-- 加盟詢問：`INSERT` 明確帶入 `tenantId: 1`
-- `exclusiveSlug` 404：移除 `isActive` 過濾條件
-- 排程發布狀態：`ContentManagement.tsx` 加入「排程中」badge
-- 大永側邊欄模組控制：`DayoneLayout.tsx` 引入 `useModules` hook
+### 2026-04-18 完成（第一批 0022 ～ 第四批 0025）
 
-### 手機版 UI 修復
-- 大永 ERP 頁面標題：`px-4` → `px-6`，`text-sm` → `text-base`
-- 後台側邊欄主題文字：顏色改 amber，字型縮小加 tracking，支援收合
-- 門市日報數字輸入：`text-center` → `text-right`（避免符號重疊）
-- 商城統計卡片：`gap-6` → `gap-3 md:gap-6`，`p-6` → `p-4 md:p-6`
+**第一批（0022）：模組管理補充**
+- `drizzle/0022_os_erp_modules.sql` — module_definitions + tenant_modules 插入
+- 新增：`daily_report_os` / `purchasing_os` / `rebate_os` / `products_os`（tenantId=1 預設開啟）
+- `scripts/seed-os-erp-modules.mjs` 可手動執行
 
-### Railway 環境變數（2026-04-17 確認完整）
-```
-NODE_ENV / DATABASE_URL / JWT_SECRET / VITE_APP_ID / VITE_APP_URL / OAUTH_SERVER_URL
-R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / R2_BUCKET / R2_PUBLIC_URL_PREFIX
-GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET
-LINE_CLIENT_ID / LINE_CLIENT_SECRET / LINE_CHANNEL_ACCESS_TOKEN
-ECPAY_HASH_IV / ECPAY_HASH_KEY / ECPAY_MERCHANT_ID
-ECPAY_LOGISTICS_MERCHANT_ID / ECPAY_LOGISTICS_HASH_KEY / ECPAY_LOGISTICS_HASH_IV
-GEMINI_API_KEY / NEWS_API_KEY / RESEND_API_KEY
-SMTP_FROM / SMTP_HOST / SMTP_PASS / SMTP_PORT / SMTP_USER
-VITE_GOOGLE_MAPS_API_KEY
-SYNC_SECRET=ordersome-sync-2026（新增，Make 推資料驗證用）
-```
+**第二批（0023）：角色擴充、用戶管理、權限管理**
+- `drizzle/0023_role_and_permission_expansion.sql`
+- `users.role` ENUM 新增 `store_manager`（現在共 8 種：super_admin / manager / franchisee / staff / store_manager / customer / driver / portal_customer）
+- `users` 新增欄位：`has_procurement_access` TINYINT(1)、`last_login_at` TIMESTAMP
+- 建立 `franchisee_feature_flags` 表（用戶功能開關）
+
+**第三批（0024）：CA 表單數位化**
+- `drizzle/0024_ca_menu_cost_tables.sql`
+- `os_menu_items`（菜單品項主表，含分頁/售價/平台價）
+- `os_menu_item_ingredients`（食材明細，連結 os_products）
+- `os_oem_products`（OEM 品項，代工費/包材費/批價）
+- `os_oem_ingredients`（OEM 原料明細）
+- `os_cost_audit_log`（成本修改歷史，三表共用）
+
+**第四批（0025）：加盟主管理頁**
+- `drizzle/0025_franchisee_management.sql`
+- `os_franchisee_contracts`（合約記錄，R2 URL + 簽約/到期日）
+- `os_franchisee_payments`（帳款往來，receivable/paid）
+- 前端：`OSCustomers.tsx`（加盟主管理頁）
+
+### Migration 執行狀態
+
+| 檔案 | 狀態 |
+|------|------|
+| `0022_os_erp_modules.sql` | ✅ 已執行（2026-04-18）|
+| `0023_role_and_permission_expansion.sql` | ✅ 已執行（2026-04-18）|
+| `0024_ca_menu_cost_tables.sql` | ✅ 已執行（2026-04-18）|
+| `0025_franchisee_management.sql` | ✅ 已執行（2026-04-18）|
 
 ---
 
-## Git 狀態（2026-04-17 EOD）
+## Git 狀態（2026-04-18）
 
-最後一個 commit（已 push）：
-1. `fix: 手機版UI — 大永標題、側邊欄收合、日報輸入、商城卡片間距 2026-04-17`
-2. `fix: purchasing Select空值、首頁按鈕樣式、加盟詢問tenantId`
-3. `feat: 程式碼裝載 — 門市日報v2、叫貨管理、退佣計算、設計系統、bug修復 2026-04-17`
+最後三個 commit（已 push）：
+1. `feat: 第四批 — 加盟主管理頁 2026-04-18`
+2. `feat: CA 表單數位化 — 菜單品項成本（第二層）+ OEM 品項（第三層）2026-04-18`
+3. `feat: 用戶與權限系統重構 — store_manager role、franchisee feature flags 2026-04-17`
 
-working tree: **clean**
+working tree: **有未 commit 的修改**（見下方）
+
+### 未 commit 的修改（2026-04-18 現況）
+
+**Modified（已追蹤）：**
+- `CLAUDE.md` — 本次整理
+- `client/src/pages/dayone/DayoneAR.tsx`
+- `client/src/pages/dayone/DayoneCustomers.tsx`
+- `client/src/pages/dayone/DayonePurchase.tsx`
+- `client/src/pages/dayone/SuperAdminModules.tsx`
+- `client/src/pages/dayone/portal/DayonePortalLogin.tsx`
+- `package.json` / `pnpm-lock.yaml`
+- `server/_core/index.ts`
+- `server/routers/dayone/index.ts`
+- `server/routers/dayone/portal.ts`
+
+**Untracked（新檔）：**
+- `AC.md` / `Ordersome_UAT_Test.html`
+- `client/src/pages/dashboard/OSAccounting.tsx`
+- `client/src/pages/dashboard/OSCustomers.tsx`
+- `client/src/pages/dashboard/OSDelivery.tsx`
+- `client/src/pages/dashboard/OSPurchasing.tsx`
+- `client/src/pages/dayone/DayoneARContent.tsx`
+- `client/src/pages/dayone/DayoneCustomersContent.tsx`
+- `client/src/pages/dayone/DayonePurchaseContent.tsx`
+- `client/src/pages/dayone/DayoneSettings.tsx`
+- `client/src/pages/dayone/portal/DayonePortalForgotPassword.tsx`
+- `client/src/pages/dayone/portal/DayonePortalResetPassword.tsx`
+- `drizzle/0022_os_erp_modules.sql`（migration，待 TiDB 執行）
+- `scripts/migrate-add-lineUserId.mjs`
+- `scripts/migrate-dy-settings.mjs`
+- `scripts/migrate-portal-reset-token.mjs`
+- `scripts/seed-os-erp-modules.mjs`
+- `server/routers/dayone/settings.ts`
+- `tests/`
 
 ---
 
 ## 後續事項
 
-### 第一優先（設計確認後才能開發，明天討論）
+### 立即待辦：TiDB Migration
 
-以下問題需要 Leo 決定設計方向，程式不得先行開發：
+依序執行（不能跳）：
+1. `drizzle/0022_os_erp_modules.sql`
+2. `drizzle/0023_role_and_permission_expansion.sql`（⚠️ 執行後確認 users.role 欄位值正常）
+3. `drizzle/0024_ca_menu_cost_tables.sql`
+4. `drizzle/0025_franchisee_management.sql`
 
-**A. 系統角色與入口整合**
-- 門市店長（franchisee/staff）登入後要看到什麼？目前只能進 SOP，報表沒有專屬入口
-- 加盟主登入後功能範圍還沒定義清楚
-- 用戶管理頁 vs 權限管理頁職責劃分，需要重新定義
+### 第五批（下一個開發批次）：損益儀表板
 
-**B. 權限系統整合**
-- 現有 6 種權限未涵蓋新 ERP 頁面（報表/叫貨/退佣/品項成本/庫存）
-- 新頁面對誰開放、誰可新增/修改/刪除，全部定義清楚
-- 後台側邊欄新分組（門市 ERP）的可見性規則
+整合日報 + 月報費用 + 退佣 → 每間店自動損益
+- 設計尚未最終確認，等 Leo 確認後執行
 
-**C. 來點什麼 ERP 語義澄清**
-- 「客戶管理」= 加盟主管理，還是 B2B 客戶？點進去能做什麼？
-- 「庫存管理」與「品項成本管理」如何聯動？
-- 「進貨管理（叫貨）」是給宇聯自己的進貨管理（資產），要另外做嗎？
-- 菜單管理是否需要，跟品項成本如何聯動？
-- 供應商資料新增是要看到類似費用分析的商品？庫存管理要能連結看到聯動資料
+### 第六批：加盟主帳款週結追蹤
 
-**D. 模組管理更新**
-- 系統管理的模組管理頁未新增今天加的新功能模組
-- 新增：`daily_report_os` / `purchasing_os` / `rebate_os` / `products_os`
+銀行明細對帳 + 未收款提醒
+- 基礎：`os_franchisee_payments` 已在 0025 建立
 
-### 第二優先（兩方確次開發，設計確認後執行）
+### 大永待辦（等蛋博確認）
 
-- **損益表**：整合日報 + 月報費用 + 退佣 → 每間店自動算損益
-- **加盟主帳款**：週結帳款追蹤 → 銀行明細對帳 → 未收款提醒
-
-### 第三優先（大永 ERP 後續，等蛋博確認）
-
-- LIFF 正式 liffId 更新（蛋博建立正式 LIFF 後給 ID，程式只改一行）
-- `dy_customers` 加 `lineUserId` 欄位（ALTER TABLE，migration script 框架已建）
+- LIFF 正式 liffId（蛋博建立正式 LIFF 後給 ID，只改一行）
 - 積欠款 LINE 推播通知（cron 基礎已建，需實作發送邏輯）
 - Portal 客戶重設密碼 email（Resend 架構已有，需完成）
+- `dy_customers` 加 `lineUserId` 欄位（`scripts/migrate-add-lineUserId.mjs` 已建）
 
-### 第四優先：Make 自動化串接
+### 技術債補強
 
-- 門市自動報表 Webhook → 直接寫進 `os_daily_reports`（需先設定 SYNC_SECRET）
+- `has_procurement_access` 前端 any cast 補型別（`useAuth` User 型別正式擴充）
+- 大永 26 張 `dy_` 表不在 `schema.ts`，用 raw SQL：`(db as any).$client.execute(...)`
+- 來點什麼 ERP 的 `os_` 表也是 raw SQL，同上
+- 本機菜單圖尚未遷移到 R2（`client/public/images/menu/korean-roll/`）
+
+### Make 自動化串接
+
+- 門市自動報表 Webhook → 直接寫進 `os_daily_reports`（SYNC_SECRET 已設）
 - 採購 importFromDamai → 不再走 Google Sheets
-
-### 其他待確認（手機實測）
-
-- 加盟詢問表單送出後，後台是否看得到記錄
-- 手機後台側邊欄是否真的可以點選
 
 ---
 
