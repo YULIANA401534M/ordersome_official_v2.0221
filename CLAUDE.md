@@ -14,6 +14,131 @@ git status && git log --oneline -3
 
 ---
 
+## 當前開發狀態（換對話框必讀）
+
+> 最後更新：2026-04-18。新大腦拿到這份文件後，先讀這個區塊再開始工作。
+
+### 今天完成的所有工作（2026-04-18）
+
+**Migration（全部已在 TiDB 執行完畢）**
+- 0022：module_definitions 補四個 ERP 模組
+- 0023：store_manager role、has_procurement_access、last_login_at、franchisee_feature_flags
+- 0024：CA 表單三層（os_menu_items / os_oem_products / os_cost_audit_log）
+- 0025：os_franchisee_contracts / os_franchisee_payments
+- node script 直接建立：os_schedule_templates / os_schedules / os_delivery_orders / os_delivery_items
+- 宇聯總部新增至 stores 表，storeId = 401534
+
+**後端新增 Router**
+- profitLoss：getProfitLoss（日報+月報費用+退佣整合損益）
+- franchiseePayment：listPayments / createPayment / markPaid / exportPayments
+- caMenu：（整合進 osProducts，menuItemUpsert / menuIngredientSave / oemProductUpsert / costAuditLog）
+- scheduling：listTemplates / upsertTemplate / deleteTemplate / listSchedules / upsertSchedule / batchUpsertSchedules / getMonthSummary
+- delivery：listDeliveryOrders / getDeliveryDetail / createDeliveryOrder / updateStatus / getMonthStats
+- dailyReport：新增 syncFromMake publicProcedure（Make Webhook 推日報用）
+
+**前端新頁面（全部已完成，非空殼）**
+- `/dashboard/profit-loss` → `OSProfitLoss.tsx`（損益儀表板，KPI 三卡片 + 費用明細 + canSeeCostModules 遮罩）
+- `/dashboard/franchisee-payments` → `OSFranchiseePayments.tsx`（加盟主帳款，應收管理 + 標記收款 + 週結摘要 + 匯出 Excel）
+- `/dashboard/ca-menu` → `OSCaMenu.tsx`（CA 菜單成本，三 Tab：菜單品項/OEM/成本歷史）
+- `/dashboard/scheduling` → `OSScheduling.tsx`（排班管理，早/晚/機動三 Tab + 點格子編輯 + 月統計 + 員工設定 + Excel 匯出）
+- `/dashboard/delivery` → `OSDelivery.tsx`（配送管理，派車單卡片 + 狀態推進 + 簽收自動產生應收 + 新增 Dialog）
+
+**權限系統重構**
+- `AdminDashboardLayout.tsx`：側邊欄依 role 控制（super_admin / manager / store_manager / franchisee / staff）
+- `canSeeCostModules` = super_admin 或 has_procurement_access=1（退佣/品項成本/損益才能看）
+- 帳務管理選單：superAdminOnly
+- `users` 表新增採購存取權開關（toggleProcurementAccess）
+
+**路由清理**
+- 刪除重複的 `/dashboard/franchise` 舊版 route
+- `/dashboard/accounting` 改指向 `OSFranchiseePayments`
+- `/dashboard/delivery` 從 `ComingSoon` 改為 `OSDelivery`
+
+---
+
+### 待處理清單（優先順序）
+
+**P1 — 立刻可做，不需外部確認**
+
+1. **Migration 0026 SQL 檔案補建**
+   四張表已在 TiDB 存在，但缺 `drizzle/0026_scheduling_delivery.sql` 版本記錄檔
+   內容：`os_schedule_templates` / `os_schedules` / `os_delivery_orders` / `os_delivery_items` 的 CREATE TABLE
+
+2. **假日批次查詢補完**
+   `OSScheduling.tsx` 目前假日標示是空陣列（因 `dailyReport.checkHoliday` 只接受單日）
+   需要在 dailyReport router 新增一個 `getHolidaysByMonth` procedure：
+   input: `{ year, month }` → 查 `os_tw_holidays` WHERE year=? AND month=?
+   回傳 `{ date, isHoliday }[]`
+   前端 `OSScheduling.tsx` 用這個 procedure 標示假日欄位背景
+
+3. **OSCustomers 加盟主管理頁補強**
+   目前 `/dashboard/os-customers` 是骨架（`OSCustomers.tsx` 包裝 DayoneCustomersContent）
+   需要改為真正的加盟主管理頁面：
+   - 加盟主列表（從 `users WHERE role='franchisee'`）
+   - 合約上傳（`os_franchisee_contracts`）
+   - 帳款往來連結（到 `/dashboard/franchisee-payments` 篩選該加盟主）
+   - 功能開關設定（`franchisee_feature_flags`）
+
+**P2 — 需要外部確認後才能做**
+
+4. **大永 LIFF 正式 liffId**（等蛋博用自己的 LINE 後台建立）
+   建立後只需改 `client/src/pages/liff/LiffOrder.tsx` 的 `TENANT_CONFIG dayone.liffId` 一行
+
+5. **大永積欠款 LINE 推播邏輯補完**
+   cron 基礎已建（`server/_core/index.ts`），每小時整點執行
+   需實作：查 `dy_customers WHERE lineUserId IS NOT NULL` + 查積欠款 + 發 LINE push
+   等蛋博確認 `dy_settings` 的 `overdue_push_enabled` / `overdue_push_hour` 設定值
+
+6. **大永 Portal 重設密碼 email**
+   後端 `requestPasswordReset` / `resetPasswordWithToken` 已建
+   前端 `DayonePortalForgotPassword.tsx` / `DayonePortalResetPassword.tsx` 已建
+   目前卡在：Resend API Key 是否已在 Railway 設定（需確認環境變數 `RESEND_API_KEY`）
+
+**P3 — 設計討論後才能做**
+
+7. **Make 串接實測**
+   `syncFromMake` endpoint 已建，需要在 Make 建立對應的 HTTP module
+   POST URL：`https://ordersome.com.tw/api/trpc/dailyReport.syncFromMake`
+   Body 格式：`{ "0": { "json": { "secret": "ordersome-sync-2026", "storeName": "...", ... } } }`
+   `importFromDamai` 同理：`https://ordersome.com.tw/api/trpc/procurement.importFromDamai`
+
+8. **智慧排班 v2**（需要歷史日報資料累積後才有意義）
+   第一版排班系統先用滿 2-3 個月，收集各門市客流量與人力資料
+   之後可做：依歷史營業額預測人力需求、自動產生排班建議
+
+9. **來點什麼客戶管理**（`/dashboard/customers` 目前是 `ComingSoon`）
+   需確認：客戶管理 = 電商 B2C 客戶查詢？還是另有業務邏輯？
+
+**技術債（長期）**
+
+- 大永 26 張 `dy_` 表不在 `schema.ts`，用 raw SQL（`(db as any).$client.execute`）
+- 來點什麼 ERP 的 `os_` 表同上
+- 本機菜單圖未遷移 R2（`client/public/images/menu/korean-roll/`）
+- `has_procurement_access` 型別已補強（boolean，已移除 any cast）
+- chunk size 超標（index.js 達 6141 kB），需考慮 code splitting
+
+---
+
+### 重要常數（開發時用）
+
+| 常數 | 值 | 說明 |
+|------|----|------|
+| `HQ_STORE_ID` | `401534` | 宇聯總部 storeId，機動人員用 |
+| `SYNC_SECRET` | `ordersome-sync-2026` | Make Webhook 驗證 |
+| `DAYONE_TENANT_ID` | `90004` | 大永蛋品 tenantId |
+| `OS_TENANT_ID` | `1` | 來點什麼 tenantId |
+
+---
+
+### 已知佔位頁面（尚未實作）
+
+| 路由 | 元件 | 狀態 |
+|------|------|------|
+| `/dashboard/customers` | `ComingSoon` | 客戶管理，業務邏輯待確認 |
+| `/dashboard/franchise` | `FranchiseDashboardPage` | 加盟主入口，部分功能未完成 |
+
+---
+
 ## 專案基本資訊
 
 - **網址**：https://ordersome.com.tw
@@ -157,7 +282,7 @@ git status && git log --oneline -3
 2. `0fafdf6` — docs: CLAUDE.md v5.11 2026-04-18
 3. `adf0f3d` — feat: Make日報webhook + CA菜單成本前端 + 型別補強 2026-04-18
 
-working tree: clean（CLAUDE.md 待 commit）
+working tree: clean
 
 ---
 
