@@ -21,6 +21,8 @@ import { osRebateRouter } from "./routers/osRebate";
 import { franchiseeRouter } from "./routers/franchisee";
 import { profitLossRouter } from "./routers/profitLoss";
 import { franchiseePaymentRouter } from "./routers/franchiseePayment";
+import { schedulingRouter } from "./routers/scheduling";
+import { deliveryRouter } from "./routers/delivery";
 import { sendMail } from "./mail";
 import { users, orderAuditLogs } from "../drizzle/schema";
 import { inArray } from "drizzle-orm";
@@ -944,6 +946,8 @@ export const appRouter = router({
   franchisee: franchiseeRouter,
   profitLoss: profitLossRouter,
   franchiseePayment: franchiseePaymentRouter,
+  scheduling: schedulingRouter,
+  delivery: deliveryRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -45,7 +45,6 @@ import MemberOrders from "./pages/member/MemberOrders";
 // Auth Pages
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
-import FranchiseDashboard from "./pages/FranchiseDashboard";
 import ProfileComplete from "./pages/ProfileComplete";
 import CompleteProfile from "./pages/CompleteProfile";
 import { MarketingTrap } from "./components/MarketingTrap";
@@ -86,6 +85,7 @@ import OSRebate from "./pages/dashboard/OSRebate";
 import OSProfitLoss from "./pages/dashboard/OSProfitLoss";
 import OSFranchiseePayments from "./pages/dashboard/OSFranchiseePayments";
 import OSCaMenu from "./pages/dashboard/OSCaMenu";
+import OSDelivery from "@/pages/dashboard/OSDelivery";
 import ComingSoon from "./pages/dashboard/ComingSoon";
 
 // Landing Page
@@ -210,9 +210,6 @@ function Router() {
       <Route path="/member/profile" component={MemberProfile} />
       <Route path="/member/orders" component={MemberOrders} />
       
-      {/* Franchisee Routes */}
-      <Route path="/dashboard/franchise" component={FranchiseDashboard} />
-      
       {/* Admin Routes */}
       <Route path="/dashboard/admin/ecommerce" component={AdminDashboard} />
       <Route path="/dashboard/admin/products" component={AdminProducts} />
@@ -244,7 +241,7 @@ function Router() {
       <Route path="/dashboard/scheduling" component={OSScheduling} />
       <Route path="/dashboard/daily-report" component={OSDailyReport} />
       <Route path="/dashboard/products" component={OSProducts} />
-      <Route path="/dashboard/delivery" component={ComingSoon} />
+      <Route path="/dashboard/delivery" component={OSDelivery} />
       <Route path="/dashboard/customers" component={ComingSoon} />
       <Route path="/dashboard/purchasing" component={OSProcurement} />
       <Route path="/dashboard/rebate" component={OSRebate} />

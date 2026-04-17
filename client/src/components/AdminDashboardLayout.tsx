@@ -141,11 +141,13 @@ export default function AdminDashboardLayout({
         { key: "purchasing_os", icon: ShoppingCart, label: "叫貨管理",  path: "/dashboard/purchasing", costOnly: false },
         { key: "rebate_os",     icon: CreditCard,   label: "退佣帳款",  path: "/dashboard/rebate",      costOnly: true  },
         { key: "profit_loss",   icon: TrendingUp,   label: "損益儀表板", path: "/dashboard/profit-loss", costOnly: true  },
-        { key: "accounting",    icon: Receipt,      label: "帳務管理",  path: "/dashboard/accounting",  costOnly: false },
+        { key: "accounting",    icon: Receipt,      label: "帳務管理",  path: "/dashboard/accounting",  costOnly: false, superAdminOnly: true },
       ];
       for (const def of osModuleDefs) {
         // costOnly 項目：只有 canSeeCostModules 才顯示
         if (def.costOnly && !canSeeCostModules) continue;
+        // superAdminOnly 項目：只有 isSuperAdmin 才顯示
+        if ((def as any).superAdminOnly && !isSuperAdmin) continue;
         const isEnabled = isSuperAdmin || (orderSomeModules?.some((m: any) => m.moduleKey === def.key && !!m.isEnabled) ?? false);
         if (isEnabled) {
           enabled.push({ icon: def.icon, label: def.label, path: def.path });
