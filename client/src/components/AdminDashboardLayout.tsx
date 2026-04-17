@@ -76,7 +76,7 @@ export default function AdminDashboardLayout({
   const isOSTenant = isSuperAdmin || (user as any)?.tenantId === 1;
   const isDYTenant = isSuperAdmin || (user as any)?.tenantId === 90004;
   // 退佣帳款 & 品項成本：super_admin 或 has_procurement_access=1
-  const canSeeCostModules = isSuperAdmin || (user as any)?.has_procurement_access === 1;
+  const canSeeCostModules = isSuperAdmin || user?.has_procurement_access === true;
 
   // ── 模組開關查詢（兩個 useQuery 必須在所有 early return 之前）──
   const { data: orderSomeModules } = trpc.dayone.modules.list.useQuery(
@@ -135,6 +135,7 @@ export default function AdminDashboardLayout({
         { key: "inventory",     icon: Warehouse,    label: "庫存管理",  path: "/dashboard/inventory",  costOnly: false },
         { key: "scheduling",    icon: CalendarDays, label: "排班管理",  path: "/dashboard/scheduling", costOnly: false },
         { key: "products_os",   icon: Package,      label: "品項成本",  path: "/dashboard/products",   costOnly: true  },
+        { key: "products_os",   icon: UtensilsCrossed, label: "菜單成本管理", path: "/dashboard/ca-menu", costOnly: true  },
         { key: "delivery",      icon: Truck,        label: "配送管理",  path: "/dashboard/delivery",   costOnly: false },
         { key: "crm_customers", icon: Users,        label: "客戶管理",  path: "/dashboard/customers",  costOnly: false },
         { key: "purchasing_os", icon: ShoppingCart, label: "叫貨管理",  path: "/dashboard/purchasing", costOnly: false },

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { router, adminProcedure, protectedProcedure } from '../_core/trpc';
+import { router, adminProcedure, protectedProcedure, publicProcedure } from '../_core/trpc';
 import { TRPCError } from '@trpc/server';
 import { getDb } from '../db';
 
@@ -205,4 +205,66 @@ export const dailyReportRouter = router({
     }),
 
   getStores: protectedProcedure.query(async () => STORES),
+
+  syncFromMake: publicProcedure
+    .input(z.object({
+      secret: z.string(),
+      storeName: z.string(),
+      reportDate: z.string(),
+      isHoliday: z.number().default(0),
+      instoreSales: z.number().default(0),
+      uberSales: z.number().default(0),
+      pandaSales: z.number().default(0),
+      guestInstore: z.number().default(0),
+      guestUber: z.number().default(0),
+      guestPanda: z.number().default(0),
+      phoneOrderCount: z.number().default(0),
+      phoneOrderAmount: z.number().default(0),
+      deliveryOrderCount: z.number().default(0),
+      deliveryOrderAmount: z.number().default(0),
+      voidCount: z.number().default(0),
+      voidAmount: z.number().default(0),
+      staffFull: z.number().default(0),
+      staffPart: z.number().default(0),
+      laborHours: z.number().default(0),
+      dailyCost: z.number().default(0),
+      note: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      if (input.secret !== process.env.SYNC_SECRET) {
+        return { success: false, error: 'unauthorized' };
+      }
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
+      await (db as any).$client.execute(`
+        INSERT INTO os_daily_reports
+          (tenantId, reportDate, storeName, isHoliday,
+           instoreSales, uberSales, pandaSales,
+           guestInstore, guestUber, guestPanda,
+           phoneOrderCount, phoneOrderAmount,
+           deliveryOrderCount, deliveryOrderAmount,
+           voidCount, voidAmount,
+           staffFull, staffPart, laborHours,
+           dailyCost, note, submittedBy)
+        VALUES (1,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ON DUPLICATE KEY UPDATE
+          isHoliday=VALUES(isHoliday),
+          instoreSales=VALUES(instoreSales), uberSales=VALUES(uberSales), pandaSales=VALUES(pandaSales),
+          guestInstore=VALUES(guestInstore), guestUber=VALUES(guestUber), guestPanda=VALUES(guestPanda),
+          phoneOrderCount=VALUES(phoneOrderCount), phoneOrderAmount=VALUES(phoneOrderAmount),
+          deliveryOrderCount=VALUES(deliveryOrderCount), deliveryOrderAmount=VALUES(deliveryOrderAmount),
+          voidCount=VALUES(voidCount), voidAmount=VALUES(voidAmount),
+          staffFull=VALUES(staffFull), staffPart=VALUES(staffPart), laborHours=VALUES(laborHours),
+          dailyCost=VALUES(dailyCost), note=VALUES(note),
+          submittedBy=VALUES(submittedBy), updatedAt=NOW()
+      `, [input.reportDate, input.storeName, input.isHoliday,
+          input.instoreSales, input.uberSales, input.pandaSales,
+          input.guestInstore, input.guestUber, input.guestPanda,
+          input.phoneOrderCount, input.phoneOrderAmount,
+          input.deliveryOrderCount, input.deliveryOrderAmount,
+          input.voidCount, input.voidAmount,
+          input.staffFull, input.staffPart, input.laborHours,
+          input.dailyCost, input.note || null, 'make-webhook']);
+      return { success: true, reportDate: input.reportDate, storeName: input.storeName };
+    }),
 });
