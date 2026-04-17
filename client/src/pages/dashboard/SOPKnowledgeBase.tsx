@@ -236,7 +236,7 @@ export default function SOPKnowledgeBase() {
     const newIndex = localDocs.findIndex((d) => d.id === over.id);
     const reordered = arrayMove(localDocs, oldIndex, newIndex);
     setLocalDocs(reordered);
-    reorderDocs.mutate(reordered.map((d, i) => ({ id: d.id, displayOrder: i })));
+    reorderDocs.mutate(reordered.map((d: any, i: number) => ({ id: d.id, displayOrder: i })));
   };
 
   const getCategoryName = (id: number) =>

@@ -69,7 +69,7 @@ export default function OSFranchiseePayments() {
   // 帳款資料
   const { data, isLoading, refetch } = trpc.franchiseePayment.listPayments.useQuery(
     { userId: filterUserId, year, month },
-    { keepPreviousData: true }
+    { placeholderData: (prev: any) => prev }
   );
 
   const payments = data?.payments ?? [];
@@ -498,7 +498,7 @@ export default function OSFranchiseePayments() {
             </Button>
             <Button
               className="bg-amber-700 hover:bg-amber-600 text-white"
-              disabled={createMutation.isLoading || !createForm.userId || !createForm.amount}
+              disabled={createMutation.isPending || !createForm.userId || !createForm.amount}
               onClick={() =>
                 createMutation.mutate({
                   userId: createForm.userId,
@@ -510,7 +510,7 @@ export default function OSFranchiseePayments() {
                 })
               }
             >
-              {createMutation.isLoading ? "新增中…" : "確認新增"}
+              {createMutation.isPending ? "新增中…" : "確認新增"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -569,7 +569,7 @@ export default function OSFranchiseePayments() {
             </Button>
             <Button
               className="bg-green-700 hover:bg-green-600 text-white"
-              disabled={markPaidMutation.isLoading || !markPaidForm.paidAmount}
+              disabled={markPaidMutation.isPending || !markPaidForm.paidAmount}
               onClick={() =>
                 markPaidMutation.mutate({
                   receivableId: markPaidTarget.id,
@@ -579,7 +579,7 @@ export default function OSFranchiseePayments() {
                 })
               }
             >
-              {markPaidMutation.isLoading ? "處理中…" : "確認收款"}
+              {markPaidMutation.isPending ? "處理中…" : "確認收款"}
             </Button>
           </DialogFooter>
         </DialogContent>

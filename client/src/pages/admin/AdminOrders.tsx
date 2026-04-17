@@ -128,7 +128,7 @@ export default function AdminOrders() {
 
   // 動態產生 orderSource 唯一值清單
   const orderSourceOptions = orders
-    ? [...new Set(orders.map((o) => (o as any).orderSource).filter(Boolean))]
+    ? (Array.from(new Set(orders.map((o) => (o as any).orderSource).filter(Boolean))) as string[])
     : [];
 
   const handleStatusChange = (orderId: number, newStatus: "pending" | "paid" | "processing" | "shipped" | "delivered" | "cancelled" | "refunded") => {
@@ -201,7 +201,7 @@ export default function AdminOrders() {
                   <SelectTrigger className="w-32"><SelectValue placeholder="來源篩選" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">全部來源</SelectItem>
-                    {orderSourceOptions.map((src) => (
+                    {orderSourceOptions.map((src: string) => (
                       <SelectItem key={src} value={src}>{ORDER_SOURCE_LABELS[src] ?? src}</SelectItem>
                     ))}
                   </SelectContent>

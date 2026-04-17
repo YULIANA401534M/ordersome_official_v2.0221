@@ -60,11 +60,12 @@ export default function DriverOrders() {
     if (!confirmState) return;
     if (confirmState.dispatchItemId) {
       await updateDispatchItem.mutateAsync({
-        dispatchItemId: confirmState.dispatchItemId,
-        deliverBoxes: confirmState.deliverBoxes,
+        itemId: confirmState.dispatchItemId,
+        tenantId: TENANT_ID,
         returnBoxes: confirmState.returnBoxes,
         cashCollected: confirmState.isMonthly ? 0 : confirmState.cashCollected,
-        note: confirmState.note,
+        paymentStatus: confirmState.isMonthly ? "monthly" : "cash",
+        driverNote: confirmState.note,
       });
     } else {
       // fallback: just update order status

@@ -99,9 +99,9 @@ export default function DayoneInventoryContent({ tenantId }: { tenantId: number 
                       <td className="px-4 py-2.5">
                         {safetyEdit?.id === inv.id ? (
                           <div className="flex gap-1 items-center">
-                            <input type="number" className="w-16 border rounded px-1 py-0.5 text-sm" value={safetyEdit.value}
+                            <input type="number" className="w-16 border rounded px-1 py-0.5 text-sm" value={safetyEdit!.value}
                               onChange={e => setSafetyEdit(s => s ? { ...s, value: Number(e.target.value) } : null)} />
-                            <button className="text-xs text-amber-600 font-medium" onClick={() => setSafety.mutate({ tenantId, productId: safetyEdit.productId, safetyQty: safetyEdit.value })}>存</button>
+                            <button className="text-xs text-amber-600 font-medium" onClick={() => setSafety.mutate({ tenantId, productId: safetyEdit!.productId, safetyQty: safetyEdit!.value })}>存</button>
                             <button className="text-xs text-gray-400" onClick={() => setSafetyEdit(null)}>✕</button>
                           </div>
                         ) : (

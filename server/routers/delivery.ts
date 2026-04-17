@@ -24,7 +24,7 @@ export const deliveryRouter = router({
       if (input.storeId) { sql += " AND toStoreId=?"; params.push(input.storeId); }
       if (input.status) { sql += " AND status=?"; params.push(input.status); }
       sql += " ORDER BY deliveryDate DESC, id DESC";
-      const [rows] = await db.execute(sql, params);
+      const [rows] = await (db as any).$client.execute(sql, params);
       return rows as any[];
     }),
 
@@ -34,8 +34,8 @@ export const deliveryRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB not available" });
       const [[orders], [items]] = await Promise.all([
-        db.execute("SELECT * FROM os_delivery_orders WHERE id=? AND tenantId=1", [input.id]),
-        db.execute("SELECT * FROM os_delivery_items WHERE deliveryOrderId=? ORDER BY sortOrder", [input.id])
+        (db as any).$client.execute("SELECT * FROM os_delivery_orders WHERE id=? AND tenantId=1", [input.id]),
+        (db as any).$client.execute("SELECT * FROM os_delivery_items WHERE deliveryOrderId=? ORDER BY sortOrder", [input.id])
       ]);
       const order = (orders as any[])[0];
       if (!order) throw new TRPCError({ code: "NOT_FOUND", message: "派車單不存在" });
@@ -119,7 +119,7 @@ export const deliveryRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB not available" });
 
-      const [orders] = await db.execute(
+      const [orders] = await (db as any).$client.execute(
         "SELECT * FROM os_delivery_orders WHERE id=? AND tenantId=1", [input.id]
       );
       const order = (orders as any[])[0];
@@ -136,7 +136,7 @@ export const deliveryRouter = router({
         if (!input.signedBy?.trim()) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "請填寫簽收人姓名" });
         }
-        const [items] = await db.execute(
+        const [items] = await (db as any).$client.execute(
           "SELECT * FROM os_delivery_items WHERE deliveryOrderId=?", [input.id]
         );
         const itemList = items as any[];
@@ -186,7 +186,7 @@ export const deliveryRouter = router({
           throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "簽收失敗，請重試" });
         }
       } else {
-        await db.execute(
+        await (db as any).$client.execute(
           "UPDATE os_delivery_orders SET status=?,updatedAt=NOW() WHERE id=?",
           [input.status, input.id]
         );
@@ -201,7 +201,7 @@ export const deliveryRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB not available" });
       const mm = String(input.month).padStart(2,"0");
       const dateFrom = `${input.year}-${mm}-01`;
-      const [rows] = await db.execute(
+      const [rows] = await (db as any).$client.execute(
         `SELECT toStoreName, toStoreId,
           COUNT(*) as deliveryCount,
           COALESCE(SUM(CASE WHEN status='signed' THEN totalAmount ELSE 0 END),0) as signedAmount,

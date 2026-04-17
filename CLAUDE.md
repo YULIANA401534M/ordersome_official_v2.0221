@@ -1,6 +1,6 @@
 # CLAUDE.md — 宇聯國際餐飲 OrderSome 開發主檔
 
-> **版本**：v5.14。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.15。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -26,14 +26,14 @@ git status && git log --oneline -3
 
 ---
 
-### 最新 Git 狀態（2026-04-18）
+### 最新 Git 狀態（2026-04-18 v5.15）
 
 最後三個 commit（已 push）：
-1. `67feed7` — feat: 加盟主管理頁 v1 — 列表/功能開關/採購存取/帳款連結 2026-04-18
-2. `b1b3c32` — feat: 0026 SQL版本記錄 + 假日批次查詢 + OSScheduling假日標示 2026-04-18
-3. `fdc8216` — docs: CLAUDE.md v5.12 2026-04-18
+1. `(待 commit)` — fix: debug 階段一 — TS 錯誤全清 + scheduling/delivery raw SQL 修正
+2. `f7a57b4` — docs: CLAUDE.md v5.14
+3. `67feed7` — feat: 加盟主管理頁 v1
 
-working tree: clean
+working tree: dirty（debug 修改尚未 commit）
 
 ---
 
@@ -56,14 +56,21 @@ working tree: clean
 
 ### 🔴 下一階段開發計畫（按優先順序）
 
-#### 階段一：Debug — 修既有 TS 錯誤（30 分鐘）
-**目標**：讓 `npx tsc --noEmit` 零錯誤
-
-已知錯誤清單：
-- `OSFranchiseePayments.tsx` L501 / L513 / L572 / L582：`isLoading` → 改為 `isPending`（TanStack Query v5 API 變更）
-- `OSDelivery.tsx` L183：`detail` possibly undefined → 加 optional chain 或 early return
-- `AdminDashboardLayout.tsx` L105 / L108 / L113：tenantId missing + listDispatchOrders → listDispatch（查 dayone router）
-- `AdminOrders.tsx` L131：Set iteration → `Array.from(set)` 或加 `--downlevelIteration`
+#### ✅ 階段一：Debug — 已完成（2026-04-18）
+修復了以下錯誤（非 TS7006 implicit any 的所有錯誤已清零）：
+- `scheduling.ts` / `delivery.ts`：`db.execute(sql, params)` → `(db as any).$client.execute(sql, params)`
+- `OSFranchiseePayments.tsx`：`isLoading` → `isPending`、`keepPreviousData` → `placeholderData`
+- `OSProfitLoss.tsx`：`keepPreviousData` → `placeholderData`
+- `OSDelivery.tsx`：`detail.items` → `detail?.items ?? []`
+- `AdminDashboardLayout.tsx`：`listDispatchOrders` → `listDispatch`，補 `tenantId: 90004`
+- `DayoneDashboard.tsx`：補 `tenantId: 90004`、`date` → `reportDate`
+- `DayoneInventoryContent.tsx`：`safetyEdit` null → non-null assertion `!`
+- `DriverOrders.tsx`：`dispatchItemId` → `itemId`，補正確欄位
+- `DriverSign.tsx`：`base64/refId/refType/signerName` → `orderId/tenantId/imageBase64`
+- `AdminOrders.tsx`：Set iteration 型別問題
+- `BrandMenu.tsx`：`items` → `(items as any[])`
+- `SOPKnowledgeBase.tsx`：`d` → `(d: any)`
+- `server/db.ts`：`_db` 型別 → `any`
 
 #### 階段二：進銷存重建 — OSPurchasing.tsx（中大型，1-2 小時）
 **目標**：把 `/dashboard/purchasing` 從大永殼換成來點什麼自己的採購介面

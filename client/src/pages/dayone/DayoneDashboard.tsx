@@ -21,10 +21,10 @@ export default function DayoneDashboard() {
   const totalMonthly = monthlyRevenue?.reduce((sum: number, r: any) => sum + Number(r.revenue || 0), 0) ?? 0;
 
   // Finance KPIs
-  const { data: arList = [] } = trpc.dayone.ar.listReceivables.useQuery({ page: 1, status: "unpaid" });
-  const { data: arOverdue = [] } = trpc.dayone.ar.listReceivables.useQuery({ page: 1, status: "overdue" });
-  const { data: cashReports = [] } = trpc.dayone.ar.listDriverCashReports.useQuery({ date: today });
-  const { data: pendingReceipts = [] } = trpc.dayone.purchaseReceipt.list.useQuery({ status: "pending" });
+  const { data: arList = [] } = trpc.dayone.ar.listReceivables.useQuery({ tenantId: TENANT_ID, page: 1, status: "unpaid" });
+  const { data: arOverdue = [] } = trpc.dayone.ar.listReceivables.useQuery({ tenantId: TENANT_ID, page: 1, status: "overdue" });
+  const { data: cashReports = [] } = trpc.dayone.ar.listDriverCashReports.useQuery({ tenantId: TENANT_ID, reportDate: today });
+  const { data: pendingReceipts = [] } = trpc.dayone.purchaseReceipt.list.useQuery({ tenantId: TENANT_ID, status: "pending" });
 
   const todayArSum = (arList as any[])
     .filter((r: any) => (r.createdAt ?? "").startsWith(today))

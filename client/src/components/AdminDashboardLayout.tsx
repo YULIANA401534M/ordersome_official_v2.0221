@@ -102,15 +102,15 @@ export default function AdminDashboardLayout({
 
   // Badge counts for DY ERP sidebar
   const { data: overdueAR = [] } = trpc.dayone.ar.listReceivables.useQuery(
-    { page: 1, status: "overdue" },
+    { tenantId: 90004, page: 1, status: "overdue" },
     { enabled: !!user && isDYTenant, refetchInterval: 60000 }
   );
-  const { data: todayDispatch = [] } = trpc.dayone.dispatch.listDispatchOrders.useQuery(
-    { page: 1 },
+  const { data: todayDispatch = [] } = trpc.dayone.dispatch.listDispatch.useQuery(
+    { tenantId: 90004 },
     { enabled: !!user && isDYTenant, refetchInterval: 60000 }
   );
   const { data: pendingReceipts = [] } = trpc.dayone.purchaseReceipt.list.useQuery(
-    { status: "pending" },
+    { tenantId: 90004, status: "pending" },
     { enabled: !!user && isDYTenant, refetchInterval: 60000 }
   );
   const overdueARCount = (overdueAR as any[]).length;

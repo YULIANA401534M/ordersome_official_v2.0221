@@ -180,7 +180,7 @@ export default function OSDelivery() {
                         <div>
                           <p className="text-xs font-medium text-stone-500 mb-2">品項明細</p>
                           <div className="space-y-1">
-                            {(detail.items as any[]).map((item: any, i: number) => (
+                            {((detail?.items ?? []) as any[]).map((item: any, i: number) => (
                               <div key={i} className="flex items-center justify-between text-xs py-1 border-b border-stone-50">
                                 <span className="text-stone-700">{item.productName}</span>
                                 <div className="flex items-center gap-3 text-stone-500">

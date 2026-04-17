@@ -16,7 +16,7 @@ export const schedulingRouter = router({
       const params: any[] = [];
       if (input.storeId !== undefined) { sql += " AND storeId=?"; params.push(input.storeId); }
       sql += " ORDER BY scheduleType, employeeName";
-      const [rows] = await db.execute(sql, params);
+      const [rows] = await (db as any).$client.execute(sql, params);
       return rows as any[];
     }),
 
@@ -32,12 +32,12 @@ export const schedulingRouter = router({
       fixedRestDays: z.array(z.number().min(0).max(6)).optional(),
       note: z.string().optional()
     }))
-    .mutation(async ({ input, ctx }) => {
+    .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB not available" });
       const fixedRestDaysJson = input.fixedRestDays ? JSON.stringify(input.fixedRestDays) : null;
       if (input.id) {
-        await db.execute(
+        await (db as any).$client.execute(
           `UPDATE os_schedule_templates SET
             storeId=?, employeeName=?, userId=?, scheduleType=?,
             defaultStartTime=?, defaultEndTime=?, fixedRestDays=?, note=?, updatedAt=NOW()
@@ -47,7 +47,7 @@ export const schedulingRouter = router({
            fixedRestDaysJson, input.note ?? null, input.id]
         );
       } else {
-        await db.execute(
+        await (db as any).$client.execute(
           `INSERT INTO os_schedule_templates
             (tenantId, storeId, employeeName, userId, scheduleType,
              defaultStartTime, defaultEndTime, fixedRestDays, note)
@@ -65,7 +65,7 @@ export const schedulingRouter = router({
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB not available" });
-      await db.execute(
+      await (db as any).$client.execute(
         "UPDATE os_schedule_templates SET isActive=0 WHERE id=? AND tenantId=1",
         [input.id]
       );
@@ -89,7 +89,7 @@ export const schedulingRouter = router({
       const params: any[] = [dateFrom, dateFrom];
       if (input.storeId !== undefined) { sql += " AND storeId=?"; params.push(input.storeId); }
       sql += " ORDER BY employeeName, scheduleDate";
-      const [rows] = await db.execute(sql, params);
+      const [rows] = await (db as any).$client.execute(sql, params);
       return rows as any[];
     }),
 
@@ -109,7 +109,7 @@ export const schedulingRouter = router({
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB not available" });
-      await db.execute(
+      await (db as any).$client.execute(
         `INSERT INTO os_schedules
           (tenantId, storeId, userId, employeeName, scheduleDate, status,
            startTime, endTime, actualHours, supportStoreId, note, createdBy)
@@ -153,7 +153,7 @@ export const schedulingRouter = router({
       ]);
       const placeholders = values.map(() => "(?,?,?,?,?,?,?,?,?,?,?,?)").join(",");
       const flat = values.flat();
-      await db.execute(
+      await (db as any).$client.execute(
         `INSERT INTO os_schedules
           (tenantId,storeId,userId,employeeName,scheduleDate,status,
            startTime,endTime,actualHours,supportStoreId,note,createdBy)
@@ -192,7 +192,7 @@ export const schedulingRouter = router({
       const params: any[] = [dateFrom, dateFrom];
       if (input.storeId !== undefined) { sql += " AND storeId=?"; params.push(input.storeId); }
       sql += " GROUP BY employeeName ORDER BY employeeName";
-      const [rows] = await db.execute(sql, params);
+      const [rows] = await (db as any).$client.execute(sql, params);
       return rows as any[];
     }),
 });

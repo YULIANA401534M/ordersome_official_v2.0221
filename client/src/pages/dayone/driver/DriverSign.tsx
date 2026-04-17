@@ -31,10 +31,9 @@ export default function DriverSign() {
     setUploading(true);
     const base64 = sigRef.current.toDataURL("image/png");
     uploadSignature.mutate({
-      base64,
-      refId: orderId,
-      refType: "order",
-      signerName,
+      orderId,
+      tenantId: 90004,
+      imageBase64: base64,
     });
   }
 

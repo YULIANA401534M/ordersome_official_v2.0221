@@ -30,7 +30,7 @@ export default function OSProfitLoss() {
 
   const { data, isLoading } = trpc.profitLoss.getProfitLoss.useQuery(
     { year, month, storeId },
-    { keepPreviousData: true }
+    { placeholderData: (prev: any) => prev }
   );
 
   const yearOptions = [DEFAULT_YEAR - 1, DEFAULT_YEAR, DEFAULT_YEAR + 1];
