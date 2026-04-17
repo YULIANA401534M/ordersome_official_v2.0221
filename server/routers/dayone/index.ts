@@ -18,6 +18,7 @@ import { dyPurchaseReceiptRouter } from "./purchaseReceipt";
 import { dyDispatchRouter } from "./dispatch";
 import { dyPortalRouter } from "./portal";
 import { dyTenantUsersRouter } from "./tenantUsers";
+import { dayoneSettingsRouter } from "./settings";
 
 export const dayoneRouter = router({
   products: dyProductsRouter,
@@ -39,4 +40,5 @@ export const dayoneRouter = router({
   dispatch: dyDispatchRouter,
   portal: dyPortalRouter,
   tenantUsers: dyTenantUsersRouter,
+  settings: dayoneSettingsRouter,
 });

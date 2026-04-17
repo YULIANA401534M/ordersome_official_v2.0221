@@ -5,6 +5,7 @@ import { getDb } from "../../db";
 import { hashPassword, verifyPassword } from "../../lib/password";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "../../_core/cookies";
+import { sendMail } from "../../mail";
 
 const PORTAL_TENANT_ID = 90004;
 
@@ -398,7 +399,78 @@ export const dyPortalRouter = router({
       return { success: true };
     }),
 
-  // 10. 綁定 LINE
+  // 10. 忘記密碼 — 發送重設連結
+  requestPasswordReset: publicProcedure
+    .input(z.object({ email: z.string().email() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      const client = (db as any).$client;
+
+      const [custRows] = await client.execute(
+        "SELECT id, name FROM dy_customers WHERE loginEmail = ? AND tenantId = ? AND isPortalActive = 1 LIMIT 1",
+        [input.email, PORTAL_TENANT_ID]
+      );
+      const customer = (custRows as any[])[0];
+      // 不管有沒有找到都回傳成功，避免 email enumeration
+      if (!customer) return { success: true };
+
+      const token = crypto.randomUUID().replace(/-/g, "");
+      const expiry = new Date(Date.now() + 30 * 60 * 1000); // 30 分鐘
+
+      await client.execute(
+        "UPDATE dy_customers SET resetToken = ?, resetTokenExpiry = ? WHERE id = ?",
+        [token, expiry, customer.id]
+      );
+
+      const baseUrl = process.env.BASE_URL || "https://ordersome.com.tw";
+      const resetUrl = `${baseUrl}/dayone/portal/reset-password?token=${token}`;
+
+      await sendMail({
+        to: input.email,
+        subject: "大永蛋品客戶入口 — 密碼重設",
+        html: `<p>${customer.name} 您好，</p>
+               <p>請點擊以下連結重設密碼（30 分鐘內有效）：</p>
+               <p><a href="${resetUrl}">${resetUrl}</a></p>
+               <p>若非您本人操作，請忽略此信。</p>`,
+      });
+
+      return { success: true };
+    }),
+
+  // 11. 重設密碼 — 用 token 設定新密碼
+  resetPasswordWithToken: publicProcedure
+    .input(z.object({ token: z.string(), newPwd: z.string().min(6) }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      const client = (db as any).$client;
+
+      const [custRows] = await client.execute(
+        "SELECT id, loginEmail FROM dy_customers WHERE resetToken = ? AND resetTokenExpiry > NOW() AND tenantId = ? LIMIT 1",
+        [input.token, PORTAL_TENANT_ID]
+      );
+      const customer = (custRows as any[])[0];
+      if (!customer) throw new TRPCError({ code: "BAD_REQUEST", message: "連結已失效或不存在" });
+
+      const hash = await hashPassword(input.newPwd);
+
+      // 更新 users 表的 passwordHash（Portal 登入走 auth.loginWithPassword → users 表）
+      await client.execute(
+        "UPDATE users SET passwordHash = ?, updatedAt = NOW() WHERE email = ? AND tenantId = ?",
+        [hash, customer.loginEmail, PORTAL_TENANT_ID]
+      );
+
+      // 清除 resetToken
+      await client.execute(
+        "UPDATE dy_customers SET resetToken = NULL, resetTokenExpiry = NULL WHERE id = ?",
+        [customer.id]
+      );
+
+      return { success: true };
+    }),
+
+  // 12. 綁定 LINE
   bindLine: portalCustomerProcedure
     .input(z.object({ lineUserId: z.string() }))
     .mutation(async ({ ctx, input }) => {
