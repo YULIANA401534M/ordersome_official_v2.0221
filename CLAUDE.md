@@ -1,170 +1,135 @@
-# CLAUDE.md — OrderSome 工作主檔
+# CLAUDE.md — 宇聯國際餐飲 OrderSome 開發主檔
 
-> 最後更新：2026-04-17 | 文件版本：v5.5
-> 詳細參考（路由/API/DB表/架構）→ 見 `CLAUDE_REFERENCE.md`
-> 歷史變更紀錄 → 見 `DEVELOPMENT_LOG.md`
+> **版本**：v5.6。**最後更新**：2026-04-17。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
-## 一、專案定位
+## 第一件事
 
-**來點什麼（OrderSome）** — 宇聯國際餐飲集團數位平台，單一 Monorepo。
-
-| 子系統 | 路由前綴 |
-|--------|---------|
-| 品牌官網 | `/brand/` |
-| 集團官網 | `/corporate/` |
-| 電商購物 + B2B 福委賣場 | `/shop/` `/exclusive/:slug` |
-| 後台管理 | `/dashboard/` |
-| SOP 知識庫 | `/dashboard/sop` |
-| 大永蛋品 ERP | `/dayone/` |
-| 大永客戶 Portal | `/dayone/portal/` |
-| 司機 App | `/driver/` |
-| 會員中心 | `/member/` |
-
-**tenantId=1**：宇聯官網 ｜ **tenantId=90004**：大永蛋品
-
----
-
-## 二、部署 & 環境
-
-```
-生產網址:   https://ordersome.com.tw
-平台:       Railway（push main 分支後 2-3 分鐘自動部署）
-資料庫:     TiDB Cloud（MySQL 相容）
-圖片儲存:   Cloudflare R2（bucket: ordersome-b2b）
-```
-
-**⚠️ TiDB 注意事項：**
-- 不支援 `ADD COLUMN IF NOT EXISTS`，ALTER 前先 `SHOW COLUMNS` 確認
-- Migration 做法：寫 `scripts/migrate-xxx.mjs`，在本機用 `DATABASE_URL` 直連執行（Railway 已移除 Shell）
-
----
-
-## 三、常用指令
-
+拿到這份文件時，先執行：
 ```bash
-pnpm dev          # 開發伺服器（port 3000）
-pnpm build        # 生產構建（push 前必跑，確認零錯誤）
-pnpm check        # TypeScript 型別檢查
-pnpm test         # 執行所有測試
-pnpm db:push      # 生成並執行 Drizzle migration
+git status && git log --oneline -3
+```
+確認 working tree clean、最新 commit 是今天的，再開始工作。
+
+---
+
+## 專案基本資訊
+
+- **網址**：https://ordersome.com.tw
+- **部署**：Railway（自動 CI/CD，push 後 2-3 分鐘生效）
+- **資料庫**：TiDB Cloud（MySQL 相容）
+- **檔案儲存**：Cloudflare R2
+- **套件管理**：pnpm 10
+- **Git 規則**：commit 只用 `git add 指定檔案`，絕不用 `git add -A`
+
+---
+
+## 技術棧
+
+| 層次 | 技術 |
+|------|------|
+| 前端框架 | React 19 + TypeScript |
+| 路由 | Wouter 3 |
+| 狀態管理 | TanStack Query v5 + Zustand 5 |
+| UI 元件 | shadcn/ui（Radix UI）+ Tailwind CSS 4 |
+| 動畫 | Framer Motion 12 |
+| 後端框架 | Express 4 |
+| API 層 | tRPC 11（type-safe RPC）|
+| ORM | Drizzle ORM（MySQL 方言）|
+| 資料庫 | TiDB Cloud（MySQL 相容）|
+| 圖檔儲存 | Cloudflare R2（S3-compatible）|
+| 金流 | 綠界（ECPay）|
+| 認證 | Google OAuth + LINE OAuth + Email/Password |
+| 打包 | Vite 7（前端）+ esbuild（後端）|
+| 可視文本 | Tiptap 3 |
+| 表單 | React Hook Form + Zod |
+| 圖表 | Recharts |
+| 自動化 | Make（Webhook/Scenario）|
+
+---
+
+## 設計系統（後台 /dashboard）
+
+- **後台設計規範**：`DESIGN-dashboard.md`
+- 底色：暖灰 `#f7f6f3`
+- 主色：amber `#b45309`
+- 側邊欄背景：`#1c1917`（深暖棕）
+- KPI 數字字體：金萱 jf-kamabit（`client/public/fonts/jf-kamabit-1_0.otf`）
+- 按鈕動效：hover 上浮 1px / active 下壓 1px / 80ms
+
+---
+
+## 多租戶架構
+
+```
+宇聯國際（母公司）
+├── 商品管理（宇聯電商，tenantId=1）
+├── 內容管理（宇聯文章，tenantId=1）
+├── 人員管理（系統層級）
+└── 系統管理（租戶/模組開關）
+
+來點什麼（tenantId=1，子系統）：
+├── 門市管理（SOP/報修/檢查表）
+├── 人員管理（來點什麼自己的）
+└── ERP 模組（依模組開關啟用）
+
+大永蛋品（tenantId=90004，子系統）：
+├── 完整 ERP
+└── 人員管理
 ```
 
----
+### 用戶角色對映
 
-## 四、每次開發前必做
-
-- [ ] `git pull origin main` — 兩台電腦（家裡/公司）都要先拉
-- [ ] `git status` — 確認工作目錄狀態
-- [ ] commit 只用 `git add 指定檔案`，**絕不用 `git add -A`**
-- [ ] `pnpm run build` 零錯誤才能 push
-- [ ] 任務結束前確認無未 commit 檔案，全部 push 才算完成
-- [ ] 安裝新套件後（pnpm add），確認 package.json 和 pnpm-lock.yaml 都有加入 git add
-- [ ] 每次任務結束執行 `/clear`
-
----
-
-## 五、核心規則（違反會出 bug）
-
-- 所有 DB 查詢必須帶 `tenantId`，**禁止 hardcode**
-- 密碼欄位：DB 實際欄位為 `passwordHash`；API 傳參用 `pwd`（登入）、`newPwd`（重設），Cloudflare WAF 規避
-- 司機路由是 `/driver/`，不是 `/dayone/driver/`
-- 大永 raw SQL 用 `(db as any).$client.execute(...)`
-- **勿修改 `server/_core/`**（除非整體基礎設施）
-- **Portal 路由不包 DayoneLayout**，改用 PortalLayout（`/dayone/portal/...` 是公開路由）
-- **綠界金流用 SHA256（ecpay.ts），物流用 MD5（ecpay-logistics.ts），不可混用**
+| 角色 | tenantId | 權限範圍 |
+|------|----------|---------|
+| `super_admin` | NULL（跨租戶）| 全部功能 |
+| `manager`（來點什麼）| 1 | 宇聯商城/內容/人員 + 來點什麼門市 + ERP（依模組）|
+| `manager`（大永）| 90004 | 大永 ERP |
+| `franchisee`（門市夥伴）| 1 | SOP/報修/檢查表/線上點餐 |
+| `staff` | 1 | SOP/線上點餐 |
+| `customer` | 1 | 線上點餐/我的訂單 |
+| `driver` | 90004 | 司機 App（`/driver/`）|
+| `portal_customer` | 90004 | 大永客戶 Portal |
 
 ---
 
-## 六、已知問題 & 技術債
+## 2026-04-17 完成項目（本次 session）
 
-### 🔴 高優先（待處理）
-- **大永 26 張 dy_ 表不在 schema.ts** — 技術債，raw SQL 操作
-- **⏳ GEMINI_API_KEY 未設定** — AI 文章助手功能受限
+### 來點什麼 ERP（後台 /dashboard）
+- `os_daily_reports` 重建（generated columns：totalSales/guestTotal/avgPrice/productivity）
+- `os_tw_holidays` 台灣假日表（2025/2026 各 365 筆）
+- `os_monthly_reports` 月報補充表（電費/水費/薪資/業績檢討/月計畫）
+- 叫貨管理系統（`os_procurement_orders` / `os_procurement_items` / `os_supplier_line`）
+- 叫貨一鍵推播 LINE 廠商（pushToLine procedure）
+- 廠商退佣自動計算（`os_rebate_records` / `os_payables`）
+- 供應商與品項成本管理（`os_suppliers` / `os_products`）
+- 新增路由：`/dashboard/daily-report` / `/dashboard/purchasing` / `/dashboard/products` / `/dashboard/rebate`
 
-### 🟡 中優先
-- 開箱飯捲菜單圖打包在 Railway，應遷移到 R2
-- 密碼重設郵件尚未實作（目前只 console.log）
-- `dy_customers` 缺 `lineUserId` 欄位 — LIFF 身份綁定用
-
----
-
-## 七、開發路線圖
-
-### 階段 A — 大永蛋品上線（進行中）
-- ✅ 大永後台基礎（客戶/訂單/庫存/進貨/行政區/司機）
-- ✅ 司機手機工作站、電子簽收、派車單打印
-- ✅ SuperAdminModules 模組開關
-- ✅ LINE@ 接單整合（Make → Gemini → 後端 → LINE Reply）
-- ✅ LIFF 客戶下單（多租戶，/liff/order?tenant=dayone）
-- ✅ 帳務管理（應收應付、月結對帳）— Phase 2
-- ✅ 派車管理（自動/手動派車、完成配送）— Phase 2
-- ✅ 進貨簽收（Canvas 簽名 + R2 上傳）— Phase 2
-- ✅ 客戶門戶 Portal（LINE 登入、查帳、月結）— Phase 2
-- ✅ 用戶管理（TenantUserManagement 通用元件）— A-3
-- ✅ 積欠款紅色警示 + 報表 CSV 匯出 + 收款統計圖表 — A-3
-- ⏳ 積欠款 LINE 推播通知（portal.ts 已建 cron 基礎）
-
-### 階段 A-2 — 宇聯官網/電商優化（已完成）
-- ✅ AdminOrders 優化、AdminDashboard 統計卡片
-- ✅ SOP PDF 上傳改為 R2
-- ✅ posts 表排程發布（scheduledAt/category）
-- ✅ Email 通知系統（Resend）
-- ✅ AI 文章助手（Gemini 2.5 Flash）
-- ✅ 後台 UI 統一（側邊欄重組，三大分組）
-
-### 階段 A-3 — 大永蛋品 P0-P3 完善（已完成，2026-04-15）
-- ✅ schema.ts role enum 加入 driver
-- ✅ 大永用戶管理（TenantUserManagement 通用元件）
-- ✅ Seed 17 家供應商 + Portal 測試帳號
-- ✅ 系統驗證腳本（16 項全通過）
-
-### 階段 A-4 — 綠界物流（進行中）
-- ✅ 後端 + DB + API 完成
-- ✅ 前端完成（結帳頁/後台/我的訂單/付款完成頁）
-  - ✅ 後台：訂單列表顯示配送方式 + 建立物流單按鈕
-  - ✅ 我的訂單：物流狀態 Badge
-  - ✅ 正式帳號切換（Railway 環境變數已設定 fallback）
-- ⏳ LIFF 正式上線（蛋博建立正式 LIFF 後更新 liffId）
-
-### 階段 B — 宇聯 ERP（大永穩定後）
-- 庫存管理、排班、門市日報、異常警報
-
-### 階段 C / D
-- 採購物流、財務報表 → SaaS 化、多租戶計費
-
----
-
-## 八、最近變更
-
-### 2026-04-17 完成項目
-
-#### 來點什麼 ERP（後台 /dashboard）
-- os_daily_reports 重建（generated columns：totalSales/guestTotal/avgPrice/productivity）
-- os_tw_holidays 台灣假日表（2025/2026 各 365 筆，來源 ruyut/TaiwanCalendar）
-- os_monthly_reports 月報補充表（電費/水費/薪資/業績檢討/月計畫）
-- 叫貨管理系統（os_procurement_orders / os_procurement_items / os_supplier_line）
-- 叫貨一鍵推播 LINE 廠商（pushToLine procedure，呼叫 LINE Messaging API）
-- 廠商退佣自動計算（os_rebate_records / os_payables）
-- 供應商與品項成本管理（os_suppliers / os_products）
-- 新增路由：/dashboard/daily-report / /dashboard/purchasing / /dashboard/products / /dashboard/rebate
-
-#### 設計系統
-- DESIGN-dashboard.md 建立（後台設計規範，暖灰底色 #f7f6f3、amber 主色 #b45309）
+### 設計系統
+- `DESIGN-dashboard.md` 建立（後台設計規範，暖灰底色 #f7f6f3、amber 主色 #b45309）
 - 金萱字體 jf-kamabit-1_0.otf 安裝至 client/public/fonts/
 - 後台全域 CSS 變數系統建立（index.css）
-- AdminDashboardLayout.tsx 套用深暖棕側邊欄 #1c1917、amber active 線
-- AdminDashboard.tsx KPI 數字套用品牌字體 36px
-- button.tsx 立體陰影動效（hover 上浮 1px / active 下壓 1px / 80ms）
+- `AdminDashboardLayout.tsx` 套用深暖棕側邊欄 #1c1917、amber active 線、**側邊欄各組可收合**
+- `button.tsx` 立體陰影動效（hover 上浮 1px / active 下壓 1px / 80ms）
 
-#### Bug 修復
-- exclusiveSlug 404：移除 isActive 過濾條件（server/db.ts）
-- 排程發布狀態：ContentManagement.tsx 加入第三種 badge「排程中」
-- 大永側邊欄模組控制：DayoneLayout.tsx 引入 useModules hook，super_admin 全顯示
+### Bug 修復
+- `/dashboard/purchasing` 崩潰：`SelectItem value=""` → `value="all"`
+- 首頁「線上點餐」按鈕透明：`CorporateHome.tsx` 加 `bg-transparent`
+- 加盟詢問：`INSERT` 明確帶入 `tenantId: 1`
+- `exclusiveSlug` 404：移除 `isActive` 過濾條件
+- 排程發布狀態：`ContentManagement.tsx` 加入「排程中」badge
+- 大永側邊欄模組控制：`DayoneLayout.tsx` 引入 `useModules` hook
 
-#### Railway 環境變數（2026-04-17 確認完整）
-DATABASE_URL / JWT_SECRET / VITE_APP_ID / VITE_APP_URL / OAUTH_SERVER_URL
+### 手機版 UI 修復
+- 大永 ERP 頁面標題：`px-4` → `px-6`，`text-sm` → `text-base`
+- 後台側邊欄主題文字：顏色改 amber，字型縮小加 tracking，支援收合
+- 門市日報數字輸入：`text-center` → `text-right`（避免符號重疊）
+- 商城統計卡片：`gap-6` → `gap-3 md:gap-6`，`p-6` → `p-4 md:p-6`
+
+### Railway 環境變數（2026-04-17 確認完整）
+```
+NODE_ENV / DATABASE_URL / JWT_SECRET / VITE_APP_ID / VITE_APP_URL / OAUTH_SERVER_URL
 R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / R2_BUCKET / R2_PUBLIC_URL_PREFIX
 GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET
 LINE_CLIENT_ID / LINE_CLIENT_SECRET / LINE_CHANNEL_ACCESS_TOKEN
@@ -173,93 +138,155 @@ ECPAY_LOGISTICS_MERCHANT_ID / ECPAY_LOGISTICS_HASH_KEY / ECPAY_LOGISTICS_HASH_IV
 GEMINI_API_KEY / NEWS_API_KEY / RESEND_API_KEY
 SMTP_FROM / SMTP_HOST / SMTP_PASS / SMTP_PORT / SMTP_USER
 VITE_GOOGLE_MAPS_API_KEY
-SYNC_SECRET（新增，Make 推資料驗證用，值：ordersome-sync-2026）
+SYNC_SECRET=ordersome-sync-2026（新增，Make 推資料驗證用）
+```
 
 ---
 
-### 最近變更（2026-04-16）— 綠界物流
+## Git 狀態（2026-04-17 EOD）
 
-| 類別 | 變更 |
+最後一個 commit（已 push）：
+1. `fix: 手機版UI — 大永標題、側邊欄收合、日報輸入、商城卡片間距 2026-04-17`
+2. `fix: purchasing Select空值、首頁按鈕樣式、加盟詢問tenantId`
+3. `feat: 程式碼裝載 — 門市日報v2、叫貨管理、退佣計算、設計系統、bug修復 2026-04-17`
+
+working tree: **clean**
+
+---
+
+## 後續事項
+
+### 第一優先（設計確認後才能開發，明天討論）
+
+以下問題需要 Leo 決定設計方向，程式不得先行開發：
+
+**A. 系統角色與入口整合**
+- 門市店長（franchisee/staff）登入後要看到什麼？目前只能進 SOP，報表沒有專屬入口
+- 加盟主登入後功能範圍還沒定義清楚
+- 用戶管理頁 vs 權限管理頁職責劃分，需要重新定義
+
+**B. 權限系統整合**
+- 現有 6 種權限未涵蓋新 ERP 頁面（報表/叫貨/退佣/品項成本/庫存）
+- 新頁面對誰開放、誰可新增/修改/刪除，全部定義清楚
+- 後台側邊欄新分組（門市 ERP）的可見性規則
+
+**C. 來點什麼 ERP 語義澄清**
+- 「客戶管理」= 加盟主管理，還是 B2B 客戶？點進去能做什麼？
+- 「庫存管理」與「品項成本管理」如何聯動？
+- 「進貨管理（叫貨）」是給宇聯自己的進貨管理（資產），要另外做嗎？
+- 菜單管理是否需要，跟品項成本如何聯動？
+- 供應商資料新增是要看到類似費用分析的商品？庫存管理要能連結看到聯動資料
+
+**D. 模組管理更新**
+- 系統管理的模組管理頁未新增今天加的新功能模組
+- 新增：`daily_report_os` / `purchasing_os` / `rebate_os` / `products_os`
+
+### 第二優先（兩方確次開發，設計確認後執行）
+
+- **損益表**：整合日報 + 月報費用 + 退佣 → 每間店自動算損益
+- **加盟主帳款**：週結帳款追蹤 → 銀行明細對帳 → 未收款提醒
+
+### 第三優先（大永 ERP 後續，等蛋博確認）
+
+- LIFF 正式 liffId 更新（蛋博建立正式 LIFF 後給 ID，程式只改一行）
+- `dy_customers` 加 `lineUserId` 欄位（ALTER TABLE，migration script 框架已建）
+- 積欠款 LINE 推播通知（cron 基礎已建，需實作發送邏輯）
+- Portal 客戶重設密碼 email（Resend 架構已有，需完成）
+
+### 第四優先：Make 自動化串接
+
+- 門市自動報表 Webhook → 直接寫進 `os_daily_reports`（需先設定 SYNC_SECRET）
+- 採購 importFromDamai → 不再走 Google Sheets
+
+### 其他待確認（手機實測）
+
+- 加盟詢問表單送出後，後台是否看得到記錄
+- 手機後台側邊欄是否真的可以點選
+
+---
+
+## 技術債
+
+- ⚠️ 大永 26 張 `dy_` 表不在 `schema.ts`，用 raw SQL 操作：`(db as any).$client.execute(...)`
+- ⚠️ 來點什麼 ERP 的 `os_` 表也是 raw SQL，同上原因
+- ⚠️ 本機菜單圖尚未遷移到 R2（`client/public/images/menu/korean-roll/`）
+
+---
+
+## 前端路由（完整清單）
+
+### 品牌官網（來點什麼）
+`/brand` / `/brand/story` / `/brand/stores` / `/brand/menu` / `/brand/news` / `/brand/contact` / `/brand/franchise`
+
+### 集團官網（宇聯國際）
+`/corporate` / `/corporate/about` / `/corporate/brands` / `/corporate/culture` / `/corporate/news` / `/corporate/news/:slug` / `/corporate/franchise` / `/corporate/contact`
+
+### 電商購物
+`/shop` / `/shop/category/:slug` / `/shop/product/:id` / `/shop/cart` / `/shop/checkout` / `/shop/order/:id` / `/shop/payment/:orderNumber` / `/shop/order-complete/:orderNumber` / `/shop/my-orders` / `/exclusive/:slug`（B2B 福委賣場）
+
+### 認證 & 會員
+`/login` / `/forgot-password` / `/reset-password/:token` / `/profile` / `/member/profile` / `/member/orders`
+
+### 後台管理（/dashboard）
+| 路徑 | 說明 |
 |------|------|
-| 物流 | ecpay-logistics.ts + webhook + logistics router + orders 7 欄位 |
-| 前端 | 結帳頁選擇配送 + 後台建立物流單 + 我的訂單物流狀態 Badge + 付款完成頁 |
-| 環境 | Railway 環境變數 ECPAY_LOGISTICS_* fallback 已設定 |
-| 物流 | ECPAY_LOGISTICS_* 環境變數正式啟用，解決「找不到加密金鑰」錯誤 |
-| 用戶管理 | TenantUserManagement 通用元件 + tenantUsers router |
-| 帳務 | 逾期警示 + 司機端提示 + 收款統計 |
-| 報表 | CSV 匯出（BOM 中文相容） |
-| 審計 | order_audit_logs 表 + 訂單明細彈窗 |
-| B2B | ExclusiveProduct slug 依照公司 |
-| Schema | role enum 加 driver |
-| 行政修復 | 訂單價格/刪除、設定刪除、售票單修正、Portal 登出修正 |
+| `/dashboard` | 智慧入口 |
+| `/dashboard/admin/ecommerce` | AdminDashboard（商品總覽）|
+| `/dashboard/admin/products` | 商品管理 |
+| `/dashboard/admin/orders` | 訂單管理 |
+| `/dashboard/admin/categories` | 分類管理 |
+| `/dashboard/admin/users` | 用戶管理 |
+| `/dashboard/admin/permissions` | 權限管理 |
+| `/dashboard/admin/tenants` | 租戶管理 |
+| `/dashboard/content` | 內容管理 |
+| `/dashboard/content/new` | 新增文章 |
+| `/dashboard/content/edit/:id` | 編輯文章 |
+| `/dashboard/franchise-inquiries` | 加盟詢問 |
+| `/dashboard/sop` | SOP 知識庫 |
+| `/dashboard/repairs` | 設備報修 |
+| `/dashboard/checklist` | 每日檢查表 |
+| `/dashboard/ai-writer` | AI 文章助手 |
+| `/dashboard/daily-report` | 門市日報（新）|
+| `/dashboard/purchasing` | 叫貨管理（新）|
+| `/dashboard/products` | 品項成本（新）|
+| `/dashboard/rebate` | 退佣帳款（新）|
+
+### 大永 ERP（/dayone）
+`/dayone` / `/dayone/orders` / `/dayone/customers` / `/dayone/drivers` / `/dayone/products` / `/dayone/inventory` / `/dayone/purchase` / `/dayone/districts` / `/dayone/reports` / `/dayone/suppliers` / `/dayone/liff-orders` / `/dayone/ar` / `/dayone/dispatch` / `/dayone/purchase-receipts`
+
+### 大永客戶 Portal（公開）
+`/dayone/portal` / `/dayone/portal/login` / `/dayone/portal/register` / `/dayone/portal/orders` / `/dayone/portal/statement` / `/dayone/portal/account`
+
+### 司機 App
+`/driver` / `/driver/today` / `/driver/orders` / `/driver/order/:id` / `/driver/pickup` / `/driver/done` / `/driver/worklog` / `/driver/profile`
+
+### LIFF（LINE 前台）
+`/liff/order?tenant=dayone`
+
+### Super Admin
+`/super-admin/tenants` / `/super-admin/modules`
 
 ---
 
-## 九、下一個任務
+## 公開 Webhook Endpoints
 
-### 待人工確認（回家測試）
-- 加盟詢問表單送出後，後台是否看得到記錄（手腳說邏輯正確但測試報告說看不到）
-- 手機後台側邊欄是否真的可以點選（需手機實測）
+| Endpoint | 說明 |
+|----------|------|
+| `POST /api/payment/callback` | 綠界 ECPay 付款回調 |
+| `POST /api/dayone/line-order` | 大永 LINE@ 接單（Make → 後端）|
+| `POST /api/ecpay/map-result` | 綠界超商選擇地圖回調 |
+| `POST /api/ecpay/logistics-notify` | 綠界物流狀態通知 |
 
-### 待開發（依序）
-1. 損益儀表板：整合日報 + 月報費用 + 退佣 → 自動算每間店損益
-2. 加盟主帳款管理：週結帳款追蹤 → 銀行明細對帳 → 未收款提醒
-3. Make 串接：門市自動報表 Webhook 直接寫進 os_daily_reports（需先設定 SYNC_SECRET）
-4. Make 串接：採購 importFromDamai → 不再走 Google Sheets
-5. 門市名稱清單改為後台可設定（目前寫死在 dailyReport.ts STORES 陣列）
-6. 供應商編輯介面確認 rebateRate 可從後台調整
-7. 官網前台動畫：Clay 等級動效 + 毛玻璃（最後一批）
-8. 大永 LIFF 正式 liffId 更新（等蛋博用自己 LINE 後台建立）
+Make Webhook URL：`https://hook.us2.make.com/6ihglkavm26i29mdgg33dvxngggv1xiu`
+SYNC_SECRET：`ordersome-sync-2026`（Make 推資料到 OrderSome API 驗證用）
 
 ---
 
-## 十、踩坑紀錄（避免再踩）
+## 大永蛋品業務背景
 
-### Git & 流程
-- `git add -A` 絕對不能用，只能 `git add 指定檔案`
-- 兩台電腦開始前都要先 `git pull`，不然有衝突
-- `DayoneLayout` 元件要加入 git（untracked 檔案 Railway build 找不到）
-
-### TiDB 限制
-- 不支援 `ADD COLUMN IF NOT EXISTS`
-- TiDB `LIMIT ?` 參數綁定報 `Incorrect arguments to LIMIT`，改用 `LIMIT ${input.limit}` 內插
-- `mysql2` 連接 TiDB 需手動解析 URL 並設 `ssl: { rejectUnauthorized: false }`
-- `drizzle-kit migrate` 本機無法連 TiDB，用 `scripts/migrate-xxx.mjs` 直連執行
-
-### 大永 ERP 特殊規則
-- `dy_orders` 欄位名稱是 `totalAmount`，不是 `total`
-- `dy_orders.customerId` 是 NOT NULL，找不到客戶傳 0 不傳 null
-- `dy_suppliers` 表無 `updatedAt` 欄位，upsert/toggle SQL 不可包含此欄
-- `createUser(role='driver')` 需同步 INSERT `dy_drivers` 表，否則司機管理頁查不到
-- `users` 表 role enum 原本沒有 `driver`，需執行 ALTER TABLE 加入，不能只改 schema.ts
-
-### 綠界物流
-- **金流用 SHA256（ecpay.ts），物流用 MD5（ecpay-logistics.ts），不可混用**
-- 物流 env var 有 fallback：`ECPAY_LOGISTICS_*` → `ECPAY_*`
-- 物流回調必須回應 `1|OK`
-- UNIMART 需額外傳 `CollectionAmount`
-- 超商取貨超過 60 件收超重費，超金額上限必須分批
-- 前端選擇地圖用 postMessage 回傳
-
-### Portal 路由
-- Portal 路由（`/dayone/portal/...`）不能包 `DayoneLayout`（DayoneLayout 內部驗證 dyAdmin）
-- Portal 是公開給客戶用的，直接在 App.tsx 放 public Route
-- Portal 登出要導到 `/dayone/portal/login`
-
-### 其他
-- Procedure 參數名稱要對（DeliveryNote bug：前端傳 orderId，後端要 id）
-- `getPublishedPosts` 回傳格式是分頁物件 `{ posts, total, ... }`，前端用 `data?.posts?.map()`
-- Tiptap `RichTextEditor` 的 `content` prop 只在初始化時讀取，需在 useEffect 裡用 `editor.commands.setContent()` 更新
-- CSV 匯出需加 BOM（`\uFEFF`）否則 Excel 開啟中文亂碼；用 `exportCSV.ts` 工具統一處理
-- `TenantUserManagement` 是通用元件，來點什麼複用只需傳 `tenantId={1} tenantName="來點什麼"`
-- `useMemo` 內不可呼叫會變動 reference 的 function，改用 `useEffect + useState`
-- Map/Set iteration 在 TS `downlevelIteration` 未啟用時報 TS2802，改用 `Array.from(map.entries())`
-- Canvas 簽名在 iOS Safari touch event 座標需用 `e.touches[0]`，不是 `e.clientX`
-- DayoneDashboard 的 Finance KPI 查詢需確認 portal.ts/dispatch.ts/purchaseReceipt.ts 已匯入 index.ts
-- LINE Reply 由後端直接呼叫（用 LINE_CHANNEL_ACCESS_TOKEN），不經過 Make
-- Make JSON string 模式無法處理換行符號，改用 Data structure 模式
-- `DayoneLayout.tsx` 的 `TENANT_ID` 正確值是 `90004`（曾被錯誤設為 `2`，commit 6fb3df0 已修正）
-
----
-
-*CLAUDE.md v5.5 — 精簡主檔，詳細參考見 CLAUDE_REFERENCE.md，歷史變更見 DEVELOPMENT_LOG.md*
+- 聯絡人：洪銘恆（蛋博）：0980190857，dayoneegg@gmail.com
+- 地址：台中市西屯區西松巷 63-18 號
+- 業務：雞蛋批發配送，台中區域，約 28 個行政區，D1/D2 兩條固定路線
+- tenantId = 90004
+- 蛋品 SKU：白大箱、白小箱、白紙、液白、液紙、粉蛋、紙蛋、液褐蛋、破蛋、洗選白帶裝、洗選白袋裝、洗選白盒裝、A液紙、鵝蛋、鴨蛋、水鴨蛋
+- LIFF ID 現用：`2009700774-rWyJ27md`（測試用，等蛋博建立正式 LIFF 後更新）

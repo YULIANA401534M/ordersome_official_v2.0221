@@ -2,7 +2,7 @@
 
 > 這份文件是「查閱用」，不是每次都要讀。
 > 開新對話時只需讀 `CLAUDE.md`，有需要才查這裡。
-> 最後更新：2026-04-17
+> 最後更新：2026-04-17（v5.6 同步）
 
 ---
 
@@ -126,6 +126,10 @@ ordersome_official_v2/
 | `/dashboard/repairs` | `EquipmentRepairs` |
 | `/dashboard/checklist` | `DailyChecklist` |
 | `/dashboard/ai-writer` | `AIWriter`（AI 文章助手） |
+| `/dashboard/daily-report` | `OSDailyReport`（門市日報，新）|
+| `/dashboard/purchasing` | `OSProcurement`（叫貨管理，新）|
+| `/dashboard/products` | `OSProducts`（品項成本，新）|
+| `/dashboard/rebate` | `OSRebate`（退佣帳款，新）|
 
 ### 大永 ERP（管理端）
 `/dayone` / `/dayone/orders` / `/dayone/customers` / `/dayone/drivers` / `/dayone/products` / `/dayone/inventory` / `/dayone/purchase` / `/dayone/districts` / `/dayone/reports` / `/dayone/suppliers` / `/dayone/liff-orders` / `/dayone/ar` / `/dayone/dispatch` / `/dayone/purchase-receipts`
@@ -299,6 +303,8 @@ driver       — 司機（大永）
 |----------|------|
 | `POST /api/payment/callback` | 綠界 ECPay 付款回調 |
 | `POST /api/dayone/line-order` | 大永 LINE@ 接單（Make → 後端） |
+| `POST /api/ecpay/map-result` | 綠界超商選擇地圖回調 |
+| `POST /api/ecpay/logistics-notify` | 綠界物流狀態通知 |
 | `POST /api/trpc/procurement.importFromDamai` | Make 解析大麥 Email → 寫入叫貨系統（需 SYNC_SECRET）|
 | `POST /api/trpc/dailyReport.sync` | Make 門市自動報表 → 同步進系統（需 SYNC_SECRET）|
 
