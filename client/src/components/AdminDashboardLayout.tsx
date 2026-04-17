@@ -126,6 +126,7 @@ export default function AdminDashboardLayout({
         { key: "delivery",      icon: Truck,        label: "配送管理", path: "/dashboard/delivery" },
         { key: "crm_customers", icon: Users,        label: "客戶管理", path: "/dashboard/customers" },
         { key: "purchasing",    icon: ShoppingCart, label: "進貨管理", path: "/dashboard/purchasing" },
+        { key: "rebate",        icon: CreditCard,   label: "退佣帳款", path: "/dashboard/rebate" },
         { key: "accounting",    icon: Receipt,      label: "帳務管理", path: "/dashboard/accounting" },
       ];
       for (const def of osModuleDefs) {
@@ -326,14 +327,14 @@ export default function AdminDashboardLayout({
   };
 
   const menuItemClass = (path: string) =>
-    `flex items-center gap-3 px-4 py-2 text-sm transition-colors cursor-pointer ${
+    `flex items-center gap-3 px-4 py-2 text-sm transition-colors cursor-pointer rounded-lg mx-2 ${
       isActive(path)
-        ? "bg-amber-50 text-amber-700 font-medium border-r-2 border-amber-500"
-        : "text-gray-700 hover:bg-amber-50 hover:text-amber-700"
+        ? "bg-[#44403c] text-[#fafaf9] font-medium sidebar-item-active"
+        : "text-[#a8a29e] hover:bg-[#292524] hover:text-[#fafaf9]"
     }`;
 
   const groupLabelClass =
-    "text-xs font-semibold text-amber-600 uppercase tracking-wider px-4 py-2";
+    "text-[11px] font-semibold text-[#78716c] uppercase tracking-[0.8px] px-4 py-2";
 
   const renderGroup = (
     label: string,
@@ -364,12 +365,12 @@ export default function AdminDashboardLayout({
     return items.map((item) => (
       <div
         key={item.label}
-        className="flex items-center gap-3 px-4 py-2 text-sm text-gray-400 cursor-not-allowed"
+        className="flex items-center gap-3 px-4 py-2 text-sm text-[#44403c] cursor-not-allowed rounded-lg mx-2 opacity-50"
         title="即將推出"
       >
         <item.icon className="h-4 w-4 shrink-0" />
         <span>{item.label}</span>
-        <span className="ml-auto text-[10px] bg-gray-100 text-gray-400 rounded px-1">即將推出</span>
+        <span className="ml-auto text-[10px] bg-[#292524] text-[#78716c] rounded px-1.5 py-0.5">即將推出</span>
       </div>
     ));
   };
@@ -379,14 +380,14 @@ export default function AdminDashboardLayout({
   const sidebarContent = (
     <>
       {/* Logo */}
-      <div className="h-16 flex items-center px-4 border-b border-gray-200 shrink-0">
-        <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center shrink-0">
+      <div className="h-16 flex items-center px-4 border-b border-[#292524] shrink-0">
+        <div className="w-8 h-8 rounded-lg bg-[#b45309] flex items-center justify-center shrink-0">
           <UtensilsCrossed className="h-4 w-4 text-white" />
         </div>
         <div className="ml-3 min-w-0">
-          <p className="font-bold text-sm leading-tight truncate">來點什麼</p>
-          <p className="text-[10px] text-gray-400 leading-tight truncate">
-            OrderSome 管理後台
+          <p className="text-sm leading-tight truncate text-[#fafaf9]" style={{ fontFamily: 'var(--font-brand)' }}>來點什麼</p>
+          <p className="text-[10px] text-[#78716c] leading-tight truncate">
+            管理後台
           </p>
         </div>
       </div>
@@ -396,7 +397,7 @@ export default function AdminDashboardLayout({
         {/* 宇聯總部 */}
         {(ecommerceItems.length > 0 || contentItems.length > 0 || userItems.length > 0 || franchiseItems.length > 0) && (
           <div className="px-4 pt-3 pb-1">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">宇聯總部</p>
+            <p className="text-[10px] font-bold text-[#78716c] uppercase tracking-widest">宇聯總部</p>
           </div>
         )}
         {renderGroup("商城管理", ecommerceItems)}
@@ -407,7 +408,7 @@ export default function AdminDashboardLayout({
         {/* 來點什麼 */}
         {(storeOperationItems.length > 0 || showOsErpSection) && (
           <div className="px-4 pt-3 pb-1">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">來點什麼</p>
+            <p className="text-[10px] font-bold text-[#78716c] uppercase tracking-widest">來點什麼</p>
           </div>
         )}
         {renderGroup("門市管理", storeOperationItems)}
@@ -432,7 +433,7 @@ export default function AdminDashboardLayout({
         {/* 大永蛋品 */}
         {showDyErpSection && (
           <div className="px-4 pt-3 pb-1">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">大永蛋品</p>
+            <p className="text-[10px] font-bold text-[#78716c] uppercase tracking-widest">大永蛋品</p>
           </div>
         )}
         {showDyErpSection && (
@@ -471,24 +472,24 @@ export default function AdminDashboardLayout({
       </nav>
 
       {/* User footer */}
-      <div className="border-t border-gray-200 p-3 shrink-0">
+      <div className="border-t border-[#292524] p-3 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
-            <span className="text-xs font-medium text-amber-700">
+          <div className="w-8 h-8 rounded-full bg-[#292524] flex items-center justify-center shrink-0">
+            <span className="text-xs font-medium text-[#d97706]">
               {user.name?.charAt(0).toUpperCase() ?? "?"}
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate leading-none">
+            <p className="text-sm font-medium truncate leading-none text-[#fafaf9]">
               {user.name || "-"}
             </p>
-            <p className="text-xs text-gray-400 truncate mt-0.5">
+            <p className="text-xs text-[#78716c] truncate mt-0.5">
               {user.email || "-"}
             </p>
           </div>
           <button
             onClick={logout}
-            className="p-1.5 rounded-lg hover:bg-red-50 hover:text-red-600 text-gray-400 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-[#292524] hover:text-red-400 text-[#78716c] transition-colors"
             title="登出"
           >
             <LogOut className="h-4 w-4" />
@@ -499,11 +500,11 @@ export default function AdminDashboardLayout({
   );
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-screen overflow-hidden" style={{ background: 'var(--color-bg)' }}>
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/60 z-40 lg:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}
@@ -511,12 +512,13 @@ export default function AdminDashboardLayout({
       {/* Sidebar */}
       <aside
         className={`
-          flex flex-col bg-white border-r border-gray-200 w-64 shrink-0
+          flex flex-col w-64 shrink-0
           lg:relative lg:translate-x-0
           fixed inset-y-0 left-0 z-50
           transition-transform duration-300 ease-in-out
           ${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
         `}
+        style={{ background: 'var(--color-sidebar-bg)' }}
       >
         {sidebarContent}
       </aside>
@@ -524,15 +526,15 @@ export default function AdminDashboardLayout({
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Mobile header */}
-        <header className="lg:hidden h-14 flex items-center justify-between px-4 bg-white border-b border-gray-200 shrink-0">
+        <header className="lg:hidden h-14 flex items-center justify-between px-4 bg-white border-b border-[#e7e5e4] shrink-0">
           <button
             onClick={() => setMobileOpen(true)}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            className="p-2 rounded-lg hover:bg-stone-100 transition-colors"
             aria-label="開啟選單"
           >
-            <Menu className="h-5 w-5 text-gray-600" />
+            <Menu className="h-5 w-5 text-stone-600" />
           </button>
-          <span className="text-sm font-medium text-gray-700">
+          <span className="text-sm font-medium text-stone-700" style={{ fontFamily: 'var(--font-brand)' }}>
             {activeMenuItem?.label ?? "管理後台"}
           </span>
           <div className="w-9" />

@@ -97,10 +97,12 @@ export default function ContentManagement() {
                         className={`px-3 py-1 text-xs font-semibold rounded-full ${
                           post.status === "published"
                             ? "bg-green-100 text-green-800"
+                            : post.scheduledAt
+                            ? "bg-amber-100 text-amber-800"
                             : "bg-gray-100 text-gray-800"
                         }`}
                       >
-                        {post.status === "published" ? "已發布" : "草稿"}
+                        {post.status === "published" ? "已發布" : post.scheduledAt ? "排程中" : "草稿"}
                       </span>
                       {(post as any).category && (
                         <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700">

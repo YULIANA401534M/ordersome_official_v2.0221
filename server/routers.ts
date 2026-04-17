@@ -17,6 +17,7 @@ import { aiWriterRouter } from "./routers/ai-writer";
 import { dailyReportRouter } from "./routers/dailyReport";
 import { osProductsRouter } from "./routers/osProducts";
 import { procurementRouter } from "./routers/procurement";
+import { osRebateRouter } from "./routers/osRebate";
 import { sendMail } from "./mail";
 import { users, orderAuditLogs } from "../drizzle/schema";
 import { inArray } from "drizzle-orm";
@@ -936,6 +937,7 @@ export const appRouter = router({
   // 來點什麼 ERP — 品項成本
   osProducts: osProductsRouter,
   procurement: procurementRouter,
+  osRebate: osRebateRouter,
 });
 
 export type AppRouter = typeof appRouter;

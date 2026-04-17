@@ -3,13 +3,60 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Custom Font - JF Kamabit */
+/* ── 字體宣告 ─────────────────────────────────────────────────────────── */
 @font-face {
-  font-family: 'JF Kamabit';
-  src: url('/fonts/jf-kamabit.otf') format('opentype');
+  font-family: 'JF-Kamabit';
+  src: url('/fonts/jf-kamabit-1_0.otf') format('opentype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
+}
+@font-face {
+  font-family: 'JF Kamabit';
+  src: url('/fonts/jf-kamabit-1_0.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── 設計系統 CSS 變數 ─────────────────────────────────────────────────── */
+:root {
+  --font-brand: 'JF-Kamabit', 'PingFang TC', sans-serif;
+  --font-ui: 'Inter', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* 背景與表面 */
+  --color-bg: #f7f6f3;
+  --color-surface: #ffffff;
+  --color-border: #e7e5e4;
+  --color-border-light: #f5f4f2;
+
+  /* 文字 */
+  --color-text-primary: #1c1917;
+  --color-text-secondary: #78716c;
+  --color-text-muted: #a8a29e;
+
+  /* Amber 主色 */
+  --color-amber: #b45309;
+  --color-amber-hover: #d97706;
+  --color-amber-active: #92400e;
+  --color-amber-bg: #fef3c7;
+  --color-amber-border: #fcd34d;
+
+  /* 側邊欄 */
+  --color-sidebar-bg: #1c1917;
+  --color-sidebar-hover: #292524;
+  --color-sidebar-active: #44403c;
+
+  /* 語意色 */
+  --color-success: #15803d;
+  --color-success-bg: #f0fdf4;
+  --color-warning: #d97706;
+  --color-warning-bg: #fffbeb;
+  --color-danger: #dc2626;
+  --color-danger-bg: #fef2f2;
+  --color-info: #0369a1;
+  --color-info-bg: #f0f9ff;
 }
 
 @theme inline {
@@ -149,10 +196,11 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Noto Sans TC', 'Inter', system-ui, sans-serif;
+    font-family: var(--font-ui);
+    color: var(--color-text-primary);
   }
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'JF Kamabit', 'Noto Sans TC', 'Inter', system-ui, sans-serif;
+    font-family: var(--font-brand);
   }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
@@ -166,10 +214,6 @@
     @apply cursor-pointer;
   }
   
-  h1, h2, h3, h4, h5, h6 {
-    font-family: 'Noto Sans TC', 'Inter', system-ui, sans-serif;
-    font-weight: 700;
-  }
 }
 
 @layer components {
@@ -254,4 +298,128 @@
   .animate-float {
     animation: float 3s ease-in-out infinite;
   }
+}
+
+/* ── 後台設計系統元件樣式 ──────────────────────────────────────────────── */
+
+/* KPI 數字卡片 */
+.kpi-value {
+  font-family: var(--font-brand);
+  font-size: 36px;
+  color: var(--color-text-primary);
+  line-height: 1;
+}
+.kpi-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+.kpi-change-positive { font-size: 13px; color: var(--color-success); margin-top: 4px; }
+.kpi-change-negative { font-size: 13px; color: var(--color-danger);  margin-top: 4px; }
+
+/* 表格容器 */
+.ds-table-wrapper {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.ds-table thead { background: var(--color-bg); }
+.ds-table th {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+}
+.ds-table td {
+  font-size: 14px;
+  color: var(--color-text-primary);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+.ds-table tr:last-child td { border-bottom: none; }
+.ds-table tr:hover td { background: #faf9f7; }
+
+/* Badge 語意色 */
+.badge-success { background: var(--color-success-bg); color: var(--color-success); }
+.badge-warning { background: var(--color-warning-bg); color: var(--color-warning); }
+.badge-danger  { background: var(--color-danger-bg);  color: var(--color-danger); }
+.badge-info    { background: var(--color-info-bg);    color: var(--color-info); }
+.badge-neutral { background: var(--color-border-light); color: var(--color-text-secondary); }
+
+/* 後台主頁面底色 */
+.dashboard-main {
+  background: var(--color-bg);
+}
+
+/* 字體工具 class */
+.font-brand { font-family: var(--font-brand); }
+.font-ui    { font-family: var(--font-ui); }
+
+/* ── 按鈕立體動效 ───────────────────────────────────────────────────────── */
+
+/* Primary button — Amber 立體 */
+.btn-3d-primary {
+  box-shadow: 0 2px 0 #92400e, 0 1px 3px rgba(0,0,0,0.15);
+  transition: transform 80ms ease, box-shadow 80ms ease, background-color 80ms ease;
+}
+.btn-3d-primary:hover:not(:disabled) {
+  background-color: #d97706 !important;
+  box-shadow: 0 3px 0 #92400e, 0 2px 6px rgba(0,0,0,0.2);
+  transform: translateY(-1px);
+}
+.btn-3d-primary:active:not(:disabled) {
+  background-color: #92400e !important;
+  box-shadow: 0 1px 0 #78350f;
+  transform: translateY(1px);
+}
+
+/* Secondary / outline button */
+.btn-3d-secondary {
+  box-shadow: 0 1px 0 #d6d3d1, 0 1px 2px rgba(0,0,0,0.08);
+  transition: transform 80ms ease, box-shadow 80ms ease;
+}
+.btn-3d-secondary:hover:not(:disabled) {
+  box-shadow: 0 2px 0 #d6d3d1, 0 2px 4px rgba(0,0,0,0.1);
+  transform: translateY(-1px);
+}
+.btn-3d-secondary:active:not(:disabled) {
+  box-shadow: 0 0px 0 #d6d3d1;
+  transform: translateY(1px);
+}
+
+/* Destructive button */
+.btn-3d-danger {
+  box-shadow: 0 2px 0 #b91c1c, 0 1px 3px rgba(0,0,0,0.15);
+  transition: transform 80ms ease, box-shadow 80ms ease;
+}
+.btn-3d-danger:hover:not(:disabled) {
+  box-shadow: 0 3px 0 #b91c1c, 0 2px 6px rgba(0,0,0,0.2);
+  transform: translateY(-1px);
+}
+.btn-3d-danger:active:not(:disabled) {
+  box-shadow: 0 1px 0 #991b1b;
+  transform: translateY(1px);
+}
+
+/* 側邊欄 active 左側 amber 線 */
+.sidebar-item-active {
+  position: relative;
+}
+.sidebar-item-active::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 16px;
+  background: #d97706;
+  border-radius: 2px;
 }

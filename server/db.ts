@@ -281,7 +281,7 @@ export async function getProductByExclusiveSlug(exclusiveSlug: string) {
   const db = await getDb();
   if (!db) return undefined;
   const result = await db.select().from(products)
-    .where(and(eq(products.exclusiveSlug, exclusiveSlug), eq(products.isActive, true)))
+    .where(eq(products.exclusiveSlug, exclusiveSlug))
     .limit(1);
   return result.length > 0 ? result[0] : undefined;
 }

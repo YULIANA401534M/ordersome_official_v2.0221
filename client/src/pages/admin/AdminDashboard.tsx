@@ -55,19 +55,24 @@ export default function AdminDashboard() {
         {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
           {stats.map((stat, i) => (
-            <Card key={i} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setLocation(stat.link)}>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-500">{stat.title}</p>
-                      <p className="text-3xl font-bold mt-1">{stat.value}</p>
-                    </div>
-                    <div className={`${stat.color} p-3 rounded-lg`}>
-                      <stat.icon className="h-6 w-6 text-white" />
-                    </div>
+            <Card
+              key={i}
+              className="cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5"
+              style={{ border: '1px solid #e7e5e4', background: '#ffffff' }}
+              onClick={() => setLocation(stat.link)}
+            >
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="kpi-label">{stat.title}</p>
+                    <p className="kpi-value">{stat.value}</p>
                   </div>
-                </CardContent>
-              </Card>
+                  <div className={`${stat.color} p-3 rounded-lg`}>
+                    <stat.icon className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
 
