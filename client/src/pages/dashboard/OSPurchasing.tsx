@@ -8,10 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import {
   ChevronLeft, ChevronRight, Plus, ChevronDown, ChevronUp,
-  ShoppingCart, Send, CheckCircle, XCircle, Trash2, Upload
+  ShoppingCart, Send, CheckCircle, XCircle, Trash2, Upload, Pencil
 } from "lucide-react";
 import * as XLSX from "xlsx";
 
@@ -44,6 +45,14 @@ const emptyItem = (): NewItem => ({
   unit: "箱", quantity: 1, unitPrice: 0, temperature: "常溫",
 });
 
+function getMonday(d: Date) {
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  const mon = new Date(d);
+  mon.setDate(d.getDate() + diff);
+  return mon.toISOString().slice(0, 10);
+}
+
 export default function OSPurchasing() {
   const { user } = useAuth();
   const canEdit = user?.role === "super_admin" || user?.role === "manager";
@@ -52,8 +61,26 @@ export default function OSPurchasing() {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [filterStatus, setFilterStatus] = useState("");
-  const [filterSupplier, setFilterSupplier] = useState("");
+
+  // 新篩選器
+  const [filterStartDate, setFilterStartDate] = useState(getMonday(now));
+  const [filterEndDate, setFilterEndDate] = useState(now.toISOString().slice(0, 10));
+  const [filterStore, setFilterStore] = useState("all");
+  const [filterSupplierSel, setFilterSupplierSel] = useState("all");
+
+  // 月份計算（給 startDate/endDate 月份切換模式）
+  const monthStart = `${year}-${String(month).padStart(2, "0")}-01`;
+  const monthEnd = (() => {
+    const last = new Date(year, month, 0);
+    return `${year}-${String(month).padStart(2, "0")}-${String(last.getDate()).padStart(2, "0")}`;
+  })();
+
+  // 以日期範圍篩選器的值為主（月份切換只影響 KPI 計算和顯示，list 以 dateRange 為主）
   const [expandedId, setExpandedId] = useState<number | null>(null);
+
+  // 批量刪除
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [showBatchDelete, setShowBatchDelete] = useState(false);
 
   // 建立叫貨單 dialog
   const [showCreate, setShowCreate] = useState(false);
@@ -84,19 +111,30 @@ export default function OSPurchasing() {
   const [noteTargetId, setNoteTargetId] = useState<number | null>(null);
   const [noteText, setNoteText] = useState("");
 
-  const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
-  const endDate = (() => {
-    const last = new Date(year, month, 0);
-    return `${year}-${String(month).padStart(2, "0")}-${String(last.getDate()).padStart(2, "0")}`;
-  })();
+  // 品項編輯 dialog
+  const [editItemTarget, setEditItemTarget] = useState<any | null>(null);
+  const [editItemField, setEditItemField] = useState({ productName: "", quantity: 1, unit: "", temperature: "常溫" });
 
+  // 新增品項 dialog
+  const [addItemOrderId, setAddItemOrderId] = useState<number | null>(null);
+  const [addItemField, setAddItemField] = useState({ productName: "", quantity: 1, unit: "箱", temperature: "常溫" as "常溫"|"冷藏"|"冷凍" });
+
+  // 主列表查詢使用 filterStartDate/filterEndDate + 狀態/店別/廠商
   const { data: orders = [], refetch } = trpc.procurement.list.useQuery({
-    startDate, endDate,
+    startDate: filterStartDate,
+    endDate: filterEndDate,
     status: filterStatus || undefined,
-    supplierName: filterSupplier || undefined,
+    supplierName: filterSupplierSel !== "all" ? filterSupplierSel : undefined,
+    storeName: filterStore !== "all" ? filterStore : undefined,
   });
 
-  const { data: detail } = trpc.procurement.getDetail.useQuery(
+  // KPI 用月份範圍
+  const { data: monthOrders = [] } = trpc.procurement.list.useQuery({
+    startDate: monthStart,
+    endDate: monthEnd,
+  });
+
+  const { data: detail, refetch: refetchDetail } = trpc.procurement.getDetail.useQuery(
     { orderId: expandedId! }, { enabled: expandedId !== null }
   );
 
@@ -106,6 +144,12 @@ export default function OSPurchasing() {
 
   const { data: supplierLines = [], refetch: refetchLines } = trpc.procurement.supplierLineList.useQuery();
   const { data: suppliers = [] } = trpc.procurement.getSuppliers.useQuery();
+
+  // 篩選器用下拉資料
+  const { data: storeNames = [] } = trpc.procurement.listStoreNames.useQuery({
+    startDate: monthStart, endDate: monthEnd,
+  });
+  const { data: supplierNames = [] } = trpc.procurement.listSupplierNames.useQuery();
 
   const createMutation = trpc.procurement.create.useMutation({
     onSuccess: () => {
@@ -163,10 +207,40 @@ export default function OSPurchasing() {
     onError: (e) => toast.error(e.message),
   });
 
+  const batchDelete = trpc.procurement.batchDeleteOrders.useMutation({
+    onSuccess: () => {
+      toast.success(`已刪除 ${selectedIds.size} 張叫貨單`);
+      setSelectedIds(new Set());
+      setShowBatchDelete(false);
+      refetch();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
   const updateNote = trpc.procurement.updateNote.useMutation({
     onSuccess: () => {
       toast.success("備註已儲存");
       setNoteTargetId(null);
+      refetch();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const updateItem = trpc.procurement.updateItem.useMutation({
+    onSuccess: () => {
+      toast.success("品項已更新");
+      setEditItemTarget(null);
+      refetchDetail();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const addItem = trpc.procurement.addItem.useMutation({
+    onSuccess: () => {
+      toast.success("品項已新增");
+      setAddItemOrderId(null);
+      setAddItemField({ productName: "", quantity: 1, unit: "箱", temperature: "常溫" });
+      refetchDetail();
       refetch();
     },
     onError: (e) => toast.error(e.message),
@@ -181,16 +255,16 @@ export default function OSPurchasing() {
     else setMonth(m => m + 1);
   };
 
-  // KPI
+  // KPI 用月份資料
   const kpi = useMemo(() => {
-    const list = orders as any[];
+    const list = monthOrders as any[];
     return {
       total: list.length,
       pending: list.filter(o => o.status === "pending").length,
       sent: list.filter(o => o.status === "sent").length,
       received: list.filter(o => o.status === "received").length,
     };
-  }, [orders]);
+  }, [monthOrders]);
 
   function handleAddItem() {
     setNewItems(items => [...items, emptyItem()]);
@@ -241,6 +315,14 @@ export default function OSPurchasing() {
     });
   }
 
+  function toggleSelect(id: number) {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
   function exportExcel() {
     const rows = (orders as any[]).map((o: any) => ({
       "叫貨單號": o.orderNo,
@@ -250,6 +332,7 @@ export default function OSPurchasing() {
       "廠商": o.suppliers,
       "門市": o.stores,
       "品項數": o.itemCount,
+      "合計金額": o.totalAmt,
       "建立人": o.createdBy,
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
@@ -262,13 +345,16 @@ export default function OSPurchasing() {
     <AdminDashboardLayout>
       <div className="p-4 space-y-4" style={{ background: "#f7f6f3", minHeight: "100vh" }}>
 
-        {/* 頂部月份切換 */}
-        <div className="flex flex-wrap items-center gap-3">
+        {/* 頂部月份切換 + 篩選列 */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* 月份切換 */}
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="sm" onClick={prevMonth}><ChevronLeft className="w-4 h-4" /></Button>
             <span className="text-base font-semibold w-20 text-center">{year}/{String(month).padStart(2, "0")}</span>
             <Button variant="ghost" size="sm" onClick={nextMonth}><ChevronRight className="w-4 h-4" /></Button>
           </div>
+
+          {/* 狀態篩選 */}
           <Select value={filterStatus || "all"} onValueChange={v => setFilterStatus(v === "all" ? "" : v)}>
             <SelectTrigger className="w-28 h-8 text-sm"><SelectValue placeholder="全部狀態" /></SelectTrigger>
             <SelectContent>
@@ -278,13 +364,60 @@ export default function OSPurchasing() {
               ))}
             </SelectContent>
           </Select>
+
+          {/* 日期範圍 */}
           <Input
-            placeholder="篩廠商…"
-            value={filterSupplier}
-            onChange={e => setFilterSupplier(e.target.value)}
-            className="h-8 text-sm w-32"
+            type="date"
+            value={filterStartDate}
+            onChange={e => setFilterStartDate(e.target.value)}
+            className="h-8 text-sm w-36"
           />
+          <span className="text-gray-400 text-sm">—</span>
+          <Input
+            type="date"
+            value={filterEndDate}
+            onChange={e => setFilterEndDate(e.target.value)}
+            className="h-8 text-sm w-36"
+          />
+
+          {/* 店別篩選 */}
+          <Select value={filterStore} onValueChange={setFilterStore}>
+            <SelectTrigger className="w-32 h-8 text-sm"><SelectValue placeholder="全部門市" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部門市</SelectItem>
+              {(storeNames as string[]).map(s => (
+                <SelectItem key={s} value={s}>{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* 廠商篩選 */}
+          <Select value={filterSupplierSel} onValueChange={setFilterSupplierSel}>
+            <SelectTrigger className="w-32 h-8 text-sm"><SelectValue placeholder="全部廠商" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部廠商</SelectItem>
+              {(supplierNames as string[]).map(s => (
+                <SelectItem key={s} value={s}>{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* 右側按鈕 */}
           <div className="ml-auto flex gap-2">
+            {canEdit && selectedIds.size > 0 && (
+              <Button
+                size="sm" variant="outline"
+                className="h-8 text-xs text-red-600 border-red-400 hover:bg-red-50"
+                onClick={() => setShowBatchDelete(true)}
+              >
+                <Trash2 className="w-3.5 h-3.5 mr-1" /> 批量刪除 ({selectedIds.size}張)
+              </Button>
+            )}
+            {canEdit && selectedIds.size === 0 && (
+              <Button size="sm" variant="outline" disabled className="h-8 text-xs opacity-40">
+                <Trash2 className="w-3.5 h-3.5 mr-1" /> 批量刪除
+              </Button>
+            )}
             {canEdit && (
               <Button size="sm" variant="outline" onClick={() => setShowLineConfig(true)} className="h-8 text-xs">
                 廠商 LINE 設定
@@ -315,7 +448,7 @@ export default function OSPurchasing() {
           </div>
         </div>
 
-        {/* KPI 卡片 */}
+        {/* KPI 卡片（月份範圍） */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
             { label: "本月叫貨", value: kpi.total, icon: ShoppingCart, color: "#b45309" },
@@ -333,18 +466,38 @@ export default function OSPurchasing() {
         {/* 叫貨單列表 */}
         <div className="space-y-3">
           {(orders as any[]).length === 0 ? (
-            <div className="bg-white rounded-xl p-8 text-center text-gray-400">本月無叫貨紀錄</div>
+            <div className="bg-white rounded-xl p-8 text-center text-gray-400">無符合條件的叫貨紀錄</div>
           ) : (
             (orders as any[]).map((order: any) => {
               const sc = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.pending;
               const next = STATUS_FLOW[order.status];
               const isExpanded = expandedId === order.id;
+              const isPending = order.status === "pending";
+              const totalAmt = Number(order.totalAmt ?? 0);
+              const amtDisplay = totalAmt > 0
+                ? `$${totalAmt.toLocaleString()}`
+                : "金額待填";
+
               return (
                 <div key={order.id} className="bg-white rounded-xl shadow-sm overflow-hidden">
                   <div
                     className="flex items-center gap-3 p-4 cursor-pointer hover:bg-gray-50 transition-colors"
                     onClick={() => setExpandedId(isExpanded ? null : order.id)}
                   >
+                    {/* Checkbox for pending orders */}
+                    {canEdit && isPending && (
+                      <div
+                        onClick={e => { e.stopPropagation(); toggleSelect(order.id); }}
+                        className="flex-shrink-0"
+                      >
+                        <Checkbox
+                          checked={selectedIds.has(order.id)}
+                          onCheckedChange={() => toggleSelect(order.id)}
+                        />
+                      </div>
+                    )}
+                    {canEdit && !isPending && <div className="w-4 flex-shrink-0" />}
+
                     <span className="text-sm font-mono text-gray-500 w-36 truncate">{order.orderNo}</span>
                     <span className="text-sm text-gray-700 w-24">{order.orderDate?.slice(0, 10)}</span>
                     <Badge style={{ color: sc.color, background: sc.bg, border: "none" }} className="text-xs">{sc.label}</Badge>
@@ -353,6 +506,9 @@ export default function OSPurchasing() {
                       {order.stores && <span className="ml-2 text-gray-300">｜{order.stores?.split(",").slice(0, 2).join("、")}</span>}
                     </span>
                     <span className="text-xs text-gray-400">{order.itemCount} 項</span>
+                    <span className={`text-xs ${totalAmt > 0 ? "text-amber-700 font-medium" : "text-gray-300"}`}>
+                      {amtDisplay}
+                    </span>
                     <span className="text-xs text-gray-300">{order.sourceType === "damai_import" ? "大麥" : "手動"}</span>
                     {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
                   </div>
@@ -370,7 +526,9 @@ export default function OSPurchasing() {
                               <th className="text-right py-1 pr-3">數量</th>
                               <th className="text-left py-1 pr-3">單位</th>
                               <th className="text-left py-1 pr-3">溫層</th>
-                              <th className="text-right py-1">單價</th>
+                              <th className="text-right py-1 pr-3">單價</th>
+                              <th className="text-right py-1 pr-3">金額</th>
+                              {canEdit && <th className="py-1 w-8"></th>}
                             </tr>
                           </thead>
                           <tbody>
@@ -382,22 +540,58 @@ export default function OSPurchasing() {
                                 <td className="py-1 pr-3 text-right">{item.quantity}</td>
                                 <td className="py-1 pr-3 text-gray-400">{item.unit}</td>
                                 <td className="py-1 pr-3 text-gray-400">{item.temperature}</td>
-                                <td className="py-1 text-right text-gray-400">
-                                  {item.unitPrice > 0 ? `$${Number(item.unitPrice).toLocaleString()}` : "—"}
+                                <td className="py-1 pr-3 text-right text-gray-400">
+                                  {Number(item.unitPrice) > 0 ? `$${Number(item.unitPrice).toLocaleString()}` : "—"}
                                 </td>
+                                <td className="py-1 pr-3 text-right text-gray-400">
+                                  {Number(item.amount) > 0 ? `$${Number(item.amount).toLocaleString()}` : "—"}
+                                </td>
+                                {canEdit && (
+                                  <td className="py-1">
+                                    <Button
+                                      size="sm" variant="ghost"
+                                      className="h-6 w-6 p-0 text-gray-400 hover:text-amber-700"
+                                      onClick={() => {
+                                        setEditItemTarget(item);
+                                        setEditItemField({
+                                          productName: item.productName,
+                                          quantity: Number(item.quantity),
+                                          unit: item.unit,
+                                          temperature: item.temperature || "常溫",
+                                        });
+                                      }}
+                                    >
+                                      <Pencil className="w-3 h-3" />
+                                    </Button>
+                                  </td>
+                                )}
                               </tr>
                             ))}
                             {(!detail?.items || detail.items.length === 0) && detail !== undefined && (
-                              <tr><td colSpan={7}>
+                              <tr><td colSpan={canEdit ? 9 : 8}>
                                 <div className="text-sm text-muted-foreground py-4 text-center">尚無品項記錄</div>
                               </td></tr>
                             )}
                             {detail === undefined && (
-                              <tr><td colSpan={7} className="py-3 text-center text-gray-300">載入中…</td></tr>
+                              <tr><td colSpan={canEdit ? 9 : 8} className="py-3 text-center text-gray-300">載入中…</td></tr>
                             )}
                           </tbody>
                         </table>
                       </div>
+
+                      {/* 新增品項按鈕 */}
+                      {canEdit && (
+                        <Button
+                          size="sm" variant="outline"
+                          className="h-7 text-xs gap-1"
+                          onClick={() => {
+                            setAddItemOrderId(order.id);
+                            setAddItemField({ productName: "", quantity: 1, unit: "箱", temperature: "常溫" });
+                          }}
+                        >
+                          <Plus className="w-3 h-3" /> 新增品項
+                        </Button>
+                      )}
 
                       {order.note && (
                         <p className="text-xs text-gray-400">備註：{order.note}</p>
@@ -430,7 +624,7 @@ export default function OSPurchasing() {
                               <Send className="w-3 h-3 mr-1" /> LINE 推播
                             </Button>
                           )}
-                          {order.status === "pending" && (
+                          {isPending && (
                             <Button
                               size="sm" variant="outline"
                               className="h-7 text-xs text-red-500 border-red-200 hover:bg-red-50"
@@ -440,7 +634,7 @@ export default function OSPurchasing() {
                               <XCircle className="w-3 h-3 mr-1" /> 取消
                             </Button>
                           )}
-                          {order.status === "pending" && (
+                          {isPending && (
                             <Button
                               size="sm" variant="outline"
                               className="h-7 text-xs text-red-600 border-red-400 hover:bg-red-50"
@@ -469,6 +663,28 @@ export default function OSPurchasing() {
           )}
         </div>
       </div>
+
+      {/* 批量刪除確認 Dialog */}
+      <Dialog open={showBatchDelete} onOpenChange={setShowBatchDelete}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>批量刪除確認</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600 py-2">
+            確定要刪除選取的 {selectedIds.size} 張叫貨單（僅限待處理）？此操作無法復原。
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBatchDelete(false)}>取消</Button>
+            <Button
+              variant="destructive"
+              onClick={() => batchDelete.mutate({ ids: Array.from(selectedIds) })}
+              disabled={batchDelete.isPending}
+            >
+              確認刪除
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* 刪除確認 Dialog */}
       <Dialog open={deleteTargetId !== null} onOpenChange={(open) => { if (!open) setDeleteTargetId(null); }}>
@@ -510,6 +726,142 @@ export default function OSPurchasing() {
               style={{ background: "#b45309" }}
             >
               儲存
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 品項編輯 Dialog */}
+      <Dialog open={editItemTarget !== null} onOpenChange={(open) => { if (!open) setEditItemTarget(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>編輯品項</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div>
+              <Label className="text-xs">商品名稱</Label>
+              <Input
+                value={editItemField.productName}
+                onChange={e => setEditItemField(f => ({ ...f, productName: e.target.value }))}
+                className="mt-1"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">數量</Label>
+                <Input
+                  type="number"
+                  value={editItemField.quantity}
+                  onChange={e => setEditItemField(f => ({ ...f, quantity: Number(e.target.value) }))}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">單位</Label>
+                <Input
+                  value={editItemField.unit}
+                  onChange={e => setEditItemField(f => ({ ...f, unit: e.target.value }))}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">溫層</Label>
+              <Select value={editItemField.temperature} onValueChange={v => setEditItemField(f => ({ ...f, temperature: v }))}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="常溫">常溫</SelectItem>
+                  <SelectItem value="冷藏">冷藏</SelectItem>
+                  <SelectItem value="冷凍">冷凍</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditItemTarget(null)}>取消</Button>
+            <Button
+              onClick={() => editItemTarget && updateItem.mutate({
+                itemId: editItemTarget.id,
+                productName: editItemField.productName,
+                quantity: editItemField.quantity,
+                unit: editItemField.unit,
+                temperature: editItemField.temperature,
+              })}
+              disabled={updateItem.isPending}
+              style={{ background: "#b45309" }}
+            >
+              儲存
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 新增品項 Dialog */}
+      <Dialog open={addItemOrderId !== null} onOpenChange={(open) => { if (!open) setAddItemOrderId(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>新增品項</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div>
+              <Label className="text-xs">商品名稱 *</Label>
+              <Input
+                value={addItemField.productName}
+                onChange={e => setAddItemField(f => ({ ...f, productName: e.target.value }))}
+                className="mt-1"
+                placeholder="品項名稱"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">數量 *</Label>
+                <Input
+                  type="number"
+                  value={addItemField.quantity}
+                  onChange={e => setAddItemField(f => ({ ...f, quantity: Number(e.target.value) }))}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">單位 *</Label>
+                <Input
+                  value={addItemField.unit}
+                  onChange={e => setAddItemField(f => ({ ...f, unit: e.target.value }))}
+                  className="mt-1"
+                  placeholder="箱"
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">溫層</Label>
+              <Select value={addItemField.temperature} onValueChange={v => setAddItemField(f => ({ ...f, temperature: v as any }))}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="常溫">常溫</SelectItem>
+                  <SelectItem value="冷藏">冷藏</SelectItem>
+                  <SelectItem value="冷凍">冷凍</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddItemOrderId(null)}>取消</Button>
+            <Button
+              onClick={() => {
+                if (!addItemField.productName) { toast.error("商品名稱必填"); return; }
+                if (!addItemField.unit) { toast.error("單位必填"); return; }
+                addItem.mutate({
+                  orderId: addItemOrderId!,
+                  productName: addItemField.productName,
+                  unit: addItemField.unit,
+                  quantity: addItemField.quantity,
+                  temperature: addItemField.temperature,
+                });
+              }}
+              disabled={addItem.isPending}
+              style={{ background: "#b45309" }}
+            >
+              新增
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -735,7 +1087,6 @@ export default function OSPurchasing() {
             <DialogTitle>廠商 LINE 設定</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
-            {/* 現有列表 */}
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {(supplierLines as any[]).map((sl: any) => (
                 <div key={sl.id} className="flex items-center justify-between bg-gray-50 rounded-lg p-3 text-sm">
@@ -752,7 +1103,6 @@ export default function OSPurchasing() {
                 <p className="text-sm text-gray-400 text-center py-3">尚無廠商 LINE 設定</p>
               )}
             </div>
-            {/* 新增/更新 */}
             <div className="border-t pt-3 space-y-2">
               <p className="text-xs text-gray-500 font-medium">新增 / 更新廠商</p>
               <Input value={lineConfigName} onChange={e => setLineConfigName(e.target.value)} placeholder="廠商名稱" className="h-8 text-sm" />

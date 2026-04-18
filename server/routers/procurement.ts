@@ -123,13 +123,14 @@ export const procurementRouter = router({
       return { success: true, orderNo, orderId };
     }),
 
-  // 列表（可篩選日期、狀態）
+  // 列表（可篩選日期、狀態、門市、廠商）
   list: adminProcedure
     .input(z.object({
       startDate: z.string().optional(),
       endDate: z.string().optional(),
       status: z.string().optional(),
       supplierName: z.string().optional(),
+      storeName: z.string().optional(),
     }))
     .query(async ({ input }) => {
       const db = await getDb();
@@ -137,6 +138,7 @@ export const procurementRouter = router({
       let sql = `
         SELECT po.*,
           COUNT(pi.id) as itemCount,
+          COALESCE(SUM(pi.amount), 0) as totalAmt,
           GROUP_CONCAT(DISTINCT pi.supplierName) as suppliers,
           GROUP_CONCAT(DISTINCT pi.storeName) as stores
         FROM os_procurement_orders po
@@ -147,6 +149,14 @@ export const procurementRouter = router({
       if (input.startDate) { sql += ` AND po.orderDate >= ?`; params.push(input.startDate); }
       if (input.endDate) { sql += ` AND po.orderDate <= ?`; params.push(input.endDate); }
       if (input.status) { sql += ` AND po.status = ?`; params.push(input.status); }
+      if (input.supplierName) {
+        sql += ` AND EXISTS (SELECT 1 FROM os_procurement_items pi2 WHERE pi2.procurementOrderId = po.id AND pi2.supplierName = ?)`;
+        params.push(input.supplierName);
+      }
+      if (input.storeName) {
+        sql += ` AND EXISTS (SELECT 1 FROM os_procurement_items pi3 WHERE pi3.procurementOrderId = po.id AND pi3.storeName = ?)`;
+        params.push(input.storeName);
+      }
       sql += ` GROUP BY po.id ORDER BY po.orderDate DESC, po.id DESC LIMIT 200`;
       const [rows] = await (db as any).$client.execute(sql, params);
       return rows as any[];
@@ -348,5 +358,134 @@ export const procurementRouter = router({
         [input.note, input.orderId]
       );
       return { success: true };
+    }),
+
+  // 批量刪除（只刪 pending）
+  batchDeleteOrders: adminProcedure
+    .input(z.object({ ids: z.array(z.number()) }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new Error('DB not available');
+      const tenantId = (ctx.user as any).tenantId ?? 1;
+      for (const id of input.ids) {
+        await (db as any).$client.execute(
+          'DELETE FROM os_procurement_items WHERE procurementOrderId = ?',
+          [id]
+        );
+        await (db as any).$client.execute(
+          'DELETE FROM os_procurement_orders WHERE id = ? AND status = "pending" AND tenantId = ?',
+          [id, tenantId]
+        );
+      }
+      return { success: true, deleted: input.ids.length };
+    }),
+
+  // 修改品項
+  updateItem: adminProcedure
+    .input(z.object({
+      itemId: z.number(),
+      productName: z.string().optional(),
+      quantity: z.number().optional(),
+      unit: z.string().optional(),
+      temperature: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new Error('DB not available');
+      const tenantId = (ctx.user as any).tenantId ?? 1;
+      const [check] = await (db as any).$client.execute(`
+        SELECT pi.id FROM os_procurement_items pi
+        JOIN os_procurement_orders po ON po.id = pi.procurementOrderId
+        WHERE pi.id = ? AND po.tenantId = ? LIMIT 1
+      `, [input.itemId, tenantId]);
+      if ((check as any[]).length === 0) throw new Error('品項不存在或無權限');
+
+      const sets: string[] = [];
+      const params: any[] = [];
+      if (input.productName !== undefined) { sets.push('productName = ?'); params.push(input.productName); }
+      if (input.quantity !== undefined) { sets.push('quantity = ?'); params.push(input.quantity); }
+      if (input.unit !== undefined) { sets.push('unit = ?'); params.push(input.unit); }
+      if (input.temperature !== undefined) { sets.push('temperature = ?'); params.push(input.temperature); }
+      if (sets.length === 0) return { success: true };
+      params.push(input.itemId);
+      await (db as any).$client.execute(
+        `UPDATE os_procurement_items SET ${sets.join(', ')} WHERE id = ?`,
+        params
+      );
+      return { success: true };
+    }),
+
+  // 新增品項
+  addItem: adminProcedure
+    .input(z.object({
+      orderId: z.number(),
+      productName: z.string(),
+      unit: z.string(),
+      quantity: z.number(),
+      temperature: z.enum(['常溫','冷藏','冷凍']).optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new Error('DB not available');
+      const tenantId = (ctx.user as any).tenantId ?? 1;
+      const [orderRows] = await (db as any).$client.execute(
+        'SELECT id, supplierName FROM os_procurement_orders WHERE id = ? AND tenantId = ? LIMIT 1',
+        [input.orderId, tenantId]
+      );
+      if ((orderRows as any[]).length === 0) throw new Error('叫貨單不存在');
+
+      // 取得此單首筆品項的 supplierName/storeName 作為預設
+      const [firstItem] = await (db as any).$client.execute(
+        'SELECT supplierName, storeName FROM os_procurement_items WHERE procurementOrderId = ? LIMIT 1',
+        [input.orderId]
+      );
+      const supplierName = (firstItem as any[])[0]?.supplierName ?? '';
+      const storeName = (firstItem as any[])[0]?.storeName ?? '';
+
+      const [supRows] = await (db as any).$client.execute(
+        'SELECT id FROM os_suppliers WHERE name = ? LIMIT 1',
+        [supplierName]
+      );
+      const supplierId = (supRows as any[])[0]?.id || null;
+
+      await (db as any).$client.execute(`
+        INSERT INTO os_procurement_items
+          (procurementOrderId, supplierId, supplierName, storeName, productName, unit, quantity, unitPrice, amount, temperature)
+        VALUES (?,?,?,?,?,?,?,0,0,?)
+      `, [input.orderId, supplierId, supplierName, storeName,
+          input.productName, input.unit, input.quantity,
+          input.temperature || '常溫']);
+      return { success: true };
+    }),
+
+  // 取得當前篩選期間的 distinct storeName
+  listStoreNames: adminProcedure
+    .input(z.object({ startDate: z.string().optional(), endDate: z.string().optional() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return [] as string[];
+      let sql = `
+        SELECT DISTINCT pi.storeName
+        FROM os_procurement_items pi
+        JOIN os_procurement_orders po ON po.id = pi.procurementOrderId
+        WHERE po.tenantId = 1 AND pi.storeName != ''
+      `;
+      const params: any[] = [];
+      if (input.startDate) { sql += ` AND po.orderDate >= ?`; params.push(input.startDate); }
+      if (input.endDate) { sql += ` AND po.orderDate <= ?`; params.push(input.endDate); }
+      sql += ` ORDER BY pi.storeName`;
+      const [rows] = await (db as any).$client.execute(sql, params);
+      return (rows as any[]).map(r => r.storeName as string);
+    }),
+
+  // 取得所有 distinct supplierName（從品項表）
+  listSupplierNames: adminProcedure
+    .query(async () => {
+      const db = await getDb();
+      if (!db) return [] as string[];
+      const [rows] = await (db as any).$client.execute(
+        `SELECT DISTINCT pi.supplierName FROM os_procurement_items pi JOIN os_procurement_orders po ON po.id = pi.procurementOrderId WHERE po.tenantId = 1 AND pi.supplierName != '' ORDER BY pi.supplierName`
+      );
+      return (rows as any[]).map(r => r.supplierName as string);
     }),
 });

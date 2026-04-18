@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md
 
-> **版本**：v5.33。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.34。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -60,14 +60,19 @@ git status && git log --oneline -3
 
 ---
 
-### 最新 Git 狀態（2026-04-18 v5.31）
+### 最新 Git 狀態（2026-04-18 v5.34）
 
-最後三個 commit（已 push）：
-1. `feat` — 叫貨管理新增刪除和備註功能
-2. `feat` — procurement import 按廠商分組建單，區分直送vs宇聯配送
-3. `docs` — v5.29 記錄 Make 串接完成、欄位對應、endpoint 格式
+最後三個 commit（已 push）：會在 commit 後更新
 
 working tree: clean
+
+**v5.34 完成項目（OSPurchasing 四功能強化）：**
+- `procurement.ts`：`list` 新增 storeName 篩選 + totalAmt 加總；新增 `batchDeleteOrders`、`updateItem`、`addItem`、`listStoreNames`、`listSupplierNames` 五個 procedure
+- `OSPurchasing.tsx`：
+  - 功能一：日期範圍篩選（startDate/endDate，預設本週一～今天）+ 店別下拉 + 廠商下拉
+  - 功能二：pending 單卡片左側 checkbox + 批量刪除按鈕（含確認 Dialog）
+  - 功能三：品項明細每行 pencil 編輯按鈕 + 表格底部「新增品項」按鈕（各自開 Dialog）
+  - 功能四：卡片顯示合計金額（totalAmt>0 顯示 $X,XXX，否則「金額待填」）+ 明細表格新增「單價」「金額」兩欄
 
 **v5.31 完成項目：**
 - DB：清除三筆測試舊單（items 刪 16 筆、orders 刪 3 筆），保留最新兩筆（廣弘、宇聯_配合）
