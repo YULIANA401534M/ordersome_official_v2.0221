@@ -314,7 +314,7 @@ async function startServer() {
       }
 
       const items = (itemsCsv as string)
-        .split('\n')
+        .split(';;')
         .filter((line: string) => line.trim())
         .map((line: string) => {
           const [supplierName, storeName, productName, unit, quantity, temperature] = line.split('|');
