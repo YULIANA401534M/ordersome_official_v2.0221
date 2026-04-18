@@ -99,26 +99,37 @@ export const osProductsRouter = router({
       unitCost: z.number().default(0),
       batchPrice: z.number().default(0),
       batchSize: z.number().default(1),
+      unitQty: z.number().default(1),
+      unitName: z.string().optional(),
+      packUnit: z.string().optional(),
+      packCost: z.number().default(0),
+      aliases: z.array(z.string()).optional(),
       note: z.string().optional(),
       isActive: z.boolean().default(true),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new Error('DB not available');
+      const aliasesJson = input.aliases && input.aliases.length > 0
+        ? JSON.stringify(input.aliases) : null;
       if (input.id) {
         await (db as any).$client.execute(
-          `UPDATE os_products SET supplierId=?, category=?, name=?, unit=?, unitSize=?, unitCost=?, batchPrice=?, batchSize=?, note=?, isActive=? WHERE id=?`,
+          `UPDATE os_products SET supplierId=?, category=?, name=?, unit=?, unitSize=?, unitCost=?, batchPrice=?, batchSize=?,
+           unitQty=?, unitName=?, packUnit=?, packCost=?, aliases=?, note=?, isActive=? WHERE id=?`,
           [input.supplierId || null, input.category, input.name, input.unit,
            input.unitSize, input.unitCost, input.batchPrice, input.batchSize,
-           input.note || null, input.isActive ? 1 : 0, input.id]
+           input.unitQty, input.unitName || null, input.packUnit || null, input.packCost,
+           aliasesJson, input.note || null, input.isActive ? 1 : 0, input.id]
         );
         return { id: input.id };
       } else {
         const [result] = await (db as any).$client.execute(
-          `INSERT INTO os_products (supplierId, category, name, unit, unitSize, unitCost, batchPrice, batchSize, note, isActive) VALUES (?,?,?,?,?,?,?,?,?,?)`,
+          `INSERT INTO os_products (supplierId, category, name, unit, unitSize, unitCost, batchPrice, batchSize,
+           unitQty, unitName, packUnit, packCost, aliases, note, isActive) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
           [input.supplierId || null, input.category, input.name, input.unit,
            input.unitSize, input.unitCost, input.batchPrice, input.batchSize,
-           input.note || null, input.isActive ? 1 : 0]
+           input.unitQty, input.unitName || null, input.packUnit || null, input.packCost,
+           aliasesJson, input.note || null, input.isActive ? 1 : 0]
         );
         return { id: (result as any).insertId };
       }

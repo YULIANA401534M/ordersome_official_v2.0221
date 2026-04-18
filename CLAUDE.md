@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md
 
-> **版本**：v5.38。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.39。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -61,14 +61,25 @@ git status && git log --oneline -3
 
 ---
 
-### 最新 Git 狀態（2026-04-18 v5.38）
+### 最新 Git 狀態（2026-04-18 v5.39）
 
 最後三個 commit（已 push）：
-1. `（本次 commit）` — fix: B類入庫supplierName查錯表 + 作廢原因必填 + 新增四筆B類廠商 + CLAUDE.md v5.38
-2. `64df474` — feat: deliveryType DB欄位 + 移除YULIAN_SUPPLIERS硬編碼 + B類叫貨收貨自動入庫
-3. `5eca38c` — feat: 稽核日誌系統 + 刪除/作廢權限分離
+1. `（本次 commit）` — feat: os_products 新欄位 + seed v2 + OSProducts/OSPurchasing 更新 + 側邊欄拖曳排序 + CLAUDE.md v5.39
+2. `eec3980` — fix: B類入庫supplierName查錯表 + 作廢原因必填 + B類廠商補齊 + CLAUDE.md v5.38
+3. `64df474` — feat: deliveryType DB欄位 + 移除YULIAN_SUPPLIERS硬編碼 + B類叫貨收貨自動入庫
 
 working tree: clean
+
+**v5.39 完成項目（品項資料重構 + 前端更新 + 側邊欄拖曳）：**
+- DB：os_products 新增 aliases(JSON)/unitQty/unitName/packUnit/packCost 五欄
+- scripts/seed-os-products-v2.mjs：326 筆全部 UPSERT，解析品名中的片/克/毫升/根等單位
+- server/_core/index.ts：採購匯入改查 packCost 並支援 aliases JSON_CONTAINS 比對
+- server/routers/osProducts.ts：productUpsert 加入新欄位
+- OSProducts.tsx：表格欄位改為「品名|品類|供應商|最小單位|單位成本|整包單位|整包成本|批售價|毛利率」，毛利率改用 (batchPrice-packCost)/batchPrice，Dialog 加 aliases/unitQty/unitName/packUnit/packCost
+- OSPurchasing.tsx：按鈕名稱改業務語言（傳送訂單給廠商/廠商已確認收單/確認收貨入庫），狀態 badge 顏色統一，received 顯示綠色「已完成」badge
+- DB：建立 os_sidebar_order 表（tenantId/menuKey/sortOrder）
+- server/routers/admin.ts：新增 getSidebarOrder / saveSidebarOrder（superAdminProcedure）
+- AdminDashboardLayout.tsx：super_admin 登入時「來點什麼 ERP」群組右上角有「排列」按鈕，點擊進入 dnd-kit 拖曳模式，儲存後寫入 DB
 
 **v5.38 完成項目（全專案 debug + B 類廠商補齊）：**
 - DB：`os_suppliers` 新增四筆 B 類廠商（宇聯/立墩/三柳/凱蒂），deliveryType='yulian'（宇聯_配合已存在，共 5 筆 yulian）

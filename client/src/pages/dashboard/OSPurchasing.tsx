@@ -17,17 +17,17 @@ import {
 import * as XLSX from "xlsx";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  pending:   { label: "待處理", color: "#9ca3af", bg: "#f3f4f6" },
-  sent:      { label: "已傳送", color: "#0369a1", bg: "#eff6ff" },
-  confirmed: { label: "已確認", color: "#b45309", bg: "#fef3c7" },
-  received:  { label: "已到貨", color: "#15803d", bg: "#f0fdf4" },
+  pending:   { label: "待處理", color: "#6b7280", bg: "#f3f4f6" },
+  sent:      { label: "已傳送", color: "#1d4ed8", bg: "#dbeafe" },
+  confirmed: { label: "已確認", color: "#c2410c", bg: "#ffedd5" },
+  received:  { label: "已完成", color: "#166534", bg: "#dcfce7" },
   cancelled: { label: "已取消", color: "#dc2626", bg: "#fef2f2" },
 };
 
-const STATUS_FLOW: Record<string, { status: string; label: string; color: string }> = {
-  pending:   { status: "sent",      label: "標記傳送",   color: "#0369a1" },
-  sent:      { status: "confirmed", label: "確認收單",   color: "#b45309" },
-  confirmed: { status: "received",  label: "確認到貨",   color: "#15803d" },
+const STATUS_FLOW: Record<string, { status: string; label: string; color: string; hint?: string }> = {
+  pending:   { status: "sent",      label: "傳送訂單給廠商",   color: "#1d4ed8" },
+  sent:      { status: "confirmed", label: "廠商已確認收單",   color: "#c2410c" },
+  confirmed: { status: "received",  label: "確認收貨入庫",     color: "#166534", hint: "B類廠商點擊後自動更新庫存" },
 };
 
 interface NewItem {
@@ -621,17 +621,24 @@ export default function OSPurchasing() {
 
                       {/* 操作按鈕 */}
                       {canEdit && (
-                        <div className="flex flex-wrap gap-2 pt-1">
-                          {next && (
-                            <Button
-                              size="sm"
-                              className="h-7 text-xs"
-                              style={{ background: next.color, color: "#fff" }}
-                              onClick={() => updateStatus.mutate({ orderId: order.id, status: next.status as any })}
-                              disabled={updateStatus.isPending}
-                            >
-                              {next.label}
-                            </Button>
+                        <div className="flex flex-wrap gap-2 pt-1 items-center">
+                          {order.status === "received" ? (
+                            <Badge style={{ color: "#166534", background: "#dcfce7", border: "none" }} className="text-xs px-3 py-1">已完成</Badge>
+                          ) : next && (
+                            <div className="flex items-center gap-2">
+                              <Button
+                                size="sm"
+                                className="h-7 text-xs"
+                                style={{ background: next.color, color: "#fff" }}
+                                onClick={() => updateStatus.mutate({ orderId: order.id, status: next.status as any })}
+                                disabled={updateStatus.isPending}
+                              >
+                                {next.label}
+                              </Button>
+                              {next.hint && (
+                                <span className="text-xs text-gray-400">{next.hint}</span>
+                              )}
+                            </div>
                           )}
                           {order.status === "sent" && (
                             <Button

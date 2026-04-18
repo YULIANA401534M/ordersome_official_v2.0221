@@ -242,4 +242,30 @@ export const adminRouter = router({
         .where(eq(users.id, input.userId));
       return { success: true };
     }),
+
+  getSidebarOrder: adminProcedure
+    .query(async () => {
+      const database = await db.getDb();
+      if (!database) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: '資料庫連線失敗' });
+      const [rows] = await (database as any).$client.execute(
+        'SELECT menuKey, sortOrder FROM os_sidebar_order WHERE tenantId=1 ORDER BY sortOrder'
+      );
+      return (rows as any[]).map((r: any) => ({ menuKey: r.menuKey as string, sortOrder: r.sortOrder as number }));
+    }),
+
+  saveSidebarOrder: superAdminProcedure
+    .input(z.object({
+      items: z.array(z.object({ menuKey: z.string(), sortOrder: z.number() })),
+    }))
+    .mutation(async ({ input }) => {
+      const database = await db.getDb();
+      if (!database) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: '資料庫連線失敗' });
+      for (const item of input.items) {
+        await (database as any).$client.execute(
+          'REPLACE INTO os_sidebar_order (tenantId, menuKey, sortOrder) VALUES (1, ?, ?)',
+          [item.menuKey, item.sortOrder]
+        );
+      }
+      return { success: true };
+    }),
 });

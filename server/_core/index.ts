@@ -392,11 +392,15 @@ async function startServer() {
 
         for (const item of supplierItems) {
           const [productRows] = await (database as any).$client.execute(
-            'SELECT id, unitCost FROM os_products WHERE name = ? LIMIT 1',
-            [item.productName]
+            `SELECT id, unitCost, packCost, batchPrice, packUnit
+             FROM os_products
+             WHERE tenantId=1 AND isActive=1
+             AND (name=? OR JSON_CONTAINS(aliases, JSON_QUOTE(?)))
+             LIMIT 1`,
+            [item.productName, item.productName]
           );
           const productRow = (productRows as any[])[0];
-          const unitPrice = productRow?.unitCost || 0;
+          const unitPrice = productRow?.packCost || 0;
           const amount = unitPrice * item.quantity;
 
           const [supRows] = await (database as any).$client.execute(

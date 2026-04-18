@@ -34,9 +34,9 @@ function fmtPct(v: number | null | undefined) {
   return (v * 100).toFixed(1) + "%";
 }
 
-function calcMargin(unitCost: number, batchPrice: number) {
+function calcMargin(packCost: number, batchPrice: number) {
   if (!batchPrice || batchPrice <= 0) return null;
-  return (((batchPrice - unitCost) / batchPrice) * 100).toFixed(1);
+  return (((batchPrice - packCost) / batchPrice) * 100).toFixed(1);
 }
 
 // ── SupplierDialog ───────────────────────────────────────────────────────────
@@ -226,6 +226,16 @@ function ProductDialog({
     unitCost: String(product?.unitCost ?? 0),
     batchPrice: String(product?.batchPrice ?? 0),
     batchSize: String(product?.batchSize ?? 1),
+    unitQty: String(product?.unitQty ?? 1),
+    unitName: product?.unitName ?? "",
+    packUnit: product?.packUnit ?? "",
+    packCost: String(product?.packCost ?? 0),
+    aliasesText: (() => {
+      try {
+        const arr = product?.aliases ? JSON.parse(product.aliases) : [];
+        return Array.isArray(arr) ? arr.join("\n") : "";
+      } catch { return ""; }
+    })(),
     note: product?.note ?? "",
     isActive: product?.isActive !== 0,
   });
@@ -237,6 +247,7 @@ function ProductDialog({
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
+    const aliases = form.aliasesText.split("\n").map(s => s.trim()).filter(Boolean);
     upsert.mutate({
       id: product?.id,
       supplierId: form.supplierId ? Number(form.supplierId) : undefined,
@@ -247,6 +258,11 @@ function ProductDialog({
       unitCost: Number(form.unitCost),
       batchPrice: Number(form.batchPrice),
       batchSize: Number(form.batchSize),
+      unitQty: Number(form.unitQty) || 1,
+      unitName: form.unitName || undefined,
+      packUnit: form.packUnit || undefined,
+      packCost: Number(form.packCost) || 0,
+      aliases: aliases.length > 0 ? aliases : undefined,
       note: form.note || undefined,
       isActive: form.isActive,
     });
@@ -256,7 +272,7 @@ function ProductDialog({
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{product ? "編輯品項" : "新增品項"}</DialogTitle>
         </DialogHeader>
@@ -276,7 +292,7 @@ function ProductDialog({
               </Select>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-sm font-medium text-gray-700">供應商</label>
               <Select value={form.supplierId || "__none"} onValueChange={v => setForm(p => ({ ...p, supplierId: v === "__none" ? "" : v }))}>
@@ -288,27 +304,42 @@ function ProductDialog({
               </Select>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">單位</label>
-              <Input value={form.unit} onChange={e => setForm(p => ({ ...p, unit: e.target.value }))} className="mt-1" placeholder="箱/包/kg" />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700">單位容量</label>
-              <Input type="number" step="0.01" value={form.unitSize} onChange={e => setForm(p => ({ ...p, unitSize: e.target.value }))} className="mt-1" />
+              <label className="text-sm font-medium text-gray-700">整包單位（packUnit）</label>
+              <Input value={form.packUnit} onChange={e => setForm(p => ({ ...p, packUnit: e.target.value }))} className="mt-1" placeholder="包/箱/條" />
             </div>
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="text-sm font-medium text-gray-700">進貨成本</label>
+              <label className="text-sm font-medium text-gray-700">最小單位數量</label>
+              <Input type="number" step="0.01" value={form.unitQty} onChange={e => setForm(p => ({ ...p, unitQty: e.target.value }))} className="mt-1" />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700">最小單位名稱</label>
+              <Input value={form.unitName} onChange={e => setForm(p => ({ ...p, unitName: e.target.value }))} className="mt-1" placeholder="片/克/毫升" />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700">單位成本（/最小）</label>
               <Input type="number" step="0.0001" value={form.unitCost} onChange={e => setForm(p => ({ ...p, unitCost: e.target.value }))} className="mt-1" />
             </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-sm font-medium text-gray-700">批價</label>
+              <label className="text-sm font-medium text-gray-700">整包進貨成本（packCost）</label>
+              <Input type="number" step="0.01" value={form.packCost} onChange={e => setForm(p => ({ ...p, packCost: e.target.value }))} className="mt-1" />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700">批售價（batchPrice）</label>
               <Input type="number" step="0.0001" value={form.batchPrice} onChange={e => setForm(p => ({ ...p, batchPrice: e.target.value }))} className="mt-1" />
             </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700">批量</label>
-              <Input type="number" step="0.01" value={form.batchSize} onChange={e => setForm(p => ({ ...p, batchSize: e.target.value }))} className="mt-1" />
-            </div>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-gray-700">別名（aliases）<span className="text-gray-400 font-normal ml-1 text-xs">每行一個，如大麥原始品名</span></label>
+            <textarea
+              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[60px] resize-y"
+              value={form.aliasesText}
+              onChange={e => setForm(p => ({ ...p, aliasesText: e.target.value }))}
+              placeholder={"廣弘-漢拿辣白菜豬耳10片\n另一個別名"}
+            />
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700">備註</label>
@@ -942,14 +973,14 @@ export default function OSProducts() {
                       <table className="w-full text-sm">
                         <thead className="bg-gray-50 border-b">
                           <tr>
-                            {["品名", "品類", "供應商", "單位", "進貨成本", "批價", "毛利率", "最後更新", ""].map(h => (
+                            {["品名", "品類", "供應商", "最小單位", "單位成本", "整包單位", "整包成本", "批售價", "毛利率", ""].map(h => (
                               <th key={h} className="px-4 py-2.5 text-left font-medium text-gray-600">{h}</th>
                             ))}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                           {productList.map((p: any) => {
-                            const margin = calcMargin(Number(p.unitCost), Number(p.batchPrice));
+                            const margin = calcMargin(Number(p.packCost ?? p.batchPrice), Number(p.batchPrice));
                             return (
                               <tr key={p.id} className={`hover:bg-gray-50 transition-colors ${!p.isActive ? "opacity-50" : ""}`}>
                                 <td className="px-4 py-2.5 font-medium text-gray-900">{p.name}</td>
@@ -957,8 +988,12 @@ export default function OSProducts() {
                                   {p.category && <Badge variant="secondary" className="text-xs">{p.category}</Badge>}
                                 </td>
                                 <td className="px-4 py-2.5 text-gray-600">{p.supplierName ?? "-"}</td>
-                                <td className="px-4 py-2.5 text-gray-600">{p.unit}</td>
-                                <td className="px-4 py-2.5 text-blue-700 font-semibold">{fmtCost(p.unitCost)}</td>
+                                <td className="px-4 py-2.5 text-gray-600 text-xs">
+                                  {p.unitQty && Number(p.unitQty) !== 1 ? `${Number(p.unitQty)}${p.unitName || p.unit}` : (p.unitName || p.unit || "-")}
+                                </td>
+                                <td className="px-4 py-2.5 text-gray-600">{fmtCost(p.unitCost)}</td>
+                                <td className="px-4 py-2.5 text-gray-600">{p.packUnit || p.unit || "-"}</td>
+                                <td className="px-4 py-2.5 text-blue-700 font-semibold">{fmtCost(p.packCost ?? p.batchPrice)}</td>
                                 <td className="px-4 py-2.5 text-gray-700">{fmtCost(p.batchPrice)}</td>
                                 <td className="px-4 py-2.5">
                                   {margin !== null && (
@@ -966,10 +1001,6 @@ export default function OSProducts() {
                                       {margin}%
                                     </Badge>
                                   )}
-                                </td>
-                                <td className="px-4 py-2.5 text-gray-500 text-xs">
-                                  {p.lastUpdated ? new Date(p.lastUpdated).toLocaleDateString("zh-TW") : "-"}
-                                  {p.updatedBy && <span className="ml-1 text-gray-400">{p.updatedBy}</span>}
                                 </td>
                                 <td className="px-4 py-2.5">
                                   <div className="flex gap-1">
@@ -990,7 +1021,7 @@ export default function OSProducts() {
                     {/* 手機版 */}
                     <div className="md:hidden divide-y divide-gray-100">
                       {productList.map((p: any) => {
-                        const margin = calcMargin(Number(p.unitCost), Number(p.batchPrice));
+                        const margin = calcMargin(Number(p.packCost ?? p.batchPrice), Number(p.batchPrice));
                         return (
                           <div key={p.id} className={`p-4 space-y-2 ${!p.isActive ? "opacity-50" : ""}`}>
                             <div className="flex justify-between items-center">
@@ -998,12 +1029,12 @@ export default function OSProducts() {
                                 <span className="font-medium text-gray-900">{p.name}</span>
                                 {p.category && <Badge variant="secondary" className="ml-2 text-xs">{p.category}</Badge>}
                               </div>
-                              <span className="text-blue-700 font-bold">{fmtCost(p.unitCost)}</span>
+                              <span className="text-blue-700 font-bold">{fmtCost(p.packCost ?? p.batchPrice)}</span>
                             </div>
                             <div className="flex gap-1 text-xs text-gray-500">
                               <span>{p.supplierName ?? "-"}</span>
                               <span>·</span>
-                              <span>{p.unit}</span>
+                              <span>{p.packUnit || p.unit}</span>
                               {margin && <><span>·</span><span>毛利 {margin}%</span></>}
                             </div>
                             <div className="flex gap-1">

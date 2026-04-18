@@ -36,11 +36,62 @@ import {
   ChevronDown,
   ChevronRight,
   TrendingUp,
+  GripVertical,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import { Button } from "./ui/button";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+function SortableErpItem({
+  id,
+  item,
+  menuItemClass,
+  inventoryAlertCount,
+  setMobileOpen,
+}: {
+  id: string;
+  item: { icon: React.ComponentType<{ className?: string }>; label: string; path?: string };
+  menuItemClass: (path: string) => string;
+  inventoryAlertCount: number;
+  setMobileOpen: (v: boolean) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+  const badge = item.path === "/dashboard/inventory" && inventoryAlertCount > 0 ? inventoryAlertCount : 0;
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center mx-2 rounded-lg cursor-default select-none">
+      <span {...attributes} {...listeners} className="px-1 py-2 text-[#44403c] hover:text-[#78716c] cursor-grab active:cursor-grabbing">
+        <GripVertical className="h-4 w-4" />
+      </span>
+      <div className={`flex items-center gap-3 flex-1 px-2 py-2 text-sm text-[#a8a29e]`}>
+        <item.icon className="h-4 w-4 shrink-0" />
+        <span className="flex-1">{item.label}</span>
+        {badge > 0 && (
+          <span className="min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+            {badge}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function AdminDashboardLayout({
   children,
@@ -53,6 +104,9 @@ export default function AdminDashboardLayout({
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const toggleGroup = (label: string) =>
     setCollapsedGroups(prev => ({ ...prev, [label]: !prev[label] }));
+  const [isDragMode, setIsDragMode] = useState(false);
+  const [erpOrder, setErpOrder] = useState<string[]>([]);
+  const [hasUnsaved, setHasUnsaved] = useState(false);
 
   // ── 側邊欄滾動記憶 ──
   useEffect(() => {
@@ -122,6 +176,12 @@ export default function AdminDashboardLayout({
     { enabled: !!user && isOSTenant, refetchInterval: 60000 }
   );
 
+  const { data: sidebarOrderData } = trpc.admin.getSidebarOrder.useQuery(
+    undefined,
+    { enabled: !!user && isSuperAdmin }
+  );
+  const saveSidebarOrder = trpc.admin.saveSidebarOrder.useMutation();
+
   // ── 模組陣列 state（hooks 必須在 early return 之前）──
   type OsErpItem = { icon: React.ComponentType<{ className?: string }>; label: string; path?: string };
   type DyErpItem = { icon: React.ComponentType<{ className?: string }>; label: string; path: string };
@@ -165,6 +225,8 @@ export default function AdminDashboardLayout({
     setOsErpComingSoon(comingSoon);
   }, [orderSomeModules, isOSTenant, isSuperAdmin, isManager, canSeeCostModules]);
 
+  const sensors = useSensors(useSensor(PointerSensor));
+
   useEffect(() => {
     if (!dayoneModules) return;
     const enabled: DyErpItem[] = [];
@@ -196,6 +258,19 @@ export default function AdminDashboardLayout({
     setDyErpEnabled(enabled);
     setDyErpComingSoon(comingSoon);
   }, [dayoneModules, isDYTenant, isSuperAdmin, isManager]);
+
+  // 初始化 erpOrder（從 DB 排序或預設順序）
+  useEffect(() => {
+    if (osErpEnabled.length === 0) return;
+    const keys = osErpEnabled.map(item => item.path ?? item.label);
+    if (sidebarOrderData && sidebarOrderData.length > 0) {
+      const ordered = [...sidebarOrderData].sort((a, b) => a.sortOrder - b.sortOrder).map(o => o.menuKey);
+      const merged = [...ordered.filter(k => keys.includes(k)), ...keys.filter(k => !ordered.includes(k))];
+      setErpOrder(merged);
+    } else {
+      setErpOrder(keys);
+    }
+  }, [osErpEnabled, sidebarOrderData]);
 
   if (loading) {
     return <DashboardLayoutSkeleton />;
@@ -463,37 +538,98 @@ export default function AdminDashboardLayout({
         {renderGroup("門市管理", storeOperationItems)}
         {showOsErpSection && (
           <div>
-            <div className={groupLabelClass} onClick={() => toggleGroup("來點什麼 ERP")}>
+            <div className={groupLabelClass} onClick={() => !isDragMode && toggleGroup("來點什麼 ERP")}>
               <span>來點什麼 ERP</span>
-              {!!collapsedGroups["來點什麼 ERP"]
-                ? <ChevronRight className="h-3 w-3 shrink-0" />
-                : <ChevronDown className="h-3 w-3 shrink-0" />
-              }
+              <div className="flex items-center gap-1">
+                {isSuperAdmin && !isDragMode && (
+                  <button
+                    className="text-[10px] px-1.5 py-0.5 rounded bg-[#292524] text-amber-400/70 hover:text-amber-400 hover:bg-[#3c3836] transition-colors"
+                    onClick={e => { e.stopPropagation(); setIsDragMode(true); setCollapsedGroups(prev => ({ ...prev, "來點什麼 ERP": false })); }}
+                  >
+                    排列
+                  </button>
+                )}
+                {!isDragMode && (!!collapsedGroups["來點什麼 ERP"]
+                  ? <ChevronRight className="h-3 w-3 shrink-0" />
+                  : <ChevronDown className="h-3 w-3 shrink-0" />
+                )}
+              </div>
             </div>
             {!collapsedGroups["來點什麼 ERP"] && (
               <>
-                {osErpEnabled.map((item) => {
-                  const badge = item.path === "/dashboard/inventory" && (inventoryAlertCount as number) > 0
-                    ? (inventoryAlertCount as number)
-                    : 0;
-                  return (
-                    <Link key={item.path} href={item.path!}>
-                      <a
-                        className={menuItemClass(item.path!)}
-                        onClick={() => setMobileOpen(false)}
-                      >
-                        <item.icon className="h-4 w-4 shrink-0" />
-                        <span className="flex-1">{item.label}</span>
-                        {badge > 0 && (
-                          <span className="ml-auto min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                            {badge}
-                          </span>
-                        )}
-                      </a>
-                    </Link>
-                  );
-                })}
-                {renderComingSoonItems(osErpComingSoon)}
+                {isDragMode ? (
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={(event: DragEndEvent) => {
+                      const { active, over } = event;
+                      if (over && active.id !== over.id) {
+                        setErpOrder(prev => {
+                          const oldIdx = prev.indexOf(active.id as string);
+                          const newIdx = prev.indexOf(over.id as string);
+                          return arrayMove(prev, oldIdx, newIdx);
+                        });
+                        setHasUnsaved(true);
+                      }
+                    }}
+                  >
+                    <SortableContext items={erpOrder} strategy={verticalListSortingStrategy}>
+                      {erpOrder.map(key => {
+                        const item = osErpEnabled.find(i => (i.path ?? i.label) === key);
+                        if (!item) return null;
+                        return <SortableErpItem key={key} id={key} item={item} menuItemClass={menuItemClass} inventoryAlertCount={inventoryAlertCount as number} setMobileOpen={setMobileOpen} />;
+                      })}
+                    </SortableContext>
+                  </DndContext>
+                ) : (
+                  erpOrder.map(key => {
+                    const item = osErpEnabled.find(i => (i.path ?? i.label) === key);
+                    if (!item) return null;
+                    const badge = item.path === "/dashboard/inventory" && (inventoryAlertCount as number) > 0
+                      ? (inventoryAlertCount as number)
+                      : 0;
+                    return (
+                      <Link key={item.path} href={item.path!}>
+                        <a className={menuItemClass(item.path!)} onClick={() => setMobileOpen(false)}>
+                          <item.icon className="h-4 w-4 shrink-0" />
+                          <span className="flex-1">{item.label}</span>
+                          {badge > 0 && (
+                            <span className="ml-auto min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                              {badge}
+                            </span>
+                          )}
+                        </a>
+                      </Link>
+                    );
+                  })
+                )}
+                {isDragMode && hasUnsaved && (
+                  <div className="mx-2 mt-1 mb-1 flex gap-1">
+                    <Button
+                      size="sm"
+                      className="h-7 text-xs flex-1 bg-amber-600 hover:bg-amber-700 text-white"
+                      onClick={async () => {
+                        await saveSidebarOrder.mutateAsync({
+                          items: erpOrder.map((key, idx) => ({ menuKey: key, sortOrder: idx })),
+                        });
+                        setIsDragMode(false);
+                        setHasUnsaved(false);
+                      }}
+                      disabled={saveSidebarOrder.isPending}
+                    >
+                      {saveSidebarOrder.isPending ? "儲存中..." : "儲存排列"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-xs text-[#a8a29e]"
+                      onClick={() => { setIsDragMode(false); setHasUnsaved(false); }}
+                    >
+                      取消
+                    </Button>
+                  </div>
+                )}
+                {!isDragMode && renderComingSoonItems(osErpComingSoon)}
               </>
             )}
           </div>
