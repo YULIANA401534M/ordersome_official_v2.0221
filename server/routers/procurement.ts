@@ -591,4 +591,163 @@ export const procurementRouter = router({
       );
       return (rows as any[]).map(r => r.supplierName as string);
     }),
+
+  // 撿貨單：B 類廠商叫貨品項清單
+  getPickList: adminProcedure
+    .input(z.object({
+      startDate: z.string(),
+      endDate: z.string(),
+    }))
+    .query(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) return [];
+      const [rows] = await (db as any).$client.execute(`
+        SELECT
+          po.id as orderId,
+          po.orderNo,
+          po.orderDate,
+          po.status,
+          pi.supplierName,
+          pi.storeName,
+          pi.productName,
+          pi.quantity,
+          pi.unit,
+          pi.temperature,
+          po.printedAt
+        FROM os_procurement_orders po
+        JOIN os_procurement_items pi ON pi.procurementOrderId = po.id
+        JOIN os_suppliers s ON s.name = pi.supplierName AND s.deliveryType = 'yulian'
+        WHERE po.tenantId = ?
+          AND po.orderDate >= ?
+          AND po.orderDate <= ?
+          AND po.status IN ('sent', 'confirmed')
+        ORDER BY pi.supplierName, po.orderDate, pi.storeName, pi.productName
+      `, [ctx.tenantId ?? 1, input.startDate, input.endDate]);
+      return rows as any[];
+    }),
+
+  // 標記撿貨單已列印
+  markPrinted: adminProcedure
+    .input(z.object({ orderIds: z.array(z.number()) }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new Error('DB unavailable');
+      for (const id of input.orderIds) {
+        await (db as any).$client.execute(
+          'UPDATE os_procurement_orders SET printedAt=NOW() WHERE id=? AND tenantId=?',
+          [id, ctx.tenantId ?? 1]
+        );
+      }
+      return { ok: true };
+    }),
+
+  // 大麥 Excel 批次匯入
+  importFromDamaiExcel: adminProcedure
+    .input(z.object({
+      rows: z.array(z.object({
+        orderNo: z.string(),
+        supplierName: z.string(),
+        storeName: z.string(),
+        productName: z.string(),
+        unit: z.string(),
+        quantity: z.number(),
+        unitPrice: z.number(),
+        temperature: z.string().optional(),
+        orderDate: z.string(),
+      }))
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new Error('DB unavailable');
+      const tenantId = ctx.tenantId ?? 1;
+      let created = 0, skipped = 0, flagged = 0;
+
+      const grouped = new Map<string, typeof input.rows>();
+      for (const row of input.rows) {
+        if (!grouped.has(row.orderNo)) grouped.set(row.orderNo, []);
+        grouped.get(row.orderNo)!.push(row);
+      }
+
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const cutoff = new Date('2026-04-01');
+
+      for (const [orderNo, items] of grouped) {
+        const [existing] = await (db as any).$client.execute(
+          'SELECT id FROM os_procurement_orders WHERE tenantId=? AND orderNo=? LIMIT 1',
+          [tenantId, orderNo]
+        );
+        if ((existing as any[]).length > 0) { skipped++; continue; }
+
+        const firstItem = items[0];
+        const [supRows] = await (db as any).$client.execute(
+          'SELECT deliveryType FROM os_suppliers WHERE name=? AND isActive=1 LIMIT 1',
+          [firstItem.supplierName]
+        );
+        const isYulian = (supRows as any[])[0]?.deliveryType === 'yulian';
+        const sourceType = isYulian ? 'damai_yulian' : 'damai_import';
+        const isHistorical = firstItem.orderDate.slice(0, 10) < todayStr;
+        const status = isHistorical ? 'received' : 'pending';
+
+        const [orderResult] = await (db as any).$client.execute(
+          `INSERT INTO os_procurement_orders (tenantId, orderNo, orderDate, status, sourceType, createdAt, updatedAt)
+           VALUES (?,?,?,?,?,NOW(),NOW())`,
+          [tenantId, orderNo, firstItem.orderDate.slice(0, 10), status, sourceType]
+        );
+        const orderId = (orderResult as any).insertId;
+        created++;
+
+        for (const item of items) {
+          const [prodRows] = await (db as any).$client.execute(
+            `SELECT id FROM os_products WHERE tenantId=1 AND isActive=1
+             AND (name=? OR JSON_CONTAINS(aliases, JSON_QUOTE(?))) LIMIT 1`,
+            [item.productName, item.productName]
+          );
+          const needsReview = (prodRows as any[]).length === 0 ? 1 : 0;
+          if (needsReview) flagged++;
+          const amount = item.unitPrice * item.quantity;
+          await (db as any).$client.execute(
+            `INSERT INTO os_procurement_items
+             (procurementOrderId, supplierName, storeName, productName, unit, quantity,
+              unitPrice, amount, temperature, needsReview, createdAt)
+             VALUES (?,?,?,?,?,?,?,?,?,?,NOW())`,
+            [orderId, item.supplierName, item.storeName, item.productName,
+             item.unit, item.quantity, item.unitPrice, amount,
+             item.temperature ?? '常溫', needsReview]
+          );
+        }
+
+        // 4/1 之後的歷史 B 類訂單：觸發庫存入庫
+        const orderDateObj = new Date(firstItem.orderDate.slice(0, 10));
+        if (isHistorical && isYulian && orderDateObj >= cutoff) {
+          try {
+            for (const item of items) {
+              const [invRows] = await (db as any).$client.execute(
+                'SELECT id, currentQty FROM os_inventory WHERE tenantId=? AND supplierName=? AND productName=? LIMIT 1',
+                [tenantId, firstItem.supplierName, item.productName]
+              );
+              if ((invRows as any[]).length > 0) {
+                const inv = (invRows as any[])[0];
+                const qtyAfter = Number(inv.currentQty) + Number(item.quantity);
+                await (db as any).$client.execute(
+                  'UPDATE os_inventory SET currentQty=?, updatedAt=NOW() WHERE id=?',
+                  [qtyAfter, inv.id]
+                );
+                await (db as any).$client.execute(
+                  `INSERT INTO os_inventory_logs (tenantId, inventoryId, changeType, qty, qtyBefore, qtyAfter, refType, refId, note, createdAt)
+                   VALUES (?,?,'in',?,?,?,'procurement',?,'大麥Excel歷史匯入',NOW())`,
+                  [tenantId, inv.id, Number(item.quantity), Number(inv.currentQty), qtyAfter, orderId]
+                );
+              }
+            }
+          } catch (e) {
+            console.error('[歷史匯入庫存失敗]', e);
+          }
+        }
+      }
+
+      return {
+        created, skipped, flagged,
+        message: `建立 ${created} 張叫貨單，略過 ${skipped} 張（重複），${flagged} 筆品名待確認`,
+      };
+    }),
 });

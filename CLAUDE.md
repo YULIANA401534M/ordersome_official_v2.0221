@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md
 
-> **版本**：v5.44。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.45。**最後更新**：2026-04-19。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -112,14 +112,14 @@ git status && git log --oneline -3
 
 ---
 
-### 最新 Git 狀態（2026-04-18 v5.44）
+### 最新 Git 狀態（2026-04-19 v5.45）
 
 最後三個 commit（已 push）：
-1. `a47562e` — docs: CLAUDE.md v5.43 — 系統架構/歷史資料/帳務/權限設計決策 + rename-os-products.mjs
-2. `a908cd8` — feat: os_products 兩層分類欄位 + os_product_categories 表 + os_suppliers sortOrder + CLAUDE.md v5.42
-3. `92acfa2` — docs: CLAUDE.md v5.41 — 開發原則/資料整合規劃/待完成功能清單三章節
+1. （本次）feat: 帳務系統 DB + 後端 v5.45
+2. `a47562e` — docs: CLAUDE.md v5.43 — 系統架構/歷史資料/帳務/權限設計決策 + rename-os-products.mjs
+3. `a908cd8` — feat: os_products 兩層分類欄位 + os_product_categories 表 + os_suppliers sortOrder + CLAUDE.md v5.42
 
-working tree: clean（本次 commit 將新增 CLAUDE.md v5.44 + scripts/run-rename-sql.mjs）
+working tree: clean
 
 **rename 執行結果（2026-04-18 最終診斷）**：
 - 更新 0 筆（新）+ 13 筆（上次已改），找不到 175 筆
@@ -411,13 +411,47 @@ working tree: clean（本次 commit 將新增 CLAUDE.md v5.44 + scripts/run-rena
 - 目前：會計用 Excel 手算，尚未系統化
 
 **月底對帳流程**
-- 直營店：每月15-18號整理月結款項，核對銀行明細，對應日記帳
+- 月結時間不固定，由會計彈性安排（非固定15-18號），核對銀行明細，對應日記帳
 - 宇聯：每週匯款支出，整理銀行明細建憑證給事務所
 - 雙月整理發票給事務所
 
-**加盟主帳款**
-- 加盟主每週匯款，目前用 ASANA 追蹤、Excel 銀行明細備查
+**加盟主帳款（週結：加盟主付給宇聯）**
+- 加盟主每週匯款給宇聯，目前用 ASANA 追蹤、Excel 銀行明細備查（不是廠商付給宇聯）
 - 系統已有 os_franchisee_payments，配送簽收後自動產生
+
+### 帳務系統架構（2026-04-19 建立）
+
+**五張帳務核心表**
+- `os_payables`：廠商應付帳款（月結，每廠商每月一筆，由叫貨收貨自動匯總）
+- `os_bank_transactions`：銀行明細（匯入Excel，自動比對建議，人工確認）
+- `os_rebates`：退佣帳款（月底計算，廣弘自動，伯享/韓濟人工確認）
+- `os_rebate_rules`：退佣規則（存DB可後台修改，不寫死；已預填廣弘/伯享/韓濟三筆）
+- `os_transfers`：提貨調貨（宇聯公司貨送各門市，月底自動產生門市應付帳款）
+
+**連動流程**
+- 叫貨單received → `generateMonthlyPayables` 月底匯總 → os_payables（每廠商每月一筆）
+- 銀行明細匯入 → `autoMatchTransactions` 自動建議 → 人工 `confirmMatch` 確認
+- 月底退佣 → `calculateRebates` → 廣弘自動算，伯享人工輸入，韓濟抵貨款（更新 rebateAmount）
+- 提貨調貨 → `billTransfers` 月底結算 → os_franchisee_payments 門市應收
+
+**銀行明細自動比對邏輯**
+- 支出 + 備註含廠商名 → 建議對應 os_payables（matchScore 信心分數）
+- 收入 + 備註含加盟店名 → 建議對應 os_franchisee_payments
+- 信心分數 >= 50 才更新建議，人工 confirmedBy 確認後才真正標記
+- 不自動確認，全程需人工二次確認防弊
+
+**大麥Excel匯入規則（importFromDamaiExcel）**
+- orderDate 早於今天 = 歷史訂單，status 直接設 received
+- 3月份以前的歷史B類訂單：只記帳，不觸發庫存（庫存基準點=3/31盤點）
+- 4/1之後的歷史B類訂單：觸發庫存入庫（比對 os_inventory）
+- 品名比對：先查 name，再查 aliases，找不到 → 標 needsReview=1（橘色警示）
+- 重複 orderNo 自動略過，回傳 created/skipped/flagged 三個計數
+
+**os_procurement_orders 新增欄位（2026-04-19）**
+- `printedAt DATETIME`：最後列印撿貨單時間
+
+**os_procurement_items 新增欄位（2026-04-19）**
+- `needsReview TINYINT`：1=品名未對應到 os_products，需人工確認
 
 ### 權限架構（2026-04-18 定案）
 
