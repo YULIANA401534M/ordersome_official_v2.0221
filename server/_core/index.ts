@@ -303,15 +303,18 @@ async function startServer() {
   // Procurement import from Make
   app.post("/api/procurement/import", async (req, res) => {
     try {
-      const { secret, orderNo, orderDate, items } = req.body;
+      const { secret, orderNo: rawOrderNo, orderDate, items } = req.body;
 
       if (secret !== process.env.SYNC_SECRET) {
         return res.status(401).json({ success: false, error: "Unauthorized" });
       }
 
-      if (!orderNo || !orderDate || !Array.isArray(items) || items.length === 0) {
+      if (!orderDate || !Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ success: false, error: "Missing required fields" });
       }
+
+      const orderNo: string = rawOrderNo ||
+        `DM-${orderDate.replace(/-/g, '')}-${Date.now().toString().slice(-6)}`;
 
       const database = await db.getDb();
       if (!database) {
@@ -319,13 +322,15 @@ async function startServer() {
       }
       const client = (database as any).$client;
 
-      // 檢查是否已存在
-      const [existing] = await client.execute(
-        "SELECT id FROM os_procurement_orders WHERE orderNo = ? LIMIT 1",
-        [orderNo]
-      );
-      if ((existing as any[]).length > 0) {
-        return res.json({ success: true, message: "訂單已存在，略過" });
+      // 檢查是否已存在（僅在有明確 orderNo 時略過）
+      if (rawOrderNo) {
+        const [existing] = await client.execute(
+          "SELECT id FROM os_procurement_orders WHERE orderNo = ? LIMIT 1",
+          [orderNo]
+        );
+        if ((existing as any[]).length > 0) {
+          return res.json({ success: true, message: "訂單已存在，略過" });
+        }
       }
 
       // 插入主表
@@ -335,8 +340,9 @@ async function startServer() {
       );
       const orderId = (result as any).insertId;
 
-      // 插入品項
-      console.log("[Procurement Import] items received:", JSON.stringify(items));
+      console.log(`[Procurement Import] orderNo=${orderNo}, items=${items.length}`);
+
+      // 批次插入品項
       for (const item of items) {
         const [supRows] = await client.execute(
           "SELECT id FROM os_suppliers WHERE name = ? LIMIT 1",
@@ -350,7 +356,7 @@ async function startServer() {
         );
       }
 
-      return res.json({ success: true, orderId, orderNo });
+      return res.json({ success: true, orderNo, orderId, itemCount: items.length });
     } catch (error) {
       console.error("[Procurement Import]", error);
       return res.status(500).json({ success: false, error: String(error) });

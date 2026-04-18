@@ -1,6 +1,6 @@
 # CLAUDE.md — 宇聯國際餐飲 OrderSome 開發主檔
 
-> **版本**：v5.24。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.25。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -91,14 +91,22 @@ Make 統整工作流：Gmail 讀取 Excel → 解析品項 → 寫入 OrderSome 
 
 ---
 
-### 最新 Git 狀態（2026-04-18 v5.24）
+### 最新 Git 狀態（2026-04-18 v5.25）
 
 最後三個 commit（已 push）：
-1. `fix` — procurement import debug log + 日期顯示 + 品項空狀態提示
-2. `feat` — 新增 /api/procurement/import REST endpoint 給 Make 呼叫
-3. `feat` — 叫貨管理手動補單Dialog + getSuppliers procedure
+1. `feat` — procurement import 支援自動 orderNo + 批次品項
+2. `fix` — procurement import debug log + 日期顯示 + 品項空狀態提示
+3. `feat` — 新增 /api/procurement/import REST endpoint 給 Make 呼叫
 
 working tree: clean
+
+**v5.25 完成項目：**
+- `server/_core/index.ts`：`POST /api/procurement/import` 支援自動產生 orderNo
+  - `orderNo` 改為 optional，未傳時自動產生 `DM-YYYYMMDD-{timestamp後6碼}`
+  - 驗證邏輯調整：僅需 `orderDate` + `items[]`（`orderNo` 可省略）
+  - 重複檢查：僅在有明確傳入 `orderNo` 時才執行略過邏輯
+  - 回傳格式改為 `{ success, orderNo, orderId, itemCount }`
+  - console.log 改為 `[Procurement Import] orderNo=..., items=...` 格式
 
 **v5.24 完成項目：**
 - `server/_core/index.ts`：品項 for loop 前加 `console.log("[Procurement Import] items received:", ...)` debug log
