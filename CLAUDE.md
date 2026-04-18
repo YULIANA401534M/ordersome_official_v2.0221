@@ -62,7 +62,10 @@ git status && git log --oneline -3
 
 ### 最新 Git 狀態（2026-04-18 v5.34）
 
-最後三個 commit（已 push）：會在 commit 後更新
+最後三個 commit（已 push）：
+1. `36898bc` — feat: OSPurchasing 四功能強化（篩選升級/批量刪除/品項編輯/金額欄位）
+2. `9d71491` — docs: 新增BUSINESS.md業務邏輯文件 + v5.33 + sourceType ENUM修正
+3. `ecdbfe8` — docs: 新增BUSINESS.md，業務邏輯從CLAUDE.md分離
 
 working tree: clean
 
