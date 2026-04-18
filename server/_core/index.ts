@@ -331,7 +331,16 @@ async function startServer() {
         .filter((item: { supplierName: string; productName: string }) => item.supplierName && item.productName);
 
       if (items.length === 0) {
-        return res.status(400).json({ success: false, error: "No valid items in itemsCsv" });
+        return res.status(400).json({
+          success: false,
+          error: "No valid items in itemsCsv",
+          debug: {
+            itemsCsvReceived: req.body.itemsCsv,
+            itemsCsvType: typeof req.body.itemsCsv,
+            itemsCsvLength: req.body.itemsCsv?.length,
+            bodyKeys: Object.keys(req.body)
+          }
+        });
       }
 
       const orderNo: string = rawOrderNo ||
