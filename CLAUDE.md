@@ -1,6 +1,6 @@
 # CLAUDE.md — 宇聯國際餐飲 OrderSome 開發主檔
 
-> **版本**：v5.21。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.22。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -16,7 +16,7 @@ git status && git log --oneline -3
 
 ## 當前開發狀態（換對話框必讀）
 
-> 最後更新：2026-04-18 v5.21。**新大腦進來請從這裡開始讀，不要跳過。**
+> 最後更新：2026-04-18 v5.22。**新大腦進來請從這裡開始讀，不要跳過。**
 
 ### ⚠️ 開發守則（每次換對話框都要遵守）
 
@@ -91,14 +91,22 @@ Make 統整工作流：Gmail 讀取 Excel → 解析品項 → 寫入 OrderSome 
 
 ---
 
-### 最新 Git 狀態（2026-04-18 v5.20）
+### 最新 Git 狀態（2026-04-18 v5.22）
 
 最後三個 commit（已 push）：
-1. `da5d1ee` — fix: mail.ts 改用 Gmail SMTP 固定 IPv4，解決 Railway IPv6 連線問題
-2. `3bb0e6d` — fix: Gmail SMTP 改用明確 IPv4 設定，解決 Railway IPv6 ENETUNREACH 問題
-3. `063bcfa` — docs: CLAUDE.md v5.19 — CA表補建、inventory路由確認、Gmail SMTP待驗證
+1. `feat` — 叫貨管理手動補單Dialog + getSuppliers procedure
+2. `61b1251` — docs: v5.21 補建廠商資料 + 業務流程記錄
+3. `d7e3f56` — fix: Portal 忘記密碼改為聯繫電話、CLAUDE.md v5.20 換對話框完整交接
 
 working tree: clean
+
+**v5.22 完成項目：**
+- `procurement.ts`：新增 `getSuppliers` procedure（adminProcedure，回傳 isActive=1 廠商列表）
+- `OSPurchasing.tsx`：新增「手動補單」按鈕（outline variant，位於匯出 Excel 按鈕右側）
+- 手動補單 Dialog：日期選擇 + 單號（自動產生 MAN-YYYYMMDD-xxx，可修改）+ 動態品項列表
+  - 廠商欄位為下拉選單（從 getSuppliers 取得，確保名稱完全比對 os_suppliers.name）
+  - 溫層下拉（常溫/冷藏/冷凍）
+  - 呼叫 importFromDamai（secret hardcode，orderNo 重複自動 skip 不報錯）
 
 ---
 

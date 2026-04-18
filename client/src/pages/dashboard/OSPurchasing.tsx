@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "sonner";
 import {
   ChevronLeft, ChevronRight, Plus, ChevronDown, ChevronUp,
-  ShoppingCart, Send, CheckCircle, XCircle, Trash2
+  ShoppingCart, Send, CheckCircle, XCircle, Trash2, Upload
 } from "lucide-react";
 import * as XLSX from "xlsx";
 
@@ -61,6 +61,12 @@ export default function OSPurchasing() {
   const [newNote, setNewNote] = useState("");
   const [newItems, setNewItems] = useState<NewItem[]>([emptyItem()]);
 
+  // 手動匯入 dialog
+  const [showImport, setShowImport] = useState(false);
+  const [importDate, setImportDate] = useState(now.toISOString().slice(0, 10));
+  const [importOrderNo, setImportOrderNo] = useState("");
+  const [importItems, setImportItems] = useState<NewItem[]>([emptyItem()]);
+
   // 廠商 LINE dialog
   const [showLineDialog, setShowLineDialog] = useState(false);
   const [lineOrderId, setLineOrderId] = useState<number | null>(null);
@@ -92,6 +98,7 @@ export default function OSPurchasing() {
   );
 
   const { data: supplierLines = [], refetch: refetchLines } = trpc.procurement.supplierLineList.useQuery();
+  const { data: suppliers = [] } = trpc.procurement.getSuppliers.useQuery();
 
   const createMutation = trpc.procurement.create.useMutation({
     onSuccess: () => {
@@ -115,6 +122,21 @@ export default function OSPurchasing() {
       const fail = data.results.filter(r => !r.success).length;
       toast.success(`LINE 推播完成：${ok} 家成功${fail > 0 ? `、${fail} 家失敗` : ""}`);
       setShowLineDialog(false);
+      refetch();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const importMutation = trpc.procurement.importFromDamai.useMutation({
+    onSuccess: (data) => {
+      if ('message' in data && data.message) {
+        toast.info(data.message as string);
+      } else {
+        toast.success(`手動補單成功，共 ${(data as any).itemCount} 項`);
+      }
+      setShowImport(false);
+      setImportItems([emptyItem()]);
+      setImportOrderNo("");
       refetch();
     },
     onError: (e) => toast.error(e.message),
@@ -153,6 +175,33 @@ export default function OSPurchasing() {
   }
   function handleItemChange(idx: number, field: keyof NewItem, value: any) {
     setNewItems(items => items.map((item, i) => i === idx ? { ...item, [field]: value } : item));
+  }
+
+  function genImportOrderNo() {
+    const d = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `MAN-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${Date.now().toString().slice(-3)}`;
+  }
+
+  function handleImport() {
+    if (!importOrderNo) { toast.error("請輸入單號"); return; }
+    if (importItems.some(it => !it.supplierName || !it.productName)) {
+      toast.error("廠商名稱和品項名稱為必填");
+      return;
+    }
+    importMutation.mutate({
+      secret: "ordersome-sync-2026",
+      orderNo: importOrderNo,
+      orderDate: importDate,
+      items: importItems.map(it => ({
+        supplierName: it.supplierName,
+        storeName: it.storeName,
+        productName: it.productName,
+        unit: it.unit || undefined,
+        quantity: Number(it.quantity),
+        temperature: it.temperature,
+      })),
+    });
   }
 
   function handleCreate() {
@@ -219,6 +268,20 @@ export default function OSPurchasing() {
             <Button size="sm" variant="outline" onClick={exportExcel} className="h-8 text-xs">
               匯出 Excel
             </Button>
+            {canEdit && (
+              <Button
+                size="sm" variant="outline"
+                onClick={() => {
+                  setImportOrderNo(genImportOrderNo());
+                  setImportDate(new Date().toISOString().slice(0, 10));
+                  setImportItems([emptyItem()]);
+                  setShowImport(true);
+                }}
+                className="h-8 text-xs gap-1"
+              >
+                <Upload className="w-3.5 h-3.5" /> 手動補單
+              </Button>
+            )}
             {canEdit && (
               <Button size="sm" onClick={() => setShowCreate(true)} className="h-8 gap-1" style={{ background: "#b45309" }}>
                 <Plus className="w-4 h-4" /> 新增叫貨單
@@ -474,6 +537,98 @@ export default function OSPurchasing() {
               style={{ background: "#06c755", color: "#fff" }}
             >
               {pushToLine.isPending ? "傳送中…" : "確認推播"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 手動補單 Dialog */}
+      <Dialog open={showImport} onOpenChange={setShowImport}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>手動補單</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-xs text-gray-400">用於補登大麥系統遺漏的叫貨紀錄，單號不可與現有訂單重複。</p>
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <Label className="text-xs">叫貨日期</Label>
+                <Input type="date" value={importDate} onChange={e => setImportDate(e.target.value)} className="mt-1" />
+              </div>
+              <div className="flex-1">
+                <Label className="text-xs">單號（自動產生可修改）</Label>
+                <Input value={importOrderNo} onChange={e => setImportOrderNo(e.target.value)} placeholder="MAN-YYYYMMDD-001" className="mt-1 font-mono text-sm" />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label className="text-xs">品項明細</Label>
+                <Button size="sm" variant="outline" onClick={() => setImportItems(items => [...items, emptyItem()])} className="h-7 text-xs gap-1">
+                  <Plus className="w-3 h-3" /> 新增一列
+                </Button>
+              </div>
+              <div className="space-y-2">
+                {importItems.map((item, idx) => (
+                  <div key={idx} className="grid grid-cols-8 gap-1 items-end bg-gray-50 p-2 rounded-lg">
+                    <div className="col-span-2">
+                      {idx === 0 && <p className="text-xs text-gray-400 mb-1">廠商 *</p>}
+                      <Select value={item.supplierName} onValueChange={v => setImportItems(items => items.map((it, i) => i === idx ? { ...it, supplierName: v } : it))}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="選廠商" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(suppliers as any[]).map((s: any) => (
+                            <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      {idx === 0 && <p className="text-xs text-gray-400 mb-1">門市</p>}
+                      <Input value={item.storeName} onChange={e => setImportItems(items => items.map((it, i) => i === idx ? { ...it, storeName: e.target.value } : it))} placeholder="門市" className="h-8 text-xs" />
+                    </div>
+                    <div className="col-span-2">
+                      {idx === 0 && <p className="text-xs text-gray-400 mb-1">品項 *</p>}
+                      <Input value={item.productName} onChange={e => setImportItems(items => items.map((it, i) => i === idx ? { ...it, productName: e.target.value } : it))} placeholder="品項名稱" className="h-8 text-xs" />
+                    </div>
+                    <div>
+                      {idx === 0 && <p className="text-xs text-gray-400 mb-1">數量</p>}
+                      <Input type="number" value={item.quantity} onChange={e => setImportItems(items => items.map((it, i) => i === idx ? { ...it, quantity: Number(e.target.value) } : it))} className="h-8 text-xs" />
+                    </div>
+                    <div>
+                      {idx === 0 && <p className="text-xs text-gray-400 mb-1">溫層</p>}
+                      <Select value={item.temperature} onValueChange={v => setImportItems(items => items.map((it, i) => i === idx ? { ...it, temperature: v as any } : it))}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="常溫">常溫</SelectItem>
+                          <SelectItem value="冷藏">冷藏</SelectItem>
+                          <SelectItem value="冷凍">冷凍</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-end">
+                      {idx === 0 && <p className="text-xs text-gray-400 mb-1 invisible">刪</p>}
+                      <Button
+                        variant="ghost" size="sm"
+                        className="h-8 w-8 p-0 text-red-400 hover:text-red-600 hover:bg-red-50"
+                        onClick={() => setImportItems(items => items.filter((_, i) => i !== idx))}
+                        disabled={importItems.length === 1}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowImport(false)}>取消</Button>
+            <Button onClick={handleImport} disabled={importMutation.isPending} style={{ background: "#b45309" }}>
+              {importMutation.isPending ? "匯入中…" : "確認補單"}
             </Button>
           </DialogFooter>
         </DialogContent>

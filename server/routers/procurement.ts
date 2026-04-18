@@ -310,4 +310,15 @@ export const procurementRouter = router({
           input.isActive !== false ? 1 : 0, input.note || null]);
       return { success: true };
     }),
+
+  getSuppliers: adminProcedure
+    .query(async () => {
+      const db = await getDb();
+      if (!db) return [] as any[];
+      const [rows] = await (db as any).$client.execute(
+        'SELECT id, name, rebateType, rebateRate FROM os_suppliers WHERE isActive = 1 ORDER BY name',
+        []
+      );
+      return rows as any[];
+    }),
 });
