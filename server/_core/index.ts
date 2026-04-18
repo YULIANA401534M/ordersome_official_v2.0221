@@ -343,58 +343,80 @@ async function startServer() {
         });
       }
 
-      const orderNo: string = rawOrderNo ||
-        `DM-${orderDate.replace(/-/g, '')}-${Date.now().toString().slice(-6)}`;
+      const orderNo: string | undefined = rawOrderNo || undefined;
 
       const database = await db.getDb();
       if (!database) {
         return res.status(500).json({ success: false, error: "DB unavailable" });
       }
-      const client = (database as any).$client;
 
-      // 檢查是否已存在（僅在有明確 orderNo 時略過）
-      if (rawOrderNo) {
-        const [existing] = await client.execute(
-          "SELECT id FROM os_procurement_orders WHERE orderNo = ? LIMIT 1",
-          [orderNo]
+      // 按廠商分組
+      const grouped = new Map<string, typeof items>();
+      for (const item of items) {
+        if (!grouped.has(item.supplierName)) {
+          grouped.set(item.supplierName, []);
+        }
+        grouped.get(item.supplierName)!.push(item);
+      }
+
+      const YULIAN_DELIVERY_SUPPLIERS = ['宇聯', '宇聯_配合'];
+
+      console.log(`[Procurement Import] ${grouped.size} suppliers, ${items.length} items total`);
+
+      const results: Array<{ orderNo: string; skipped?: boolean; orderId?: number; itemCount?: number; isYulianDelivery?: boolean }> = [];
+      for (const [supplierName, supplierItems] of grouped) {
+        const groupOrderNo = orderNo
+          ? `${orderNo}-${supplierName.slice(0, 2)}`
+          : `DM-${orderDate.replace(/-/g, '')}-${Date.now().toString().slice(-6)}`;
+
+        const isYulianDelivery = YULIAN_DELIVERY_SUPPLIERS.includes(supplierName);
+        const sourceType = isYulianDelivery ? 'damai_yulian' : 'damai_import';
+
+        const [existing] = await (database as any).$client.execute(
+          'SELECT id FROM os_procurement_orders WHERE orderNo = ? LIMIT 1',
+          [groupOrderNo]
         );
         if ((existing as any[]).length > 0) {
-          return res.json({ success: true, message: "訂單已存在，略過" });
+          results.push({ orderNo: groupOrderNo, skipped: true });
+          continue;
         }
+
+        const [result] = await (database as any).$client.execute(
+          `INSERT INTO os_procurement_orders (tenantId, orderNo, orderDate, status, sourceType, createdBy, createdAt) VALUES (1, ?, ?, 'pending', ?, 'Make自動匯入', NOW())`,
+          [groupOrderNo, orderDate, sourceType]
+        );
+        const orderId = (result as any).insertId;
+
+        for (const item of supplierItems) {
+          const [productRows] = await (database as any).$client.execute(
+            'SELECT id, unitCost FROM os_products WHERE name = ? LIMIT 1',
+            [item.productName]
+          );
+          const productRow = (productRows as any[])[0];
+          const unitPrice = productRow?.unitCost || 0;
+          const amount = unitPrice * item.quantity;
+
+          const [supRows] = await (database as any).$client.execute(
+            'SELECT id FROM os_suppliers WHERE name = ? LIMIT 1',
+            [item.supplierName]
+          );
+          const supplierId = (supRows as any[])[0]?.id || null;
+
+          await (database as any).$client.execute(
+            `INSERT INTO os_procurement_items (procurementOrderId, supplierId, supplierName, storeName, productName, unit, quantity, unitPrice, amount, temperature) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [orderId, supplierId, item.supplierName, item.storeName, item.productName, item.unit || '', item.quantity, unitPrice, amount, item.temperature || '常溫']
+          );
+        }
+
+        results.push({ orderNo: groupOrderNo, orderId, itemCount: supplierItems.length, isYulianDelivery });
       }
 
-      // 插入主表
-      const [result] = await client.execute(
-        "INSERT INTO os_procurement_orders (orderNo, orderDate, status, sourceType, createdBy, tenantId, createdAt) VALUES (?, ?, 'pending', 'damai_import', 'Make自動匯入', 1, NOW())",
-        [orderNo, orderDate]
-      );
-      const orderId = (result as any).insertId;
-
-      console.log(`[Procurement Import] orderNo=${orderNo}, items=${items.length}`);
-
-      // 批次插入品項
-      for (const item of items) {
-        const [supRows] = await client.execute(
-          "SELECT id FROM os_suppliers WHERE name = ? LIMIT 1",
-          [item.supplierName]
-        );
-        const supplierId = (supRows as any[])[0]?.id || null;
-
-        const [productRows] = await client.execute(
-          'SELECT id, unitCost FROM os_products WHERE name = ? LIMIT 1',
-          [item.productName]
-        );
-        const productRow = (productRows as any[])[0];
-        const unitPrice = productRow?.unitCost || 0;
-        const amount = unitPrice * item.quantity;
-
-        await client.execute(
-          "INSERT INTO os_procurement_items (procurementOrderId, supplierId, supplierName, storeName, productName, unit, quantity, unitPrice, amount, temperature) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-          [orderId, supplierId, item.supplierName, item.storeName, item.productName, item.unit || "", item.quantity, unitPrice, amount, item.temperature || "常溫"]
-        );
-      }
-
-      return res.json({ success: true, orderNo, orderId, itemCount: items.length });
+      return res.json({
+        success: true,
+        orders: results,
+        totalOrders: results.length,
+        totalItems: items.length
+      });
     } catch (error) {
       console.error("[Procurement Import]", error);
       return res.status(500).json({ success: false, error: String(error) });

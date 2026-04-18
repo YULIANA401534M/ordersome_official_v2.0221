@@ -1,6 +1,6 @@
 # CLAUDE.md — 宇聯國際餐飲 OrderSome 開發主檔
 
-> **版本**：v5.29。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.30。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -85,6 +85,15 @@ Make 統整工作流：Gmail 讀取 Excel → 解析品項 → 寫入 OrderSome 
 - 自動查 os_products 對應 unitPrice
 - orderNo 重複時略過（不報錯）
 - orderNo 未傳時自動產生 DM-YYYYMMDD-xxxxxx
+
+### 廠商分組建單邏輯（v5.30 新增）
+- 每次 import 按 supplierName 分組，每個廠商各建一張叫貨單
+- `YULIAN_DELIVERY_SUPPLIERS = ['宇聯', '宇聯_配合']`
+  - 這兩個廠商的叫貨單 `sourceType = 'damai_yulian'`，代表需要宇聯自行配送
+  - 其他廠商 `sourceType = 'damai_import'`，代表直送廠商
+- orderNo 規則：有傳 orderNo 時 → `${orderNo}-${廠商名前2字}`；未傳時 → 自動產生 `DM-YYYYMMDD-xxxxxx`
+- 重複 orderNo 自動略過（skipped: true），不報錯
+- 回傳格式：`{ success, orders[], totalOrders, totalItems }`
 
 ### 現存問題（待處理）
 - 單價（unitPrice）目前幾乎全為 0，因為 os_products 只有測試資料一筆
