@@ -287,30 +287,21 @@ working tree: clean
 #### ✅ 階段二：進銷存重建 — OSPurchasing.tsx（已完成，2026-04-18）
 **目標**：把 `/dashboard/purchasing` 從大永殼換成來點什麼自己的採購介面
 
-後端 `procurement` router 已有完整 7 個 procedure：
-- `list`：列出叫貨單（可篩日期/狀態）
-- `create`：手動建立叫貨單
-- `getDetail`：叫貨單 + 品項明細
-- `updateStatus`：pending → sent → confirmed → received / cancelled
-- `groupBySupplier`：依廠商分組顯示
-- `pushToLine`：推播給廠商 LINE
-- `supplierLineList` / `supplierLineUpsert`：廠商 LINE 管理
-- `importFromDamai`：Make Webhook 匯入（已有，publicProcedure）
+後端 `procurement` router 完整 procedures（截至 v5.46）：
+- `list` / `create` / `getDetail` / `updateStatus` / `groupBySupplier`
+- `pushToLine` / `supplierLineList` / `supplierLineUpsert` / `getSuppliers`
+- `deleteOrder`（superAdmin） / `batchDeleteOrders`（superAdmin） / `updateNote`
+- `updateItem` / `addItem` / `listStoreNames` / `listSupplierNames`
+- `getPickList` / `markPrinted` / `importFromDamai`（public） / `importFromDamaiExcel`
+- `listNeedsReview`
 
-前端需要的功能：
-1. 叫貨單列表（KPI 卡 + 篩選 + 狀態 Badge）
-2. 叫貨單詳情 Dialog（品項明細 + 狀態推進按鈕）
-3. 手動建立叫貨單 Dialog
-4. 依廠商分組 Tab 或視圖
-5. Excel 匯出
+#### 階段三：帳務系統 ✅ 已完成（v5.45/v5.46）
+- `/dashboard/accounting`：OSAccounting.tsx（四 Tab）
+- accounting router：16 個 procedure 完整
+- 銀行對帳自動比對邏輯、退佣計算、提貨調貨月底結算
 
-#### 階段三：帳務系統補強（待確認）
-**目標**：帳務批次匯入，但使用者有非常多種 Excel 格式，需先討論確認範圍再動工。
-- 暫緩，等使用者確認最急用的帳務類型與 Excel 欄位格式後再開始
-
-#### 階段四：排班假日標示補完（小型，可立即開始）
-- `OSScheduling.tsx` 已呼叫 `dailyReport.getHolidaysByMonth`，後端 procedure 需確認存在
-- 若不存在需新增：input `{ year, month }`，回傳該月所有假日日期陣列
+#### 階段四：排班假日標示 ✅ 已完成
+- `dailyReport.getHolidaysByMonth` 已存在，OSScheduling.tsx 正常使用
 
 ---
 
@@ -378,12 +369,11 @@ working tree: clean
 - 報表：銷售品項統計、採購訂單統計折線圖、分店採購銷售統計KPI
 - 帳務管理：月結對帳、發票管理
 
-**我們目前的缺口（待完成）**
-- 帳務管理（/dashboard/accounting 空殼）
-- 廠商對帳 / 應付帳款
-- 撿貨單列印
-- 菜單成本 BOM 連動
-- 分店庫存（未來，目前只記宇聯總倉B類）
+**我們目前的缺口（待完成，2026-04-19 更新）**
+- 菜單成本 BOM 連動（os_bom 表，開工條件：採購資料穩定）
+- 3/31 盤點資料匯入庫存（等 Excel 格式確認）
+- 分店庫存（未來，目前只記宇聯總倉 B 類）
+- 客戶管理（/dashboard/customers 仍為 ComingSoon）
 
 ### 歷史資料整合計畫（2026-04-18 定案）
 
@@ -499,7 +489,7 @@ working tree: clean
 - B類廠商（deliveryType='yulian'）：記宇聯總倉庫存，存 os_inventory
 - A類廠商（deliveryType='direct'）：直送各門市，宇聯無庫存壓力，但需記帳（應付帳款）
 - 門市庫存：未來規劃，參考大麥「分店庫存管理」模式，暫不實作
-- 帳務：A類和B類都要記應付帳款（os_payables，待建）
+- 帳務：A類和B類都要記應付帳款（os_payables，✅ 已建，透過 /dashboard/accounting 管理）
 
 ---
 
@@ -731,7 +721,7 @@ check().catch(console.error);
 **路由清理**
 - 刪除重複 `/dashboard/franchise`（舊 `FranchiseDashboard` import + route）
 - `/dashboard/delivery` 從 `ComingSoon` 改接 `OSDelivery`
-- 帳務管理選單項目加 `superAdminOnly: true`，manager 不可見
+- 帳務管理選單項目原加 `superAdminOnly: true`；v5.46 已改為 manager 也可見
 - 宇聯總部 `storeId = 401534`（`stores` 表，`tenantId=1`）貫穿所有後端
 
 **排班管理 v1**
@@ -763,17 +753,13 @@ check().catch(console.error);
 - 門市自動報表 Webhook → 直接寫進 `os_daily_reports`（SYNC_SECRET 已設）
 - 採購 importFromDamai → 不再走 Google Sheets
 
-### 已知佔位頁面與缺口（2026-04-18 更新）
+### 已知佔位頁面與缺口（2026-04-19 更新）
 
 **佔位頁面（有路由但無實作）：**
 
 | 路由 | 元件 | 狀態 |
 |------|------|------|
 | `/dashboard/customers` | `ComingSoon` | 空殼，客戶管理未開發 |
-| `/dashboard/accounting` | `ComingSoon` | 帳務管理，superAdminOnly，範圍待確認 |
-
-**路由已確認正常（之前疑慮已解除）：**
-- `/dashboard/inventory` → `OSInventory`（App.tsx line 240，✅ 有對應元件）
 
 **加盟主入口未完成：**
 - `/dashboard/franchise` → `FranchiseDashboardPage.tsx` 顯示「功能開發中」，加盟主完整功能（訂單/庫存/報表）尚未實作
