@@ -1,6 +1,6 @@
 # CLAUDE.md — 宇聯國際餐飲 OrderSome 開發主檔
 
-> **版本**：v5.22。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.23。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -91,14 +91,22 @@ Make 統整工作流：Gmail 讀取 Excel → 解析品項 → 寫入 OrderSome 
 
 ---
 
-### 最新 Git 狀態（2026-04-18 v5.22）
+### 最新 Git 狀態（2026-04-18 v5.23）
 
 最後三個 commit（已 push）：
-1. `feat` — 叫貨管理手動補單Dialog + getSuppliers procedure
-2. `61b1251` — docs: v5.21 補建廠商資料 + 業務流程記錄
-3. `d7e3f56` — fix: Portal 忘記密碼改為聯繫電話、CLAUDE.md v5.20 換對話框完整交接
+1. `feat` — 新增 /api/procurement/import REST endpoint 給 Make 呼叫
+2. `feat` — 叫貨管理手動補單Dialog + getSuppliers procedure
+3. `61b1251` — docs: v5.21 補建廠商資料 + 業務流程記錄
 
 working tree: clean
+
+**v5.23 完成項目：**
+- `server/_core/index.ts`：新增 `POST /api/procurement/import` 標準 REST endpoint
+  - SYNC_SECRET 驗證
+  - 重複 orderNo 自動略過
+  - 插入 os_procurement_orders 主表 + os_procurement_items 品項
+  - 廠商 id 自動從 os_suppliers 查找
+  - 使用頂部已 import 的 `db.getDb()`（非動態 import）
 
 **v5.22 完成項目：**
 - `procurement.ts`：新增 `getSuppliers` procedure（adminProcedure，回傳 isActive=1 廠商列表）

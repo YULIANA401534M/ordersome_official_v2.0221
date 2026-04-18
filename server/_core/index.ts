@@ -300,6 +300,62 @@ async function startServer() {
     }
   });
 
+  // Procurement import from Make
+  app.post("/api/procurement/import", async (req, res) => {
+    try {
+      const { secret, orderNo, orderDate, items } = req.body;
+
+      if (secret !== process.env.SYNC_SECRET) {
+        return res.status(401).json({ success: false, error: "Unauthorized" });
+      }
+
+      if (!orderNo || !orderDate || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ success: false, error: "Missing required fields" });
+      }
+
+      const database = await db.getDb();
+      if (!database) {
+        return res.status(500).json({ success: false, error: "DB unavailable" });
+      }
+      const client = (database as any).$client;
+
+      // 檢查是否已存在
+      const [existing] = await client.execute(
+        "SELECT id FROM os_procurement_orders WHERE orderNo = ? LIMIT 1",
+        [orderNo]
+      );
+      if ((existing as any[]).length > 0) {
+        return res.json({ success: true, message: "訂單已存在，略過" });
+      }
+
+      // 插入主表
+      const [result] = await client.execute(
+        "INSERT INTO os_procurement_orders (orderNo, orderDate, status, sourceType, createdBy, tenantId, createdAt) VALUES (?, ?, 'pending', 'damai_import', 'Make自動匯入', 1, NOW())",
+        [orderNo, orderDate]
+      );
+      const orderId = (result as any).insertId;
+
+      // 插入品項
+      for (const item of items) {
+        const [supRows] = await client.execute(
+          "SELECT id FROM os_suppliers WHERE name = ? LIMIT 1",
+          [item.supplierName]
+        );
+        const supplierId = (supRows as any[])[0]?.id || null;
+
+        await client.execute(
+          "INSERT INTO os_procurement_items (procurementOrderId, supplierId, supplierName, storeName, productName, unit, quantity, temperature, tenantId, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, NOW())",
+          [orderId, supplierId, item.supplierName, item.storeName, item.productName, item.unit || "", item.quantity, item.temperature || "常溫"]
+        );
+      }
+
+      return res.json({ success: true, orderId, orderNo });
+    } catch (error) {
+      console.error("[Procurement Import]", error);
+      return res.status(500).json({ success: false, error: String(error) });
+    }
+  });
+
   // tRPC API
   app.use(
     "/api/trpc",
