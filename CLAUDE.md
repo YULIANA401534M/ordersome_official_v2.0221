@@ -1,6 +1,6 @@
 # CLAUDE.md — 宇聯國際餐飲 OrderSome 開發主檔
 
-> **版本**：v5.19。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.20。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -26,12 +26,42 @@ git status && git log --oneline -3
 
 ---
 
-### 最新 Git 狀態（2026-04-18 v5.19）
+### 給新大腦的重要提醒
+
+**郵件系統**：
+- Railway 環境封鎖 SMTP 出口（IPv6 問題），nodemailer 無法連接 Gmail SMTP
+- Resend 免費版只能寄到 verified email，無法寄到任意外部信箱
+- 目前 `sendMail` 函數存在但實際不可用於生產環境
+- 解決方案：未來需驗證自有網域（ordersome.com.tw）並用 Resend API
+- 短期不要嘗試修復此問題，優先處理業務功能
+
+**CA 表（菜單成本）**：
+- `os_menu_items` 等 5 張表原本未執行 0024 migration
+- 已於 2026-04-18 用 node script 補建，現在正常
+- `/dashboard/ca-menu` 可正常使用
+
+**連動關係（重要）**：
+- 叫貨單（confirmed）→ 配送管理（新增派車單時可選關聯叫貨單，自動帶入品項）
+- 配送管理簽收 → 自動產生 `os_franchisee_payments`（應收帳款）
+- 應收帳款 → 損益儀表板（`arIncome` 欄位）
+- 退佣 → 損益儀表板（`rebateIncome` 欄位）
+- 加盟主管理頁 → 點「查看帳款往來」跳轉到帳款頁（帶 userId 篩選）
+
+**宇聯總部 storeId = 401534**（機動人員排班用，不要改這個數字）
+
+**下次換對話框前務必確認**：
+1. `git status` clean
+2. `pnpm run build` 零錯誤
+3. CLAUDE.md 已更新版本號和 git 狀態
+
+---
+
+### 最新 Git 狀態（2026-04-18 v5.20）
 
 最後三個 commit（已 push）：
-1. `14bbc5f` — docs: CLAUDE.md v5.18 — 郵件系統 Gmail SMTP 更新紀錄
-2. `777fcd2` — fix: 郵件系統改用 Gmail SMTP，移除 Resend 依賴 2026-04-18
-3. `da4d494` — feat: 連動補強 — 配送品項自動帶批價、叫貨單帶入派車、損益納入出貨應收
+1. `da5d1ee` — fix: mail.ts 改用 Gmail SMTP 固定 IPv4，解決 Railway IPv6 連線問題
+2. `3bb0e6d` — fix: Gmail SMTP 改用明確 IPv4 設定，解決 Railway IPv6 ENETUNREACH 問題
+3. `063bcfa` — docs: CLAUDE.md v5.19 — CA表補建、inventory路由確認、Gmail SMTP待驗證
 
 working tree: clean
 
@@ -51,6 +81,7 @@ working tree: clean
 | `/dashboard/daily-report` | `OSDailyReport.tsx` | ✅ 完成 | 門市日報 |
 | `/dashboard/products` | `OSProducts.tsx` | ✅ 完成 | 品項成本 |
 | `/dashboard/rebate` | `OSRebate.tsx` | ✅ 完成 | 退佣帳款 |
+| `/dayone/portal/forgot-password` | `DayonePortalForgotPassword.tsx` | ✅ 完成 | 改為顯示聯繫電話 0980-190-857，不走 email 流程 |
 
 ---
 
@@ -113,10 +144,12 @@ working tree: clean
    cron 基礎已建（`server/_core/index.ts`），每小時整點執行
    等蛋博確認 `dy_settings` 的 `overdue_push_enabled` / `overdue_push_hour` 設定值
 
-3. **大永 Portal 重設密碼 email**
-   架構已完成，郵件改用 Gmail SMTP（nodemailer，commit `777fcd2`）。
-   Railway `GMAIL_APP_PASSWORD` 設定後，可用 `test@dayone.com`（dy_customers id=1，isPortalActive=1）觸發重設密碼測試寄信。
-   測試指令：`curl -X POST https://ordersome.com.tw/api/trpc/dayone.portal.requestPasswordReset -H "Content-Type: application/json" -d '{"email":"test@dayone.com"}'`
+3. ✅ **已關閉：Portal 忘記密碼改為顯示聯繫電話**（0980-190-857）
+   email 重設密碼功能暫不實作。原因：
+   - 大永客戶 90% 用 LINE 登入，忘記密碼情境極少
+   - Railway 環境封鎖 SMTP 出口（IPv6 問題），nodemailer 無法連接 Gmail SMTP
+   - 蛋博可直接後台協助重設密碼
+   - 頁面改為直接顯示聯繫電話，點擊可撥打（commit 即將 push）
 
 **P3 — 設計討論後才能做**
 
@@ -141,6 +174,7 @@ working tree: clean
 | `SYNC_SECRET` | `ordersome-sync-2026` | Make Webhook 驗證 |
 | `DAYONE_TENANT_ID` | `90004` | 大永蛋品 tenantId |
 | `OS_TENANT_ID` | `1` | 來點什麼 tenantId |
+| `GMAIL_APP_PASSWORD` | Railway 已設定 | 但 SMTP 出口被 Railway 封鎖（IPv6），sendMail 目前實際不可用 |
 
 ---
 
