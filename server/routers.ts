@@ -23,6 +23,7 @@ import { profitLossRouter } from "./routers/profitLoss";
 import { franchiseePaymentRouter } from "./routers/franchiseePayment";
 import { schedulingRouter } from "./routers/scheduling";
 import { deliveryRouter } from "./routers/delivery";
+import { inventoryRouter } from "./routers/inventory";
 import { sendMail } from "./mail";
 import { users, orderAuditLogs } from "../drizzle/schema";
 import { inArray } from "drizzle-orm";
@@ -948,6 +949,7 @@ export const appRouter = router({
   franchiseePayment: franchiseePaymentRouter,
   scheduling: schedulingRouter,
   delivery: deliveryRouter,
+  inventory: inventoryRouter,
 });
 
 export type AppRouter = typeof appRouter;

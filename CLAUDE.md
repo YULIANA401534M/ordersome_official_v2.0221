@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md
 
-> **版本**：v5.34。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.35。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -60,14 +60,22 @@ git status && git log --oneline -3
 
 ---
 
-### 最新 Git 狀態（2026-04-18 v5.34）
+### 最新 Git 狀態（2026-04-18 v5.35）
 
 最後三個 commit（已 push）：
-1. `36898bc` — feat: OSPurchasing 四功能強化（篩選升級/批量刪除/品項編輯/金額欄位）
-2. `9d71491` — docs: 新增BUSINESS.md業務邏輯文件 + v5.33 + sourceType ENUM修正
-3. `ecdbfe8` — docs: 新增BUSINESS.md，業務邏輯從CLAUDE.md分離
+1. `（本次 commit）` — feat: 庫存管理系統 v1（os_inventory + OSInventory.tsx）
+2. `36898bc` — feat: OSPurchasing 四功能強化（篩選升級/批量刪除/品項編輯/金額欄位）
+3. `9d71491` — docs: 新增BUSINESS.md業務邏輯文件 + v5.33 + sourceType ENUM修正
 
 working tree: clean
+
+**v5.35 完成項目（庫存管理系統 v1）：**
+- DB：建立 `os_inventory`（品項主表）+ `os_inventory_logs`（異動記錄）
+- `server/routers/inventory.ts`：7 個 procedure（list/getDetail/adjust/count/setSafety/addProduct/alertCount）
+- `server/routers.ts`：掛載 `inventoryRouter`
+- `OSInventory.tsx`：完整重建（廠商/分類篩選 + 低庫存 checkbox + 狀態 badge + 調整/設警戒 Dialog + 新增品項 Dialog + KPI 三卡片）
+- `AdminDashboardLayout.tsx`：庫存管理側邊欄顯示低庫存警告紅色 badge（alertCount）
+- 備註：B 類廠商（宇聯/立墩/三柳/凱蒂）在 os_products 無資料，os_inventory 目前為空表，需手動新增品項或未來 ETL
 
 **v5.34 完成項目（OSPurchasing 四功能強化）：**
 - `procurement.ts`：`list` 新增 storeName 篩選 + totalAmt 加總；新增 `batchDeleteOrders`、`updateItem`、`addItem`、`listStoreNames`、`listSupplierNames` 五個 procedure

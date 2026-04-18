@@ -117,6 +117,11 @@ export default function AdminDashboardLayout({
   const activeDispatchCount = (todayDispatch as any[]).filter((d: any) => d.status === "in_progress").length;
   const pendingReceiptCount = (pendingReceipts as any[]).length;
 
+  const { data: inventoryAlertCount = 0 } = trpc.inventory.alertCount.useQuery(
+    undefined,
+    { enabled: !!user && isOSTenant, refetchInterval: 60000 }
+  );
+
   // ── 模組陣列 state（hooks 必須在 early return 之前）──
   type OsErpItem = { icon: React.ComponentType<{ className?: string }>; label: string; path?: string };
   type DyErpItem = { icon: React.ComponentType<{ className?: string }>; label: string; path: string };
@@ -467,17 +472,27 @@ export default function AdminDashboardLayout({
             </div>
             {!collapsedGroups["來點什麼 ERP"] && (
               <>
-                {osErpEnabled.map((item) => (
-                  <Link key={item.path} href={item.path!}>
-                    <a
-                      className={menuItemClass(item.path!)}
-                      onClick={() => setMobileOpen(false)}
-                    >
-                      <item.icon className="h-4 w-4 shrink-0" />
-                      <span>{item.label}</span>
-                    </a>
-                  </Link>
-                ))}
+                {osErpEnabled.map((item) => {
+                  const badge = item.path === "/dashboard/inventory" && (inventoryAlertCount as number) > 0
+                    ? (inventoryAlertCount as number)
+                    : 0;
+                  return (
+                    <Link key={item.path} href={item.path!}>
+                      <a
+                        className={menuItemClass(item.path!)}
+                        onClick={() => setMobileOpen(false)}
+                      >
+                        <item.icon className="h-4 w-4 shrink-0" />
+                        <span className="flex-1">{item.label}</span>
+                        {badge > 0 && (
+                          <span className="ml-auto min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                            {badge}
+                          </span>
+                        )}
+                      </a>
+                    </Link>
+                  );
+                })}
                 {renderComingSoonItems(osErpComingSoon)}
               </>
             )}
