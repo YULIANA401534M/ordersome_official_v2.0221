@@ -351,7 +351,7 @@ async function startServer() {
         const supplierId = (supRows as any[])[0]?.id || null;
 
         await client.execute(
-          "INSERT INTO os_procurement_items (procurementOrderId, supplierId, supplierName, storeName, productName, unit, quantity, temperature, tenantId, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, NOW())",
+          "INSERT INTO os_procurement_items (procurementOrderId, supplierId, supplierName, storeName, productName, unit, quantity, temperature) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
           [orderId, supplierId, item.supplierName, item.storeName, item.productName, item.unit || "", item.quantity, item.temperature || "常溫"]
         );
       }

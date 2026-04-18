@@ -1,6 +1,6 @@
 # CLAUDE.md — 宇聯國際餐飲 OrderSome 開發主檔
 
-> **版本**：v5.25。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.26。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -91,14 +91,20 @@ Make 統整工作流：Gmail 讀取 Excel → 解析品項 → 寫入 OrderSome 
 
 ---
 
-### 最新 Git 狀態（2026-04-18 v5.25）
+### 最新 Git 狀態（2026-04-18 v5.26）
 
 最後三個 commit（已 push）：
-1. `feat` — procurement import 支援自動 orderNo + 批次品項
-2. `fix` — procurement import debug log + 日期顯示 + 品項空狀態提示
-3. `feat` — 新增 /api/procurement/import REST endpoint 給 Make 呼叫
+1. `fix` — procurement import 移除不存在的 tenantId 欄位（os_procurement_items）
+2. `feat` — procurement import 支援自動 orderNo + 批次品項
+3. `fix` — procurement import debug log + 日期顯示 + 品項空狀態提示
 
 working tree: clean
+
+**v5.26 完成項目：**
+- `server/_core/index.ts`：`POST /api/procurement/import` items INSERT 移除不存在欄位
+  - `os_procurement_items` 無 `tenantId` 欄位、無 `createdAt` 欄位，已從 INSERT 移除
+  - `os_procurement_orders` 有 `tenantId`，orders INSERT 保留不動
+  - SHOW COLUMNS 確認實際欄位：`id, procurementOrderId, supplierId, supplierName, storeName, productName, unit, quantity, unitPrice, amount, temperature, lineSent, lineSentAt`
 
 **v5.25 完成項目：**
 - `server/_core/index.ts`：`POST /api/procurement/import` 支援自動產生 orderNo
