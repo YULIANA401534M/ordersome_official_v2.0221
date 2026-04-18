@@ -1,6 +1,6 @@
 # CLAUDE.md — 宇聯國際餐飲 OrderSome 開發主檔
 
-> **版本**：v5.23。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.24。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -16,7 +16,7 @@ git status && git log --oneline -3
 
 ## 當前開發狀態（換對話框必讀）
 
-> 最後更新：2026-04-18 v5.22。**新大腦進來請從這裡開始讀，不要跳過。**
+> 最後更新：2026-04-18 v5.24。**新大腦進來請從這裡開始讀，不要跳過。**
 
 ### ⚠️ 開發守則（每次換對話框都要遵守）
 
@@ -91,14 +91,20 @@ Make 統整工作流：Gmail 讀取 Excel → 解析品項 → 寫入 OrderSome 
 
 ---
 
-### 最新 Git 狀態（2026-04-18 v5.23）
+### 最新 Git 狀態（2026-04-18 v5.24）
 
 最後三個 commit（已 push）：
-1. `feat` — 新增 /api/procurement/import REST endpoint 給 Make 呼叫
-2. `feat` — 叫貨管理手動補單Dialog + getSuppliers procedure
-3. `61b1251` — docs: v5.21 補建廠商資料 + 業務流程記錄
+1. `fix` — procurement import debug log + 日期顯示 + 品項空狀態提示
+2. `feat` — 新增 /api/procurement/import REST endpoint 給 Make 呼叫
+3. `feat` — 叫貨管理手動補單Dialog + getSuppliers procedure
 
 working tree: clean
+
+**v5.24 完成項目：**
+- `server/_core/index.ts`：品項 for loop 前加 `console.log("[Procurement Import] items received:", ...)` debug log
+- `OSPurchasing.tsx`：orderDate 顯示改為 `?.slice(0, 10)`（相容 YYYY-MM-DD 與 ISO timestamp）
+- `OSPurchasing.tsx`：品項展開時空陣列顯示「尚無品項記錄」而非空白
+- DB：刪除 `os_procurement_orders id=1` 測試資料（items 已無殘留）
 
 **v5.23 完成項目：**
 - `server/_core/index.ts`：新增 `POST /api/procurement/import` 標準 REST endpoint

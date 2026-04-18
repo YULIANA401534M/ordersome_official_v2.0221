@@ -321,7 +321,7 @@ export default function OSPurchasing() {
                     onClick={() => setExpandedId(isExpanded ? null : order.id)}
                   >
                     <span className="text-sm font-mono text-gray-500 w-36 truncate">{order.orderNo}</span>
-                    <span className="text-sm text-gray-700 w-24">{order.orderDate}</span>
+                    <span className="text-sm text-gray-700 w-24">{order.orderDate?.slice(0, 10)}</span>
                     <Badge style={{ color: sc.color, background: sc.bg, border: "none" }} className="text-xs">{sc.label}</Badge>
                     <span className="text-xs text-gray-400 flex-1 truncate">
                       {order.suppliers?.split(",").slice(0, 3).join("、")}
@@ -362,6 +362,11 @@ export default function OSPurchasing() {
                                 </td>
                               </tr>
                             ))}
+                            {(!detail?.items || detail.items.length === 0) && detail !== undefined && (
+                              <tr><td colSpan={7}>
+                                <div className="text-sm text-muted-foreground py-4 text-center">尚無品項記錄</div>
+                              </td></tr>
+                            )}
                             {detail === undefined && (
                               <tr><td colSpan={7} className="py-3 text-center text-gray-300">載入中…</td></tr>
                             )}

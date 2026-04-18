@@ -336,6 +336,7 @@ async function startServer() {
       const orderId = (result as any).insertId;
 
       // 插入品項
+      console.log("[Procurement Import] items received:", JSON.stringify(items));
       for (const item of items) {
         const [supRows] = await client.execute(
           "SELECT id FROM os_suppliers WHERE name = ? LIMIT 1",
