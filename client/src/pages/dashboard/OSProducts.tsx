@@ -34,9 +34,17 @@ function fmtPct(v: number | null | undefined) {
   return (v * 100).toFixed(1) + "%";
 }
 
-function calcMargin(packCost: number, batchPrice: number) {
-  if (!batchPrice || batchPrice <= 0) return null;
+function calcMargin(packCost: number, batchPrice: number): string | null {
+  if (!batchPrice || batchPrice <= 0 || !packCost || packCost <= 0) return null;
   return (((batchPrice - packCost) / batchPrice) * 100).toFixed(1);
+}
+
+function marginClass(margin: string | null): string {
+  if (margin === null) return "";
+  const n = Number(margin);
+  if (n >= 20) return "bg-green-100 text-green-700";
+  if (n >= 5) return "bg-orange-100 text-orange-700";
+  return "bg-red-100 text-red-700";
 }
 
 // ── SupplierDialog ───────────────────────────────────────────────────────────
@@ -973,31 +981,31 @@ export default function OSProducts() {
                       <table className="w-full text-sm">
                         <thead className="bg-gray-50 border-b">
                           <tr>
-                            {["品名", "品類", "供應商", "最小單位", "單位成本", "整包單位", "整包成本", "批售價", "毛利率", ""].map(h => (
+                            {["供應商", "品名", "分類", "最小單位", "整包單位", "成本", "批價", "毛利率", ""].map(h => (
                               <th key={h} className="px-4 py-2.5 text-left font-medium text-gray-600">{h}</th>
                             ))}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                           {productList.map((p: any) => {
-                            const margin = calcMargin(Number(p.packCost ?? p.batchPrice), Number(p.batchPrice));
+                            const margin = calcMargin(Number(p.packCost), Number(p.batchPrice));
+                            const unitDisplay = p.unitQty && Number(p.unitQty) > 0
+                              ? `${Number(p.unitQty)}${p.unitName || ""}`
+                              : (p.unitName || "-");
                             return (
                               <tr key={p.id} className={`hover:bg-gray-50 transition-colors ${!p.isActive ? "opacity-50" : ""}`}>
+                                <td className="px-4 py-2.5 text-gray-600">{p.supplierName ?? "-"}</td>
                                 <td className="px-4 py-2.5 font-medium text-gray-900">{p.name}</td>
                                 <td className="px-4 py-2.5">
                                   {p.category && <Badge variant="secondary" className="text-xs">{p.category}</Badge>}
                                 </td>
-                                <td className="px-4 py-2.5 text-gray-600">{p.supplierName ?? "-"}</td>
-                                <td className="px-4 py-2.5 text-gray-600 text-xs">
-                                  {p.unitQty && Number(p.unitQty) !== 1 ? `${Number(p.unitQty)}${p.unitName || p.unit}` : (p.unitName || p.unit || "-")}
-                                </td>
-                                <td className="px-4 py-2.5 text-gray-600">{fmtCost(p.unitCost)}</td>
-                                <td className="px-4 py-2.5 text-gray-600">{p.packUnit || p.unit || "-"}</td>
-                                <td className="px-4 py-2.5 text-blue-700 font-semibold">{fmtCost(p.packCost ?? p.batchPrice)}</td>
+                                <td className="px-4 py-2.5 text-gray-600 text-xs">{unitDisplay}</td>
+                                <td className="px-4 py-2.5 text-gray-600">{p.packUnit || "-"}</td>
+                                <td className="px-4 py-2.5 text-blue-700 font-semibold">{fmtCost(p.packCost)}</td>
                                 <td className="px-4 py-2.5 text-gray-700">{fmtCost(p.batchPrice)}</td>
                                 <td className="px-4 py-2.5">
                                   {margin !== null && (
-                                    <Badge className={Number(margin) >= 30 ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}>
+                                    <Badge className={marginClass(margin)}>
                                       {margin}%
                                     </Badge>
                                   )}
@@ -1021,7 +1029,10 @@ export default function OSProducts() {
                     {/* 手機版 */}
                     <div className="md:hidden divide-y divide-gray-100">
                       {productList.map((p: any) => {
-                        const margin = calcMargin(Number(p.packCost ?? p.batchPrice), Number(p.batchPrice));
+                        const margin = calcMargin(Number(p.packCost), Number(p.batchPrice));
+                        const unitDisplay = p.unitQty && Number(p.unitQty) > 0
+                          ? `${Number(p.unitQty)}${p.unitName || ""}`
+                          : (p.unitName || "-");
                         return (
                           <div key={p.id} className={`p-4 space-y-2 ${!p.isActive ? "opacity-50" : ""}`}>
                             <div className="flex justify-between items-center">
@@ -1029,13 +1040,15 @@ export default function OSProducts() {
                                 <span className="font-medium text-gray-900">{p.name}</span>
                                 {p.category && <Badge variant="secondary" className="ml-2 text-xs">{p.category}</Badge>}
                               </div>
-                              <span className="text-blue-700 font-bold">{fmtCost(p.packCost ?? p.batchPrice)}</span>
+                              <span className="text-blue-700 font-bold">{fmtCost(p.packCost)}</span>
                             </div>
                             <div className="flex gap-1 text-xs text-gray-500">
                               <span>{p.supplierName ?? "-"}</span>
                               <span>·</span>
-                              <span>{p.packUnit || p.unit}</span>
-                              {margin && <><span>·</span><span>毛利 {margin}%</span></>}
+                              <span>{unitDisplay}</span>
+                              <span>·</span>
+                              <span>{p.packUnit || "-"}</span>
+                              {margin && <><span>·</span><span className={`font-medium ${Number(margin) >= 20 ? "text-green-600" : Number(margin) >= 5 ? "text-orange-600" : "text-red-600"}`}>毛利 {margin}%</span></>}
                             </div>
                             <div className="flex gap-1">
                               <Button size="sm" variant="ghost" className="h-7 text-xs px-2"

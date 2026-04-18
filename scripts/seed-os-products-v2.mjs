@@ -33,40 +33,29 @@ const catMap = {
 };
 
 function parseUnitQtyName(name, fallbackUnit) {
-  // 片數：10片、20片、30片...
-  const piecesMatch = name.match(/(\d+)片/);
-  if (piecesMatch) return { unitQty: parseInt(piecesMatch[1]), unitName: '片' };
-  // 公克/克：500g, 1kg, 1000克, 600g...
-  const kgMatch = name.match(/(\d+(?:\.\d+)?)\s*[Kk][Gg]/);
-  if (kgMatch) return { unitQty: Math.round(parseFloat(kgMatch[1]) * 1000), unitName: '克' };
-  const gMatch = name.match(/(\d+(?:\.\d+)?)\s*[Gg](?![a-zA-Z])/);
-  if (gMatch) return { unitQty: parseFloat(gMatch[1]), unitName: '克' };
-  const keMatch = name.match(/(\d+(?:\.\d+)?)\s*克/);
-  if (keMatch) return { unitQty: parseFloat(keMatch[1]), unitName: '克' };
-  // 毫升/ml：2500ml, 500ml...
-  const mlMatch = name.match(/(\d+(?:\.\d+)?)\s*[Mm][Ll]/);
-  if (mlMatch) return { unitQty: parseFloat(mlMatch[1]), unitName: '毫升' };
-  // 公升/L：18L, 5L...
-  const lMatch = name.match(/(\d+(?:\.\d+)?)\s*[Ll](?![a-zA-Z])/);
-  if (lMatch) return { unitQty: parseFloat(lMatch[1]) * 1000, unitName: '毫升' };
-  // 根數：20根、50根...
-  const rootMatch = name.match(/(\d+)\s*根/);
-  if (rootMatch) return { unitQty: parseInt(rootMatch[1]), unitName: '根' };
-  // 張數：300張、1000張...
-  const sheetMatch = name.match(/(\d+)\s*張/);
-  if (sheetMatch) return { unitQty: parseInt(sheetMatch[1]), unitName: '張' };
-  // 支數：100支、50支...
-  const stickMatch = name.match(/(\d+)\s*支/);
-  if (stickMatch) return { unitQty: parseInt(stickMatch[1]), unitName: '支' };
-  // 包數：10包、24包...（整箱裡的包數）
-  const packMatch = name.match(/(\d+)\s*包/);
-  if (packMatch) return { unitQty: parseInt(packMatch[1]), unitName: '包' };
-  // 罐數：6罐、12罐...
-  const canMatch = name.match(/(\d+)\s*罐/);
-  if (canMatch) return { unitQty: parseInt(canMatch[1]), unitName: '罐' };
-  // 顆/粒
-  const grainMatch = name.match(/(\d+)\s*[顆粒]/);
-  if (grainMatch) return { unitQty: parseInt(grainMatch[1]), unitName: '顆' };
+  const patterns = [
+    [/(\d+)片/, '片'],
+    [/(\d+)張/, '張'],
+    [/(\d+)顆/, '顆'],
+    [/(\d+)根/, '根'],
+    [/(\d+)入/, '入'],
+    [/(\d+\.?\d*)[Kk][Gg]/, 'kg'],
+    [/(\d+)[Gg](?!\w)/, 'g'],
+    [/(\d+)[Mm][Ll]/, 'ml'],
+    [/(\d+)[Ll](?!\w)/, 'L'],
+  ];
+
+  for (const [re, unit] of patterns) {
+    const m = name.match(re);
+    if (m) {
+      const n = parseFloat(m[1]);
+      if (unit === 'kg') return { unitQty: Math.round(n * 1000), unitName: '克' };
+      if (unit === 'g') return { unitQty: n, unitName: '克' };
+      if (unit === 'ml') return { unitQty: n, unitName: '毫升' };
+      if (unit === 'L') return { unitQty: Math.round(n * 1000), unitName: '毫升' };
+      return { unitQty: parseInt(m[1]), unitName: unit };
+    }
+  }
 
   return { unitQty: 1, unitName: fallbackUnit };
 }
@@ -407,8 +396,10 @@ let inserted = 0, updated = 0, failed = 0;
 for (const it of items) {
   const category = catMap[it.category] ?? it.category;
   const { unitQty, unitName } = parseUnitQtyName(it.name, it.unit);
-  const packUnit = it.unit;
-  const packCost = it.price;   // 整包進貨成本 = price（批售給加盟主的價格，即廠商整包單位）
+  const INVALID_UNITS = ['元', '克', '毫升', '片', '張'];
+  const packUnit = INVALID_UNITS.includes(it.unit) ? '' : it.unit;
+  // packCost = 整包進貨成本 = 最小單位數量 × 最小單位成本
+  const packCost = unitQty > 1 ? parseFloat((unitQty * it.unit_cost).toFixed(4)) : it.unit_cost;
   const aliases = JSON.stringify([it.name]);
 
   try {

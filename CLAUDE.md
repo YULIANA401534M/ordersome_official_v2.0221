@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md
 
-> **版本**：v5.39。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.40。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -61,14 +61,32 @@ git status && git log --oneline -3
 
 ---
 
-### 最新 Git 狀態（2026-04-18 v5.39）
+### 最新 Git 狀態（2026-04-18 v5.40）
 
 最後三個 commit（已 push）：
-1. `（本次 commit）` — feat: os_products 新欄位 + seed v2 + OSProducts/OSPurchasing 更新 + 側邊欄拖曳排序 + CLAUDE.md v5.39
-2. `eec3980` — fix: B類入庫supplierName查錯表 + 作廢原因必填 + B類廠商補齊 + CLAUDE.md v5.38
-3. `64df474` — feat: deliveryType DB欄位 + 移除YULIAN_SUPPLIERS硬編碼 + B類叫貨收貨自動入庫
+1. `（本次 commit）` — fix: seed-os-products-v2 欄位修正 + OSProducts 表格重整 + CLAUDE.md v5.40
+2. `673120c` — feat: os_products 新欄位 + seed v2 + OSProducts/OSPurchasing 更新 + 側邊欄拖曳排序 + CLAUDE.md v5.39
+3. `eec3980` — fix: B類入庫supplierName查錯表 + 作廢原因必填 + B類廠商補齊 + CLAUDE.md v5.38
 
 working tree: clean
+
+**v5.40 完成項目（seed 欄位修正 + OSProducts 表格重整）：**
+- seed-os-products-v2.mjs：
+  - pattern 重寫（按片/張/顆/根/入/kg/g/ml/L 順序，不含條和包）
+  - packUnit 過濾無效單位：元/克/毫升/片/張 → 留空
+  - packCost 改為 unitQty × unit_cost（整包進貨總成本）
+  - batchPrice = it.price（整包批售價），unitCost = it.unit_cost（最小單位成本）
+  - aliases = JSON.stringify([it.name])
+  - 326 筆全部更新，失敗 0 筆
+- OSProducts.tsx：
+  - 表格欄位改為「供應商|品名|分類|最小單位|整包單位|成本|批價|毛利率|操作」
+  - 最小單位格：unitQty+unitName 合併（如「10片」「30000克」）
+  - packUnit 空時顯示「-」
+  - 毛利率：(batchPrice-packCost)/batchPrice，packCost=0 或 batchPrice=0 顯示「-」
+  - 毛利率顏色：≥20% 綠/5-20% 橘/<5% 紅
+  - 欄位標題：「成本」（原整包進貨成本）、「批價」（原批售價）
+
+**注意：packUnit 有部分品項為空（CA 表原始資料未填，如 unit='片'/'克' 等），需後台手動修正。**
 
 **v5.39 完成項目（品項資料重構 + 前端更新 + 側邊欄拖曳）：**
 - DB：os_products 新增 aliases(JSON)/unitQty/unitName/packUnit/packCost 五欄
