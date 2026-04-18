@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import AdminDashboardLayout from "@/components/AdminDashboardLayout";
@@ -275,10 +275,30 @@ function CreateDeliveryDialog({ stores, onClose, onSuccess }: { stores: any[], o
   const [form, setForm] = useState({
     deliveryDate: new Date().toISOString().slice(0,10),
     toStoreId: "",
-    driverName: "",
+    driverName: "江沛儒",
     note: "",
   });
   const [items, setItems] = useState([{ productName: "", quantity: 1, unit: "", batchPrice: "", note: "", sortOrder: 0 }]);
+  const [selectedProcurementId, setSelectedProcurementId] = useState<number | undefined>();
+
+  const { data: products = [] } = trpc.osProducts.productList.useQuery({});
+  const { data: confirmedOrders = [] } = trpc.procurement.list.useQuery({ status: 'confirmed' });
+  const { data: orderDetail } = trpc.procurement.getDetail.useQuery(
+    { orderId: selectedProcurementId! },
+    { enabled: !!selectedProcurementId }
+  );
+
+  useEffect(() => {
+    if (!orderDetail?.items || orderDetail.items.length === 0) return;
+    setItems(orderDetail.items.map((item: any, idx: number) => ({
+      productName: item.productName ?? "",
+      quantity: item.quantity?.toString() ?? "",
+      unit: item.unit ?? "",
+      batchPrice: item.batchPrice?.toString() ?? "",
+      note: "",
+      sortOrder: idx
+    })));
+  }, [orderDetail]);
 
   const createOrder = trpc.delivery.createDeliveryOrder.useMutation({
     onSuccess: (data) => {
@@ -303,6 +323,7 @@ function CreateDeliveryDialog({ stores, onClose, onSuccess }: { stores: any[], o
       toStoreName: toStore?.name ?? "",
       driverName: form.driverName || undefined,
       note: form.note || undefined,
+      procurementOrderId: selectedProcurementId,
       items: validItems.map((it, i) => ({
         productName: it.productName,
         quantity: Number(it.quantity),
@@ -343,23 +364,65 @@ function CreateDeliveryDialog({ stores, onClose, onSuccess }: { stores: any[], o
             </Select>
           </div>
           <div>
+            <Label>關聯叫貨單（選填）</Label>
+            <Select
+              value={selectedProcurementId?.toString() ?? "none"}
+              onValueChange={v => setSelectedProcurementId(v === "none" ? undefined : Number(v))}>
+              <SelectTrigger><SelectValue placeholder="不關聯叫貨單" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">不關聯</SelectItem>
+                {(confirmedOrders as any[]).map((o: any) => (
+                  <SelectItem key={o.id} value={o.id.toString()}>
+                    {o.orderNo} · {o.storeName ?? ""}（{o.orderDate}）
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedProcurementId && (
+              <p className="text-xs text-amber-600 mt-1">已自動帶入叫貨單品項，可手動修改</p>
+            )}
+          </div>
+          <div>
             <div className="flex items-center justify-between mb-2">
               <Label>品項明細</Label>
               <Button size="sm" variant="outline" onClick={addItem}>+新增</Button>
             </div>
             <div className="space-y-2">
-              {items.map((item, i) => (
-                <div key={i} className="grid grid-cols-12 gap-1 items-center">
-                  <Input className="col-span-4 h-7 text-xs" placeholder="品名*"
-                    value={item.productName} onChange={e => updateItem(i, "productName", e.target.value)} />
+              {items.map((item, idx) => (
+                <div key={idx} className="grid grid-cols-12 gap-1 items-center">
+                  <div className="col-span-3">
+                    <Select onValueChange={v => {
+                      if (v === "manual") return;
+                      const p = (products as any[]).find((p: any) => p.id === Number(v));
+                      if (p) {
+                        updateItem(idx, "productName", p.name);
+                        updateItem(idx, "unit", p.unit ?? "");
+                        updateItem(idx, "batchPrice", p.batchPrice?.toString() ?? "");
+                      }
+                    }}>
+                      <SelectTrigger className="h-7 text-xs">
+                        <SelectValue placeholder="選品項" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="manual">手動輸入</SelectItem>
+                        {(products as any[]).map((p: any) => (
+                          <SelectItem key={p.id} value={p.id.toString()}>
+                            {p.name}（批價${p.batchPrice ?? "未設"}）
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Input className="col-span-3 h-7 text-xs" placeholder="品名*"
+                    value={item.productName} onChange={e => updateItem(idx, "productName", e.target.value)} />
                   <Input className="col-span-2 h-7 text-xs" placeholder="數量" type="number"
-                    value={item.quantity} onChange={e => updateItem(i, "quantity", e.target.value)} />
-                  <Input className="col-span-2 h-7 text-xs" placeholder="單位"
-                    value={item.unit} onChange={e => updateItem(i, "unit", e.target.value)} />
+                    value={item.quantity} onChange={e => updateItem(idx, "quantity", e.target.value)} />
+                  <Input className="col-span-1 h-7 text-xs" placeholder="單位"
+                    value={item.unit} onChange={e => updateItem(idx, "unit", e.target.value)} />
                   <Input className="col-span-2 h-7 text-xs" placeholder="批價"
-                    value={item.batchPrice} onChange={e => updateItem(i, "batchPrice", e.target.value)} />
+                    value={item.batchPrice} onChange={e => updateItem(idx, "batchPrice", e.target.value)} />
                   <button className="col-span-1 text-red-400 text-xs hover:text-red-600"
-                    onClick={() => removeItem(i)}>✕</button>
+                    onClick={() => removeItem(idx)}>✕</button>
                 </div>
               ))}
             </div>

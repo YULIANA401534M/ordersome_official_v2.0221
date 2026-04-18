@@ -49,6 +49,7 @@ export default function OSProfitLoss() {
         { label: "水費",       value: mask(data.waterFee),                           ratio: maskPct(data.waterFee, data.totalSales),           highlight: false },
         { label: "薪資",       value: mask(data.salaryTotal),                        ratio: maskPct(data.salaryTotal, data.totalSales),        highlight: false },
         { label: "退佣收入",   value: canSeeCost ? `+ $ ${fmt(data.rebateIncome)}` : "---", ratio: maskPct(data.rebateIncome, data.totalSales), highlight: false },
+        { label: "出貨帳款應收", value: canSeeCost ? `+ $ ${fmt(data.arIncome ?? 0)}` : "---", ratio: maskPct(data.arIncome ?? 0, data.totalSales), highlight: false },
         { label: "營業利益",   value: mask(data.operatingProfit),                   ratio: maskPct(data.operatingProfit, data.totalSales),    highlight: true  },
       ]
     : [];

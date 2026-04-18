@@ -408,6 +408,7 @@ check().catch(console.error);
 - ⚠️ 大永 26 張 `dy_` 表不在 `schema.ts`，用 raw SQL 操作：`(db as any).$client.execute(...)`
 - ⚠️ 來點什麼 ERP 的 `os_` 表也是 raw SQL，同上原因
 - ⚠️ 本機菜單圖尚未遷移到 R2（`client/public/images/menu/korean-roll/`）
+- ⚠️ 叫貨收貨→退佣自動計算：設計暫緩，退佣規則複雜（廣弘10.71%/伯享差價/韓濟抵貨），目前手動月結，待實際使用後確認自動化需求
 
 ---
 
