@@ -321,4 +321,32 @@ export const procurementRouter = router({
       );
       return rows as any[];
     }),
+
+  deleteOrder: adminProcedure
+    .input(z.object({ orderId: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error('DB not available');
+      await (db as any).$client.execute(
+        'DELETE FROM os_procurement_items WHERE procurementOrderId = ?',
+        [input.orderId]
+      );
+      await (db as any).$client.execute(
+        'DELETE FROM os_procurement_orders WHERE id = ? AND status = "pending"',
+        [input.orderId]
+      );
+      return { success: true };
+    }),
+
+  updateNote: adminProcedure
+    .input(z.object({ orderId: z.number(), note: z.string() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error('DB not available');
+      await (db as any).$client.execute(
+        'UPDATE os_procurement_orders SET note = ? WHERE id = ?',
+        [input.note, input.orderId]
+      );
+      return { success: true };
+    }),
 });

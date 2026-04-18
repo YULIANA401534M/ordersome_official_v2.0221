@@ -77,6 +77,13 @@ export default function OSPurchasing() {
   const [lineConfigName, setLineConfigName] = useState("");
   const [lineConfigGroupId, setLineConfigGroupId] = useState("");
 
+  // 刪除確認 dialog
+  const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+
+  // 備註 dialog
+  const [noteTargetId, setNoteTargetId] = useState<number | null>(null);
+  const [noteText, setNoteText] = useState("");
+
   const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
   const endDate = (() => {
     const last = new Date(year, month, 0);
@@ -144,6 +151,24 @@ export default function OSPurchasing() {
 
   const lineUpsert = trpc.procurement.supplierLineUpsert.useMutation({
     onSuccess: () => { toast.success("廠商 LINE 已更新"); refetchLines(); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const deleteOrder = trpc.procurement.deleteOrder.useMutation({
+    onSuccess: () => {
+      toast.success("叫貨單已刪除");
+      setDeleteTargetId(null);
+      refetch();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const updateNote = trpc.procurement.updateNote.useMutation({
+    onSuccess: () => {
+      toast.success("備註已儲存");
+      setNoteTargetId(null);
+      refetch();
+    },
     onError: (e) => toast.error(e.message),
   });
 
@@ -415,6 +440,25 @@ export default function OSPurchasing() {
                               <XCircle className="w-3 h-3 mr-1" /> 取消
                             </Button>
                           )}
+                          {order.status === "pending" && (
+                            <Button
+                              size="sm" variant="outline"
+                              className="h-7 text-xs text-red-600 border-red-400 hover:bg-red-50"
+                              onClick={() => setDeleteTargetId(order.id)}
+                            >
+                              <Trash2 className="w-3 h-3 mr-1" /> 刪除
+                            </Button>
+                          )}
+                          <Button
+                            size="sm" variant="ghost"
+                            className="h-7 text-xs"
+                            onClick={() => {
+                              setNoteTargetId(order.id);
+                              setNoteText(order.note || "");
+                            }}
+                          >
+                            備註
+                          </Button>
                         </div>
                       )}
                     </div>
@@ -425,6 +469,51 @@ export default function OSPurchasing() {
           )}
         </div>
       </div>
+
+      {/* 刪除確認 Dialog */}
+      <Dialog open={deleteTargetId !== null} onOpenChange={(open) => { if (!open) setDeleteTargetId(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>確認刪除</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600 py-2">確定要刪除此叫貨單？此操作無法復原。</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTargetId(null)}>取消</Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteTargetId !== null && deleteOrder.mutate({ orderId: deleteTargetId })}
+              disabled={deleteOrder.isPending}
+            >
+              確認刪除
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 備註 Dialog */}
+      <Dialog open={noteTargetId !== null} onOpenChange={(open) => { if (!open) setNoteTargetId(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>編輯備註</DialogTitle>
+          </DialogHeader>
+          <textarea
+            className="w-full border rounded-md p-2 text-sm mt-2 min-h-[100px] resize-none focus:outline-none focus:ring-1 focus:ring-amber-500"
+            value={noteText}
+            onChange={(e) => setNoteText(e.target.value)}
+            placeholder="輸入備註..."
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNoteTargetId(null)}>取消</Button>
+            <Button
+              onClick={() => noteTargetId !== null && updateNote.mutate({ orderId: noteTargetId, note: noteText })}
+              disabled={updateNote.isPending}
+              style={{ background: "#b45309" }}
+            >
+              儲存
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* 新增叫貨單 Dialog */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>

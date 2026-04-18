@@ -1,6 +1,6 @@
 # CLAUDE.md — 宇聯國際餐飲 OrderSome 開發主檔
 
-> **版本**：v5.30。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.31。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -132,14 +132,23 @@ Make 統整工作流：Gmail 讀取 Excel → 解析品項 → 寫入 OrderSome 
 
 ---
 
-### 最新 Git 狀態（2026-04-18 v5.28）
+### 最新 Git 狀態（2026-04-18 v5.31）
 
 最後三個 commit（已 push）：
-1. `feat` — procurement import 改用 CSV 格式接收品項
-2. `feat` — procurement import 自動對應品項單價 + 清理測試資料
-3. `fix` — procurement import 移除不存在的 tenantId 欄位（os_procurement_items）
+1. `feat` — 叫貨管理新增刪除和備註功能
+2. `feat` — procurement import 按廠商分組建單，區分直送vs宇聯配送
+3. `docs` — v5.29 記錄 Make 串接完成、欄位對應、endpoint 格式
 
 working tree: clean
+
+**v5.31 完成項目：**
+- DB：清除三筆測試舊單（items 刪 16 筆、orders 刪 3 筆），保留最新兩筆（廣弘、宇聯_配合）
+- `server/routers/procurement.ts`：新增 `deleteOrder`、`updateNote` 兩個 procedure
+  - `deleteOrder`：先刪 items，再刪 status=pending 的 order
+  - `updateNote`：UPDATE note 欄位
+- `OSPurchasing.tsx`：操作按鈕區新增「刪除」（status=pending 才顯示）和「備註」（所有狀態）
+  - 刪除：確認 Dialog → 呼叫 deleteOrder mutation
+  - 備註：textarea Dialog → 呼叫 updateNote mutation
 
 **v5.28 完成項目：**
 - `server/_core/index.ts`：`POST /api/procurement/import` 改用 CSV 格式接收品項
