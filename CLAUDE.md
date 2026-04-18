@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md
 
-> **版本**：v5.41。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.42。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -18,7 +18,7 @@ git status && git log --oneline -3
 
 ## 當前開發狀態（換對話框必讀）
 
-> 最後更新：2026-04-18 v5.41。**新大腦進來請從這裡開始讀，不要跳過。**
+> 最後更新：2026-04-18 v5.42。**新大腦進來請從這裡開始讀，不要跳過。**
 
 ### ⚠️ 開發守則（每次換對話框都要遵守）
 
@@ -112,12 +112,12 @@ git status && git log --oneline -3
 
 ---
 
-### 最新 Git 狀態（2026-04-18 v5.40）
+### 最新 Git 狀態（2026-04-18 v5.42）
 
 最後三個 commit（已 push）：
-1. `（本次 commit）` — fix: seed-os-products-v2 欄位修正 + OSProducts 表格重整 + CLAUDE.md v5.40
-2. `673120c` — feat: os_products 新欄位 + seed v2 + OSProducts/OSPurchasing 更新 + 側邊欄拖曳排序 + CLAUDE.md v5.39
-3. `eec3980` — fix: B類入庫supplierName查錯表 + 作廢原因必填 + B類廠商補齊 + CLAUDE.md v5.38
+1. `（本次 commit）` — feat: os_products 兩層分類欄位 + os_product_categories 表 + os_suppliers sortOrder/note + CLAUDE.md v5.42
+2. `92acfa2` — docs: CLAUDE.md v5.41 — 開發原則/資料整合規劃/待完成功能清單三章節
+3. `5ba7301` — fix: seed-os-products-v2 欄位修正 + OSProducts 表格重整 + CLAUDE.md v5.40
 
 working tree: clean
 
@@ -351,6 +351,36 @@ working tree: clean
 | `/dashboard/franchise` | `FranchiseDashboardPage` | 加盟主入口，部分功能未完成 |
 
 ---
+
+---
+
+### 品項命名規範（永久有效）
+
+**命名格式**：品名_規格/計價單位
+**廠商資訊**：只存 supplierName 欄位，不放在品名裡
+**規格格式**：數量+單位，多層規格用 * 連接（如 10片*8包）
+**範例**：
+  - 勁辣雞腿排(特大)_10片*8包/箱
+  - 厚切牛肉堡_20片/包
+  - 壽司米_30KG/袋
+  - 純綠茶包_24入/袋
+
+**別名（aliases）**：外部系統名稱（大麥、CA表原始名）存 JSON 陣列
+**大麥品名**：匯入時以 aliases 比對，找不到才建新品項並 flag 待確認
+
+### 分類規範（永久有效）
+
+**兩層分類**：
+- category1（第一層）：冷凍食材/韓國食材/乾貨類/冷藏類/麵包/茶包泡粉/醬粉類/包材類/清潔類/公司配送食品/公司配送訂製/公司配送雜貨/生鮮自購
+- category2（第二層）：由 os_product_categories 表管理，可在後台新增修改
+- 分類由 os_product_categories 表控制，不寫死在程式碼
+
+### 庫存範圍規範（永久有效）
+
+- B類廠商（deliveryType='yulian'）：記宇聯總倉庫存，存 os_inventory
+- A類廠商（deliveryType='direct'）：直送各門市，宇聯無庫存壓力，但需記帳（應付帳款）
+- 門市庫存：未來規劃，參考大麥「分店庫存管理」模式，暫不實作
+- 帳務：A類和B類都要記應付帳款（os_payables，待建）
 
 ---
 
