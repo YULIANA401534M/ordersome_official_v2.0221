@@ -20,7 +20,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
   pending:   { label: "待處理", color: "#6b7280", bg: "#f3f4f6" },
   sent:      { label: "已傳送", color: "#1d4ed8", bg: "#dbeafe" },
   confirmed: { label: "已確認", color: "#c2410c", bg: "#ffedd5" },
-  received:  { label: "已完成", color: "#166534", bg: "#dcfce7" },
+  received:  { label: "已到貨入庫", color: "#166534", bg: "#dcfce7" },
   cancelled: { label: "已取消", color: "#dc2626", bg: "#fef2f2" },
 };
 
@@ -807,7 +807,7 @@ export default function OSPurchasing() {
                       {canEdit && (
                         <div className="flex flex-wrap gap-2 pt-1 items-center">
                           {order.status === "received" ? (
-                            <Badge style={{ color: "#166534", background: "#dcfce7", border: "none" }} className="text-xs px-3 py-1">已完成</Badge>
+                            <Badge style={{ color: "#166534", background: "#dcfce7", border: "none" }} className="text-xs px-3 py-1">已到貨入庫</Badge>
                           ) : next && (
                             <div className="flex items-center gap-2">
                               <Button

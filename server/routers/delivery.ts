@@ -176,6 +176,44 @@ export const deliveryRouter = router({
             );
           }
 
+          try {
+            const [deliveryItems] = await conn.execute(
+              'SELECT productName, quantity FROM os_delivery_items WHERE deliveryOrderId=?',
+              [input.id]
+            );
+
+            for (const item of deliveryItems as any[]) {
+              // 查是否有對應的 B類庫存記錄（os_inventory 含 supplierName）
+              const [invRows] = await conn.execute(
+                `SELECT i.id, i.currentQty, i.supplierName
+                 FROM os_inventory i
+                 JOIN os_suppliers s ON s.name = i.supplierName AND s.isActive = 1
+                 WHERE i.tenantId=? AND i.productName=? AND s.deliveryType='yulian'
+                 LIMIT 1`,
+                [ctx.tenantId, item.productName]
+              );
+              if ((invRows as any[]).length === 0) continue;
+
+              const inv = (invRows as any[])[0];
+              const qtyBefore = Number(inv.currentQty);
+              const qtyAfter = Math.max(0, qtyBefore - Number(item.quantity));
+
+              await conn.execute(
+                'UPDATE os_inventory SET currentQty=?, updatedAt=NOW() WHERE id=?',
+                [qtyAfter, inv.id]
+              );
+
+              await conn.execute(
+                `INSERT INTO os_inventory_logs
+                 (tenantId, inventoryId, changeType, qty, qtyBefore, qtyAfter, refType, refId, note, createdAt)
+                 VALUES (?,?,'out',?,?,?,'delivery',?,'派車單簽收出庫',NOW())`,
+                [ctx.tenantId, inv.id, Number(item.quantity), qtyBefore, qtyAfter, input.id]
+              );
+            }
+          } catch(e) {
+            console.error('[庫存出庫失敗]', e);
+          }
+
           return { success: true, totalAmount };
         } catch (e) {
           console.error('[delivery] DB error (updateStatus signed):', e);

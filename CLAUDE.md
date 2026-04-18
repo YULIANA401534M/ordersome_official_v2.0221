@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md
 
-> **版本**：v5.50。**最後更新**：2026-04-19。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.51。**最後更新**：2026-04-19。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -18,7 +18,7 @@ git status && git log --oneline -3
 
 ## 當前開發狀態（換對話框必讀）
 
-> 最後更新：2026-04-19 v5.50。**新大腦進來請從這裡開始讀，不要跳過。**
+> 最後更新：2026-04-19 v5.51。**新大腦進來請從這裡開始讀，不要跳過。**
 
 ### ⚠️ 開發守則（每次換對話框都要遵守）
 
@@ -102,6 +102,7 @@ git status && git log --oneline -3
 - 退佣 → 損益儀表板（`rebateIncome` 欄位）
 - 加盟主管理頁 → 點「查看帳款往來」跳轉到帳款頁（帶 userId 篩選）
 - **叫貨單（received）→ 查 `os_suppliers.deliveryType='yulian'`（用 os_procurement_items 的 supplierName 查）→ 寫 `os_inventory`（changeType='in'）+ `os_inventory_logs`**
+- **配送派車單（signed）→ JOIN os_inventory + os_suppliers 確認 B類品項 → 寫 `os_inventory`（currentQty-，不低於0）+ `os_inventory_logs(out)`**
 
 **宇聯總部 storeId = 401534**（機動人員排班用，不要改這個數字）
 
@@ -112,14 +113,21 @@ git status && git log --oneline -3
 
 ---
 
-### 最新 Git 狀態（2026-04-19 v5.50）
+### 最新 Git 狀態（2026-04-19 v5.51）
 
 最後三個 commit（已 push）：
-1. （本次）feat: v5.50 側邊欄重構 — 三群組改兩群組，來點什麼整合子群組標題（e546b23）
-2. fix: v5.49 五個 bug 修正
-3. docs: BUSINESS.md 完整重寫 v5.48，反映 2026-04-19 所有業務邏輯
+1. （本次）feat: v5.51 派車單簽收→庫存出庫連動 + OSPurchasing badge 文字修正
+2. feat: v5.50 側邊欄重構（e546b23）
+3. fix: v5.49 五個 bug 修正
 
 working tree: clean
+
+**v5.51 完成項目：**
+- **修正一（delivery.ts）**：`updateStatus` signed 時加庫存出庫區塊，透過 `os_inventory JOIN os_suppliers` 確認 B類（deliveryType='yulian'），currentQty 減少不低於 0，寫 `os_inventory_logs(out)`，失敗只 console.error 不 throw
+- **修正二（OSPurchasing.tsx）**：received 狀態 badge 文字從「已完成」改為「已到貨入庫」（statusConfig + 卡片內 Badge）
+- **修正三（BUSINESS.md）**：五、庫存管理邏輯表格補充 signed 觸發時機說明 + A/B 類差異補充
+
+**注意**：os_delivery_items 無 supplierName 欄位，改用 JOIN os_suppliers 從 os_inventory.supplierName 確認廠商類型
 
 **v5.49 完成項目（五個 bug 修正）：**
 - **Bug 1（撿貨單查不到資料）**：`procurement.ts` getPickList SQL 改為 `NOT IN ('cancelled', 'received')`，前端說明文字同步更新

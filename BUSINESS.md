@@ -82,10 +82,14 @@ OrderSome 後端按 supplierName 分組，每廠商各建一張叫貨單
 
 | 動作 | 觸發時機 | 效果 |
 |------|---------|------|
-| 庫存增加 | 叫貨單 status → received（B類） | os_inventory.currentQty +，寫 os_inventory_logs(in) |
-| 庫存減少 | 配送派車單簽收（B類品項） | os_inventory.currentQty -，寫 os_inventory_logs(out) |
+| 庫存增加 | 叫貨單 status → received（B類） | currentQty +，寫 os_inventory_logs(in) |
+| 庫存減少 | 配送派車單 status → signed（B類品項） | currentQty -，寫 os_inventory_logs(out)，不低於0 |
 | 手動調整 | 後台 OSInventory 調整按鈕 | 必填原因，寫 os_inventory_logs(adjust) |
 | 盤點 | 後台盤點功能 | 寫 os_inventory_logs(count)，更新 lastCountDate |
+
+**補充說明：**
+- A類直送廠商叫貨單 received 不觸發庫存（廠商直送門市，宇聯無庫存壓力）
+- B類分宇聯（自有倉庫）和宇聯_配合（寄庫凱田），兩者庫存邏輯相同，差別只在實體位置，帳務上都是宇聯資產
 
 ### 庫存基準點
 - 2026-03-31 全宇聯資產盤點（4/19取得，匯入後設為初始庫存）
