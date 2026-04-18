@@ -362,6 +362,7 @@ async function startServer() {
       console.log(`[Procurement Import] ${grouped.size} suppliers, ${items.length} items total`);
 
       const results: Array<{ orderNo: string; skipped?: boolean; orderId?: number; itemCount?: number; isYulianDelivery?: boolean }> = [];
+      let createdCount = 0;
       for (const [supplierName, supplierItems] of grouped) {
         const groupOrderNo = orderNo
           ? `${orderNo}-${supplierName.slice(0, 2)}`
@@ -380,15 +381,24 @@ async function startServer() {
           [groupOrderNo]
         );
         if ((existing as any[]).length > 0) {
+          console.log(`[Procurement Import] SKIP (duplicate) orderNo: ${groupOrderNo}`);
           results.push({ orderNo: groupOrderNo, skipped: true });
           continue;
         }
 
-        const [result] = await (database as any).$client.execute(
-          `INSERT INTO os_procurement_orders (tenantId, orderNo, orderDate, status, sourceType, createdBy, createdAt) VALUES (1, ?, ?, 'pending', ?, 'Make自動匯入', NOW())`,
-          [groupOrderNo, orderDate, sourceType]
-        );
-        const orderId = (result as any).insertId;
+        console.log(`[Procurement Import] inserting order for supplier: ${supplierName}, orderNo: ${groupOrderNo}`);
+        let orderId: number;
+        try {
+          const [result] = await (database as any).$client.execute(
+            `INSERT INTO os_procurement_orders (tenantId, orderNo, orderDate, status, sourceType, createdBy, createdAt) VALUES (1, ?, ?, 'pending', ?, 'Make自動匯入', NOW())`,
+            [groupOrderNo, orderDate, sourceType]
+          );
+          orderId = (result as any).insertId;
+          console.log(`[Procurement Import] order inserted, id: ${orderId}`);
+        } catch (e: any) {
+          console.error(`[Procurement Import] INSERT order failed: ${e.message}`, e.stack);
+          throw e;
+        }
 
         for (const item of supplierItems) {
           const [productRows] = await (database as any).$client.execute(
@@ -403,21 +413,28 @@ async function startServer() {
           const unitPrice = productRow?.packCost || 0;
           const amount = unitPrice * item.quantity;
 
-          const [supRows] = await (database as any).$client.execute(
+          const [supRowsInner] = await (database as any).$client.execute(
             'SELECT id FROM os_suppliers WHERE name = ? LIMIT 1',
             [item.supplierName]
           );
-          const supplierId = (supRows as any[])[0]?.id || null;
+          const supplierId = (supRowsInner as any[])[0]?.id || null;
 
-          await (database as any).$client.execute(
-            `INSERT INTO os_procurement_items (procurementOrderId, supplierId, supplierName, storeName, productName, unit, quantity, unitPrice, amount, temperature) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [orderId, supplierId, item.supplierName, item.storeName, item.productName, item.unit || '', item.quantity, unitPrice, amount, item.temperature || '常溫']
-          );
+          try {
+            await (database as any).$client.execute(
+              `INSERT INTO os_procurement_items (procurementOrderId, supplierId, supplierName, storeName, productName, unit, quantity, unitPrice, amount, temperature) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              [orderId, supplierId, item.supplierName, item.storeName, item.productName, item.unit || '', item.quantity, unitPrice, amount, item.temperature || '常溫']
+            );
+          } catch (e: any) {
+            console.error(`[Procurement Import] INSERT item failed (${item.productName}): ${e.message}`, e.stack);
+            throw e;
+          }
         }
 
-        results.push({ orderNo: groupOrderNo, orderId, itemCount: supplierItems.length, isYulianDelivery });
+        createdCount++;
+        results.push({ orderNo: groupOrderNo, orderId: orderId!, itemCount: supplierItems.length, isYulianDelivery });
       }
 
+      console.log(`[Procurement Import] done, created orders: ${createdCount}, skipped: ${results.filter(r => r.skipped).length}`);
       return res.json({
         success: true,
         orders: results,
@@ -425,7 +442,7 @@ async function startServer() {
         totalItems: items.length
       });
     } catch (error) {
-      console.error("[Procurement Import]", error);
+      console.error("[Procurement Import] FATAL:", error);
       return res.status(500).json({ success: false, error: String(error) });
     }
   });
