@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md
 
-> **版本**：v5.48。**最後更新**：2026-04-19。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.49。**最後更新**：2026-04-19。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -112,14 +112,21 @@ git status && git log --oneline -3
 
 ---
 
-### 最新 Git 狀態（2026-04-19 v5.48）
+### 最新 Git 狀態（2026-04-19 v5.49）
 
 最後三個 commit（已 push）：
-1. （本次）docs: BUSINESS.md 完整重寫 v5.48，反映 2026-04-19 所有業務邏輯
-2. feat: 前端四頁面 v5.46 — 撿貨單列印 + 大麥匯入 + 帳務管理 + 側邊欄 badge
-3. `54a039f` — feat: 帳務系統 DB + 後端 v5.45
+1. （本次）fix: v5.49 五個 bug 修正
+2. docs: BUSINESS.md 完整重寫 v5.48，反映 2026-04-19 所有業務邏輯
+3. feat: 前端四頁面 v5.46 — 撿貨單列印 + 大麥匯入 + 帳務管理 + 側邊欄 badge
 
 working tree: clean
+
+**v5.49 完成項目（五個 bug 修正）：**
+- **Bug 1（撿貨單查不到資料）**：`procurement.ts` getPickList SQL 改為 `NOT IN ('cancelled', 'received')`，前端說明文字同步更新
+- **Bug 2（派車單 beginTransaction 錯誤）**：`delivery.ts` 移除所有 `beginTransaction/commit/rollback`，改用 try-catch + console.error（TiDB Cloud pool 不支援 transaction）
+- **Bug 3（packCost 計算錯誤）**：DB 直接修正兩筆：壽司米 1224→1225、糖粉 0.05→45；seed 腳本新增支援 `it.cost` 欄位直接使用 CA 表成本（東豪-勁辣雞腿 DB 不存在，略過）
+- **Bug 4（批次盤點多選）**：`OSInventory.tsx` 新增批次盤點模式，含全選 checkbox、逐行 checkbox、盤點 Dialog（數量 input + 共用備註）、完成後顯示 N 筆結果
+- **Bug 5（叫貨管理 checkbox）**：`OSPurchasing.tsx` checkbox 條件改為 `isPending || order.status === "sent"`，sent 狀態也顯示 checkbox
 
 **rename 執行結果（2026-04-18 最終診斷）**：
 - 更新 0 筆（新）+ 13 筆（上次已改），找不到 175 筆

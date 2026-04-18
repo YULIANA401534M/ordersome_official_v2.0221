@@ -689,8 +689,8 @@ export default function OSPurchasing() {
                     className="flex items-center gap-3 p-4 cursor-pointer hover:bg-gray-50 transition-colors"
                     onClick={() => setExpandedId(isExpanded ? null : order.id)}
                   >
-                    {/* Checkbox for pending orders — 僅 super_admin 可批量刪除 */}
-                    {isSuperAdmin && isPending && (
+                    {/* Checkbox for pending/sent orders — 僅 super_admin 可批量刪除 */}
+                    {isSuperAdmin && (isPending || order.status === "sent") ? (
                       <div
                         onClick={e => { e.stopPropagation(); toggleSelect(order.id); }}
                         className="flex-shrink-0"
@@ -700,9 +700,9 @@ export default function OSPurchasing() {
                           onCheckedChange={() => toggleSelect(order.id)}
                         />
                       </div>
+                    ) : (
+                      <div className="w-4 flex-shrink-0" />
                     )}
-                    {isSuperAdmin && !isPending && <div className="w-4 flex-shrink-0" />}
-                    {!isSuperAdmin && canEdit && <div className="w-4 flex-shrink-0" />}
 
                     <span className="text-sm font-mono text-gray-500 w-36 truncate">{order.orderNo}</span>
                     <span className="text-sm text-gray-700 w-24">{order.orderDate?.slice(0, 10)}</span>
@@ -1431,7 +1431,7 @@ export default function OSPurchasing() {
               );
             })() : (
               <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-400 text-center">
-                {showPickPrint ? "查詢中或此日期範圍無撿貨單（僅限 sent/confirmed 狀態的 B 類廠商叫貨單）" : ""}
+                {showPickPrint ? "查詢中或此日期範圍無撿貨單（不含已作廢和已到貨的 B 類廠商叫貨單）" : ""}
               </div>
             )}
           </div>

@@ -620,7 +620,7 @@ export const procurementRouter = router({
         WHERE po.tenantId = ?
           AND po.orderDate >= ?
           AND po.orderDate <= ?
-          AND po.status IN ('sent', 'confirmed')
+          AND po.status NOT IN ('cancelled', 'received')
         ORDER BY pi.supplierName, po.orderDate, pi.storeName, pi.productName
       `, [ctx.tenantId ?? 1, input.startDate, input.endDate]);
       return rows as any[];

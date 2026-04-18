@@ -51,6 +51,14 @@ export default function OSInventory() {
   const [safetyDialog, setSafetyDialog] = useState<{ open: boolean; item?: InventoryItem }>({ open: false });
   const [addDialog, setAddDialog] = useState(false);
 
+  // 批次盤點
+  const [batchMode, setBatchMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [batchDialog, setBatchDialog] = useState(false);
+  const [batchQtys, setBatchQtys] = useState<Record<number, string>>({});
+  const [batchNote, setBatchNote] = useState("");
+  const [batchDone, setBatchDone] = useState<number | null>(null);
+
   const [adjustQty, setAdjustQty] = useState("");
   const [adjustNote, setAdjustNote] = useState("");
   const [safetyQtyInput, setSafetyQtyInput] = useState("");
@@ -71,6 +79,7 @@ export default function OSInventory() {
 
   const adjustMut = trpc.inventory.adjust.useMutation({ onSuccess: () => { refetch(); setAdjustDialog({ open: false }); } });
   const safetyMut = trpc.inventory.setSafety.useMutation({ onSuccess: () => { refetch(); setSafetyDialog({ open: false }); } });
+  const countMut = trpc.inventory.count.useMutation();
   const addMut = trpc.inventory.addProduct.useMutation({ onSuccess: () => { refetch(); setAddDialog(false); resetAddForm(); } });
 
   const categories = Array.from(new Set((items as InventoryItem[]).map(i => i.category).filter(Boolean)));
@@ -105,10 +114,38 @@ export default function OSInventory() {
         <div className="flex flex-wrap items-center gap-4 justify-between">
           <h1 className="text-2xl font-bold text-[#1c1917]">庫存管理</h1>
           <div className="flex gap-2">
-            <Button variant="outline" disabled>批次盤點</Button>
-            <Button onClick={() => setAddDialog(true)} className="bg-amber-700 hover:bg-amber-800 text-white">
-              新增品項
-            </Button>
+            {batchMode ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const selected = (items as InventoryItem[]).filter(i => selectedIds.has(i.id));
+                    const initQtys: Record<number, string> = {};
+                    selected.forEach(i => { initQtys[i.id] = String(Number(i.currentQty)); });
+                    setBatchQtys(initQtys);
+                    setBatchNote("");
+                    setBatchDone(null);
+                    setBatchDialog(true);
+                  }}
+                  disabled={selectedIds.size === 0}
+                  className="bg-amber-700 hover:bg-amber-800 text-white disabled:opacity-50"
+                >
+                  盤點已選取（{selectedIds.size}筆）
+                </Button>
+                <Button variant="outline" onClick={() => { setBatchMode(false); setSelectedIds(new Set()); }}>
+                  取消選取
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => { setBatchMode(true); setSelectedIds(new Set()); }}>
+                  批次盤點
+                </Button>
+                <Button onClick={() => setAddDialog(true)} className="bg-amber-700 hover:bg-amber-800 text-white">
+                  新增品項
+                </Button>
+              </>
+            )}
           </div>
         </div>
 
@@ -157,6 +194,17 @@ export default function OSInventory() {
           <table className="w-full text-sm">
             <thead className="bg-stone-50 border-b">
               <tr>
+                {batchMode && (
+                  <th className="px-4 py-3 w-10">
+                    <Checkbox
+                      checked={(items as InventoryItem[]).length > 0 && selectedIds.size === (items as InventoryItem[]).length}
+                      onCheckedChange={v => {
+                        if (v) setSelectedIds(new Set((items as InventoryItem[]).map(i => i.id)));
+                        else setSelectedIds(new Set());
+                      }}
+                    />
+                  </th>
+                )}
                 {["廠商", "品項名稱", "分類", "單位", "目前庫存", "安全庫存", "狀態", "最後盤點", "操作"].map(h => (
                   <th key={h} className="px-4 py-3 text-left font-semibold text-stone-600 whitespace-nowrap">{h}</th>
                 ))}
@@ -165,13 +213,25 @@ export default function OSInventory() {
             <tbody>
               {(items as InventoryItem[]).length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-stone-400">
+                  <td colSpan={batchMode ? 10 : 9} className="px-4 py-12 text-center text-stone-400">
                     尚無庫存品項，請點「新增品項」開始建立
                   </td>
                 </tr>
               ) : (
                 (items as InventoryItem[]).map(item => (
-                  <tr key={item.id} className="border-b hover:bg-stone-50 transition-colors">
+                  <tr key={item.id} className={`border-b hover:bg-stone-50 transition-colors ${batchMode && selectedIds.has(item.id) ? "bg-amber-50" : ""}`}>
+                    {batchMode && (
+                      <td className="px-4 py-3">
+                        <Checkbox
+                          checked={selectedIds.has(item.id)}
+                          onCheckedChange={v => {
+                            const next = new Set(selectedIds);
+                            if (v) next.add(item.id); else next.delete(item.id);
+                            setSelectedIds(next);
+                          }}
+                        />
+                      </td>
+                    )}
                     <td className="px-4 py-3 whitespace-nowrap">{item.supplierName}</td>
                     <td className="px-4 py-3">{item.productName}</td>
                     <td className="px-4 py-3 text-stone-500">{item.category || "-"}</td>
@@ -247,7 +307,7 @@ export default function OSInventory() {
             <Button
               onClick={() => {
                 if (!adjustDialog.item) return;
-                adjustMut.mutate({ id: adjustDialog.item.id, newQty: Number(adjustQty), note: adjustNote || undefined });
+                adjustMut.mutate({ id: adjustDialog.item.id, newQty: Number(adjustQty), note: adjustNote || "" });
               }}
               disabled={adjustMut.isPending || !adjustNote.trim()}
               className="bg-amber-700 hover:bg-amber-800 text-white"
@@ -355,6 +415,84 @@ export default function OSInventory() {
             >
               {addMut.isPending ? "新增中…" : "新增"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Batch Count Dialog */}
+      <Dialog open={batchDialog} onOpenChange={o => { if (!o) setBatchDialog(false); }}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>批次盤點</DialogTitle>
+          </DialogHeader>
+          {batchDone !== null ? (
+            <div className="py-8 text-center text-green-600 font-semibold text-lg">
+              已完成 {batchDone} 筆盤點
+            </div>
+          ) : (
+            <div className="space-y-4 py-2">
+              <div className="space-y-3">
+                {(items as InventoryItem[]).filter(i => selectedIds.has(i.id)).map(item => (
+                  <div key={item.id} className="flex items-center gap-3 border rounded-md p-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{item.productName}</p>
+                      <p className="text-xs text-stone-400">目前庫存：{Number(item.currentQty).toFixed(2)} {item.unit}</p>
+                    </div>
+                    <Input
+                      type="number"
+                      className="w-28 text-right"
+                      value={batchQtys[item.id] ?? ""}
+                      onChange={e => setBatchQtys(prev => ({ ...prev, [item.id]: e.target.value }))}
+                      placeholder="盤點數量"
+                    />
+                  </div>
+                ))}
+              </div>
+              <div>
+                <Label>備註（選填，所有品項共用）</Label>
+                <textarea
+                  className="w-full border rounded-md p-2 text-sm mt-1 min-h-[60px] resize-none focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  value={batchNote}
+                  onChange={e => setBatchNote(e.target.value)}
+                  placeholder="例：2026-03-31 盤點"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBatchDialog(false)}>
+              {batchDone !== null ? "關閉" : "取消"}
+            </Button>
+            {batchDone === null && (
+              <Button
+                className="bg-amber-700 hover:bg-amber-800 text-white"
+                disabled={countMut.isPending}
+                onClick={async () => {
+                  const selected = (items as InventoryItem[]).filter(i => selectedIds.has(i.id));
+                  let doneCount = 0;
+                  for (const item of selected) {
+                    const qtyStr = batchQtys[item.id];
+                    if (qtyStr === undefined || qtyStr === "") continue;
+                    try {
+                      await countMut.mutateAsync({
+                        id: item.id,
+                        countQty: Number(qtyStr),
+                        note: batchNote.trim() || undefined,
+                      });
+                      doneCount++;
+                    } catch {
+                      // 繼續下一筆
+                    }
+                  }
+                  setBatchDone(doneCount);
+                  refetch();
+                  setBatchMode(false);
+                  setSelectedIds(new Set());
+                }}
+              >
+                {countMut.isPending ? "盤點中…" : "確認盤點"}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

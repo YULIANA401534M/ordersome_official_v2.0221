@@ -398,8 +398,8 @@ for (const it of items) {
   const { unitQty, unitName } = parseUnitQtyName(it.name, it.unit);
   const INVALID_UNITS = ['元', '克', '毫升', '片', '張'];
   const packUnit = INVALID_UNITS.includes(it.unit) ? '' : it.unit;
-  // packCost = 整包進貨成本 = 最小單位數量 × 最小單位成本
-  const packCost = unitQty > 1 ? parseFloat((unitQty * it.unit_cost).toFixed(4)) : it.unit_cost;
+  // packCost = CA 表的「成本」欄位（整包進貨成本）；若有 it.cost 直接用，否則用 unitQty × unit_cost
+  const packCost = it.cost != null ? it.cost : (unitQty > 1 ? parseFloat((unitQty * it.unit_cost).toFixed(4)) : it.unit_cost);
   const aliases = JSON.stringify([it.name]);
 
   try {

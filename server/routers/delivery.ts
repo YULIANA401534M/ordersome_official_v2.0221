@@ -65,11 +65,10 @@ export const deliveryRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB not available" });
       const conn = (db as any).$client;
 
-      await conn.beginTransaction();
       try {
         const dateStr = input.deliveryDate.replace(/-/g,"");
         const [[seqRows]] = await conn.execute(
-          "SELECT COUNT(*)+1 as seq FROM os_delivery_orders WHERE tenantId=1 AND DATE(deliveryDate)=? FOR UPDATE",
+          "SELECT COUNT(*)+1 as seq FROM os_delivery_orders WHERE tenantId=1 AND DATE(deliveryDate)=?",
           [input.deliveryDate]
         );
         const seq = String((seqRows as any).seq).padStart(3,"0");
@@ -101,10 +100,9 @@ export const deliveryRouter = router({
           );
         }
 
-        await conn.commit();
         return { id: deliveryOrderId, deliveryNo };
       } catch (e) {
-        await conn.rollback();
+        console.error('[delivery] DB error (createDeliveryOrder):', e);
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "建立派車單失敗，請重試" });
       }
     }),
@@ -150,7 +148,6 @@ export const deliveryRouter = router({
         const totalAmount = itemList.reduce((sum, i) => sum + Number(i.quantity) * Number(i.batchPrice), 0);
 
         const conn = (db as any).$client;
-        await conn.beginTransaction();
         try {
           await conn.execute(
             "UPDATE os_delivery_orders SET status=?,signedAt=NOW(),signedBy=?,totalAmount=? WHERE id=?",
@@ -179,10 +176,9 @@ export const deliveryRouter = router({
             );
           }
 
-          await conn.commit();
           return { success: true, totalAmount };
         } catch (e) {
-          await conn.rollback();
+          console.error('[delivery] DB error (updateStatus signed):', e);
           throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "簽收失敗，請重試" });
         }
       } else {
