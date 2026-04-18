@@ -303,14 +303,34 @@ async function startServer() {
   // Procurement import from Make
   app.post("/api/procurement/import", async (req, res) => {
     try {
-      const { secret, orderNo: rawOrderNo, orderDate, items } = req.body;
+      const { secret, orderNo: rawOrderNo, orderDate, itemsCsv } = req.body;
 
       if (secret !== process.env.SYNC_SECRET) {
         return res.status(401).json({ success: false, error: "Unauthorized" });
       }
 
-      if (!orderDate || !Array.isArray(items) || items.length === 0) {
+      if (!orderDate || !itemsCsv || typeof itemsCsv !== 'string') {
         return res.status(400).json({ success: false, error: "Missing required fields" });
+      }
+
+      const items = (itemsCsv as string)
+        .split('\n')
+        .filter((line: string) => line.trim())
+        .map((line: string) => {
+          const [supplierName, storeName, productName, unit, quantity, temperature] = line.split('|');
+          return {
+            supplierName: supplierName?.trim() || '',
+            storeName: storeName?.trim() || '',
+            productName: productName?.trim() || '',
+            unit: unit?.trim() || '',
+            quantity: parseFloat(quantity?.trim() || '0') || 0,
+            temperature: temperature?.trim() || '常溫'
+          };
+        })
+        .filter((item: { supplierName: string; productName: string }) => item.supplierName && item.productName);
+
+      if (items.length === 0) {
+        return res.status(400).json({ success: false, error: "No valid items in itemsCsv" });
       }
 
       const orderNo: string = rawOrderNo ||

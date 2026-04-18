@@ -1,6 +1,6 @@
 # CLAUDE.md — 宇聯國際餐飲 OrderSome 開發主檔
 
-> **版本**：v5.27。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.28。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -91,14 +91,20 @@ Make 統整工作流：Gmail 讀取 Excel → 解析品項 → 寫入 OrderSome 
 
 ---
 
-### 最新 Git 狀態（2026-04-18 v5.27）
+### 最新 Git 狀態（2026-04-18 v5.28）
 
 最後三個 commit（已 push）：
-1. `feat` — procurement import 自動對應品項單價 + 清理測試資料
-2. `fix` — procurement import 移除不存在的 tenantId 欄位（os_procurement_items）
-3. `feat` — procurement import 支援自動 orderNo + 批次品項
+1. `feat` — procurement import 改用 CSV 格式接收品項
+2. `feat` — procurement import 自動對應品項單價 + 清理測試資料
+3. `fix` — procurement import 移除不存在的 tenantId 欄位（os_procurement_items）
 
 working tree: clean
+
+**v5.28 完成項目：**
+- `server/_core/index.ts`：`POST /api/procurement/import` 改用 CSV 格式接收品項
+  - 原本接收 `items[]` 陣列，改為接收 `itemsCsv` 字串（避免 JSON 特殊字符問題）
+  - 格式：每行一筆，欄位用 `|` 分隔：`supplierName|storeName|productName|unit|quantity|temperature`
+  - endpoint 接收欄位：`{ secret, orderDate, orderNo?, itemsCsv }`
 
 **v5.27 完成項目：**
 - `server/_core/index.ts`：`POST /api/procurement/import` 自動從 `os_products` 查詢單價
