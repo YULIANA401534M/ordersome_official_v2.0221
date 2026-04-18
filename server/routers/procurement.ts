@@ -133,6 +133,7 @@ export const procurementRouter = router({
       storeName: z.string().optional(),
       sortBy: z.enum(['date','status','amount','supplier']).optional().default('date'),
       sortOrder: z.enum(['asc','desc']).optional().default('desc'),
+      sourceType: z.string().optional(),
     }))
     .query(async ({ input }) => {
       const db = await getDb();
@@ -151,6 +152,7 @@ export const procurementRouter = router({
       if (input.startDate) { sql += ` AND po.orderDate >= ?`; params.push(input.startDate); }
       if (input.endDate) { sql += ` AND po.orderDate <= ?`; params.push(input.endDate); }
       if (input.status) { sql += ` AND po.status = ?`; params.push(input.status); }
+      if (input.sourceType) { sql += ` AND po.sourceType = ?`; params.push(input.sourceType); }
       if (input.supplierName) {
         sql += ` AND EXISTS (SELECT 1 FROM os_procurement_items pi2 WHERE pi2.procurementOrderId = po.id AND pi2.supplierName = ?)`;
         params.push(input.supplierName);

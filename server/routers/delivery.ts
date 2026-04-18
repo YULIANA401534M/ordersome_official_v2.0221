@@ -127,7 +127,7 @@ export const deliveryRouter = router({
       const currentIdx = statusFlow.indexOf(order.status);
       const newIdx = statusFlow.indexOf(input.status);
       if (newIdx !== currentIdx + 1) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "狀態只能依序推進" });
+        throw new TRPCError({ code: "BAD_REQUEST", message: `狀態必須依序推進。目前狀態：「${order.status}」，請先執行上一步驟。` });
       }
 
       if (input.status === "signed") {
@@ -226,6 +226,55 @@ export const deliveryRouter = router({
         );
         return { success: true, totalAmount: null };
       }
+    }),
+
+  createFromProcurement: adminProcedure
+    .input(z.object({
+      procurementOrderId: z.number(),
+      deliveryDate: z.string(),
+      driverName: z.string(),
+      note: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB not available" });
+
+      const [orderRows] = await (db as any).$client.execute(
+        `SELECT id FROM os_procurement_orders WHERE id=? AND tenantId=? AND status IN ('confirmed','received')`,
+        [input.procurementOrderId, ctx.tenantId]
+      );
+      if (!(orderRows as any[])[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "找不到叫貨單，或狀態需為已確認/已到貨" });
+
+      const [items] = await (db as any).$client.execute(
+        `SELECT supplierName, storeName, productName, quantity, unit, unitPrice FROM os_procurement_items WHERE procurementOrderId=?`,
+        [input.procurementOrderId]
+      );
+      if (!(items as any[]).length) throw new TRPCError({ code: "BAD_REQUEST", message: "叫貨單沒有品項" });
+
+      const toStoreName = ((items as any[])[0] as any).storeName || '';
+
+      const dateStr = input.deliveryDate.replace(/-/g, '');
+      const [countRows] = await (db as any).$client.execute(
+        `SELECT COUNT(*) as cnt FROM os_delivery_orders WHERE tenantId=? AND deliveryNo LIKE ?`,
+        [ctx.tenantId, `DO-${dateStr}%`]
+      );
+      const seq = String(((countRows as any[])[0] as any).cnt + 1).padStart(3, '0');
+      const deliveryNo = `DO-${dateStr}-${seq}`;
+
+      const [result] = await (db as any).$client.execute(
+        `INSERT INTO os_delivery_orders (tenantId, deliveryNo, deliveryDate, toStoreName, driverName, status, note, procurementOrderId, createdAt, updatedAt) VALUES (?,?,?,?,?,'pending',?,?,NOW(),NOW())`,
+        [ctx.tenantId, deliveryNo, input.deliveryDate, toStoreName, input.driverName, input.note || null, input.procurementOrderId]
+      );
+      const orderId = (result as any).insertId;
+
+      for (const item of items as any[]) {
+        await (db as any).$client.execute(
+          `INSERT INTO os_delivery_items (deliveryOrderId, productName, quantity, unit, batchPrice, sortOrder) VALUES (?,?,?,?,?,0)`,
+          [orderId, item.productName, Number(item.quantity), item.unit, Number(item.unitPrice) || 0]
+        );
+      }
+
+      return { deliveryNo, orderId, itemCount: (items as any[]).length };
     }),
 
   getMonthStats: adminProcedure

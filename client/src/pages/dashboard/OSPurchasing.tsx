@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import AdminDashboardLayout from "@/components/AdminDashboardLayout";
@@ -55,6 +56,7 @@ function getMonday(d: Date) {
 
 export default function OSPurchasing() {
   const { user } = useAuth();
+  const [, navigate] = useLocation();
   const canEdit = user?.role === "super_admin" || user?.role === "manager";
   const isSuperAdmin = user?.role === "super_admin";
 
@@ -841,6 +843,16 @@ export default function OSPurchasing() {
                                 <span className="text-xs text-gray-600">{next.hint}</span>
                               )}
                             </div>
+                          )}
+                          {order.sourceType === 'damai_yulian' &&
+                            (order.status === 'confirmed' || order.status === 'received') && (
+                            <Button
+                              size="sm" variant="outline"
+                              className="h-7 text-xs border-blue-400 text-blue-600 hover:bg-blue-50"
+                              onClick={() => navigate(`/dashboard/delivery?from=${order.id}`)}
+                            >
+                              建立派車單
+                            </Button>
                           )}
                           {order.status === "sent" && (
                             <Button

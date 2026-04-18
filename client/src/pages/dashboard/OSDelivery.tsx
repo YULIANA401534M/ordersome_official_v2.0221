@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useSearch } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import AdminDashboardLayout from "@/components/AdminDashboardLayout";
@@ -9,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight, Plus, ChevronDown, ChevronUp, Truck, AlertCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Truck, AlertCircle } from "lucide-react";
 
 const STATUS_CONFIG = {
   pending:    { label:"待備貨", color:"#9ca3af", bg:"#f3f4f6" },
@@ -21,13 +22,14 @@ const STATUS_CONFIG = {
 
 const NEXT_STATUS: Record<string,{status:string,label:string,color:string}> = {
   pending:    { status:"picking",    label:"開始撿貨", color:"#0369a1" },
-  picking:    { status:"dispatched", label:"確認出車", color:"#b45309" },
-  dispatched: { status:"delivered",  label:"確認送達", color:"#15803d" },
+  picking:    { status:"dispatched", label:"已出車",   color:"#b45309" },
+  dispatched: { status:"delivered",  label:"貨已送達", color:"#15803d" },
   delivered:  { status:"signed",     label:"確認簽收", color:"#14532d" },
 };
 
 export default function OSDelivery() {
   const { user } = useAuth();
+  const search = useSearch();
   const isSuperAdmin = user?.role === "super_admin";
   const isManager = user?.role === "manager";
   const canEdit = isSuperAdmin || isManager;
@@ -39,8 +41,19 @@ export default function OSDelivery() {
   const [filterStatus, setFilterStatus] = useState<string>("");
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [showCreateFrom, setShowCreateFrom] = useState(false);
+  const [preselectedProcurementId, setPreselectedProcurementId] = useState<number | undefined>();
   const [signDialog, setSignDialog] = useState<{id:number,deliveryNo:string}|null>(null);
   const [signedBy, setSignedBy] = useState("");
+
+  // URL 參數：從叫貨管理跳轉過來
+  useEffect(() => {
+    const fromId = new URLSearchParams(search).get('from');
+    if (fromId) {
+      setPreselectedProcurementId(Number(fromId));
+      setShowCreateFrom(true);
+    }
+  }, [search]);
 
   const { data: stores = [] } = trpc.store.list.useQuery();
   const { data: orders = [], refetch } = trpc.delivery.listDeliveryOrders.useQuery({
@@ -58,6 +71,8 @@ export default function OSDelivery() {
       setSignedBy("");
       if (data.totalAmount) {
         toast.success(`簽收完成，已自動產生應收帳款 $${Number(data.totalAmount).toLocaleString()}`);
+      } else {
+        toast.success("狀態已更新");
       }
     },
     onError: (e) => toast.error(e.message)
@@ -96,11 +111,18 @@ export default function OSDelivery() {
               {Object.entries(STATUS_CONFIG).map(([k,v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
             </SelectContent>
           </Select>
-          <div className="ml-auto">
+          <div className="ml-auto flex gap-2">
             {canEdit && (
-              <Button className="bg-amber-700 hover:bg-amber-800 text-white" onClick={() => setShowCreate(true)}>
-                <Plus className="w-4 h-4 mr-1"/>新增派車單
-              </Button>
+              <>
+                <Button
+                  style={{ background:"#b45309", color:"white" }}
+                  onClick={() => setShowCreateFrom(true)}>
+                  從叫貨單建立
+                </Button>
+                <Button variant="outline" onClick={() => setShowCreate(true)}>
+                  手動新增
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -155,7 +177,7 @@ export default function OSDelivery() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium text-sm text-stone-800">{order.deliveryNo}</span>
                         <span className="text-xs text-stone-400">{order.deliveryDate}</span>
-                        <span className="text-xs text-stone-500">{order.toStoreName?.replace("來點什麼 ","")}</span>
+                        <span className="text-xs text-stone-500">{order.toStoreName}</span>
                         {order.driverName && <span className="text-xs text-stone-400">· {order.driverName}</span>}
                       </div>
                       {order.totalAmount && (
@@ -165,10 +187,14 @@ export default function OSDelivery() {
                       )}
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-                        style={{ color: cfg?.color, background: cfg?.bg }}>
-                        {cfg?.label}
-                      </span>
+                      {order.status === "signed" ? (
+                        <Badge style={{ background:"#dcfce7", color:"#14532d", border:"none" }} className="text-xs">已完成</Badge>
+                      ) : (
+                        <span className="text-xs px-2 py-0.5 rounded-full font-medium"
+                          style={{ color: cfg?.color, background: cfg?.bg }}>
+                          {cfg?.label}
+                        </span>
+                      )}
                       {isExpanded ? <ChevronUp className="w-4 h-4 text-stone-400" /> : <ChevronDown className="w-4 h-4 text-stone-400" />}
                     </div>
                   </div>
@@ -179,20 +205,24 @@ export default function OSDelivery() {
                       {detail?.order?.id === order.id ? (
                         <div>
                           <p className="text-xs font-medium text-stone-500 mb-2">品項明細</p>
-                          <div className="space-y-1">
-                            {((detail?.items ?? []) as any[]).map((item: any, i: number) => (
-                              <div key={i} className="flex items-center justify-between text-xs py-1 border-b border-stone-50">
-                                <span className="text-stone-700">{item.productName}</span>
-                                <div className="flex items-center gap-3 text-stone-500">
-                                  <span>{item.quantity} {item.unit || "份"}</span>
-                                  {item.batchPrice != null
-                                    ? <span style={{ color:"#b45309" }}>${Number(item.batchPrice).toLocaleString()}/份</span>
-                                    : <span className="text-red-400 flex items-center gap-0.5"><AlertCircle className="w-3 h-3" />未設批價</span>
-                                  }
+                          {((detail?.items ?? []) as any[]).length === 0 ? (
+                            <p className="text-xs text-stone-400">無品項記錄</p>
+                          ) : (
+                            <div className="space-y-1">
+                              {((detail?.items ?? []) as any[]).map((item: any, i: number) => (
+                                <div key={i} className="flex items-center justify-between text-xs py-1 border-b border-stone-50">
+                                  <span className="text-stone-700">{item.productName}</span>
+                                  <div className="flex items-center gap-3 text-stone-500">
+                                    <span>{item.quantity} {item.unit || ""}</span>
+                                    {item.batchPrice != null && Number(item.batchPrice) > 0
+                                      ? <span style={{ color:"#b45309" }}>${Number(item.batchPrice).toLocaleString()}/份</span>
+                                      : <span className="text-red-400 flex items-center gap-0.5"><AlertCircle className="w-3 h-3" />未設批價</span>
+                                    }
+                                  </div>
                                 </div>
-                              </div>
-                            ))}
-                          </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <p className="text-xs text-stone-400">載入品項中...</p>
@@ -206,7 +236,7 @@ export default function OSDelivery() {
                       )}
 
                       {/* 狀態推進按鈕 */}
-                      {canEdit && nextAction && (
+                      {canEdit && nextAction && order.status !== "signed" && (
                         <div className="flex gap-2 pt-1">
                           {nextAction.status === "signed" ? (
                             <Button size="sm"
@@ -258,7 +288,16 @@ export default function OSDelivery() {
           </DialogContent>
         </Dialog>
 
-        {/* 新增派車單 Dialog */}
+        {/* 從叫貨單建立 Dialog */}
+        {showCreateFrom && (
+          <CreateFromProcurementDialog
+            preselectedId={preselectedProcurementId}
+            onClose={() => { setShowCreateFrom(false); setPreselectedProcurementId(undefined); }}
+            onSuccess={() => { setShowCreateFrom(false); setPreselectedProcurementId(undefined); refetch(); }}
+          />
+        )}
+
+        {/* 手動新增派車單 Dialog */}
         {showCreate && (
           <CreateDeliveryDialog
             stores={storesForDelivery}
@@ -268,6 +307,137 @@ export default function OSDelivery() {
         )}
       </div>
     </AdminDashboardLayout>
+  );
+}
+
+function CreateFromProcurementDialog({
+  preselectedId,
+  onClose,
+  onSuccess,
+}: {
+  preselectedId?: number;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const now = new Date().toISOString().slice(0,10);
+  const [selectedOrderId, setSelectedOrderId] = useState<number | undefined>(preselectedId);
+  const [deliveryDate, setDeliveryDate] = useState(now);
+  const [driverName, setDriverName] = useState("江沛儒");
+  const [note, setNote] = useState("");
+
+  const { data: yulianOrders = [] } = trpc.procurement.list.useQuery({
+    sourceType: 'damai_yulian',
+  });
+  const availableOrders = (yulianOrders as any[]).filter(
+    (o: any) => o.status === 'confirmed' || o.status === 'received'
+  );
+
+  const { data: detail } = trpc.procurement.getDetail.useQuery(
+    { orderId: selectedOrderId! },
+    { enabled: !!selectedOrderId }
+  );
+
+  const createFromProcurement = trpc.delivery.createFromProcurement.useMutation({
+    onSuccess: (data) => {
+      toast.success(`派車單 ${data.deliveryNo} 已建立，共 ${data.itemCount} 項`);
+      onSuccess();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const handleSubmit = () => {
+    if (!selectedOrderId) return toast.error("請選擇叫貨單");
+    if (!driverName.trim()) return toast.error("請輸入司機姓名");
+    createFromProcurement.mutate({
+      procurementOrderId: selectedOrderId,
+      deliveryDate,
+      driverName: driverName.trim(),
+      note: note.trim() || undefined,
+    });
+  };
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>從叫貨單建立派車單</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          {/* 步驟一：選擇叫貨單 */}
+          <div>
+            <Label>選擇叫貨單（B類・已確認/已到貨）</Label>
+            <Select
+              value={selectedOrderId?.toString() ?? "none"}
+              onValueChange={v => setSelectedOrderId(v === "none" ? undefined : Number(v))}>
+              <SelectTrigger><SelectValue placeholder="選擇叫貨單" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">請選擇...</SelectItem>
+                {availableOrders.map((o: any) => (
+                  <SelectItem key={o.id} value={o.id.toString()}>
+                    {o.orderNo} | {o.suppliers} | {o.stores} | {o.itemCount}項
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {availableOrders.length === 0 && (
+              <p className="text-xs text-stone-400 mt-1">目前無 B 類（自配）且狀態為已確認/已到貨的叫貨單</p>
+            )}
+          </div>
+
+          {/* 步驟二：派車資訊 */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>出車日期</Label>
+              <Input type="date" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} />
+            </div>
+            <div>
+              <Label>司機姓名</Label>
+              <Input placeholder="必填" value={driverName} onChange={e => setDriverName(e.target.value)} />
+            </div>
+          </div>
+          <div>
+            <Label>備註（選填）</Label>
+            <Input placeholder="選填" value={note} onChange={e => setNote(e.target.value)} />
+          </div>
+
+          {/* 步驟三：品項預覽 */}
+          {selectedOrderId && detail && (
+            <div>
+              <Label>品項預覽（唯讀，共 {detail.items?.length ?? 0} 項）</Label>
+              <div className="mt-1 border border-stone-200 rounded-lg overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead className="bg-stone-50">
+                    <tr>
+                      <th className="text-left px-3 py-2 text-stone-500 font-medium">品名</th>
+                      <th className="text-right px-3 py-2 text-stone-500 font-medium">數量</th>
+                      <th className="text-left px-3 py-2 text-stone-500 font-medium">單位</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(detail.items as any[]).map((item: any, i: number) => (
+                      <tr key={i} className="border-t border-stone-100">
+                        <td className="px-3 py-2 text-stone-700">{item.productName}</td>
+                        <td className="px-3 py-2 text-right text-stone-600">{item.quantity}</td>
+                        <td className="px-3 py-2 text-stone-500">{item.unit}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>取消</Button>
+          <Button
+            style={{ background:"#b45309", color:"white" }}
+            disabled={!selectedOrderId || !driverName.trim() || createFromProcurement.isPending}
+            onClick={handleSubmit}>
+            {createFromProcurement.isPending ? "建立中..." : "建立派車單"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -281,7 +451,6 @@ function CreateDeliveryDialog({ stores, onClose, onSuccess }: { stores: any[], o
   const [items, setItems] = useState([{ productName: "", quantity: 1, unit: "", batchPrice: "", note: "", sortOrder: 0 }]);
   const [selectedProcurementId, setSelectedProcurementId] = useState<number | undefined>();
 
-  const { data: products = [] } = trpc.osProducts.productList.useQuery({});
   const { data: confirmedOrders = [] } = trpc.procurement.list.useQuery({ status: 'confirmed' });
   const { data: orderDetail } = trpc.procurement.getDetail.useQuery(
     { orderId: selectedProcurementId! },
@@ -339,7 +508,7 @@ function CreateDeliveryDialog({ stores, onClose, onSuccess }: { stores: any[], o
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>新增派車單</DialogTitle>
+          <DialogTitle>手動新增派車單</DialogTitle>
         </DialogHeader>
         <div className="space-y-3 py-2">
           <div className="grid grid-cols-2 gap-2">
@@ -373,14 +542,11 @@ function CreateDeliveryDialog({ stores, onClose, onSuccess }: { stores: any[], o
                 <SelectItem value="none">不關聯</SelectItem>
                 {(confirmedOrders as any[]).map((o: any) => (
                   <SelectItem key={o.id} value={o.id.toString()}>
-                    {o.orderNo} · {o.storeName ?? ""}（{o.orderDate}）
+                    {o.orderNo} · {o.stores ?? ""}（{o.orderDate}）
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {selectedProcurementId && (
-              <p className="text-xs text-amber-600 mt-1">已自動帶入叫貨單品項，可手動修改</p>
-            )}
           </div>
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -390,34 +556,11 @@ function CreateDeliveryDialog({ stores, onClose, onSuccess }: { stores: any[], o
             <div className="space-y-2">
               {items.map((item, idx) => (
                 <div key={idx} className="grid grid-cols-12 gap-1 items-center">
-                  <div className="col-span-3">
-                    <Select onValueChange={v => {
-                      if (v === "manual") return;
-                      const p = (products as any[]).find((p: any) => p.id === Number(v));
-                      if (p) {
-                        updateItem(idx, "productName", p.name);
-                        updateItem(idx, "unit", p.unit ?? "");
-                        updateItem(idx, "batchPrice", p.batchPrice?.toString() ?? "");
-                      }
-                    }}>
-                      <SelectTrigger className="h-7 text-xs">
-                        <SelectValue placeholder="選品項" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="manual">手動輸入</SelectItem>
-                        {(products as any[]).map((p: any) => (
-                          <SelectItem key={p.id} value={p.id.toString()}>
-                            {p.name}（批價${p.batchPrice ?? "未設"}）
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Input className="col-span-3 h-7 text-xs" placeholder="品名*"
+                  <Input className="col-span-4 h-7 text-xs" placeholder="品名*"
                     value={item.productName} onChange={e => updateItem(idx, "productName", e.target.value)} />
-                  <Input className="col-span-2 h-7 text-xs" placeholder="數量" type="number"
+                  <Input className="col-span-3 h-7 text-xs" placeholder="數量" type="number"
                     value={item.quantity} onChange={e => updateItem(idx, "quantity", e.target.value)} />
-                  <Input className="col-span-1 h-7 text-xs" placeholder="單位"
+                  <Input className="col-span-2 h-7 text-xs" placeholder="單位"
                     value={item.unit} onChange={e => updateItem(idx, "unit", e.target.value)} />
                   <Input className="col-span-2 h-7 text-xs" placeholder="批價"
                     value={item.batchPrice} onChange={e => updateItem(idx, "batchPrice", e.target.value)} />
