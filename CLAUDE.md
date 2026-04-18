@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md
 
-> **版本**：v5.53。**最後更新**：2026-04-19。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.54。**最後更新**：2026-04-19。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -113,14 +113,24 @@ git status && git log --oneline -3
 
 ---
 
-### 最新 Git 狀態（2026-04-19 v5.53）
+### 最新 Git 狀態（2026-04-19 v5.54）
 
 最後三個 commit（已 push）：
-1. （本次）feat: v5.53 OSPurchasing 月份切換移除 + 頁面標題 + badge 簡化 + storeName 原樣顯示
-2. debug: v5.52.1 加強 procurement import log
-3. feat: v5.52 Make 診斷修正 + OSPurchasing 視覺 + 排序功能
+1. （本次）feat: v5.54 派車單重構 — 從叫貨單自動建立、中文狀態按鈕、URL參數跳轉（73864a0）
+2. feat: v5.53 OSPurchasing 月份切換移除 + 頁面標題 + badge 簡化 + storeName 原樣顯示
+3. debug: v5.52.1 加強 procurement import log
 
 working tree: clean
+
+**v5.54 完成項目：**
+- **DB**：ALTER TABLE os_delivery_orders，toStoreId 改為 NULL DEFAULT NULL
+- **delivery.ts**：新增 `createFromProcurement` procedure，從叫貨單自動帶入品項建立派車單
+- **delivery.ts**：`updateStatus` 錯誤訊息中文化（`狀態必須依序推進。目前狀態：「x」`）
+- **procurement.ts**：`list` 新增 `sourceType` 篩選參數
+- **OSDelivery.tsx**：主按鈕改「從叫貨單建立」（橘）＋「手動新增」（outline）；三步驟 Dialog；useSearch 讀取 ?from= 自動開 Dialog
+- **OSDelivery.tsx**：狀態按鈕中文化（開始撿貨/已出車/貨已送達/確認簽收），signed 顯示綠色「已完成」badge
+- **OSDelivery.tsx**：品項展開純文字表格（品名｜數量｜單位），移除手動選品項下拉
+- **OSPurchasing.tsx**：B類（damai_yulian）且 confirmed/received 的叫貨單展開後顯示「建立派車單」按鈕，navigate 至 /dashboard/delivery?from=id
 
 **v5.53 完成項目：**
 - **修正一（OSPurchasing.tsx）**：移除月份左右切換箭頭（`< 2026/04 >`）及 year/month state；篩選器預設改為本月 1 日～今天；KPI 卡片永遠查本月固定範圍（`thisMonthStart/thisMonthEnd`），不跟 filterStartDate/filterEndDate 連動
