@@ -136,4 +136,72 @@
 
 ---
 
+---
+
+## 2026-04-18 到 2026-04-19 — 進銷存採購帳務系統建立（v5.23-v5.54）
+
+### 採購系統
+- Make → /api/procurement/import 串接（itemsCsv 格式，`;;` 分隔行，`|` 分隔欄位）
+- OSPurchasing 四功能：篩選/批量刪除（superAdmin）/品項編輯/金額顯示
+- 叫貨單狀態流程：pending→sent→confirmed→received
+- 按鈕業務語言化：傳送訂單/廠商已確認/確認收貨入庫
+- sourceType badge 簡化：自配/直送/手動
+- 撿貨單列印（A4，B類，宇聯+來點什麼LOGO）
+- 大麥 Excel 歷史訂單匯入（防重複以 orderNo 為唯一鍵，aliases 比對，needsReview 標記）
+- 排序功能：日期/狀態/金額/廠商
+- 移除月份切換箭頭，改固定本月篩選範圍
+- storeName 原樣顯示（移除 .replace('來點什麼-', '') 前綴去除）
+
+### 品項成本系統
+- os_products 326筆從CA表匯入（seed-os-products-v2.mjs）
+- 欄位：aliases(JSON)/unitQty/unitName/packUnit/packCost/batchPrice/category1/category2
+- 品名命名規則定案（大麥格式：品名_規格/計價單位，不含廠商前綴）
+- os_product_categories 兩層分類表
+
+### 廠商管理
+- os_suppliers 加 deliveryType ENUM('direct','yulian','other') DEFAULT 'direct'
+- B類廠商由DB控制（deliveryType='yulian'），現有5筆：宇聯_配合/宇聯/立墩/三柳/凱蒂
+- 移除所有 YULIAN_SUPPLIERS 硬編碼
+
+### 庫存管理
+- os_inventory + os_inventory_logs 建表
+- 叫貨單 received（B類）→ 查 os_suppliers.deliveryType='yulian' → 庫存增加
+- 配送派車單 signed（B類）→ 庫存減少（不低於0）
+- 批次盤點多選功能（全選 checkbox + 批次 Dialog）
+- 安全庫存警戒值（setSafety）
+- os_audit_logs：稽核日誌（刪除/修改留快照，永久不可刪）
+
+### 帳務系統
+- os_payables：廠商應付帳款（月結，每廠商每月一筆）
+- os_bank_transactions：銀行明細（自動比對建議 matchScore，人工 confirmedBy 確認）
+- os_rebates：退佣帳款
+- os_rebate_rules：退佣規則存DB（廣弘10.71%/伯享差價/韓濟抵貨款）
+- os_transfers：提貨調貨（月底結算→門市應收）
+- OSAccounting.tsx：四Tab（應付/銀行對帳/退佣/提貨調貨）
+
+### 配送管理（v5.54 重構）
+- 派車單從叫貨單自動建立（createFromProcurement procedure）
+- 狀態：pending→picking→dispatched→delivered→signed
+- 簽收觸發庫存減少 + 應收帳款產生
+- toStoreId 改為允許 NULL（ALTER TABLE）
+- 主按鈕改「從叫貨單建立」（橘）＋「手動新增」（outline）
+- 三步驟 Dialog：選叫貨單 → 派車資訊 → 品項預覽
+- useSearch 讀取 ?from= 自動開 Dialog（從 OSPurchasing 跳轉）
+- 狀態按鈕中文化：開始撿貨/已出車/貨已送達/確認簽收
+- signed 顯示綠色「已完成」badge
+
+### 系統架構
+- superAdminProcedure：刪除限 super_admin，作廢 manager 可做
+- os_sidebar_order：側邊欄拖曳排序（dnd-kit，super_admin 專用）
+- 側邊欄重構：宇聯集團/來點什麼（採購庫存/帳務財務/門市作業）/大永ERP
+
+### 各版本要點
+- **v5.23-v5.28**：Make→採購API串接，itemsCsv 格式，自動 orderNo
+- **v5.31-v5.34**：OSPurchasing 四功能強化，deleteOrder/batchDeleteOrders/updateItem
+- **v5.35-v5.38**：庫存管理系統v1，稽核日誌，B類廠商DB化，自動入庫修正
+- **v5.39-v5.40**：品項資料重構，seed-os-products-v2，OSProducts 表格重整，側邊欄拖曳
+- **v5.46-v5.49**：帳務系統完成（四Tab），五個bug修正（撿貨單/派車/packCost/批次盤點/checkbox）
+- **v5.52-v5.53**：Make診斷修正，OSPurchasing視覺/排序，移除月份切換，storeName原樣顯示
+- **v5.54**：派車單重構，從叫貨單自動建立，中文狀態按鈕，URL參數跳轉
+
 *DEVELOPMENT_LOG.md — 查閱用，新對話只讀 CLAUDE.md 即可*
