@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md
 
-> **版本**：v5.52。**最後更新**：2026-04-19。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.53。**最後更新**：2026-04-19。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -113,14 +113,21 @@ git status && git log --oneline -3
 
 ---
 
-### 最新 Git 狀態（2026-04-19 v5.52）
+### 最新 Git 狀態（2026-04-19 v5.53）
 
 最後三個 commit（已 push）：
-1. （本次）feat: v5.52 Make 診斷修正 + OSPurchasing 視覺 + 排序功能
-2. feat: v5.51 派車單簽收→庫存出庫連動 + OSPurchasing badge 文字修正
-3. feat: v5.50 側邊欄重構（e546b23）
+1. （本次）feat: v5.53 OSPurchasing 月份切換移除 + 頁面標題 + badge 簡化 + storeName 原樣顯示
+2. debug: v5.52.1 加強 procurement import log
+3. feat: v5.52 Make 診斷修正 + OSPurchasing 視覺 + 排序功能
 
 working tree: clean
+
+**v5.53 完成項目：**
+- **修正一（OSPurchasing.tsx）**：移除月份左右切換箭頭（`< 2026/04 >`）及 year/month state；篩選器預設改為本月 1 日～今天；KPI 卡片永遠查本月固定範圍（`thisMonthStart/thisMonthEnd`），不跟 filterStartDate/filterEndDate 連動
+- **修正二（OSPurchasing.tsx）**：sourceType badge 文字簡化：大麥直送→「直送」、大麥自配→「自配」、手動補單→「手動」
+- **修正三（OSPurchasing.tsx + server/_core/index.ts）**：移除所有 `.replace('來點什麼-', '')` 前綴去除邏輯，storeName 原樣顯示與儲存（未來可能有其他品牌混入）
+- **修正四（OSPurchasing.tsx）**：頁面頂部加 `<h1 className="text-2xl font-bold text-gray-800 mb-6">叫貨管理</h1>`
+- **修正五（OSPurchasing.tsx）**：全檔案 `text-gray-400` → `text-gray-600`，`text-gray-300` → `text-gray-500`
 
 **v5.52 完成項目：**
 - **問題一（server/_core/index.ts）**：`/api/procurement/import` 的 storeName 解析新增 `.replace('來點什麼-', '')` 去前綴；分隔符確認為 `;;`（正確），欄位順序 `supplierName|storeName|productName|unit|quantity|temperature`（6欄）

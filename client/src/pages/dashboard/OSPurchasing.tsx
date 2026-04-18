@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import {
-  ChevronLeft, ChevronRight, Plus, ChevronDown, ChevronUp,
+  Plus, ChevronDown, ChevronUp,
   ShoppingCart, Send, CheckCircle, XCircle, Trash2, Upload, Pencil, Printer
 } from "lucide-react";
 import * as XLSX from "xlsx";
@@ -59,26 +59,20 @@ export default function OSPurchasing() {
   const isSuperAdmin = user?.role === "super_admin";
 
   const now = new Date();
-  const [year, setYear] = useState(now.getFullYear());
-  const [month, setMonth] = useState(now.getMonth() + 1);
+  // 本月固定範圍（KPI 用）
+  const thisMonthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+  const thisMonthEnd = now.toISOString().slice(0, 10);
+
   const [filterStatus, setFilterStatus] = useState("");
 
-  // 新篩選器
-  const [filterStartDate, setFilterStartDate] = useState(getMonday(now));
-  const [filterEndDate, setFilterEndDate] = useState(now.toISOString().slice(0, 10));
+  // 篩選器：預設本月 1 日 ～ 今天
+  const [filterStartDate, setFilterStartDate] = useState(thisMonthStart);
+  const [filterEndDate, setFilterEndDate] = useState(thisMonthEnd);
   const [filterStore, setFilterStore] = useState("all");
   const [filterSupplierSel, setFilterSupplierSel] = useState("all");
   const [sortBy, setSortBy] = useState<"date" | "status" | "amount" | "supplier">("date");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
-  // 月份計算（給 startDate/endDate 月份切換模式）
-  const monthStart = `${year}-${String(month).padStart(2, "0")}-01`;
-  const monthEnd = (() => {
-    const last = new Date(year, month, 0);
-    return `${year}-${String(month).padStart(2, "0")}-${String(last.getDate()).padStart(2, "0")}`;
-  })();
-
-  // 以日期範圍篩選器的值為主（月份切換只影響 KPI 計算和顯示，list 以 dateRange 為主）
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   // 批量刪除
@@ -152,10 +146,10 @@ export default function OSPurchasing() {
     sortOrder,
   });
 
-  // KPI 用月份範圍
+  // KPI 永遠查本月固定範圍，不跟篩選器連動
   const { data: monthOrders = [] } = trpc.procurement.list.useQuery({
-    startDate: monthStart,
-    endDate: monthEnd,
+    startDate: thisMonthStart,
+    endDate: thisMonthEnd,
   });
 
   const { data: detail, refetch: refetchDetail } = trpc.procurement.getDetail.useQuery(
@@ -169,9 +163,9 @@ export default function OSPurchasing() {
   const { data: supplierLines = [], refetch: refetchLines } = trpc.procurement.supplierLineList.useQuery();
   const { data: suppliers = [] } = trpc.procurement.getSuppliers.useQuery();
 
-  // 篩選器用下拉資料
+  // 篩選器用下拉資料（用本月範圍）
   const { data: storeNames = [] } = trpc.procurement.listStoreNames.useQuery({
-    startDate: monthStart, endDate: monthEnd,
+    startDate: thisMonthStart, endDate: thisMonthEnd,
   });
   const { data: supplierNames = [] } = trpc.procurement.listSupplierNames.useQuery();
 
@@ -299,15 +293,6 @@ export default function OSPurchasing() {
     },
     onError: (e) => toast.error(e.message),
   });
-
-  const prevMonth = () => {
-    if (month === 1) { setYear(y => y - 1); setMonth(12); }
-    else setMonth(m => m - 1);
-  };
-  const nextMonth = () => {
-    if (month === 12) { setYear(y => y + 1); setMonth(1); }
-    else setMonth(m => m + 1);
-  };
 
   // KPI 用月份資料
   const kpi = useMemo(() => {
@@ -536,15 +521,10 @@ export default function OSPurchasing() {
     <AdminDashboardLayout>
       <div className="p-4 space-y-4" style={{ background: "#f7f6f3", minHeight: "100vh" }}>
 
-        {/* 頂部月份切換 + 篩選列 */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* 月份切換 */}
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" onClick={prevMonth}><ChevronLeft className="w-4 h-4" /></Button>
-            <span className="text-base font-semibold w-20 text-center">{year}/{String(month).padStart(2, "0")}</span>
-            <Button variant="ghost" size="sm" onClick={nextMonth}><ChevronRight className="w-4 h-4" /></Button>
-          </div>
+        <h1 className="text-2xl font-bold text-gray-800 mb-6">叫貨管理</h1>
 
+        {/* 篩選列 */}
+        <div className="flex flex-wrap items-center gap-2">
           {/* 狀態篩選 */}
           <Select value={filterStatus || "all"} onValueChange={v => setFilterStatus(v === "all" ? "" : v)}>
             <SelectTrigger className="w-28 h-8 text-sm"><SelectValue placeholder="全部狀態" /></SelectTrigger>
@@ -737,7 +717,7 @@ export default function OSPurchasing() {
                       </span>
                       {order.stores && (
                         <span className="ml-2 text-gray-500">
-                          ｜{order.stores?.split(",").slice(0, 2).map((s: string) => s.replace("來點什麼-", "")).join("、")}
+                          ｜{order.stores?.split(",").slice(0, 2).join("、")}
                         </span>
                       )}
                     </span>
@@ -746,15 +726,15 @@ export default function OSPurchasing() {
                       {amtDisplay}
                     </span>
                     {order.sourceType === "damai_import" && (
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">大麥直送</span>
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">直送</span>
                     )}
                     {order.sourceType === "damai_yulian" && (
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 font-medium">大麥自配</span>
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 font-medium">自配</span>
                     )}
                     {order.sourceType === "manual" && (
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-gray-200 text-gray-700 font-medium">手動補單</span>
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-gray-200 text-gray-700 font-medium">手動</span>
                     )}
-                    {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                    {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-600" /> : <ChevronDown className="w-4 h-4 text-gray-600" />}
                   </div>
 
                   {isExpanded && (
@@ -779,7 +759,7 @@ export default function OSPurchasing() {
                             {(detail?.items ?? []).map((item: any, i: number) => (
                               <tr key={i} className="border-b last:border-0 hover:bg-gray-50">
                                 <td className="py-1 pr-3 text-gray-700">{item.supplierName}</td>
-                                <td className="py-1 pr-3 text-gray-700">{item.storeName?.replace("來點什麼-", "")}</td>
+                                <td className="py-1 pr-3 text-gray-700">{item.storeName}</td>
                                 <td className="py-1 pr-3 font-medium">{item.productName}</td>
                                 <td className="py-1 pr-3 text-right">{item.quantity}</td>
                                 <td className="py-1 pr-3 text-gray-600">{item.unit}</td>
@@ -794,7 +774,7 @@ export default function OSPurchasing() {
                                   <td className="py-1">
                                     <Button
                                       size="sm" variant="ghost"
-                                      className="h-6 w-6 p-0 text-gray-400 hover:text-amber-700"
+                                      className="h-6 w-6 p-0 text-gray-600 hover:text-amber-700"
                                       onClick={() => {
                                         setEditItemTarget(item);
                                         setEditItemField({
@@ -817,7 +797,7 @@ export default function OSPurchasing() {
                               </td></tr>
                             )}
                             {detail === undefined && (
-                              <tr><td colSpan={canEdit ? 9 : 8} className="py-3 text-center text-gray-300">載入中…</td></tr>
+                              <tr><td colSpan={canEdit ? 9 : 8} className="py-3 text-center text-gray-500">載入中…</td></tr>
                             )}
                           </tbody>
                         </table>
@@ -1194,24 +1174,24 @@ export default function OSPurchasing() {
                 {newItems.map((item, idx) => (
                   <div key={idx} className="grid grid-cols-7 gap-1 items-end bg-gray-50 p-2 rounded-lg">
                     <div className="col-span-2">
-                      {idx === 0 && <p className="text-xs text-gray-400 mb-1">廠商 *</p>}
+                      {idx === 0 && <p className="text-xs text-gray-600 mb-1">廠商 *</p>}
                       <Input value={item.supplierName} onChange={e => handleItemChange(idx, "supplierName", e.target.value)} placeholder="廠商名稱" className="h-8 text-xs" />
                     </div>
                     <div>
-                      {idx === 0 && <p className="text-xs text-gray-400 mb-1">門市</p>}
+                      {idx === 0 && <p className="text-xs text-gray-600 mb-1">門市</p>}
                       <Input value={item.storeName} onChange={e => handleItemChange(idx, "storeName", e.target.value)} placeholder="門市" className="h-8 text-xs" />
                     </div>
                     <div className="col-span-2">
-                      {idx === 0 && <p className="text-xs text-gray-400 mb-1">品項 *</p>}
+                      {idx === 0 && <p className="text-xs text-gray-600 mb-1">品項 *</p>}
                       <Input value={item.productName} onChange={e => handleItemChange(idx, "productName", e.target.value)} placeholder="品項名稱" className="h-8 text-xs" />
                     </div>
                     <div>
-                      {idx === 0 && <p className="text-xs text-gray-400 mb-1">數量</p>}
+                      {idx === 0 && <p className="text-xs text-gray-600 mb-1">數量</p>}
                       <Input type="number" value={item.quantity} onChange={e => handleItemChange(idx, "quantity", e.target.value)} className="h-8 text-xs" />
                     </div>
                     <div className="flex items-end gap-1">
                       <div className="flex-1">
-                        {idx === 0 && <p className="text-xs text-gray-400 mb-1">單位</p>}
+                        {idx === 0 && <p className="text-xs text-gray-600 mb-1">單位</p>}
                         <Input value={item.unit} onChange={e => handleItemChange(idx, "unit", e.target.value)} placeholder="箱" className="h-8 text-xs" />
                       </div>
                       <Button
@@ -1249,7 +1229,7 @@ export default function OSPurchasing() {
               <div key={i} className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
                 <div>
                   <p className="text-sm font-medium">{g.supplierName}</p>
-                  <p className="text-xs text-gray-400">{g.itemCount} 項品項</p>
+                  <p className="text-xs text-gray-600">{g.itemCount} 項品項</p>
                 </div>
                 {g.lineGroupId ? (
                   <Badge style={{ color: "#15803d", background: "#f0fdf4", border: "none" }} className="text-xs">
@@ -1293,7 +1273,7 @@ export default function OSPurchasing() {
             <DialogTitle>手動補單</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <p className="text-xs text-gray-400">用於補登大麥系統遺漏的叫貨紀錄，單號不可與現有訂單重複。</p>
+            <p className="text-xs text-gray-600">用於補登大麥系統遺漏的叫貨紀錄，單號不可與現有訂單重複。</p>
             <div className="flex gap-4">
               <div className="flex-1">
                 <Label className="text-xs">叫貨日期</Label>
@@ -1316,7 +1296,7 @@ export default function OSPurchasing() {
                 {importItems.map((item, idx) => (
                   <div key={idx} className="grid grid-cols-8 gap-1 items-end bg-gray-50 p-2 rounded-lg">
                     <div className="col-span-2">
-                      {idx === 0 && <p className="text-xs text-gray-400 mb-1">廠商 *</p>}
+                      {idx === 0 && <p className="text-xs text-gray-600 mb-1">廠商 *</p>}
                       <Select value={item.supplierName} onValueChange={v => setImportItems(items => items.map((it, i) => i === idx ? { ...it, supplierName: v } : it))}>
                         <SelectTrigger className="h-8 text-xs">
                           <SelectValue placeholder="選廠商" />
@@ -1329,19 +1309,19 @@ export default function OSPurchasing() {
                       </Select>
                     </div>
                     <div>
-                      {idx === 0 && <p className="text-xs text-gray-400 mb-1">門市</p>}
+                      {idx === 0 && <p className="text-xs text-gray-600 mb-1">門市</p>}
                       <Input value={item.storeName} onChange={e => setImportItems(items => items.map((it, i) => i === idx ? { ...it, storeName: e.target.value } : it))} placeholder="門市" className="h-8 text-xs" />
                     </div>
                     <div className="col-span-2">
-                      {idx === 0 && <p className="text-xs text-gray-400 mb-1">品項 *</p>}
+                      {idx === 0 && <p className="text-xs text-gray-600 mb-1">品項 *</p>}
                       <Input value={item.productName} onChange={e => setImportItems(items => items.map((it, i) => i === idx ? { ...it, productName: e.target.value } : it))} placeholder="品項名稱" className="h-8 text-xs" />
                     </div>
                     <div>
-                      {idx === 0 && <p className="text-xs text-gray-400 mb-1">數量</p>}
+                      {idx === 0 && <p className="text-xs text-gray-600 mb-1">數量</p>}
                       <Input type="number" value={item.quantity} onChange={e => setImportItems(items => items.map((it, i) => i === idx ? { ...it, quantity: Number(e.target.value) } : it))} className="h-8 text-xs" />
                     </div>
                     <div>
-                      {idx === 0 && <p className="text-xs text-gray-400 mb-1">溫層</p>}
+                      {idx === 0 && <p className="text-xs text-gray-600 mb-1">溫層</p>}
                       <Select value={item.temperature} onValueChange={v => setImportItems(items => items.map((it, i) => i === idx ? { ...it, temperature: v as any } : it))}>
                         <SelectTrigger className="h-8 text-xs">
                           <SelectValue />
@@ -1354,7 +1334,7 @@ export default function OSPurchasing() {
                       </Select>
                     </div>
                     <div className="flex items-end">
-                      {idx === 0 && <p className="text-xs text-gray-400 mb-1 invisible">刪</p>}
+                      {idx === 0 && <p className="text-xs text-gray-600 mb-1 invisible">刪</p>}
                       <Button
                         variant="ghost" size="sm"
                         className="h-8 w-8 p-0 text-red-400 hover:text-red-600 hover:bg-red-50"
@@ -1390,7 +1370,7 @@ export default function OSPurchasing() {
                 <div key={sl.id} className="flex items-center justify-between bg-gray-50 rounded-lg p-3 text-sm">
                   <div>
                     <p className="font-medium">{sl.supplierName}</p>
-                    <p className="text-xs text-gray-400 font-mono truncate w-40">{sl.lineGroupId || "—"}</p>
+                    <p className="text-xs text-gray-600 font-mono truncate w-40">{sl.lineGroupId || "—"}</p>
                   </div>
                   <Badge style={{ color: sl.isActive ? "#15803d" : "#9ca3af", background: sl.isActive ? "#f0fdf4" : "#f3f4f6", border: "none" }} className="text-xs">
                     {sl.isActive ? "啟用" : "停用"}
@@ -1398,7 +1378,7 @@ export default function OSPurchasing() {
                 </div>
               ))}
               {(supplierLines as any[]).length === 0 && (
-                <p className="text-sm text-gray-400 text-center py-3">尚無廠商 LINE 設定</p>
+                <p className="text-sm text-gray-600 text-center py-3">尚無廠商 LINE 設定</p>
               )}
             </div>
             <div className="border-t pt-3 space-y-2">
@@ -1463,12 +1443,12 @@ export default function OSPurchasing() {
                     <p className="text-orange-600 text-xs">⚠ 其中 {printedCount} 張已於 {String(lastPrinted.printedAt).slice(0, 10)} 列印過</p>
                   )}
                   {filtered.length === 0 && (
-                    <p className="text-gray-400 text-xs">（所有單已列印過，若要重印請取消勾選「只印未列印過的單」）</p>
+                    <p className="text-gray-600 text-xs">（所有單已列印過，若要重印請取消勾選「只印未列印過的單」）</p>
                   )}
                 </div>
               );
             })() : (
-              <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-400 text-center">
+              <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600 text-center">
                 {showPickPrint ? "查詢中或此日期範圍無撿貨單（不含已作廢和已到貨的 B 類廠商叫貨單）" : ""}
               </div>
             )}
@@ -1499,7 +1479,7 @@ export default function OSPurchasing() {
             <div>
               <Label className="text-xs text-gray-500 mb-1 block">步驟一：選擇大麥 Excel 檔案</Label>
               <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-orange-400 hover:bg-orange-50 transition-colors">
-                <Upload className="w-6 h-6 text-gray-400 mb-1" />
+                <Upload className="w-6 h-6 text-gray-600 mb-1" />
                 <span className="text-sm text-gray-500">點擊選擇或拖拉 .xlsx / .xls 檔案</span>
                 <input
                   type="file"
