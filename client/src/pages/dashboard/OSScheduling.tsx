@@ -203,6 +203,20 @@ export default function OSScheduling() {
             </Button>
           )}
           {renderTemplateDrawer()}
+          <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{editTemplate ? "編輯員工" : "新增員工"}</DialogTitle>
+              </DialogHeader>
+              <TemplateForm
+                initial={editTemplate}
+                stores={stores}
+                onSave={(data: any) => upsertTemplate.mutate(data)}
+                onCancel={() => setShowTemplateDialog(false)}
+                isPending={upsertTemplate.isPending}
+              />
+            </DialogContent>
+          </Dialog>
         </div>
       </AdminDashboardLayout>
     );
@@ -398,11 +412,11 @@ export default function OSScheduling() {
               {scheduleTab === "mobile" && (
                 <div className="mb-3">
                   <Label className="text-xs">支援門市</Label>
-                  <Select value={popoverData.supportStoreId?.toString() ?? ""}
-                    onValueChange={v => setPopoverData((p:any) => ({ ...p, supportStoreId: v }))}>
+                  <Select value={popoverData.supportStoreId?.toString() || "none"}
+                    onValueChange={v => setPopoverData((p:any) => ({ ...p, supportStoreId: v === "none" ? "" : v }))}>
                     <SelectTrigger className="h-7 text-xs mt-0.5"><SelectValue placeholder="選擇門市" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">不指定</SelectItem>
+                      <SelectItem value="none">不指定</SelectItem>
                       {(stores as any[]).filter((s:any) => s.id !== HQ_STORE_ID).map((s:any) => (
                         <SelectItem key={s.id} value={s.id.toString()}>{s.name.replace("來點什麼 ","")}</SelectItem>
                       ))}
