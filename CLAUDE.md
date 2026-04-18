@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md
 
-> **版本**：v5.42。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.43。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -18,7 +18,7 @@ git status && git log --oneline -3
 
 ## 當前開發狀態（換對話框必讀）
 
-> 最後更新：2026-04-18 v5.42。**新大腦進來請從這裡開始讀，不要跳過。**
+> 最後更新：2026-04-18 v5.43。**新大腦進來請從這裡開始讀，不要跳過。**
 
 ### ⚠️ 開發守則（每次換對話框都要遵守）
 
@@ -112,14 +112,19 @@ git status && git log --oneline -3
 
 ---
 
-### 最新 Git 狀態（2026-04-18 v5.42）
+### 最新 Git 狀態（2026-04-18 v5.43）
 
 最後三個 commit（已 push）：
-1. `（本次 commit）` — feat: os_products 兩層分類欄位 + os_product_categories 表 + os_suppliers sortOrder/note + CLAUDE.md v5.42
+1. `a908cd8` — feat: os_products 兩層分類欄位 + os_product_categories 表 + os_suppliers sortOrder/note + CLAUDE.md v5.42
 2. `92acfa2` — docs: CLAUDE.md v5.41 — 開發原則/資料整合規劃/待完成功能清單三章節
 3. `5ba7301` — fix: seed-os-products-v2 欄位修正 + OSProducts 表格重整 + CLAUDE.md v5.40
 
-working tree: clean
+working tree: clean（本次 commit 將新增 CLAUDE.md v5.43 + scripts/rename-os-products.mjs 修正）
+
+**rename-os-products.mjs 執行結果（2026-04-18）**：
+- 更新 13 筆，找不到 176 筆，失敗 0 筆
+- 找不到原因：DB 品項名稱由 seed-os-products-v2 建立，與 rename script 的 `original` 欄位（大麥格式）不符
+- 已成功更新品項：RICOS起司醬/梨山花生醬/梨山草莓醬/巧克力醬/凱田部分品項/伯享部分品項 等 13 筆
 
 **v5.40 完成項目（seed 欄位修正 + OSProducts 表格重整）：**
 - seed-os-products-v2.mjs：
@@ -351,6 +356,76 @@ working tree: clean
 | `/dashboard/franchise` | `FranchiseDashboardPage` | 加盟主入口，部分功能未完成 |
 
 ---
+
+---
+
+---
+
+### 系統架構總覽（2026-04-18 定案）
+
+**為什麼仿大麥**
+- 大麥是目前實際在用的採購系統，加盟主和店長習慣其品名格式和操作邏輯
+- 目標：把大麥功能搬進 Ordersome，讓資料不再分散於大麥/ASANA/Google雲端/Excel
+- 大麥的進銷存邏輯設計完整，直接學習參考
+
+**大麥系統功能對照（已觀察）**
+- 採購訂單管理：篩選器豐富、批次撥款、列印收貨表、下載報表
+- 商品資料：系統編號、兩層分類、進貨價/銷貨價/定價、溫層、排序、調貨記錄
+- 分店管理：每間門市各自庫存（倉庫庫存+店面庫存+總庫存+安全庫存）
+- 廠商對帳：應付帳款、下載對帳明細、列印報表
+- 報表：銷售品項統計、採購訂單統計折線圖、分店採購銷售統計KPI
+- 帳務管理：月結對帳、發票管理
+
+**我們目前的缺口（待完成）**
+- 帳務管理（/dashboard/accounting 空殼）
+- 廠商對帳 / 應付帳款
+- 撿貨單列印
+- 菜單成本 BOM 連動
+- 分店庫存（未來，目前只記宇聯總倉B類）
+
+### 歷史資料整合計畫（2026-04-18 定案）
+
+**基準點：2026-03-31 全宇聯資產盤點**
+- 盤點資料 4/19 從採購取得（Excel格式待確認）
+- 匯入後：os_inventory.currentQty = 實際盤點數量，lastCountDate='2026-03-31'
+- 匯入後再逐筆匯入 4/1～今天大麥歷史訂單，B類自動累加庫存
+
+**大麥歷史訂單 Excel 欄位對應（已確認）**
+- 訂單編號→orderNo（唯一鍵，重複略過）
+- 供應商→supplierName
+- 訂購店家→storeName（格式：來點什麼-逢甲旗艦店）
+- 商品名稱→productName（存 aliases 比對）
+- 計價單位→unit
+- 計價數量→quantity
+- 進貨價→unitPrice
+- 溫層→temperature
+- 訂單日期→orderDate
+
+### 帳務流程（2026-04-18 定案，人工確認，待系統化）
+
+**退佣計算**
+- 廣弘：叫貨總金額 ÷ 1.12 = 未稅金額，差額 = 退佣，匯入公司帳（扣30手續費）
+- 伯享：（系統銷價 - 宇聯成本價）× 數量 = 退佣，匯入公司帳
+- 韓濟：同伯享計算，但退佣直接抵當月貨款（付現金）
+- 目前：會計用 Excel 手算，尚未系統化
+
+**月底對帳流程**
+- 直營店：每月15-18號整理月結款項，核對銀行明細，對應日記帳
+- 宇聯：每週匯款支出，整理銀行明細建憑證給事務所
+- 雙月整理發票給事務所
+
+**加盟主帳款**
+- 加盟主每週匯款，目前用 ASANA 追蹤、Excel 銀行明細備查
+- 系統已有 os_franchisee_payments，配送簽收後自動產生
+
+### 權限架構（2026-04-18 定案）
+
+| 角色 | 刪除 | 作廢 | 修改 | 新增 | 說明 |
+|------|------|------|------|------|------|
+| super_admin | 可以（必填原因，寫 audit log） | 可以 | 可以 | 可以 | 兼系統開發者 |
+| manager | 不行 | 可以（必填原因） | 可以（寫快照） | 可以 | 一般管理人員 |
+
+所有刪除和修改寫 os_audit_logs，os_audit_logs 不可被刪除。
 
 ---
 
