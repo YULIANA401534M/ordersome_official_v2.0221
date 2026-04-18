@@ -46,6 +46,23 @@ export const adminProcedure = t.procedure.use(
   }),
 );
 
+export const superAdminProcedure = t.procedure.use(
+  t.middleware(async opts => {
+    const { ctx, next } = opts;
+
+    if (!ctx.user || ctx.user.role !== 'super_admin') {
+      throw new TRPCError({ code: "FORBIDDEN", message: '僅 super_admin 可執行此操作' });
+    }
+
+    return next({
+      ctx: {
+        ...ctx,
+        user: ctx.user,
+      },
+    });
+  }),
+);
+
 /**
  * tenantProcedure: 繼承 protectedProcedure，確保 ctx 中有 tenantId
  * 供需要資料隔離的 router 使用

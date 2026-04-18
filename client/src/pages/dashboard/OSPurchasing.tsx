@@ -56,6 +56,7 @@ function getMonday(d: Date) {
 export default function OSPurchasing() {
   const { user } = useAuth();
   const canEdit = user?.role === "super_admin" || user?.role === "manager";
+  const isSuperAdmin = user?.role === "super_admin";
 
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
@@ -104,8 +105,16 @@ export default function OSPurchasing() {
   const [lineConfigName, setLineConfigName] = useState("");
   const [lineConfigGroupId, setLineConfigGroupId] = useState("");
 
-  // 刪除確認 dialog
+  // 刪除確認 dialog（僅 super_admin）
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+  const [deleteReason, setDeleteReason] = useState("");
+
+  // 批量刪除 reason
+  const [batchDeleteReason, setBatchDeleteReason] = useState("");
+
+  // 作廢 dialog（manager + super_admin）
+  const [cancelTargetId, setCancelTargetId] = useState<number | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
 
   // 備註 dialog
   const [noteTargetId, setNoteTargetId] = useState<number | null>(null);
@@ -202,6 +211,17 @@ export default function OSPurchasing() {
     onSuccess: () => {
       toast.success("叫貨單已刪除");
       setDeleteTargetId(null);
+      setDeleteReason("");
+      refetch();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const cancelOrder = trpc.procurement.updateStatus.useMutation({
+    onSuccess: () => {
+      toast.success("叫貨單已作廢");
+      setCancelTargetId(null);
+      setCancelReason("");
       refetch();
     },
     onError: (e) => toast.error(e.message),
@@ -212,6 +232,7 @@ export default function OSPurchasing() {
       toast.success(`已刪除 ${selectedIds.size} 張叫貨單`);
       setSelectedIds(new Set());
       setShowBatchDelete(false);
+      setBatchDeleteReason("");
       refetch();
     },
     onError: (e) => toast.error(e.message),
@@ -404,16 +425,16 @@ export default function OSPurchasing() {
 
           {/* 右側按鈕 */}
           <div className="ml-auto flex gap-2">
-            {canEdit && selectedIds.size > 0 && (
+            {isSuperAdmin && selectedIds.size > 0 && (
               <Button
                 size="sm" variant="outline"
                 className="h-8 text-xs text-red-600 border-red-400 hover:bg-red-50"
-                onClick={() => setShowBatchDelete(true)}
+                onClick={() => { setBatchDeleteReason(""); setShowBatchDelete(true); }}
               >
                 <Trash2 className="w-3.5 h-3.5 mr-1" /> 批量刪除 ({selectedIds.size}張)
               </Button>
             )}
-            {canEdit && selectedIds.size === 0 && (
+            {isSuperAdmin && selectedIds.size === 0 && (
               <Button size="sm" variant="outline" disabled className="h-8 text-xs opacity-40">
                 <Trash2 className="w-3.5 h-3.5 mr-1" /> 批量刪除
               </Button>
@@ -484,8 +505,8 @@ export default function OSPurchasing() {
                     className="flex items-center gap-3 p-4 cursor-pointer hover:bg-gray-50 transition-colors"
                     onClick={() => setExpandedId(isExpanded ? null : order.id)}
                   >
-                    {/* Checkbox for pending orders */}
-                    {canEdit && isPending && (
+                    {/* Checkbox for pending orders — 僅 super_admin 可批量刪除 */}
+                    {isSuperAdmin && isPending && (
                       <div
                         onClick={e => { e.stopPropagation(); toggleSelect(order.id); }}
                         className="flex-shrink-0"
@@ -496,7 +517,8 @@ export default function OSPurchasing() {
                         />
                       </div>
                     )}
-                    {canEdit && !isPending && <div className="w-4 flex-shrink-0" />}
+                    {isSuperAdmin && !isPending && <div className="w-4 flex-shrink-0" />}
+                    {!isSuperAdmin && canEdit && <div className="w-4 flex-shrink-0" />}
 
                     <span className="text-sm font-mono text-gray-500 w-36 truncate">{order.orderNo}</span>
                     <span className="text-sm text-gray-700 w-24">{order.orderDate?.slice(0, 10)}</span>
@@ -624,21 +646,21 @@ export default function OSPurchasing() {
                               <Send className="w-3 h-3 mr-1" /> LINE 推播
                             </Button>
                           )}
-                          {isPending && (
+                          {isPending && canEdit && (
                             <Button
                               size="sm" variant="outline"
                               className="h-7 text-xs text-red-500 border-red-200 hover:bg-red-50"
-                              onClick={() => updateStatus.mutate({ orderId: order.id, status: "cancelled" })}
-                              disabled={updateStatus.isPending}
+                              onClick={() => { setCancelReason(""); setCancelTargetId(order.id); }}
+                              disabled={cancelOrder.isPending}
                             >
-                              <XCircle className="w-3 h-3 mr-1" /> 取消
+                              <XCircle className="w-3 h-3 mr-1" /> 作廢
                             </Button>
                           )}
-                          {isPending && (
+                          {isPending && isSuperAdmin && (
                             <Button
                               size="sm" variant="outline"
                               className="h-7 text-xs text-red-600 border-red-400 hover:bg-red-50"
-                              onClick={() => setDeleteTargetId(order.id)}
+                              onClick={() => { setDeleteReason(""); setDeleteTargetId(order.id); }}
                             >
                               <Trash2 className="w-3 h-3 mr-1" /> 刪除
                             </Button>
@@ -664,7 +686,7 @@ export default function OSPurchasing() {
         </div>
       </div>
 
-      {/* 批量刪除確認 Dialog */}
+      {/* 批量刪除確認 Dialog（僅 super_admin） */}
       <Dialog open={showBatchDelete} onOpenChange={setShowBatchDelete}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
@@ -673,12 +695,21 @@ export default function OSPurchasing() {
           <p className="text-sm text-gray-600 py-2">
             確定要刪除選取的 {selectedIds.size} 張叫貨單（僅限待處理）？此操作無法復原。
           </p>
+          <div>
+            <Label className="text-sm">刪除原因（必填，永久保存）</Label>
+            <textarea
+              className="w-full border rounded-md p-2 text-sm mt-1 min-h-[80px] resize-none focus:outline-none focus:ring-1 focus:ring-red-400"
+              value={batchDeleteReason}
+              onChange={e => setBatchDeleteReason(e.target.value)}
+              placeholder="請說明刪除原因，此記錄將永久保存"
+            />
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowBatchDelete(false)}>取消</Button>
             <Button
               variant="destructive"
-              onClick={() => batchDelete.mutate({ ids: Array.from(selectedIds) })}
-              disabled={batchDelete.isPending}
+              onClick={() => batchDelete.mutate({ ids: Array.from(selectedIds), reason: batchDeleteReason })}
+              disabled={batchDelete.isPending || !batchDeleteReason.trim()}
             >
               確認刪除
             </Button>
@@ -686,21 +717,59 @@ export default function OSPurchasing() {
         </DialogContent>
       </Dialog>
 
-      {/* 刪除確認 Dialog */}
-      <Dialog open={deleteTargetId !== null} onOpenChange={(open) => { if (!open) setDeleteTargetId(null); }}>
+      {/* 刪除確認 Dialog（僅 super_admin） */}
+      <Dialog open={deleteTargetId !== null} onOpenChange={(open) => { if (!open) { setDeleteTargetId(null); setDeleteReason(""); } }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>確認刪除</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-gray-600 py-2">確定要刪除此叫貨單？此操作無法復原。</p>
+          <p className="text-sm text-gray-600 py-2">確定要永久刪除此叫貨單？此操作無法復原。</p>
+          <div>
+            <Label className="text-sm">刪除原因（必填，永久保存）</Label>
+            <textarea
+              className="w-full border rounded-md p-2 text-sm mt-1 min-h-[80px] resize-none focus:outline-none focus:ring-1 focus:ring-red-400"
+              value={deleteReason}
+              onChange={e => setDeleteReason(e.target.value)}
+              placeholder="請說明刪除原因，此記錄將永久保存"
+            />
+          </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTargetId(null)}>取消</Button>
+            <Button variant="outline" onClick={() => { setDeleteTargetId(null); setDeleteReason(""); }}>取消</Button>
             <Button
               variant="destructive"
-              onClick={() => deleteTargetId !== null && deleteOrder.mutate({ orderId: deleteTargetId })}
-              disabled={deleteOrder.isPending}
+              onClick={() => deleteTargetId !== null && deleteOrder.mutate({ orderId: deleteTargetId, reason: deleteReason })}
+              disabled={deleteOrder.isPending || !deleteReason.trim()}
             >
               確認刪除
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 作廢 Dialog（manager + super_admin） */}
+      <Dialog open={cancelTargetId !== null} onOpenChange={(open) => { if (!open) { setCancelTargetId(null); setCancelReason(""); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>作廢叫貨單</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600 py-2">作廢後狀態改為「已取消」，記錄保留不刪除。</p>
+          <div>
+            <Label className="text-sm">作廢原因（選填）</Label>
+            <textarea
+              className="w-full border rounded-md p-2 text-sm mt-1 min-h-[80px] resize-none focus:outline-none focus:ring-1 focus:ring-amber-400"
+              value={cancelReason}
+              onChange={e => setCancelReason(e.target.value)}
+              placeholder="請說明作廢原因…"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setCancelTargetId(null); setCancelReason(""); }}>取消</Button>
+            <Button
+              variant="destructive"
+              onClick={() => cancelTargetId !== null && cancelOrder.mutate({ orderId: cancelTargetId, status: "cancelled", reason: cancelReason || undefined })}
+              disabled={cancelOrder.isPending}
+            >
+              確認作廢
             </Button>
           </DialogFooter>
         </DialogContent>

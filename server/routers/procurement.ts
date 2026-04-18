@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { router, adminProcedure, publicProcedure } from '../_core/trpc';
+import { router, adminProcedure, publicProcedure, superAdminProcedure } from '../_core/trpc';
 import { getDb } from '../db';
 
 function genOrderNo() {
@@ -182,19 +182,28 @@ export const procurementRouter = router({
       };
     }),
 
-  // 更新狀態
+  // 更新狀態（cancelled 時寫 audit log，reason 為選填）
   updateStatus: adminProcedure
     .input(z.object({
       orderId: z.number(),
       status: z.enum(['pending','sent','confirmed','received','cancelled']),
+      reason: z.string().optional(),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new Error('DB not available');
       await (db as any).$client.execute(
         'UPDATE os_procurement_orders SET status = ? WHERE id = ?',
         [input.status, input.orderId]
       );
+      if (input.status === 'cancelled') {
+        const operatorEmail = (ctx.user as any).email ?? null;
+        await (db as any).$client.execute(
+          `INSERT INTO os_audit_logs (tenantId, operatorId, operatorEmail, action, targetTable, targetId, reason)
+           VALUES (1, ?, ?, 'cancel', 'os_procurement_orders', ?, ?)`,
+          [ctx.user.id, operatorEmail, input.orderId, input.reason ?? null]
+        );
+      }
       return { success: true };
     }),
 
@@ -332,11 +341,20 @@ export const procurementRouter = router({
       return rows as any[];
     }),
 
-  deleteOrder: adminProcedure
-    .input(z.object({ orderId: z.number() }))
-    .mutation(async ({ input }) => {
+  deleteOrder: superAdminProcedure
+    .input(z.object({
+      orderId: z.number(),
+      reason: z.string().min(1, '請填寫刪除原因'),
+    }))
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new Error('DB not available');
+      // 快照刪除前資料
+      const [snapRows] = await (db as any).$client.execute(
+        'SELECT * FROM os_procurement_orders WHERE id = ? LIMIT 1',
+        [input.orderId]
+      );
+      const snapshot = (snapRows as any[])[0] ?? null;
       await (db as any).$client.execute(
         'DELETE FROM os_procurement_items WHERE procurementOrderId = ?',
         [input.orderId]
@@ -344,6 +362,12 @@ export const procurementRouter = router({
       await (db as any).$client.execute(
         'DELETE FROM os_procurement_orders WHERE id = ? AND status = "pending"',
         [input.orderId]
+      );
+      const operatorEmail = (ctx.user as any).email ?? null;
+      await (db as any).$client.execute(
+        `INSERT INTO os_audit_logs (tenantId, operatorId, operatorEmail, action, targetTable, targetId, targetSnapshot, reason)
+         VALUES (1, ?, ?, 'delete', 'os_procurement_orders', ?, ?, ?)`,
+        [ctx.user.id, operatorEmail, input.orderId, snapshot ? JSON.stringify(snapshot) : null, input.reason]
       );
       return { success: true };
     }),
@@ -360,14 +384,23 @@ export const procurementRouter = router({
       return { success: true };
     }),
 
-  // 批量刪除（只刪 pending）
-  batchDeleteOrders: adminProcedure
-    .input(z.object({ ids: z.array(z.number()) }))
-    .mutation(async ({ input, ctx }) => {
+  // 批量刪除（只刪 pending，僅 super_admin）
+  batchDeleteOrders: superAdminProcedure
+    .input(z.object({
+      ids: z.array(z.number()),
+      reason: z.string().min(1, '請填寫刪除原因'),
+    }))
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new Error('DB not available');
       const tenantId = (ctx.user as any).tenantId ?? 1;
+      const operatorEmail = (ctx.user as any).email ?? null;
       for (const id of input.ids) {
+        const [snapRows] = await (db as any).$client.execute(
+          'SELECT * FROM os_procurement_orders WHERE id = ? LIMIT 1',
+          [id]
+        );
+        const snapshot = (snapRows as any[])[0] ?? null;
         await (db as any).$client.execute(
           'DELETE FROM os_procurement_items WHERE procurementOrderId = ?',
           [id]
@@ -376,11 +409,16 @@ export const procurementRouter = router({
           'DELETE FROM os_procurement_orders WHERE id = ? AND status = "pending" AND tenantId = ?',
           [id, tenantId]
         );
+        await (db as any).$client.execute(
+          `INSERT INTO os_audit_logs (tenantId, operatorId, operatorEmail, action, targetTable, targetId, targetSnapshot, reason)
+           VALUES (1, ?, ?, 'delete', 'os_procurement_orders', ?, ?, ?)`,
+          [ctx.user.id, operatorEmail, id, snapshot ? JSON.stringify(snapshot) : null, input.reason]
+        );
       }
       return { success: true, deleted: input.ids.length };
     }),
 
-  // 修改品項
+  // 修改品項（寫 audit log）
   updateItem: adminProcedure
     .input(z.object({
       itemId: z.number(),
@@ -389,7 +427,7 @@ export const procurementRouter = router({
       unit: z.string().optional(),
       temperature: z.string().optional(),
     }))
-    .mutation(async ({ input, ctx }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new Error('DB not available');
       const tenantId = (ctx.user as any).tenantId ?? 1;
@@ -399,6 +437,13 @@ export const procurementRouter = router({
         WHERE pi.id = ? AND po.tenantId = ? LIMIT 1
       `, [input.itemId, tenantId]);
       if ((check as any[]).length === 0) throw new Error('品項不存在或無權限');
+
+      // 快照修改前資料
+      const [snapRows] = await (db as any).$client.execute(
+        'SELECT * FROM os_procurement_items WHERE id = ? LIMIT 1',
+        [input.itemId]
+      );
+      const snapshot = (snapRows as any[])[0] ?? null;
 
       const sets: string[] = [];
       const params: any[] = [];
@@ -411,6 +456,12 @@ export const procurementRouter = router({
       await (db as any).$client.execute(
         `UPDATE os_procurement_items SET ${sets.join(', ')} WHERE id = ?`,
         params
+      );
+      const operatorEmail = (ctx.user as any).email ?? null;
+      await (db as any).$client.execute(
+        `INSERT INTO os_audit_logs (tenantId, operatorId, operatorEmail, action, targetTable, targetId, targetSnapshot)
+         VALUES (1, ?, ?, 'update', 'os_procurement_items', ?, ?)`,
+        [ctx.user.id, operatorEmail, input.itemId, snapshot ? JSON.stringify(snapshot) : null]
       );
       return { success: true };
     }),

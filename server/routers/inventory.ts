@@ -55,7 +55,7 @@ export const inventoryRouter = router({
     .input(z.object({
       id: z.number(),
       newQty: z.number(),
-      note: z.string().optional(),
+      note: z.string().min(1, '請填寫調整原因'),
     }))
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
@@ -75,7 +75,7 @@ export const inventoryRouter = router({
       await (db as any).$client.execute(
         `INSERT INTO os_inventory_logs (tenantId, inventoryId, changeType, qty, qtyBefore, qtyAfter, refType, note, operatorId)
          VALUES (?, ?, 'adjust', ?, ?, ?, 'manual', ?, ?)`,
-        [TENANT_ID, input.id, newQty - oldQty, oldQty, newQty, input.note ?? null, ctx.user.id]
+        [TENANT_ID, input.id, newQty - oldQty, oldQty, newQty, input.note, ctx.user.id]
       );
       return { success: true };
     }),

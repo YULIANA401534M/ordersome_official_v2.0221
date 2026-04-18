@@ -233,11 +233,12 @@ export default function OSInventory() {
               />
             </div>
             <div>
-              <Label>備註（選填）</Label>
-              <Input
+              <Label>調整原因（必填）</Label>
+              <textarea
+                className="w-full border rounded-md p-2 text-sm mt-1 min-h-[72px] resize-none focus:outline-none focus:ring-1 focus:ring-amber-500"
                 value={adjustNote}
                 onChange={e => setAdjustNote(e.target.value)}
-                className="mt-1"
+                placeholder="請說明調整原因"
               />
             </div>
           </div>
@@ -248,7 +249,7 @@ export default function OSInventory() {
                 if (!adjustDialog.item) return;
                 adjustMut.mutate({ id: adjustDialog.item.id, newQty: Number(adjustQty), note: adjustNote || undefined });
               }}
-              disabled={adjustMut.isPending}
+              disabled={adjustMut.isPending || !adjustNote.trim()}
               className="bg-amber-700 hover:bg-amber-800 text-white"
             >
               {adjustMut.isPending ? "儲存中…" : "儲存"}

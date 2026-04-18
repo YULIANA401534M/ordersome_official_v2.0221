@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md
 
-> **版本**：v5.35。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.36。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -60,14 +60,26 @@ git status && git log --oneline -3
 
 ---
 
-### 最新 Git 狀態（2026-04-18 v5.35）
+### 最新 Git 狀態（2026-04-18 v5.36）
 
 最後三個 commit（已 push）：
-1. `（本次 commit）` — feat: 庫存管理系統 v1（os_inventory + OSInventory.tsx）
-2. `36898bc` — feat: OSPurchasing 四功能強化（篩選升級/批量刪除/品項編輯/金額欄位）
-3. `9d71491` — docs: 新增BUSINESS.md業務邏輯文件 + v5.33 + sourceType ENUM修正
+1. `（本次 commit）` — feat: 稽核日誌系統 + 刪除/作廢權限分離
+2. `8eb8977` — feat: 庫存管理系統 v1（os_inventory + OSInventory.tsx）
+3. `cb0e778` — docs: CLAUDE.md v5.34 更新 git 狀態
 
 working tree: clean
+
+**v5.36 完成項目（稽核日誌 + 權限分離）：**
+- DB：建立 `os_audit_logs`（稽核日誌表，永久不可刪）
+- `server/_core/trpc.ts`：新增 export `superAdminProcedure`（僅 super_admin）
+- `server/routers/procurement.ts`：
+  - `deleteOrder`：改為 superAdminProcedure，必填 reason，刪前快照寫 audit log
+  - `batchDeleteOrders`：改為 superAdminProcedure，必填 reason，每筆寫 audit log
+  - `updateStatus`：cancelled 時寫 audit log（action='cancel'）
+  - `updateItem`：修改前快照寫 audit log（action='update'）
+- `server/routers/inventory.ts`：`adjust` note 改為必填（min 1）
+- `OSPurchasing.tsx`：刪除按鈕限 super_admin；「取消」改「作廢」加 reason Dialog；刪除 Dialog 加 reason textarea（必填）
+- `OSInventory.tsx`：調整庫存 Dialog reason 改必填
 
 **v5.35 完成項目（庫存管理系統 v1）：**
 - DB：建立 `os_inventory`（品項主表）+ `os_inventory_logs`（異動記錄）
@@ -262,6 +274,27 @@ working tree: clean
 |------|------|------|
 | `/dashboard/customers` | `ComingSoon` | 客戶管理，業務邏輯待確認 |
 | `/dashboard/franchise` | `FranchiseDashboardPage` | 加盟主入口，部分功能未完成 |
+
+---
+
+---
+
+### 權限與稽核規則（永久有效，不得移除）
+
+**刪除權限**
+- 真實刪除（DELETE FROM DB）：僅 super_admin 可執行，且必須填寫原因
+- 每次刪除前自動快照資料，寫入 `os_audit_logs`，此表不可被刪除
+- manager 只能作廢（status='cancelled'），作廢需填原因，寫入 `os_audit_logs`
+- 此規則套用範圍：採購叫貨、配送管理、應收帳款、庫存管理
+- 技術實現：`superAdminProcedure`（server/_core/trpc.ts）用於真實刪除的 procedure
+
+**BOM 物料清單（第二步，待完成）**
+- 目前狀態：os_menu_items 存放菜單成本快照（手動維護）
+- 待完成：建立 os_bom 表，記錄每道菜使用的食材和用量
+  - os_bom: id, tenantId, menuItemId, productId, productName, qty, unit
+  - 完成後：修改任何 os_products.unitCost，自動觸發關聯菜單的成本重算
+  - 影響範圍：os_menu_items.cost, os_profit_loss 的食材成本欄位
+  - 開工條件：採購叫貨資料穩定、os_products 成本資料準確後再做
 
 ---
 
