@@ -308,6 +308,7 @@ async function startServer() {
       if (secret !== process.env.SYNC_SECRET) {
         return res.status(401).json({ success: false, error: "Unauthorized" });
       }
+      console.log("[Procurement Import] req.body:", JSON.stringify(req.body));
 
       if (!orderDate || !itemsCsv || typeof itemsCsv !== 'string') {
         return res.status(400).json({ success: false, error: "Missing required fields" });
