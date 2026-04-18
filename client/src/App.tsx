@@ -86,6 +86,7 @@ import OSProfitLoss from "./pages/dashboard/OSProfitLoss";
 import OSFranchiseePayments from "./pages/dashboard/OSFranchiseePayments";
 import OSCaMenu from "./pages/dashboard/OSCaMenu";
 import OSDelivery from "@/pages/dashboard/OSDelivery";
+import OSAccounting from "./pages/dashboard/OSAccounting";
 import ComingSoon from "./pages/dashboard/ComingSoon";
 
 // Landing Page
@@ -248,7 +249,7 @@ function Router() {
       <Route path="/dashboard/profit-loss" component={OSProfitLoss} />
       <Route path="/dashboard/franchisee-payments" component={OSFranchiseePayments} />
       <Route path="/dashboard/ca-menu" component={OSCaMenu} />
-      <Route path="/dashboard/accounting" component={ComingSoon} />
+      <Route path="/dashboard/accounting" component={OSAccounting} />
       {/* DaYong ERP Routes */}
       <Route path="/dayone/login" component={DayoneLogin} />
       <Route path="/dayone" component={DayoneDashboard} />

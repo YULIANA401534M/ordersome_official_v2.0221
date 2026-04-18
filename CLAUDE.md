@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md
 
-> **版本**：v5.45。**最後更新**：2026-04-19。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.46。**最後更新**：2026-04-19。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -18,7 +18,7 @@ git status && git log --oneline -3
 
 ## 當前開發狀態（換對話框必讀）
 
-> 最後更新：2026-04-18 v5.44。**新大腦進來請從這裡開始讀，不要跳過。**
+> 最後更新：2026-04-19 v5.46。**新大腦進來請從這裡開始讀，不要跳過。**
 
 ### ⚠️ 開發守則（每次換對話框都要遵守）
 
@@ -64,10 +64,10 @@ git status && git log --oneline -3
 ### 待完成功能清單（依優先順序）
 
 **P1 本週：**
-- [ ] 叫貨管理新增匯入 Excel（支援大麥格式，防重複，驗證報告）
+- [x] 叫貨管理新增匯入大麥 Excel ✅
+- [x] 撿貨單列印 ✅
+- [x] 帳務管理基礎建置 ✅
 - [ ] 3/31 盤點資料匯入庫存（4/19 取得資料後執行）
-- [ ] 撿貨單列印（B類，/dashboard/purchasing，可選日期範圍）
-- [ ] 帳務管理基礎建置（/dashboard/accounting，目前空殼）
 
 **P2 之後：**
 - [ ] 全系統 RWD 審查（所有頁面手機版）
@@ -112,12 +112,12 @@ git status && git log --oneline -3
 
 ---
 
-### 最新 Git 狀態（2026-04-19 v5.45）
+### 最新 Git 狀態（2026-04-19 v5.46）
 
 最後三個 commit（已 push）：
-1. （本次）feat: 帳務系統 DB + 後端 v5.45
-2. `a47562e` — docs: CLAUDE.md v5.43 — 系統架構/歷史資料/帳務/權限設計決策 + rename-os-products.mjs
-3. `a908cd8` — feat: os_products 兩層分類欄位 + os_product_categories 表 + os_suppliers sortOrder + CLAUDE.md v5.42
+1. （本次）feat: 前端四頁面 v5.46 — 撿貨單列印 + 大麥匯入 + 帳務管理 + 側邊欄 badge
+2. `54a039f` — feat: 帳務系統 DB + 後端 v5.45
+3. `a47562e` — docs: CLAUDE.md v5.43
 
 working tree: clean
 
@@ -258,7 +258,7 @@ working tree: clean
 
 ---
 
-### 已完成模組一覽（截至 2026-04-18 v5.38）
+### 已完成模組一覽（截至 2026-04-19 v5.46）
 
 | 路由 | 元件 | 狀態 | 說明 |
 |------|------|------|------|
@@ -268,7 +268,8 @@ working tree: clean
 | `/dashboard/scheduling` | `OSScheduling.tsx` | ✅ 完成 | 早/晚/機動三 Tab + 假日標示 + 月統計 + Excel 匯出 |
 | `/dashboard/delivery` | `OSDelivery.tsx` | ✅ 完成（有 TS 錯誤待修） | 派車單 + 狀態推進 + 簽收自動產生應收 |
 | `/dashboard/franchisees` | `OSCustomers.tsx` | ✅ 完成 | 加盟主列表 + 功能開關 + 採購存取 + 新增帳號 |
-| `/dashboard/purchasing` | `OSPurchasing.tsx` | ✅ 完成 | KPI 卡片 + 叫貨單列表 + 詳情展開 + 新增 Dialog + LINE 推播 + 廠商 LINE 設定 + Excel 匯出 |
+| `/dashboard/purchasing` | `OSPurchasing.tsx` | ✅ 更新 | KPI 卡片 + 叫貨單列表 + 詳情展開 + 新增 Dialog + LINE 推播 + 廠商 LINE 設定 + Excel 匯出 + 撿貨單列印（A4）+ 大麥 Excel 匯入 |
+| `/dashboard/accounting` | `OSAccounting.tsx` | ✅ 完成 | 四 Tab（應付/銀行對帳/退佣/提貨調貨）+ KPI 卡片 + 匯入匯出 |
 | `os_inventory` + `os_inventory_logs` | — | ✅ 完成 | 庫存管理兩張表（B類廠商用）|
 | `os_audit_logs` | — | ✅ 完成 | 稽核日誌表（永久不可刪）|
 | `os_suppliers.deliveryType` | — | ✅ 完成 | B 類廠商由 DB 控制，現有 5 筆 yulian |

@@ -671,7 +671,7 @@ export const procurementRouter = router({
       const todayStr = new Date().toISOString().slice(0, 10);
       const cutoff = new Date('2026-04-01');
 
-      for (const [orderNo, items] of grouped) {
+      for (const [orderNo, items] of Array.from(grouped)) {
         const [existing] = await (db as any).$client.execute(
           'SELECT id FROM os_procurement_orders WHERE tenantId=? AND orderNo=? LIMIT 1',
           [tenantId, orderNo]
@@ -749,5 +749,21 @@ export const procurementRouter = router({
         created, skipped, flagged,
         message: `建立 ${created} 張叫貨單，略過 ${skipped} 張（重複），${flagged} 筆品名待確認`,
       };
+    }),
+
+  listNeedsReview: adminProcedure
+    .query(async ({ ctx }) => {
+      const db = await getDb();
+      if (!db) return [];
+      const [rows] = await (db as any).$client.execute(
+        `SELECT pi.id, pi.productName, pi.supplierName, po.orderNo, po.orderDate
+         FROM os_procurement_items pi
+         JOIN os_procurement_orders po ON po.id = pi.procurementOrderId
+         WHERE po.tenantId=? AND pi.needsReview=1
+         ORDER BY po.orderDate DESC
+         LIMIT 100`,
+        [ctx.tenantId ?? 1]
+      );
+      return rows as any[];
     }),
 });

@@ -389,4 +389,76 @@ export const accountingRouter = router({
       );
       return rows as any[];
     }),
+
+  listBankTransactions: adminProcedure
+    .input(z.object({
+      month: z.string(),
+      importBatch: z.string().optional(),
+    }))
+    .query(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) return [];
+      let sql = `SELECT * FROM os_bank_transactions WHERE tenantId=? AND transactionDate LIKE ?`;
+      const params: any[] = [ctx.tenantId ?? 1, `${input.month}%`];
+      if (input.importBatch) { sql += ` AND importBatch=?`; params.push(input.importBatch); }
+      sql += ` ORDER BY transactionDate, id`;
+      const [rows] = await (db as any).$client.execute(sql, params);
+      return rows as any[];
+    }),
+
+  listRebates: adminProcedure
+    .input(z.object({
+      month: z.string().optional(),
+      supplierName: z.string().optional(),
+    }))
+    .query(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) return [];
+      let sql = `SELECT * FROM os_rebates WHERE tenantId=?`;
+      const params: any[] = [ctx.tenantId ?? 1];
+      if (input.month) { sql += ` AND month=?`; params.push(input.month); }
+      if (input.supplierName) { sql += ` AND supplierName=?`; params.push(input.supplierName); }
+      sql += ` ORDER BY month DESC, supplierName`;
+      const [rows] = await (db as any).$client.execute(sql, params);
+      return rows as any[];
+    }),
+
+  updateRebate: adminProcedure
+    .input(z.object({
+      id: z.number(),
+      rebateAmount: z.number().optional(),
+      bankRef: z.string().optional(),
+      status: z.enum(['pending', 'received', 'offset']).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new Error('DB unavailable');
+      const tenantId = ctx.tenantId ?? 1;
+      const setClauses: string[] = ['updatedAt=NOW()'];
+      const params: any[] = [];
+      if (input.rebateAmount !== undefined) {
+        setClauses.push('rebateAmount=?');
+        params.push(input.rebateAmount);
+      }
+      if (input.bankRef !== undefined) { setClauses.push('bankRef=?'); params.push(input.bankRef); }
+      if (input.status !== undefined) { setClauses.push('status=?'); params.push(input.status); }
+      params.push(input.id, tenantId);
+      await (db as any).$client.execute(
+        `UPDATE os_rebates SET ${setClauses.join(', ')} WHERE id=? AND tenantId=?`,
+        params
+      );
+      return { ok: true };
+    }),
+
+  voidTransfer: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new Error('DB unavailable');
+      await (db as any).$client.execute(
+        `UPDATE os_transfers SET status='void', updatedAt=NOW() WHERE id=? AND tenantId=? AND status='pending'`,
+        [input.id, ctx.tenantId ?? 1]
+      );
+      return { ok: true };
+    }),
 });

@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import {
   ChevronLeft, ChevronRight, Plus, ChevronDown, ChevronUp,
-  ShoppingCart, Send, CheckCircle, XCircle, Trash2, Upload, Pencil
+  ShoppingCart, Send, CheckCircle, XCircle, Trash2, Upload, Pencil, Printer
 } from "lucide-react";
 import * as XLSX from "xlsx";
 
@@ -127,6 +127,17 @@ export default function OSPurchasing() {
   // 新增品項 dialog
   const [addItemOrderId, setAddItemOrderId] = useState<number | null>(null);
   const [addItemField, setAddItemField] = useState({ productName: "", quantity: 1, unit: "箱", temperature: "常溫" as "常溫"|"冷藏"|"冷凍" });
+
+  // 撿貨單列印 dialog
+  const [showPickPrint, setShowPickPrint] = useState(false);
+  const [pickStartDate, setPickStartDate] = useState(getMonday(now));
+  const [pickEndDate, setPickEndDate] = useState(now.toISOString().slice(0, 10));
+  const [pickOnlyUnprinted, setPickOnlyUnprinted] = useState(true);
+
+  // 大麥 Excel 匯入 dialog
+  const [showDamaiImport, setShowDamaiImport] = useState(false);
+  const [damaiPreview, setDamaiPreview] = useState<any[]>([]);
+  const [damaiImportResult, setDamaiImportResult] = useState<{ created: number; skipped: number; flagged: number } | null>(null);
 
   // 主列表查詢使用 filterStartDate/filterEndDate + 狀態/店別/廠商
   const { data: orders = [], refetch } = trpc.procurement.list.useQuery({
@@ -267,6 +278,24 @@ export default function OSPurchasing() {
     onError: (e) => toast.error(e.message),
   });
 
+  const { data: pickListData = [] } = trpc.procurement.getPickList.useQuery(
+    { startDate: pickStartDate, endDate: pickEndDate },
+    { enabled: showPickPrint }
+  );
+
+  const markPrinted = trpc.procurement.markPrinted.useMutation({
+    onSuccess: () => { toast.success("已標記列印"); refetch(); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const importFromDamaiExcel = trpc.procurement.importFromDamaiExcel.useMutation({
+    onSuccess: (data: any) => {
+      setDamaiImportResult({ created: data.created, skipped: data.skipped, flagged: data.flagged });
+      refetch();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
   const prevMonth = () => {
     if (month === 1) { setYear(y => y - 1); setMonth(12); }
     else setMonth(m => m - 1);
@@ -362,6 +391,143 @@ export default function OSPurchasing() {
     XLSX.writeFile(wb, `叫貨管理_${year}${String(month).padStart(2, "0")}.xlsx`);
   }
 
+  function parseDamaiExcel(file: File) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const data = new Uint8Array(e.target!.result as ArrayBuffer);
+      const wb = XLSX.read(data, { type: "array", cellDates: true });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
+      const dataRows = rows.slice(1).filter((r) => r[0]);
+      const parsed = dataRows.map((r) => ({
+        orderNo: String(r[0] || ""),
+        supplierName: String(r[2] || ""),
+        storeName: String(r[3] || "").replace("來點什麼-", ""),
+        productName: String(r[11] || ""),
+        unit: String(r[15] || ""),
+        quantity: Number(r[16] || 0),
+        unitPrice: Number(r[17] || 0),
+        temperature: String(r[22] || "常溫"),
+        orderDate:
+          r[23] instanceof Date
+            ? r[23].toISOString().slice(0, 10)
+            : String(r[23] || "").slice(0, 10),
+      }));
+      setDamaiPreview(parsed);
+      setDamaiImportResult(null);
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function generatePickPrint() {
+    const rows = pickListData as any[];
+    const filtered = pickOnlyUnprinted ? rows.filter((r) => !r.printedAt) : rows;
+    const orderIds = Array.from(new Set(filtered.map((r: any) => r.orderId))) as number[];
+
+    try {
+      markPrinted.mutate({ orderIds });
+    } catch (_) {}
+
+    const timestamp = new Date().toLocaleString("zh-TW", { hour12: false });
+
+    // 按廠商分組，宇聯和宇聯_配合排最前
+    const groupedBySupplier = new Map<string, { storeName: string; items: any[] }[]>();
+    for (const row of filtered) {
+      if (!groupedBySupplier.has(row.supplierName)) groupedBySupplier.set(row.supplierName, []);
+      const supplierRows = groupedBySupplier.get(row.supplierName)!;
+      let storeGroup = supplierRows.find((g) => g.storeName === row.storeName);
+      if (!storeGroup) { storeGroup = { storeName: row.storeName, items: [] }; supplierRows.push(storeGroup); }
+      storeGroup.items.push(row);
+    }
+
+    const SUPPLIER_ORDER = ["宇聯", "宇聯_配合"];
+    const allSupplierKeys = Array.from(groupedBySupplier.keys());
+    const supplierKeys = [
+      ...SUPPLIER_ORDER.filter((k) => groupedBySupplier.has(k)),
+      ...allSupplierKeys.filter((k) => !SUPPLIER_ORDER.includes(k)),
+    ];
+
+    const sectionHtml = supplierKeys.map((supplierName) => {
+      const storeGroups = groupedBySupplier.get(supplierName)!;
+      const storesHtml = storeGroups.map((sg) => {
+        const rowsHtml = sg.items
+          .map(
+            (item) =>
+              `<tr><td>${item.productName}</td><td class="qty-col">${item.quantity}</td><td>${item.unit}</td><td>${item.temperature}</td><td></td></tr>`
+          )
+          .join("");
+        return `<div class="store-title">▸ ${sg.storeName}</div>
+          <table><thead><tr><th>品項名稱</th><th>數量</th><th>單位</th><th>溫層</th><th>備註</th></tr></thead><tbody>${rowsHtml}</tbody></table>`;
+      }).join("");
+      return `<div class="section-title">▶ ${supplierName}</div>${storesHtml}
+        <div class="sign-row">
+          <div>經手人：<span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></div>
+          <div>確認日期：<span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></div>
+          <div>主管簽核：<span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></div>
+        </div>`;
+    }).join("<div class='page-break'></div>");
+
+    const stores = Array.from(new Set(filtered.map((r: any) => r.storeName))).join("、") || "無";
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>撿貨單 - 來點什麼</title>
+  <style>
+    @page { size: A4; margin: 15mm; }
+    @media print {
+      body { -webkit-print-color-adjust: exact; }
+      .no-print { display: none; }
+      .page-break { page-break-before: always; }
+    }
+    body { font-family: 'Microsoft JhengHei', sans-serif; font-size: 12px; color: #333; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 15px; }
+    .brand-left .company { font-size: 18px; font-weight: bold; color: #FF6B35; }
+    .brand-left .sub { font-size: 12px; color: #666; margin-top: 2px; }
+    .brand-right { text-align: right; }
+    .brand-right .title { font-size: 22px; font-weight: bold; }
+    .brand-right .date-range { font-size: 12px; color: #666; margin-top: 4px; }
+    .section-title { background: #FF6B35; color: white; padding: 6px 12px; font-size: 14px; font-weight: bold; margin: 15px 0 8px; border-radius: 4px; }
+    .store-title { font-weight: bold; font-size: 13px; padding: 4px 0; border-bottom: 1px dashed #ccc; margin: 8px 0 4px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+    th { background: #f5f5f5; padding: 5px 8px; text-align: left; font-size: 11px; border: 1px solid #ddd; }
+    td { padding: 5px 8px; border: 1px solid #ddd; font-size: 11px; }
+    .qty-col { text-align: center; font-weight: bold; }
+    .sign-row { display: flex; justify-content: space-between; margin-top: 10px; padding-top: 8px; border-top: 1px solid #ccc; font-size: 11px; }
+    .sign-row span { border-bottom: 1px solid #333; min-width: 120px; display: inline-block; margin-left: 8px; }
+    .footer { text-align: right; font-size: 10px; color: #999; margin-top: 20px; border-top: 1px solid #eee; padding-top: 6px; }
+    .no-print { text-align: center; padding: 20px; }
+    .print-btn { background: #FF6B35; color: white; border: none; padding: 10px 30px; font-size: 16px; border-radius: 6px; cursor: pointer; margin-right: 10px; }
+    .close-btn { background: #6c757d; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 6px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="no-print">
+    <button class="print-btn" onclick="window.print()">🖨️ 列印</button>
+    <button class="close-btn" onclick="window.close()">關閉</button>
+  </div>
+  <div class="header">
+    <div class="brand-left">
+      <div class="company">宇聯國際文化餐飲</div>
+      <div class="sub">來點什麼 OrderSome</div>
+    </div>
+    <div class="brand-right">
+      <div class="title">撿貨單</div>
+      <div class="date-range">${pickStartDate} ～ ${pickEndDate}</div>
+      <div class="date-range">列印時間：${timestamp}</div>
+    </div>
+  </div>
+  ${sectionHtml}
+  <div class="footer">門市：${stores}｜共 ${orderIds.length} 張叫貨單｜列印時間：${timestamp} | 系統自動產生，請核對後簽名</div>
+</body>
+</html>`;
+
+    const win = window.open("", "_blank");
+    if (win) { win.document.write(html); win.document.close(); }
+    setShowPickPrint(false);
+  }
+
   return (
     <AdminDashboardLayout>
       <div className="p-4 space-y-4" style={{ background: "#f7f6f3", minHeight: "100vh" }}>
@@ -447,6 +613,24 @@ export default function OSPurchasing() {
             <Button size="sm" variant="outline" onClick={exportExcel} className="h-8 text-xs">
               匯出 Excel
             </Button>
+            {canEdit && (
+              <Button
+                size="sm" variant="outline"
+                onClick={() => { setDamaiPreview([]); setDamaiImportResult(null); setShowDamaiImport(true); }}
+                className="h-8 text-xs gap-1"
+              >
+                <Upload className="w-3.5 h-3.5" /> 匯入大麥 Excel
+              </Button>
+            )}
+            {canEdit && (
+              <Button
+                size="sm" variant="outline"
+                onClick={() => { setPickStartDate(getMonday(now)); setPickEndDate(now.toISOString().slice(0, 10)); setShowPickPrint(true); }}
+                className="h-8 text-xs gap-1"
+              >
+                <Printer className="w-3.5 h-3.5" /> 列印撿貨單
+              </Button>
+            )}
             {canEdit && (
               <Button
                 size="sm" variant="outline"
@@ -1198,6 +1382,166 @@ export default function OSPurchasing() {
             >
               儲存
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ===== 撿貨單列印 Dialog ===== */}
+      <Dialog open={showPickPrint} onOpenChange={setShowPickPrint}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>列印撿貨單</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs text-gray-500">起始日期</Label>
+                <Input type="date" value={pickStartDate} onChange={e => setPickStartDate(e.target.value)} className="h-8 text-sm mt-1" />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-500">結束日期</Label>
+                <Input type="date" value={pickEndDate} onChange={e => setPickEndDate(e.target.value)} className="h-8 text-sm mt-1" />
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="onlyUnprinted"
+                checked={pickOnlyUnprinted}
+                onCheckedChange={v => setPickOnlyUnprinted(!!v)}
+              />
+              <Label htmlFor="onlyUnprinted" className="text-sm cursor-pointer">只印未列印過的單</Label>
+            </div>
+            {/* 預覽摘要 */}
+            {(pickListData as any[]).length > 0 ? (() => {
+              const rows = pickListData as any[];
+              const filtered = pickOnlyUnprinted ? rows.filter((r) => !r.printedAt) : rows;
+              const orderIds = Array.from(new Set(filtered.map((r: any) => r.orderId)));
+              const storeSet = Array.from(new Set(filtered.map((r: any) => r.storeName)));
+              const printedCount = Array.from(new Set(rows.filter((r: any) => r.printedAt).map((r: any) => r.orderId))).length;
+              const lastPrinted = rows.filter((r: any) => r.printedAt).sort((a: any, b: any) => b.printedAt > a.printedAt ? 1 : -1)[0];
+              return (
+                <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
+                  <p className="text-gray-700">找到 <strong>{orderIds.length}</strong> 張叫貨單，共 <strong>{filtered.length}</strong> 項品項</p>
+                  <p className="text-gray-500 text-xs">門市：{storeSet.join("、") || "無"}</p>
+                  {printedCount > 0 && lastPrinted && (
+                    <p className="text-orange-600 text-xs">⚠ 其中 {printedCount} 張已於 {String(lastPrinted.printedAt).slice(0, 10)} 列印過</p>
+                  )}
+                  {filtered.length === 0 && (
+                    <p className="text-gray-400 text-xs">（所有單已列印過，若要重印請取消勾選「只印未列印過的單」）</p>
+                  )}
+                </div>
+              );
+            })() : (
+              <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-400 text-center">
+                {showPickPrint ? "查詢中或此日期範圍無撿貨單（僅限 sent/confirmed 狀態的 B 類廠商叫貨單）" : ""}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPickPrint(false)}>取消</Button>
+            <Button
+              onClick={generatePickPrint}
+              disabled={(() => {
+                const rows = pickListData as any[];
+                const filtered = pickOnlyUnprinted ? rows.filter((r) => !r.printedAt) : rows;
+                return filtered.length === 0;
+              })()}
+              style={{ background: "#b45309" }}
+            >
+              <Printer className="w-4 h-4 mr-1" /> 產生並列印
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ===== 大麥 Excel 匯入 Dialog ===== */}
+      <Dialog open={showDamaiImport} onOpenChange={(open) => { if (!open) { setShowDamaiImport(false); setDamaiPreview([]); setDamaiImportResult(null); } }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>匯入大麥採購 Excel</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-2">
+            {/* 步驟一：選擇檔案 */}
+            <div>
+              <Label className="text-xs text-gray-500 mb-1 block">步驟一：選擇大麥 Excel 檔案</Label>
+              <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-orange-400 hover:bg-orange-50 transition-colors">
+                <Upload className="w-6 h-6 text-gray-400 mb-1" />
+                <span className="text-sm text-gray-500">點擊選擇或拖拉 .xlsx / .xls 檔案</span>
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  className="hidden"
+                  onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (file) parseDamaiExcel(file);
+                  }}
+                />
+              </label>
+            </div>
+
+            {/* 步驟二：預覽 */}
+            {damaiPreview.length > 0 && !damaiImportResult && (
+              <div className="space-y-2">
+                <Label className="text-xs text-gray-500">步驟二：確認預覽</Label>
+                <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
+                  {(() => {
+                    const orderNos = Array.from(new Set(damaiPreview.map(r => r.orderNo)));
+                    const dates = damaiPreview.map(r => r.orderDate).filter(Boolean).sort();
+                    const supplierMap = new Map<string, number>();
+                    damaiPreview.forEach(r => supplierMap.set(r.supplierName, (supplierMap.get(r.supplierName) ?? 0) + 1));
+                    const suppliers = Array.from(supplierMap.entries());
+                    const today = now.toISOString().slice(0, 10);
+                    const historicalCount = orderNos.filter(no => {
+                      const item = damaiPreview.find(r => r.orderNo === no);
+                      return item && item.orderDate < today;
+                    }).length;
+                    const yulianCount = damaiPreview.filter(r => r.supplierName === '宇聯_配合' && r.orderDate >= '2026-04-01').length;
+                    return (
+                      <>
+                        <p className="text-gray-700">已解析：<strong>{orderNos.length}</strong> 張訂單，<strong>{damaiPreview.length}</strong> 筆品項</p>
+                        <p className="text-gray-500 text-xs">日期範圍：{dates[0]} ～ {dates[dates.length - 1]}</p>
+                        <p className="text-gray-500 text-xs">廠商：{suppliers.map(([s, n]) => `${s}（${n}筆）`).join("、")}</p>
+                        {historicalCount > 0 && (
+                          <p className="text-orange-600 text-xs">⚠ 注意：{historicalCount} 張歷史訂單（早於今天）將直接標記為「已收貨」</p>
+                        )}
+                        {yulianCount > 0 && (
+                          <p className="text-orange-600 text-xs">⚠ 注意：B類廠商 4/1 後 {yulianCount} 筆品項將觸發庫存入庫</p>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
+
+            {/* 步驟三：匯入結果 */}
+            {damaiImportResult && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm space-y-1">
+                <p className="font-medium text-green-700">✅ 匯入完成</p>
+                <p className="text-gray-600">建立叫貨單：<strong>{damaiImportResult.created}</strong> 張</p>
+                <p className="text-gray-600">略過（重複）：<strong>{damaiImportResult.skipped}</strong> 張</p>
+                {damaiImportResult.flagged > 0 && (
+                  <p className="text-orange-600">⚠ 品名待確認：<strong>{damaiImportResult.flagged}</strong> 筆（已用橘色標示，請至叫貨管理確認）</p>
+                )}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowDamaiImport(false); setDamaiPreview([]); setDamaiImportResult(null); }}>
+              {damaiImportResult ? "關閉" : "取消"}
+            </Button>
+            {!damaiImportResult && (
+              <Button
+                onClick={() => {
+                  if (damaiPreview.length === 0) { toast.error("請先選擇 Excel 檔案"); return; }
+                  try {
+                    importFromDamaiExcel.mutate({ rows: damaiPreview });
+                  } catch (e: any) {
+                    toast.error(e.message);
+                  }
+                }}
+                disabled={damaiPreview.length === 0 || importFromDamaiExcel.isPending}
+                style={{ background: "#b45309" }}
+              >
+                {importFromDamaiExcel.isPending ? "匯入中..." : "確認匯入"}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

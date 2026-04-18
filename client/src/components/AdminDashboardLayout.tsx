@@ -63,17 +63,26 @@ function SortableErpItem({
   item,
   menuItemClass,
   inventoryAlertCount,
+  needsReviewCount,
+  accountingBadge,
   setMobileOpen,
 }: {
   id: string;
   item: { icon: React.ComponentType<{ className?: string }>; label: string; path?: string };
   menuItemClass: (path: string) => string;
   inventoryAlertCount: number;
+  needsReviewCount: number;
+  accountingBadge: number;
   setMobileOpen: (v: boolean) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
-  const badge = item.path === "/dashboard/inventory" && inventoryAlertCount > 0 ? inventoryAlertCount : 0;
+  const badge =
+    item.path === "/dashboard/inventory" && inventoryAlertCount > 0 ? inventoryAlertCount :
+    item.path === "/dashboard/purchasing" && needsReviewCount > 0 ? needsReviewCount :
+    item.path === "/dashboard/accounting" && accountingBadge > 0 ? accountingBadge :
+    0;
+  const badgeColor = item.path === "/dashboard/accounting" ? "bg-red-500" : item.path === "/dashboard/purchasing" ? "bg-orange-500" : "bg-red-500";
 
   return (
     <div ref={setNodeRef} style={style} className="flex items-center mx-2 rounded-lg cursor-default select-none">
@@ -84,7 +93,7 @@ function SortableErpItem({
         <item.icon className="h-4 w-4 shrink-0" />
         <span className="flex-1">{item.label}</span>
         {badge > 0 && (
-          <span className="min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+          <span className={`min-w-[20px] h-5 px-1.5 ${badgeColor} text-white text-[10px] font-bold rounded-full flex items-center justify-center`}>
             {badge}
           </span>
         )}
@@ -176,6 +185,23 @@ export default function AdminDashboardLayout({
     { enabled: !!user && isOSTenant, refetchInterval: 60000 }
   );
 
+  const { data: needsReviewItems = [] } = trpc.procurement.listNeedsReview.useQuery(
+    undefined,
+    { enabled: !!user && isOSTenant, refetchInterval: 120000 }
+  );
+  const needsReviewCount = (needsReviewItems as any[]).length;
+
+  const nowMonth = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; })();
+  const { data: pendingPayables = [] } = trpc.accounting.listPayables.useQuery(
+    { month: nowMonth, status: "pending" },
+    { enabled: !!user && isOSTenant, refetchInterval: 120000 }
+  );
+  const { data: partialPayables = [] } = trpc.accounting.listPayables.useQuery(
+    { month: nowMonth, status: "partial" },
+    { enabled: !!user && isOSTenant, refetchInterval: 120000 }
+  );
+  const accountingBadge = (pendingPayables as any[]).length + (partialPayables as any[]).length;
+
   const { data: sidebarOrderData } = trpc.admin.getSidebarOrder.useQuery(
     undefined,
     { enabled: !!user && isSuperAdmin }
@@ -206,13 +232,11 @@ export default function AdminDashboardLayout({
         { key: "purchasing_os", icon: ShoppingCart, label: "叫貨管理",  path: "/dashboard/purchasing", costOnly: false },
         { key: "rebate_os",     icon: CreditCard,   label: "退佣帳款",  path: "/dashboard/rebate",      costOnly: true  },
         { key: "profit_loss",   icon: TrendingUp,   label: "損益儀表板", path: "/dashboard/profit-loss", costOnly: true  },
-        { key: "accounting",    icon: Receipt,      label: "帳務管理",  path: "/dashboard/accounting",  costOnly: false, superAdminOnly: true },
+        { key: "accounting",    icon: Receipt,      label: "帳務管理",  path: "/dashboard/accounting",  costOnly: false },
       ];
       for (const def of osModuleDefs) {
         // costOnly 項目：只有 canSeeCostModules 才顯示
         if (def.costOnly && !canSeeCostModules) continue;
-        // superAdminOnly 項目：只有 isSuperAdmin 才顯示
-        if ((def as any).superAdminOnly && !isSuperAdmin) continue;
         const isEnabled = isSuperAdmin || (orderSomeModules?.some((m: any) => m.moduleKey === def.key && !!m.isEnabled) ?? false);
         if (isEnabled) {
           enabled.push({ icon: def.icon, label: def.label, path: def.path });
@@ -577,7 +601,7 @@ export default function AdminDashboardLayout({
                       {erpOrder.map(key => {
                         const item = osErpEnabled.find(i => (i.path ?? i.label) === key);
                         if (!item) return null;
-                        return <SortableErpItem key={key} id={key} item={item} menuItemClass={menuItemClass} inventoryAlertCount={inventoryAlertCount as number} setMobileOpen={setMobileOpen} />;
+                        return <SortableErpItem key={key} id={key} item={item} menuItemClass={menuItemClass} inventoryAlertCount={inventoryAlertCount as number} needsReviewCount={needsReviewCount} accountingBadge={accountingBadge} setMobileOpen={setMobileOpen} />;
                       })}
                     </SortableContext>
                   </DndContext>
@@ -585,16 +609,19 @@ export default function AdminDashboardLayout({
                   erpOrder.map(key => {
                     const item = osErpEnabled.find(i => (i.path ?? i.label) === key);
                     if (!item) return null;
-                    const badge = item.path === "/dashboard/inventory" && (inventoryAlertCount as number) > 0
-                      ? (inventoryAlertCount as number)
-                      : 0;
+                    const badge =
+                      item.path === "/dashboard/inventory" && (inventoryAlertCount as number) > 0 ? (inventoryAlertCount as number) :
+                      item.path === "/dashboard/purchasing" && needsReviewCount > 0 ? needsReviewCount :
+                      item.path === "/dashboard/accounting" && accountingBadge > 0 ? accountingBadge :
+                      0;
+                    const badgeColor = item.path === "/dashboard/purchasing" ? "bg-orange-500" : "bg-red-500";
                     return (
                       <Link key={item.path} href={item.path!}>
                         <a className={menuItemClass(item.path!)} onClick={() => setMobileOpen(false)}>
                           <item.icon className="h-4 w-4 shrink-0" />
                           <span className="flex-1">{item.label}</span>
                           {badge > 0 && (
-                            <span className="ml-auto min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                            <span className={`ml-auto min-w-[20px] h-5 px-1.5 ${badgeColor} text-white text-[10px] font-bold rounded-full flex items-center justify-center`}>
                               {badge}
                             </span>
                           )}
