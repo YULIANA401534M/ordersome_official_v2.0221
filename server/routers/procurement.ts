@@ -206,12 +206,13 @@ export const procurementRouter = router({
       }
       if (input.status === 'received') {
         try {
-          const [orderRows] = await (db as any).$client.execute(
-            'SELECT supplierName FROM os_procurement_orders WHERE id=? AND tenantId=?',
-            [input.orderId, ctx.tenantId]
+          // os_procurement_orders has no supplierName column; get it from items
+          const [itemSupRows] = await (db as any).$client.execute(
+            'SELECT DISTINCT supplierName FROM os_procurement_items WHERE procurementOrderId=? LIMIT 1',
+            [input.orderId]
           );
-          const supplierName = (orderRows as any[])[0]?.supplierName;
-          if (!supplierName) throw new Error('找不到叫貨單');
+          const supplierName = (itemSupRows as any[])[0]?.supplierName;
+          if (!supplierName) throw new Error('找不到叫貨單品項');
           const [supRows] = await (db as any).$client.execute(
             'SELECT deliveryType FROM os_suppliers WHERE name=? AND isActive=1 LIMIT 1',
             [supplierName]

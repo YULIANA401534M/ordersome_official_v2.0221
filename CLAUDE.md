@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md
 
-> **版本**：v5.37。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.38。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -18,7 +18,7 @@ git status && git log --oneline -3
 
 ## 當前開發狀態（換對話框必讀）
 
-> 最後更新：2026-04-18 v5.24。**新大腦進來請從這裡開始讀，不要跳過。**
+> 最後更新：2026-04-18 v5.38。**新大腦進來請從這裡開始讀，不要跳過。**
 
 ### ⚠️ 開發守則（每次換對話框都要遵守）
 
@@ -50,6 +50,7 @@ git status && git log --oneline -3
 - 應收帳款 → 損益儀表板（`arIncome` 欄位）
 - 退佣 → 損益儀表板（`rebateIncome` 欄位）
 - 加盟主管理頁 → 點「查看帳款往來」跳轉到帳款頁（帶 userId 篩選）
+- **叫貨單（received）→ 查 `os_suppliers.deliveryType='yulian'`（用 os_procurement_items 的 supplierName 查）→ 寫 `os_inventory`（changeType='in'）+ `os_inventory_logs`**
 
 **宇聯總部 storeId = 401534**（機動人員排班用，不要改這個數字）
 
@@ -60,14 +61,19 @@ git status && git log --oneline -3
 
 ---
 
-### 最新 Git 狀態（2026-04-18 v5.37）
+### 最新 Git 狀態（2026-04-18 v5.38）
 
 最後三個 commit（已 push）：
-1. `（本次 commit）` — feat: deliveryType DB欄位 + 移除YULIAN_SUPPLIERS硬編碼 + B類叫貨收貨自動入庫
-2. `（前次 commit）` — feat: 稽核日誌系統 + 刪除/作廢權限分離
-3. `8eb8977` — feat: 庫存管理系統 v1（os_inventory + OSInventory.tsx）
+1. `（本次 commit）` — fix: B類入庫supplierName查錯表 + 作廢原因必填 + 新增四筆B類廠商 + CLAUDE.md v5.38
+2. `64df474` — feat: deliveryType DB欄位 + 移除YULIAN_SUPPLIERS硬編碼 + B類叫貨收貨自動入庫
+3. `5eca38c` — feat: 稽核日誌系統 + 刪除/作廢權限分離
 
 working tree: clean
+
+**v5.38 完成項目（全專案 debug + B 類廠商補齊）：**
+- DB：`os_suppliers` 新增四筆 B 類廠商（宇聯/立墩/三柳/凱蒂），deliveryType='yulian'（宇聯_配合已存在，共 5 筆 yulian）
+- **Bug 修正一（嚴重）**：`procurement.ts` `updateStatus` received 邏輯錯誤 — 舊版查 `SELECT supplierName FROM os_procurement_orders`，但此欄位不存在於 `os_procurement_orders` 表。改為查 `SELECT DISTINCT supplierName FROM os_procurement_items WHERE procurementOrderId=?`，B 類自動入庫才能實際執行。
+- **Bug 修正二（業務規則）**：`OSPurchasing.tsx` 作廢 Dialog — 原為「作廢原因（選填）」且按鈕無 disabled 保護；改為「必填」並加 `disabled={!cancelReason.trim()}`，與稽核日誌規範一致。
 
 **v5.37 完成項目（deliveryType + 移除硬編碼 + 自動入庫）：**
 - DB：`os_suppliers` 加 `deliveryType ENUM('direct','yulian','other') DEFAULT 'direct'`
@@ -166,7 +172,7 @@ working tree: clean
 
 ---
 
-### 已完成模組一覽（截至 2026-04-18）
+### 已完成模組一覽（截至 2026-04-18 v5.38）
 
 | 路由 | 元件 | 狀態 | 說明 |
 |------|------|------|------|
@@ -177,6 +183,10 @@ working tree: clean
 | `/dashboard/delivery` | `OSDelivery.tsx` | ✅ 完成（有 TS 錯誤待修） | 派車單 + 狀態推進 + 簽收自動產生應收 |
 | `/dashboard/franchisees` | `OSCustomers.tsx` | ✅ 完成 | 加盟主列表 + 功能開關 + 採購存取 + 新增帳號 |
 | `/dashboard/purchasing` | `OSPurchasing.tsx` | ✅ 完成 | KPI 卡片 + 叫貨單列表 + 詳情展開 + 新增 Dialog + LINE 推播 + 廠商 LINE 設定 + Excel 匯出 |
+| `os_inventory` + `os_inventory_logs` | — | ✅ 完成 | 庫存管理兩張表（B類廠商用）|
+| `os_audit_logs` | — | ✅ 完成 | 稽核日誌表（永久不可刪）|
+| `os_suppliers.deliveryType` | — | ✅ 完成 | B 類廠商由 DB 控制，現有 5 筆 yulian |
+| `/dashboard/inventory` | `OSInventory.tsx` | ✅ 完成 | 庫存管理頁 |
 | `/dashboard/daily-report` | `OSDailyReport.tsx` | ✅ 完成 | 門市日報 |
 | `/dashboard/products` | `OSProducts.tsx` | ✅ 完成 | 品項成本 |
 | `/dashboard/rebate` | `OSRebate.tsx` | ✅ 完成 | 退佣帳款 |
@@ -187,21 +197,6 @@ working tree: clean
 ### 🔴 下一階段開發計畫（按優先順序）
 
 #### ✅ 階段一：Debug — 已完成（2026-04-18）
-修復了以下錯誤（非 TS7006 implicit any 的所有錯誤已清零，含 AdminPermissions TS7031）：
-- `scheduling.ts` / `delivery.ts`：`db.execute(sql, params)` → `(db as any).$client.execute(sql, params)`
-- `OSFranchiseePayments.tsx`：`isLoading` → `isPending`、`keepPreviousData` → `placeholderData`
-- `OSProfitLoss.tsx`：`keepPreviousData` → `placeholderData`
-- `OSDelivery.tsx`：`detail.items` → `detail?.items ?? []`
-- `AdminDashboardLayout.tsx`：`listDispatchOrders` → `listDispatch`，補 `tenantId: 90004`
-- `DayoneDashboard.tsx`：補 `tenantId: 90004`、`date` → `reportDate`
-- `DayoneInventoryContent.tsx`：`safetyEdit` null → non-null assertion `!`
-- `DriverOrders.tsx`：`dispatchItemId` → `itemId`，補正確欄位
-- `DriverSign.tsx`：`base64/refId/refType/signerName` → `orderId/tenantId/imageBase64`
-- `AdminOrders.tsx`：Set iteration 型別問題
-- `BrandMenu.tsx`：`items` → `(items as any[])`
-- `SOPKnowledgeBase.tsx`：`d` → `(d: any)`
-- `server/db.ts`：`_db` 型別 → `any`
-
 #### ✅ 階段二：進銷存重建 — OSPurchasing.tsx（已完成，2026-04-18）
 **目標**：把 `/dashboard/purchasing` 從大永殼換成來點什麼自己的採購介面
 
@@ -232,36 +227,27 @@ working tree: clean
 
 ---
 
-### 待處理清單（P1 全部完成，現在執行上方階段計畫）
+### 待處理清單
 
-**P2 — 需要外部確認後才能做**
+**P1 — 來點什麼**
 
-1. **大永 LIFF 正式 liffId**（等蛋博用自己的 LINE 後台建立）
+1. **撿貨單列印功能**（B 類，`/dashboard/purchasing`）— 收貨後可列印每單品項清單
+2. **os_menu_items 菜單成本匯入**（CA 表各菜單分頁）— 手動填入或 ETL
+3. **BOM 物料清單（第二步）**— 開工條件：採購叫貨資料穩定、os_products 成本資料準確
+
+**P2 — 需要外部確認**
+
+4. **大永 LIFF 正式 liffId**（等蛋博用自己的 LINE 後台建立）
    建立後只需改 `client/src/pages/liff/LiffOrder.tsx` 的 `TENANT_CONFIG dayone.liffId` 一行
-
-2. **大永積欠款 LINE 推播邏輯補完**
-   cron 基礎已建（`server/_core/index.ts`），每小時整點執行
-   等蛋博確認 `dy_settings` 的 `overdue_push_enabled` / `overdue_push_hour` 設定值
-
-3. ✅ **已關閉：Portal 忘記密碼改為顯示聯繫電話**（0980-190-857）
-   email 重設密碼功能暫不實作。原因：
-   - 大永客戶 90% 用 LINE 登入，忘記密碼情境極少
-   - Railway 環境封鎖 SMTP 出口（IPv6 問題），nodemailer 無法連接 Gmail SMTP
-   - 蛋博可直接後台協助重設密碼
-   - 頁面改為直接顯示聯繫電話，點擊可撥打（commit 即將 push）
-
-**P3 — 設計討論後才能做**
-
-4. **Make 串接實測**（endpoint 已建，需在 Make 建立 HTTP module）
-5. **智慧排班 v2**（需 2-3 個月歷史資料後才有意義）
-6. **來點什麼客戶管理**（業務邏輯待確認）
+5. **大永積欠款 LINE 推播邏輯補完**
+   cron 基礎已建（`server/_core/index.ts`），每小時整點執行，等蛋博確認設定值
 
 **技術債**
 
+- `has_procurement_access` 前端型別補強（`useAuth` User 型別正式擴充）
 - 大永 / 來點什麼 ERP 的表不在 `schema.ts`，用 raw SQL
 - 本機菜單圖未遷移 R2
-- chunk size 超標（index.js 6141 kB），需 code splitting
-- `ContentEditor.tsx` / `ContentManagement.tsx`：`post.category` 和 `post.scheduledAt` 用 `as any` cast，後端型別未完整宣告（低優先級）
+- chunk size 超標（index.js 6266 kB），需 code splitting
 
 ---
 

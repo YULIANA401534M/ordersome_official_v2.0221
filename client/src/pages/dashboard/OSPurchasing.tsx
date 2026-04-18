@@ -754,20 +754,20 @@ export default function OSPurchasing() {
           </DialogHeader>
           <p className="text-sm text-gray-600 py-2">作廢後狀態改為「已取消」，記錄保留不刪除。</p>
           <div>
-            <Label className="text-sm">作廢原因（選填）</Label>
+            <Label className="text-sm">作廢原因（必填，永久保存）</Label>
             <textarea
               className="w-full border rounded-md p-2 text-sm mt-1 min-h-[80px] resize-none focus:outline-none focus:ring-1 focus:ring-amber-400"
               value={cancelReason}
               onChange={e => setCancelReason(e.target.value)}
-              placeholder="請說明作廢原因…"
+              placeholder="請說明作廢原因，此記錄將永久保存"
             />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setCancelTargetId(null); setCancelReason(""); }}>取消</Button>
             <Button
               variant="destructive"
-              onClick={() => cancelTargetId !== null && cancelOrder.mutate({ orderId: cancelTargetId, status: "cancelled", reason: cancelReason || undefined })}
-              disabled={cancelOrder.isPending}
+              onClick={() => cancelTargetId !== null && cancelOrder.mutate({ orderId: cancelTargetId, status: "cancelled", reason: cancelReason })}
+              disabled={cancelOrder.isPending || !cancelReason.trim()}
             >
               確認作廢
             </Button>
