@@ -21,7 +21,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 
-const YULIAN_SUPPLIERS = ["宇聯", "宇聯_配合", "立墩", "三柳", "凱蒂"];
 
 type InventoryItem = {
   id: number;
@@ -56,7 +55,8 @@ export default function OSInventory() {
   const [adjustNote, setAdjustNote] = useState("");
   const [safetyQtyInput, setSafetyQtyInput] = useState("");
 
-  const [newSupplier, setNewSupplier] = useState(YULIAN_SUPPLIERS[0]);
+  const { data: yulianSuppliers = [] } = trpc.inventory.listYulianSuppliers.useQuery();
+  const [newSupplier, setNewSupplier] = useState("");
   const [newProduct, setNewProduct] = useState("");
   const [newUnit, setNewUnit] = useState("包");
   const [newCategory, setNewCategory] = useState("未分類");
@@ -79,7 +79,7 @@ export default function OSInventory() {
   const lowStock = (items as InventoryItem[]).filter(i => Number(i.safetyQty) > 0 && Number(i.currentQty) > 0 && Number(i.currentQty) < Number(i.safetyQty)).length;
 
   function resetAddForm() {
-    setNewSupplier(YULIAN_SUPPLIERS[0]);
+    setNewSupplier(yulianSuppliers[0]?.name ?? "");
     setNewProduct("");
     setNewUnit("包");
     setNewCategory("未分類");
@@ -122,8 +122,8 @@ export default function OSInventory() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">全部廠商</SelectItem>
-                {YULIAN_SUPPLIERS.map(s => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                {yulianSuppliers.map(s => (
+                  <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -305,8 +305,8 @@ export default function OSInventory() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {YULIAN_SUPPLIERS.map(s => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  {yulianSuppliers.map(s => (
+                    <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

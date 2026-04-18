@@ -163,4 +163,15 @@ export const inventoryRouter = router({
       );
       return Number((rows as any[])[0].cnt);
     }),
+
+  listYulianSuppliers: adminProcedure
+    .query(async ({ ctx }) => {
+      const db = await getDb();
+      if (!db) return [];
+      const [rows] = await (db as any).$client.execute(
+        "SELECT name FROM os_suppliers WHERE deliveryType='yulian' AND isActive=1 ORDER BY name",
+        []
+      );
+      return rows as { name: string }[];
+    }),
 });

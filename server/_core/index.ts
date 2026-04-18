@@ -359,8 +359,6 @@ async function startServer() {
         grouped.get(item.supplierName)!.push(item);
       }
 
-      const YULIAN_DELIVERY_SUPPLIERS = ['宇聯', '宇聯_配合'];
-
       console.log(`[Procurement Import] ${grouped.size} suppliers, ${items.length} items total`);
 
       const results: Array<{ orderNo: string; skipped?: boolean; orderId?: number; itemCount?: number; isYulianDelivery?: boolean }> = [];
@@ -369,8 +367,13 @@ async function startServer() {
           ? `${orderNo}-${supplierName.slice(0, 2)}`
           : `DM-${orderDate.replace(/-/g, '')}-${Date.now().toString().slice(-6)}`;
 
-        const isYulianDelivery = YULIAN_DELIVERY_SUPPLIERS.includes(supplierName);
-        const sourceType = isYulianDelivery ? 'damai_yulian' : 'damai_import';
+        const [supRows] = await (database as any).$client.execute(
+          'SELECT deliveryType FROM os_suppliers WHERE name=? AND isActive=1 LIMIT 1',
+          [supplierName]
+        );
+        const isYulian = (supRows as any[])[0]?.deliveryType === 'yulian';
+        const sourceType = isYulian ? 'damai_yulian' : 'damai_import';
+        const isYulianDelivery = isYulian;
 
         const [existing] = await (database as any).$client.execute(
           'SELECT id FROM os_procurement_orders WHERE orderNo = ? LIMIT 1',

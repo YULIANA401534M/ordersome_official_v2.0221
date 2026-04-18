@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md
 
-> **版本**：v5.36。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.37。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -60,14 +60,23 @@ git status && git log --oneline -3
 
 ---
 
-### 最新 Git 狀態（2026-04-18 v5.36）
+### 最新 Git 狀態（2026-04-18 v5.37）
 
 最後三個 commit（已 push）：
-1. `（本次 commit）` — feat: 稽核日誌系統 + 刪除/作廢權限分離
-2. `8eb8977` — feat: 庫存管理系統 v1（os_inventory + OSInventory.tsx）
-3. `cb0e778` — docs: CLAUDE.md v5.34 更新 git 狀態
+1. `（本次 commit）` — feat: deliveryType DB欄位 + 移除YULIAN_SUPPLIERS硬編碼 + B類叫貨收貨自動入庫
+2. `（前次 commit）` — feat: 稽核日誌系統 + 刪除/作廢權限分離
+3. `8eb8977` — feat: 庫存管理系統 v1（os_inventory + OSInventory.tsx）
 
 working tree: clean
+
+**v5.37 完成項目（deliveryType + 移除硬編碼 + 自動入庫）：**
+- DB：`os_suppliers` 加 `deliveryType ENUM('direct','yulian','other') DEFAULT 'direct'`
+- DB：`宇聯_配合` 已設為 yulian（其他 B 類廠商待後台手動維護）
+- `server/_core/index.ts`：移除 `YULIAN_DELIVERY_SUPPLIERS` 硬編碼，改查 `os_suppliers.deliveryType`
+- `server/routers/inventory.ts`：新增 `listYulianSuppliers` procedure（查 deliveryType='yulian' 的廠商）
+- `client/src/pages/dashboard/OSInventory.tsx`：移除 `YULIAN_SUPPLIERS` 陣列，廠商下拉改呼叫 `listYulianSuppliers`
+- `server/routers/procurement.ts`：`updateStatus` 收到 received 時自動判斷 B 類廠商並寫入 `os_inventory`
+- `BUSINESS.md`：B 類廠商說明改為資料庫驅動描述
 
 **v5.36 完成項目（稽核日誌 + 權限分離）：**
 - DB：建立 `os_audit_logs`（稽核日誌表，永久不可刪）

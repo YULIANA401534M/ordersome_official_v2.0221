@@ -204,6 +204,57 @@ export const procurementRouter = router({
           [ctx.user.id, operatorEmail, input.orderId, input.reason ?? null]
         );
       }
+      if (input.status === 'received') {
+        try {
+          const [orderRows] = await (db as any).$client.execute(
+            'SELECT supplierName FROM os_procurement_orders WHERE id=? AND tenantId=?',
+            [input.orderId, ctx.tenantId]
+          );
+          const supplierName = (orderRows as any[])[0]?.supplierName;
+          if (!supplierName) throw new Error('找不到叫貨單');
+          const [supRows] = await (db as any).$client.execute(
+            'SELECT deliveryType FROM os_suppliers WHERE name=? AND isActive=1 LIMIT 1',
+            [supplierName]
+          );
+          if ((supRows as any[])[0]?.deliveryType === 'yulian') {
+            const [itemRows] = await (db as any).$client.execute(
+              'SELECT productName, quantity, unit FROM os_procurement_items WHERE procurementOrderId=?',
+              [input.orderId]
+            );
+            for (const item of itemRows as any[]) {
+              const [invRows] = await (db as any).$client.execute(
+                'SELECT id, currentQty FROM os_inventory WHERE tenantId=? AND supplierName=? AND productName=? LIMIT 1',
+                [ctx.tenantId, supplierName, item.productName]
+              );
+              if ((invRows as any[]).length > 0) {
+                const inv = (invRows as any[])[0];
+                const qtyBefore = Number(inv.currentQty);
+                const qtyAfter = qtyBefore + Number(item.quantity);
+                await (db as any).$client.execute(
+                  'UPDATE os_inventory SET currentQty=?, updatedAt=NOW() WHERE id=?',
+                  [qtyAfter, inv.id]
+                );
+                await (db as any).$client.execute(
+                  "INSERT INTO os_inventory_logs (tenantId, inventoryId, changeType, qty, qtyBefore, qtyAfter, refType, refId, note, createdAt) VALUES (?,?,'in',?,?,?,'procurement',?,'叫貨收貨自動入庫',NOW())",
+                  [ctx.tenantId, inv.id, Number(item.quantity), qtyBefore, qtyAfter, input.orderId]
+                );
+              } else {
+                const [insertResult] = await (db as any).$client.execute(
+                  'INSERT INTO os_inventory (tenantId, supplierName, productName, unit, currentQty, safetyQty, lastCountDate, createdAt, updatedAt) VALUES (?,?,?,?,?,0,NULL,NOW(),NOW())',
+                  [ctx.tenantId, supplierName, item.productName, item.unit, Number(item.quantity)]
+                );
+                const newId = (insertResult as any).insertId;
+                await (db as any).$client.execute(
+                  "INSERT INTO os_inventory_logs (tenantId, inventoryId, changeType, qty, qtyBefore, qtyAfter, refType, refId, note, createdAt) VALUES (?,?,'in',?,0,?,'procurement',?,'叫貨收貨自動建立品項',NOW())",
+                  [ctx.tenantId, newId, Number(item.quantity), Number(item.quantity), input.orderId]
+                );
+              }
+            }
+          }
+        } catch (e) {
+          console.error('[庫存自動入庫失敗]', e);
+        }
+      }
       return { success: true };
     }),
 
