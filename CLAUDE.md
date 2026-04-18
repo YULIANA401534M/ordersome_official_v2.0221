@@ -1,6 +1,6 @@
 # CLAUDE.md — 宇聯國際餐飲 OrderSome 開發主檔
 
-> **版本**：v5.28。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.29。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -58,6 +58,38 @@ Make 統整工作流：Gmail 讀取 Excel → 解析品項 → 寫入 OrderSome 
 - 退貨機制 ⏳ 尚未建立
 
 **現在使用大麥採購系統（合約剩約一年），未來視情況開發自有採購前台。**
+
+## Make → OrderSome 串接狀態（2026-04-18 已完成）
+
+### 統整工作流串接方式
+- Gmail 讀取大麥採購 Email → 解析 Excel → 寫入自動化採購總表（Google Sheets）
+- Text aggregator（模組28）收集所有品項，格式：supplierName|storeName|productName|unit|quantity|temperature，分隔符 ;;
+- HTTP 模組（模組25）POST 到 https://ordersome.com.tw/api/procurement/import
+- Body 格式：{"secret":"ordersome-sync-2026","orderNo":"{{10.`0`}}","orderDate":"{{formatDate(10.`14`; "YYYY-MM-DD")}}","itemsCsv":"{{28.text}}"}
+
+### Google Sheets 模組10 欄位對應（重要）
+- 0 = 訂單號
+- 1 = 供應商
+- 4 = 門市（含「來點什麼-」前綴，storeName 用 replace 去除）
+- 7 = 商品名稱
+- 8 = 單位
+- 9 = 數量
+- 13 = 溫層
+- 14 = 叫貨時間（YYYY-MM-DD HH:mm:ss）
+
+### REST endpoint
+- URL：POST /api/procurement/import
+- 接收：secret, orderNo?, orderDate, itemsCsv
+- itemsCsv 格式：每筆用 ;; 分隔，欄位用 | 分隔
+- 自動查 os_suppliers 對應 supplierId
+- 自動查 os_products 對應 unitPrice
+- orderNo 重複時略過（不報錯）
+- orderNo 未傳時自動產生 DM-YYYYMMDD-xxxxxx
+
+### 現存問題（待處理）
+- 單價（unitPrice）目前幾乎全為 0，因為 os_products 只有測試資料一筆
+- 需要把所有實際品項的成本填入 os_products，單價才會自動帶入
+- os_suppliers 廠商名稱必須和 Make 傳來的完全一致才能對應到 supplierId
 
 ---
 
