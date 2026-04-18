@@ -350,9 +350,17 @@ async function startServer() {
         );
         const supplierId = (supRows as any[])[0]?.id || null;
 
+        const [productRows] = await client.execute(
+          'SELECT id, unitCost FROM os_products WHERE name = ? LIMIT 1',
+          [item.productName]
+        );
+        const productRow = (productRows as any[])[0];
+        const unitPrice = productRow?.unitCost || 0;
+        const amount = unitPrice * item.quantity;
+
         await client.execute(
-          "INSERT INTO os_procurement_items (procurementOrderId, supplierId, supplierName, storeName, productName, unit, quantity, temperature) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-          [orderId, supplierId, item.supplierName, item.storeName, item.productName, item.unit || "", item.quantity, item.temperature || "常溫"]
+          "INSERT INTO os_procurement_items (procurementOrderId, supplierId, supplierName, storeName, productName, unit, quantity, unitPrice, amount, temperature) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          [orderId, supplierId, item.supplierName, item.storeName, item.productName, item.unit || "", item.quantity, unitPrice, amount, item.temperature || "常溫"]
         );
       }
 

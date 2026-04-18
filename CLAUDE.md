@@ -1,6 +1,6 @@
 # CLAUDE.md — 宇聯國際餐飲 OrderSome 開發主檔
 
-> **版本**：v5.26。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.27。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -91,14 +91,21 @@ Make 統整工作流：Gmail 讀取 Excel → 解析品項 → 寫入 OrderSome 
 
 ---
 
-### 最新 Git 狀態（2026-04-18 v5.26）
+### 最新 Git 狀態（2026-04-18 v5.27）
 
 最後三個 commit（已 push）：
-1. `fix` — procurement import 移除不存在的 tenantId 欄位（os_procurement_items）
-2. `feat` — procurement import 支援自動 orderNo + 批次品項
-3. `fix` — procurement import debug log + 日期顯示 + 品項空狀態提示
+1. `feat` — procurement import 自動對應品項單價 + 清理測試資料
+2. `fix` — procurement import 移除不存在的 tenantId 欄位（os_procurement_items）
+3. `feat` — procurement import 支援自動 orderNo + 批次品項
 
 working tree: clean
+
+**v5.27 完成項目：**
+- `server/_core/index.ts`：`POST /api/procurement/import` 自動從 `os_products` 查詢單價
+  - items for loop 新增查詢 `os_products WHERE name = ?`，取得 `unitCost` → `unitPrice`
+  - `amount = unitPrice * item.quantity`（無對應品項時 unitPrice=0）
+  - INSERT 改帶入 `unitPrice` 和 `amount`
+- DB：清除三筆測試空單（`os_procurement_orders` 刪 4 筆空 order，items 刪 0 筆）
 
 **v5.26 完成項目：**
 - `server/_core/index.ts`：`POST /api/procurement/import` items INSERT 移除不存在欄位
