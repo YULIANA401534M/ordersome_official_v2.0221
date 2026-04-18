@@ -1,13 +1,15 @@
 import nodemailer from 'nodemailer';
 
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
+  host: '74.125.133.108',
   port: 465,
   secure: true,
-  family: 4,
   auth: {
     user: 'ordersome2020@gmail.com',
     pass: process.env.GMAIL_APP_PASSWORD,
+  },
+  tls: {
+    servername: 'smtp.gmail.com',
   },
 });
 
@@ -20,10 +22,11 @@ export async function sendMail({
   subject: string;
   html: string;
 }) {
-  await transporter.sendMail({
-    from: '"OrderSome 宇聯國際" <ordersome2020@gmail.com>',
+  const result = await transporter.sendMail({
+    from: '"宇聯國際 OrderSome" <ordersome2020@gmail.com>',
     to,
     subject,
     html,
   });
+  return result;
 }
