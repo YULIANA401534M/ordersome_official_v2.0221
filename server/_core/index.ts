@@ -321,7 +321,7 @@ async function startServer() {
           const [supplierName, storeName, productName, unit, quantity, temperature] = line.split('|');
           return {
             supplierName: supplierName?.trim() || '',
-            storeName: storeName?.trim() || '',
+            storeName: (storeName?.trim() || '').replace('來點什麼-', ''),
             productName: productName?.trim() || '',
             unit: unit?.trim() || '',
             quantity: parseFloat(quantity?.trim() || '0') || 0,

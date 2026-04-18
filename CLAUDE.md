@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md
 
-> **版本**：v5.51。**最後更新**：2026-04-19。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.52。**最後更新**：2026-04-19。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -113,21 +113,26 @@ git status && git log --oneline -3
 
 ---
 
-### 最新 Git 狀態（2026-04-19 v5.51）
+### 最新 Git 狀態（2026-04-19 v5.52）
 
 最後三個 commit（已 push）：
-1. （本次）feat: v5.51 派車單簽收→庫存出庫連動 + OSPurchasing badge 文字修正
-2. feat: v5.50 側邊欄重構（e546b23）
-3. fix: v5.49 五個 bug 修正
+1. （本次）feat: v5.52 Make 診斷修正 + OSPurchasing 視覺 + 排序功能
+2. feat: v5.51 派車單簽收→庫存出庫連動 + OSPurchasing badge 文字修正
+3. feat: v5.50 側邊欄重構（e546b23）
 
 working tree: clean
 
-**v5.51 完成項目：**
-- **修正一（delivery.ts）**：`updateStatus` signed 時加庫存出庫區塊，透過 `os_inventory JOIN os_suppliers` 確認 B類（deliveryType='yulian'），currentQty 減少不低於 0，寫 `os_inventory_logs(out)`，失敗只 console.error 不 throw
-- **修正二（OSPurchasing.tsx）**：received 狀態 badge 文字從「已完成」改為「已到貨入庫」（statusConfig + 卡片內 Badge）
-- **修正三（BUSINESS.md）**：五、庫存管理邏輯表格補充 signed 觸發時機說明 + A/B 類差異補充
+**v5.52 完成項目：**
+- **問題一（server/_core/index.ts）**：`/api/procurement/import` 的 storeName 解析新增 `.replace('來點什麼-', '')` 去前綴；分隔符確認為 `;;`（正確），欄位順序 `supplierName|storeName|productName|unit|quantity|temperature`（6欄）
+- **問題二（OSPurchasing.tsx）**：廠商名稱加粗 `font-semibold text-gray-800`；門市顯示去「來點什麼-」前綴；「金額待填」改 `text-amber-600`；sourceType 改為 badge 樣式（大麥直送/大麥自配/手動補單）
+- **問題三（OSPurchasing.tsx + procurement.ts）**：新增排序下拉（6選項），後端 `list` procedure 新增 `sortBy/sortOrder` 兩個 optional input，SQL ORDER BY 對應 date/status/amount/supplier
+- **問題四（OSPurchasing.tsx）**：所有 `text-gray-400` → `text-gray-600`，`text-gray-300` → `text-gray-500/600`，確保白底可讀
 
-**注意**：os_delivery_items 無 supplierName 欄位，改用 JOIN os_suppliers 從 os_inventory.supplierName 確認廠商類型
+**診斷結論（問題一）**：
+- `/api/procurement/import` 解析邏輯正確（`;;` 分隔、6欄 `|` 分隔）
+- Make 截圖「箱箱」是截圖換行問題，實際是「箱|箱」→ unit=箱, quantity=1（正確）
+- storeName「來點什麼-北屯昌平店」→ 現在自動去掉前綴存為「北屯昌平店」
+- 若送單沒進後台，最可能是 SYNC_SECRET 不符（回 401）或 orderNo 重複（skip）
 
 **v5.49 完成項目（五個 bug 修正）：**
 - **Bug 1（撿貨單查不到資料）**：`procurement.ts` getPickList SQL 改為 `NOT IN ('cancelled', 'received')`，前端說明文字同步更新

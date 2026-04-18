@@ -68,6 +68,8 @@ export default function OSPurchasing() {
   const [filterEndDate, setFilterEndDate] = useState(now.toISOString().slice(0, 10));
   const [filterStore, setFilterStore] = useState("all");
   const [filterSupplierSel, setFilterSupplierSel] = useState("all");
+  const [sortBy, setSortBy] = useState<"date" | "status" | "amount" | "supplier">("date");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   // 月份計算（給 startDate/endDate 月份切換模式）
   const monthStart = `${year}-${String(month).padStart(2, "0")}-01`;
@@ -146,6 +148,8 @@ export default function OSPurchasing() {
     status: filterStatus || undefined,
     supplierName: filterSupplierSel !== "all" ? filterSupplierSel : undefined,
     storeName: filterStore !== "all" ? filterStore : undefined,
+    sortBy,
+    sortOrder,
   });
 
   // KPI 用月份範圍
@@ -559,7 +563,7 @@ export default function OSPurchasing() {
             onChange={e => setFilterStartDate(e.target.value)}
             className="h-8 text-sm w-36"
           />
-          <span className="text-gray-400 text-sm">—</span>
+          <span className="text-gray-600 text-sm">—</span>
           <Input
             type="date"
             value={filterEndDate}
@@ -586,6 +590,26 @@ export default function OSPurchasing() {
               {(supplierNames as string[]).map(s => (
                 <SelectItem key={s} value={s}>{s}</SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+
+          {/* 排序 */}
+          <Select
+            value={`${sortBy}__${sortOrder}`}
+            onValueChange={v => {
+              const [sb, so] = v.split("__");
+              setSortBy(sb as any);
+              setSortOrder(so as any);
+            }}
+          >
+            <SelectTrigger className="w-36 h-8 text-sm"><SelectValue placeholder="排序" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="date__desc">日期（新→舊）</SelectItem>
+              <SelectItem value="date__asc">日期（舊→新）</SelectItem>
+              <SelectItem value="status__asc">待處理優先</SelectItem>
+              <SelectItem value="status__desc">已到貨優先</SelectItem>
+              <SelectItem value="amount__desc">金額（高→低）</SelectItem>
+              <SelectItem value="supplier__asc">廠商名稱（A→Z）</SelectItem>
             </SelectContent>
           </Select>
 
@@ -671,7 +695,7 @@ export default function OSPurchasing() {
         {/* 叫貨單列表 */}
         <div className="space-y-3">
           {(orders as any[]).length === 0 ? (
-            <div className="bg-white rounded-xl p-8 text-center text-gray-400">無符合條件的叫貨紀錄</div>
+            <div className="bg-white rounded-xl p-8 text-center text-gray-600">無符合條件的叫貨紀錄</div>
           ) : (
             (orders as any[]).map((order: any) => {
               const sc = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.pending;
@@ -704,18 +728,32 @@ export default function OSPurchasing() {
                       <div className="w-4 flex-shrink-0" />
                     )}
 
-                    <span className="text-sm font-mono text-gray-500 w-36 truncate">{order.orderNo}</span>
+                    <span className="text-sm font-mono text-gray-600 w-36 truncate">{order.orderNo}</span>
                     <span className="text-sm text-gray-700 w-24">{order.orderDate?.slice(0, 10)}</span>
                     <Badge style={{ color: sc.color, background: sc.bg, border: "none" }} className="text-xs">{sc.label}</Badge>
-                    <span className="text-xs text-gray-400 flex-1 truncate">
-                      {order.suppliers?.split(",").slice(0, 3).join("、")}
-                      {order.stores && <span className="ml-2 text-gray-300">｜{order.stores?.split(",").slice(0, 2).join("、")}</span>}
+                    <span className="text-xs flex-1 truncate">
+                      <span className="font-semibold text-gray-800">
+                        {order.suppliers?.split(",").slice(0, 3).join("、")}
+                      </span>
+                      {order.stores && (
+                        <span className="ml-2 text-gray-500">
+                          ｜{order.stores?.split(",").slice(0, 2).map((s: string) => s.replace("來點什麼-", "")).join("、")}
+                        </span>
+                      )}
                     </span>
-                    <span className="text-xs text-gray-400">{order.itemCount} 項</span>
-                    <span className={`text-xs ${totalAmt > 0 ? "text-amber-700 font-medium" : "text-gray-300"}`}>
+                    <span className="text-xs text-gray-600">{order.itemCount} 項</span>
+                    <span className={`text-xs ${totalAmt > 0 ? "text-amber-700 font-medium" : "text-amber-600"}`}>
                       {amtDisplay}
                     </span>
-                    <span className="text-xs text-gray-300">{order.sourceType === "damai_import" ? "大麥" : "手動"}</span>
+                    {order.sourceType === "damai_import" && (
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">大麥直送</span>
+                    )}
+                    {order.sourceType === "damai_yulian" && (
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 font-medium">大麥自配</span>
+                    )}
+                    {order.sourceType === "manual" && (
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-gray-200 text-gray-700 font-medium">手動補單</span>
+                    )}
                     {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
                   </div>
 
@@ -725,7 +763,7 @@ export default function OSPurchasing() {
                       <div className="overflow-x-auto">
                         <table className="w-full text-xs">
                           <thead>
-                            <tr className="text-gray-400 border-b">
+                            <tr className="text-gray-600 border-b">
                               <th className="text-left py-1 pr-3">廠商</th>
                               <th className="text-left py-1 pr-3">門市</th>
                               <th className="text-left py-1 pr-3">品項</th>
@@ -740,16 +778,16 @@ export default function OSPurchasing() {
                           <tbody>
                             {(detail?.items ?? []).map((item: any, i: number) => (
                               <tr key={i} className="border-b last:border-0 hover:bg-gray-50">
-                                <td className="py-1 pr-3 text-gray-600">{item.supplierName}</td>
-                                <td className="py-1 pr-3 text-gray-600">{item.storeName}</td>
+                                <td className="py-1 pr-3 text-gray-700">{item.supplierName}</td>
+                                <td className="py-1 pr-3 text-gray-700">{item.storeName?.replace("來點什麼-", "")}</td>
                                 <td className="py-1 pr-3 font-medium">{item.productName}</td>
                                 <td className="py-1 pr-3 text-right">{item.quantity}</td>
-                                <td className="py-1 pr-3 text-gray-400">{item.unit}</td>
-                                <td className="py-1 pr-3 text-gray-400">{item.temperature}</td>
-                                <td className="py-1 pr-3 text-right text-gray-400">
+                                <td className="py-1 pr-3 text-gray-600">{item.unit}</td>
+                                <td className="py-1 pr-3 text-gray-600">{item.temperature}</td>
+                                <td className="py-1 pr-3 text-right text-gray-600">
                                   {Number(item.unitPrice) > 0 ? `$${Number(item.unitPrice).toLocaleString()}` : "—"}
                                 </td>
-                                <td className="py-1 pr-3 text-right text-gray-400">
+                                <td className="py-1 pr-3 text-right text-gray-600">
                                   {Number(item.amount) > 0 ? `$${Number(item.amount).toLocaleString()}` : "—"}
                                 </td>
                                 {canEdit && (
@@ -800,7 +838,7 @@ export default function OSPurchasing() {
                       )}
 
                       {order.note && (
-                        <p className="text-xs text-gray-400">備註：{order.note}</p>
+                        <p className="text-xs text-gray-600">備註：{order.note}</p>
                       )}
 
                       {/* 操作按鈕 */}
@@ -820,7 +858,7 @@ export default function OSPurchasing() {
                                 {next.label}
                               </Button>
                               {next.hint && (
-                                <span className="text-xs text-gray-400">{next.hint}</span>
+                                <span className="text-xs text-gray-600">{next.hint}</span>
                               )}
                             </div>
                           )}

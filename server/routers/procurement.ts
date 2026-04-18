@@ -131,6 +131,8 @@ export const procurementRouter = router({
       status: z.string().optional(),
       supplierName: z.string().optional(),
       storeName: z.string().optional(),
+      sortBy: z.enum(['date','status','amount','supplier']).optional().default('date'),
+      sortOrder: z.enum(['asc','desc']).optional().default('desc'),
     }))
     .query(async ({ input }) => {
       const db = await getDb();
@@ -157,7 +159,19 @@ export const procurementRouter = router({
         sql += ` AND EXISTS (SELECT 1 FROM os_procurement_items pi3 WHERE pi3.procurementOrderId = po.id AND pi3.storeName = ?)`;
         params.push(input.storeName);
       }
-      sql += ` GROUP BY po.id ORDER BY po.orderDate DESC, po.id DESC LIMIT 200`;
+      sql += ` GROUP BY po.id `;
+      const sb = input.sortBy ?? 'date';
+      const so = input.sortOrder ?? 'desc';
+      if (sb === 'date') {
+        sql += ` ORDER BY po.orderDate ${so.toUpperCase()}, po.createdAt ${so.toUpperCase()}`;
+      } else if (sb === 'status') {
+        sql += ` ORDER BY FIELD(po.status,'pending','sent','confirmed','received','cancelled')`;
+      } else if (sb === 'amount') {
+        sql += ` ORDER BY totalAmt DESC`;
+      } else if (sb === 'supplier') {
+        sql += ` ORDER BY suppliers ASC`;
+      }
+      sql += ` LIMIT 200`;
       const [rows] = await (db as any).$client.execute(sql, params);
       return rows as any[];
     }),
