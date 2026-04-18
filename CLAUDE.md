@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md
 
-> **版本**：v5.43。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.44。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -18,7 +18,7 @@ git status && git log --oneline -3
 
 ## 當前開發狀態（換對話框必讀）
 
-> 最後更新：2026-04-18 v5.43。**新大腦進來請從這裡開始讀，不要跳過。**
+> 最後更新：2026-04-18 v5.44。**新大腦進來請從這裡開始讀，不要跳過。**
 
 ### ⚠️ 開發守則（每次換對話框都要遵守）
 
@@ -112,19 +112,20 @@ git status && git log --oneline -3
 
 ---
 
-### 最新 Git 狀態（2026-04-18 v5.43）
+### 最新 Git 狀態（2026-04-18 v5.44）
 
 最後三個 commit（已 push）：
-1. `a908cd8` — feat: os_products 兩層分類欄位 + os_product_categories 表 + os_suppliers sortOrder/note + CLAUDE.md v5.42
-2. `92acfa2` — docs: CLAUDE.md v5.41 — 開發原則/資料整合規劃/待完成功能清單三章節
-3. `5ba7301` — fix: seed-os-products-v2 欄位修正 + OSProducts 表格重整 + CLAUDE.md v5.40
+1. `a47562e` — docs: CLAUDE.md v5.43 — 系統架構/歷史資料/帳務/權限設計決策 + rename-os-products.mjs
+2. `a908cd8` — feat: os_products 兩層分類欄位 + os_product_categories 表 + os_suppliers sortOrder + CLAUDE.md v5.42
+3. `92acfa2` — docs: CLAUDE.md v5.41 — 開發原則/資料整合規劃/待完成功能清單三章節
 
-working tree: clean（本次 commit 將新增 CLAUDE.md v5.43 + scripts/rename-os-products.mjs 修正）
+working tree: clean（本次 commit 將新增 CLAUDE.md v5.44 + scripts/run-rename-sql.mjs）
 
-**rename-os-products.mjs 執行結果（2026-04-18）**：
-- 更新 13 筆，找不到 176 筆，失敗 0 筆
-- 找不到原因：DB 品項名稱由 seed-os-products-v2 建立，與 rename script 的 `original` 欄位（大麥格式）不符
-- 已成功更新品項：RICOS起司醬/梨山花生醬/梨山草莓醬/巧克力醬/凱田部分品項/伯享部分品項 等 13 筆
+**rename 執行結果（2026-04-18 最終診斷）**：
+- 更新 0 筆（新）+ 13 筆（上次已改），找不到 175 筆
+- **根本原因確認**：DB 裡的 os_products 是 CA 表命名體系（seed-os-products-v2 建），而 rename 清單 original 是大麥格式品名，兩套體系不同
+  - 廠商名也有差異（如大麥「韓澤」/ CA表「韓濟」、品名「招牌壽司米」/ DB「台梗壽司米」）
+- **處理策略**：品名統一需等大麥 Excel 匯入後，以實際大麥品名建立 aliases 對照，不能事先批次更新
 
 **v5.40 完成項目（seed 欄位修正 + OSProducts 表格重整）：**
 - seed-os-products-v2.mjs：
@@ -442,6 +443,14 @@ working tree: clean（本次 commit 將新增 CLAUDE.md v5.43 + scripts/rename-o
 
 **別名（aliases）**：外部系統名稱（大麥、CA表原始名）存 JSON 陣列
 **大麥品名**：匯入時以 aliases 比對，找不到才建新品項並 flag 待確認
+
+**⚠️ 2026-04-18 品名統一狀態（重要）**：
+- os_products 現有品名由 seed-os-products-v2.mjs 從 CA 表建立，是 CA 表的命名體系
+- 大麥系統的廠商名和 CA 表廠商名不完全一致（如大麥「韓濟」= DB 有5筆，大麥「米谷」= DB「招牌壽司米_30KG」但 DB 實際名稱為「台梗壽司米_30KG」）
+- 189 筆 rename 清單的 original 欄位是大麥格式品名，但 DB 裡這些品名根本不存在（是不同命名體系）
+- **結論：品名統一需等大麥歷史訂單 Excel 匯入後，才能以實際大麥品名建立 aliases 對照**
+- 舊名稱保留在 aliases 欄位，採購匯入時仍可比對
+- 命名仍需採購現場實際核對後二次確認
 
 ### 分類規範（永久有效）
 
