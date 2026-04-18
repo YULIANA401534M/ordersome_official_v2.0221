@@ -1,6 +1,6 @@
 # CLAUDE.md — 宇聯國際餐飲 OrderSome 開發主檔
 
-> **版本**：v5.18。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.19。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -26,12 +26,12 @@ git status && git log --oneline -3
 
 ---
 
-### 最新 Git 狀態（2026-04-18 v5.18）
+### 最新 Git 狀態（2026-04-18 v5.19）
 
 最後三個 commit（已 push）：
-1. `777fcd2` — fix: 郵件系統改用 Gmail SMTP，移除 Resend 依賴 2026-04-18
-2. `da4d494` — feat: 連動補強 — 配送品項自動帶批價、叫貨單帶入派車、損益納入出貨應收
-3. `c18c8cc` — chore: 補建 0026 migration 版本記錄
+1. `14bbc5f` — docs: CLAUDE.md v5.18 — 郵件系統 Gmail SMTP 更新紀錄
+2. `777fcd2` — fix: 郵件系統改用 Gmail SMTP，移除 Resend 依賴 2026-04-18
+3. `da4d494` — feat: 連動補強 — 配送品項自動帶批價、叫貨單帶入派車、損益納入出貨應收
 
 working tree: clean
 
@@ -43,7 +43,7 @@ working tree: clean
 |------|------|------|------|
 | `/dashboard/profit-loss` | `OSProfitLoss.tsx` | ✅ 完成 | KPI 三卡片 + 費用明細 + canSeeCostModules 遮罩 |
 | `/dashboard/franchisee-payments` | `OSFranchiseePayments.tsx` | ✅ 完成（有 TS 錯誤待修） | 應收管理 + 標記收款 + 週結摘要 + 匯出 Excel |
-| `/dashboard/ca-menu` | `OSCaMenu.tsx` | ✅ 完成 | 菜單品項/OEM/成本歷史 三 Tab |
+| `/dashboard/ca-menu` | `OSCaMenu.tsx` | ✅ 完成 | 菜單品項/OEM/成本歷史 三 Tab（DB 表於 2026-04-18 補建，現可正常使用）|
 | `/dashboard/scheduling` | `OSScheduling.tsx` | ✅ 完成 | 早/晚/機動三 Tab + 假日標示 + 月統計 + Excel 匯出 |
 | `/dashboard/delivery` | `OSDelivery.tsx` | ✅ 完成（有 TS 錯誤待修） | 派車單 + 狀態推進 + 簽收自動產生應收 |
 | `/dashboard/franchisees` | `OSCustomers.tsx` | ✅ 完成 | 加盟主列表 + 功能開關 + 採購存取 + 新增帳號 |
@@ -114,8 +114,9 @@ working tree: clean
    等蛋博確認 `dy_settings` 的 `overdue_push_enabled` / `overdue_push_hour` 設定值
 
 3. **大永 Portal 重設密碼 email**
-   架構已完成，郵件改用 Gmail SMTP（nodemailer）。
-   Railway 需設定環境變數 `GMAIL_APP_PASSWORD`（值：unys yegb ghjf pjyq），設定後即可測試發信。
+   架構已完成，郵件改用 Gmail SMTP（nodemailer，commit `777fcd2`）。
+   Railway `GMAIL_APP_PASSWORD` 設定後，可用 `test@dayone.com`（dy_customers id=1，isPortalActive=1）觸發重設密碼測試寄信。
+   測試指令：`curl -X POST https://ordersome.com.tw/api/trpc/dayone.portal.requestPasswordReset -H "Content-Type: application/json" -d '{"email":"test@dayone.com"}'`
 
 **P3 — 設計討論後才能做**
 
@@ -128,6 +129,7 @@ working tree: clean
 - 大永 / 來點什麼 ERP 的表不在 `schema.ts`，用 raw SQL
 - 本機菜單圖未遷移 R2
 - chunk size 超標（index.js 6141 kB），需 code splitting
+- `ContentEditor.tsx` / `ContentManagement.tsx`：`post.category` 和 `post.scheduledAt` 用 `as any` cast，後端型別未完整宣告（低優先級）
 
 ---
 
@@ -269,6 +271,7 @@ working tree: clean
 - `os_oem_products`（OEM 品項，代工費/包材費/批價）
 - `os_oem_ingredients`（OEM 原料明細）
 - `os_cost_audit_log`（成本修改歷史，三表共用）
+- ⚠️ **0024 migration 當時未實際建立 DB 表**，於 2026-04-18 健康檢查時發現並補建，現已全部 ✅ 存在
 
 **第四批（0025）：加盟主管理頁**
 - `drizzle/0025_franchisee_management.sql`
@@ -282,7 +285,7 @@ working tree: clean
 |------|------|
 | `0022_os_erp_modules.sql` | ✅ 已執行（2026-04-18）|
 | `0023_role_and_permission_expansion.sql` | ✅ 已執行（2026-04-18）|
-| `0024_ca_menu_cost_tables.sql` | ✅ 已執行（2026-04-18）|
+| `0024_ca_menu_cost_tables.sql` | ✅ 已執行（SQL），但 DB 表未實際建立；2026-04-18 補建完成 ✅ |
 | `0025_franchisee_management.sql` | ✅ 已執行（2026-04-18）|
 
 ---
@@ -398,6 +401,10 @@ check().catch(console.error);
 | 路由 | 元件 | 狀態 |
 |------|------|------|
 | `/dashboard/customers` | `ComingSoon` | 空殼，客戶管理未開發 |
+| `/dashboard/accounting` | `ComingSoon` | 帳務管理，superAdminOnly，範圍待確認 |
+
+**路由已確認正常（之前疑慮已解除）：**
+- `/dashboard/inventory` → `OSInventory`（App.tsx line 240，✅ 有對應元件）
 
 **加盟主入口未完成：**
 - `/dashboard/franchise` → `FranchiseDashboardPage.tsx` 顯示「功能開發中」，加盟主完整功能（訂單/庫存/報表）尚未實作
@@ -410,6 +417,7 @@ check().catch(console.error);
 - ⚠️ 來點什麼 ERP 的 `os_` 表也是 raw SQL，同上原因
 - ⚠️ 本機菜單圖尚未遷移到 R2（`client/public/images/menu/korean-roll/`）
 - ⚠️ 叫貨收貨→退佣自動計算：設計暫緩，退佣規則複雜（廣弘10.71%/伯享差價/韓濟抵貨），目前手動月結，待實際使用後確認自動化需求
+- ⚠️ `ContentEditor.tsx` / `ContentManagement.tsx`：`post.category` 和 `post.scheduledAt` 用 `as any` cast，後端 content router 型別未正式宣告這兩欄（低優先級）
 
 ---
 
