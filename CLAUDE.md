@@ -1,6 +1,6 @@
 # CLAUDE.md — 宇聯國際餐飲 OrderSome 開發主檔
 
-> **版本**：v5.17。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.18。**最後更新**：2026-04-18。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -26,12 +26,12 @@ git status && git log --oneline -3
 
 ---
 
-### 最新 Git 狀態（2026-04-18 v5.17）
+### 最新 Git 狀態（2026-04-18 v5.18）
 
 最後三個 commit（已 push）：
-1. `489bada` — fix: OSScheduling 新增員工 Dialog 空狀態缺失 + SelectItem value="" 崩潰
-2. `c568772` — fix: SelectItem value="" 崩潰 — OSPurchasing + OSDelivery
-3. `eaaa9b5` — fix: App.tsx 路由改接 OSPurchasing
+1. `777fcd2` — fix: 郵件系統改用 Gmail SMTP，移除 Resend 依賴 2026-04-18
+2. `da4d494` — feat: 連動補強 — 配送品項自動帶批價、叫貨單帶入派車、損益納入出貨應收
+3. `c18c8cc` — chore: 補建 0026 migration 版本記錄
 
 working tree: clean
 
@@ -114,7 +114,8 @@ working tree: clean
    等蛋博確認 `dy_settings` 的 `overdue_push_enabled` / `overdue_push_hour` 設定值
 
 3. **大永 Portal 重設密碼 email**
-   架構已建，卡在：確認 Railway 環境變數 `RESEND_API_KEY` 是否已設定
+   架構已完成，郵件改用 Gmail SMTP（nodemailer）。
+   Railway 需設定環境變數 `GMAIL_APP_PASSWORD`（值：unys yegb ghjf pjyq），設定後即可測試發信。
 
 **P3 — 設計討論後才能做**
 
