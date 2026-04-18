@@ -58,6 +58,55 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
+// ── 子群組標題（不可點擊）──
+function SubGroupLabel({ label }: { label: string }) {
+  return (
+    <div className="px-4 pt-2 pb-0.5">
+      <p className="text-[10px] font-semibold text-[#57534e] uppercase tracking-wider">{label}</p>
+    </div>
+  );
+}
+
+// 判斷某個 key 屬於哪個子群組
+const OS_SUBGROUPS: { label: string; keys: string[] }[] = [
+  {
+    label: "採購與庫存",
+    keys: [
+      "/dashboard/purchasing",
+      "/dashboard/inventory",
+      "/dashboard/products",
+      "/dashboard/ca-menu",
+      "/dashboard/delivery",
+    ],
+  },
+  {
+    label: "帳務與財務",
+    keys: [
+      "/dashboard/accounting",
+      "/dashboard/franchisee-payments",
+      "/dashboard/rebate",
+      "/dashboard/profit-loss",
+    ],
+  },
+  {
+    label: "門市作業",
+    keys: [
+      "/dashboard/daily-report",
+      "/dashboard/scheduling",
+      "/dashboard/sop",
+      "/dashboard/repairs",
+      "/dashboard/checklist",
+    ],
+  },
+];
+
+function getSubGroupLabel(key: string): string | null {
+  for (const sg of OS_SUBGROUPS) {
+    if (sg.keys.includes(key)) return sg.label;
+  }
+  return null;
+}
+
 function SortableErpItem({
   id,
   item,
@@ -134,14 +183,11 @@ export default function AdminDashboardLayout({
   const isStoreManager = user?.role === "store_manager";
   const isFranchisee = user?.role === "franchisee";
   const isStaff = user?.role === "staff";
-  // 可進入後台 layout 的角色
   const hasAdminAccess = isSuperAdmin || isManager || isStoreManager || isFranchisee || isStaff;
   const isOSTenant = isSuperAdmin || (user as any)?.tenantId === 1;
   const isDYTenant = isSuperAdmin || (user as any)?.tenantId === 90004;
-  // 退佣帳款 & 品項成本：super_admin 或 has_procurement_access=1
   const canSeeCostModules = isSuperAdmin || user?.has_procurement_access === true;
 
-  // ── 模組開關查詢（兩個 useQuery 必須在所有 early return 之前）──
   const { data: orderSomeModules } = trpc.dayone.modules.list.useQuery(
     { tenantId: 1 },
     {
@@ -163,7 +209,6 @@ export default function AdminDashboardLayout({
     }
   );
 
-  // Badge counts for DY ERP sidebar
   const { data: overdueAR = [] } = trpc.dayone.ar.listReceivables.useQuery(
     { tenantId: 90004, page: 1, status: "overdue" },
     { enabled: !!user && isDYTenant, refetchInterval: 60000 }
@@ -208,7 +253,6 @@ export default function AdminDashboardLayout({
   );
   const saveSidebarOrder = trpc.admin.saveSidebarOrder.useMutation();
 
-  // ── 模組陣列 state（hooks 必須在 early return 之前）──
   type OsErpItem = { icon: React.ComponentType<{ className?: string }>; label: string; path?: string };
   type DyErpItem = { icon: React.ComponentType<{ className?: string }>; label: string; path: string };
   const [osErpEnabled, setOsErpEnabled] = useState<OsErpItem[]>([]);
@@ -220,22 +264,24 @@ export default function AdminDashboardLayout({
     if (!orderSomeModules) return;
     const enabled: OsErpItem[] = [];
     const comingSoon: { icon: React.ComponentType<{ className?: string }>; label: string }[] = [];
-    // 只有 super_admin / manager 才顯示 ERP 區塊（門市管理的項目已在 storeOperationItems 處理）
     if (isOSTenant && (isSuperAdmin || isManager)) {
       const osModuleDefs = [
-        { key: "inventory",     icon: Warehouse,    label: "庫存管理",  path: "/dashboard/inventory",  costOnly: false },
-        { key: "scheduling",    icon: CalendarDays, label: "排班管理",  path: "/dashboard/scheduling", costOnly: false },
-        { key: "products_os",   icon: Package,      label: "品項成本",  path: "/dashboard/products",   costOnly: true  },
-        { key: "products_os",   icon: UtensilsCrossed, label: "菜單成本管理", path: "/dashboard/ca-menu", costOnly: true  },
-        { key: "delivery",      icon: Truck,        label: "配送管理",  path: "/dashboard/delivery",   costOnly: false },
-        { key: "crm_customers", icon: Users,        label: "客戶管理",  path: "/dashboard/customers",  costOnly: false },
-        { key: "purchasing_os", icon: ShoppingCart, label: "叫貨管理",  path: "/dashboard/purchasing", costOnly: false },
-        { key: "rebate_os",     icon: CreditCard,   label: "退佣帳款",  path: "/dashboard/rebate",      costOnly: true  },
-        { key: "profit_loss",   icon: TrendingUp,   label: "損益儀表板", path: "/dashboard/profit-loss", costOnly: true  },
-        { key: "accounting",    icon: Receipt,      label: "帳務管理",  path: "/dashboard/accounting",  costOnly: false },
+        { key: "purchasing_os", icon: ShoppingCart,    label: "叫貨管理",    path: "/dashboard/purchasing",           costOnly: false },
+        { key: "inventory",     icon: Warehouse,       label: "庫存管理",    path: "/dashboard/inventory",            costOnly: false },
+        { key: "products_os",   icon: Package,         label: "品項成本",    path: "/dashboard/products",             costOnly: true  },
+        { key: "products_os",   icon: UtensilsCrossed, label: "菜單成本管理", path: "/dashboard/ca-menu",             costOnly: true  },
+        { key: "delivery",      icon: Truck,           label: "配送管理",    path: "/dashboard/delivery",             costOnly: false },
+        { key: "accounting",    icon: Receipt,         label: "帳務管理",    path: "/dashboard/accounting",           costOnly: false },
+        { key: "franchisee_payments", icon: CreditCard, label: "加盟主帳款", path: "/dashboard/franchisee-payments", costOnly: false },
+        { key: "rebate_os",     icon: CreditCard,      label: "退佣帳款",    path: "/dashboard/rebate",               costOnly: true  },
+        { key: "profit_loss",   icon: TrendingUp,      label: "損益儀表板",  path: "/dashboard/profit-loss",          costOnly: true  },
+        { key: "daily_report_os", icon: ClipboardList, label: "門市日報",   path: "/dashboard/daily-report",         costOnly: false },
+        { key: "scheduling",    icon: CalendarDays,    label: "排班管理",    path: "/dashboard/scheduling",           costOnly: false },
+        { key: "sop",           icon: BookOpen,        label: "SOP知識庫",   path: "/dashboard/sop",                  costOnly: false },
+        { key: "equipment_repair", icon: Wrench,       label: "設備報修",    path: "/dashboard/repairs",              costOnly: false },
+        { key: "checklist",     icon: ClipboardCheck,  label: "每日檢查表",  path: "/dashboard/checklist",            costOnly: false },
       ];
       for (const def of osModuleDefs) {
-        // costOnly 項目：只有 canSeeCostModules 才顯示
         if (def.costOnly && !canSeeCostModules) continue;
         const isEnabled = isSuperAdmin || (orderSomeModules?.some((m: any) => m.moduleKey === def.key && !!m.isEnabled) ?? false);
         if (isEnabled) {
@@ -354,7 +400,6 @@ export default function AdminDashboardLayout({
   const hasPermission = (permission: string) => {
     if (!user) return false;
     if (isSuperAdmin) return true;
-    // manager 預設擁有所有來點什麼的後台權限
     if (isManager && isOSTenant) return true;
     if (!user.permissions) return false;
     const permissions =
@@ -375,7 +420,7 @@ export default function AdminDashboardLayout({
     return dayoneModules?.some((m: any) => m.moduleKey === key && !!m.isEnabled) ?? false;
   };
 
-  // ── 宇聯總部分組 ──
+  // ── 宇聯集團分組 ──
   const ecommerceItems = isOSTenant && hasPermission("manage_products")
     ? [
         { icon: LayoutDashboard, label: "商城總覽", path: "/dashboard/admin/ecommerce" },
@@ -410,37 +455,15 @@ export default function AdminDashboardLayout({
       ]
     : [];
 
-  // ── 來點什麼分組（門市管理）── 接模組開關 + role 控制
-  // store_manager：日報 + SOP + 報修 + 檢查表
-  // franchisee：SOP + 報修 + 檢查表
-  // staff：SOP + 檢查表
-  const canSeeStoreOps = isOSTenant && (isSuperAdmin || isManager || isStoreManager || isFranchisee || isStaff);
-  const storeOperationItems = canSeeStoreOps
-    ? ([
-        (isSuperAdmin || isManager || isStoreManager) && hasOSModule("daily_report_os")
-          ? { icon: ClipboardList, label: "門市日報", path: "/dashboard/daily-report" }
-          : null,
-        hasOSModule("sop")
-          ? { icon: BookOpen, label: "SOP 知識庫", path: "/dashboard/sop" }
-          : null,
-        (isSuperAdmin || isManager || isStoreManager || isFranchisee) && hasOSModule("equipment_repair")
-          ? { icon: Wrench, label: "設備報修", path: "/dashboard/repairs" }
-          : null,
-        hasOSModule("checklist")
-          ? { icon: ClipboardCheck, label: "每日檢查表", path: "/dashboard/checklist" }
-          : null,
-      ].filter(Boolean) as { icon: React.ComponentType<{ className?: string }>; label: string; path: string }[])
-    : [];
-
-  const showDyErpSection = (isSuperAdmin || isManager) && (dyErpEnabled.length > 0 || dyErpComingSoon.length > 0);
-
-  // ── 系統管理（super_admin 限定）──
   const systemItems = isSuperAdmin
     ? [
         { icon: Building, label: "租戶管理", path: "/super-admin/tenants" },
         { icon: Puzzle, label: "模組管理", path: "/super-admin/modules" },
       ]
     : [];
+
+  const showDyErpSection = (isSuperAdmin || isManager) && (dyErpEnabled.length > 0 || dyErpComingSoon.length > 0);
+  const showOsSection = isOSTenant && (isSuperAdmin || isManager) && (osErpEnabled.length > 0 || osErpComingSoon.length > 0);
 
   const bottomItems = [{ icon: Home, label: "返回首頁", path: "/" }];
 
@@ -449,7 +472,6 @@ export default function AdminDashboardLayout({
     ...contentItems,
     ...userItems,
     ...franchiseItems,
-    ...storeOperationItems,
     ...osErpEnabled,
     ...dyErpEnabled,
     ...systemItems,
@@ -522,8 +544,41 @@ export default function AdminDashboardLayout({
     ));
   };
 
-  // ERP 區塊只對 super_admin / manager 顯示（其他 role 的門市項目已在「門市管理」群組呈現）
-  const showOsErpSection = (isSuperAdmin || isManager) && (osErpEnabled.length > 0 || osErpComingSoon.length > 0);
+  // ── 渲染「來點什麼」群組內的項目（含子群組標題）──
+  // orderedKeys: 實際顯示順序（可能是 erpOrder 或 osErpEnabled 預設順序）
+  const renderOsItemsWithSubGroups = (orderedKeys: string[]) => {
+    const nodes: React.ReactNode[] = [];
+    let lastSubGroup: string | null = null;
+    for (const key of orderedKeys) {
+      const item = osErpEnabled.find(i => (i.path ?? i.label) === key);
+      if (!item || !item.path) continue;
+      const sg = getSubGroupLabel(item.path);
+      if (sg !== lastSubGroup) {
+        if (sg) nodes.push(<SubGroupLabel key={`sg-${sg}`} label={sg} />);
+        lastSubGroup = sg;
+      }
+      const badge =
+        item.path === "/dashboard/inventory" && (inventoryAlertCount as number) > 0 ? (inventoryAlertCount as number) :
+        item.path === "/dashboard/purchasing" && needsReviewCount > 0 ? needsReviewCount :
+        item.path === "/dashboard/accounting" && accountingBadge > 0 ? accountingBadge :
+        0;
+      const badgeColor = item.path === "/dashboard/purchasing" ? "bg-orange-500" : "bg-red-500";
+      nodes.push(
+        <Link key={item.path} href={item.path}>
+          <a className={menuItemClass(item.path)} onClick={() => setMobileOpen(false)}>
+            <item.icon className="h-4 w-4 shrink-0" />
+            <span className="flex-1">{item.label}</span>
+            {badge > 0 && (
+              <span className={`ml-auto min-w-[20px] h-5 px-1.5 ${badgeColor} text-white text-[10px] font-bold rounded-full flex items-center justify-center`}>
+                {badge}
+              </span>
+            )}
+          </a>
+        </Link>
+      );
+    }
+    return nodes;
+  };
 
   const sidebarContent = (
     <>
@@ -542,127 +597,121 @@ export default function AdminDashboardLayout({
 
       {/* Menu */}
       <nav id="sidebar-nav" className="flex-1 overflow-y-auto py-2 space-y-1">
-        {/* 宇聯總部 */}
-        {(ecommerceItems.length > 0 || contentItems.length > 0 || userItems.length > 0 || franchiseItems.length > 0) && (
+
+        {/* ── 群組一：宇聯集團 ── */}
+        {(ecommerceItems.length > 0 || contentItems.length > 0 || userItems.length > 0 || franchiseItems.length > 0 || systemItems.length > 0) && (
           <div className="px-4 pt-3 pb-1">
-            <p className="text-[10px] font-bold text-[#78716c] uppercase tracking-widest">宇聯總部</p>
+            <p className="text-[10px] font-bold text-[#78716c] uppercase tracking-widest">宇聯集團</p>
           </div>
         )}
         {renderGroup("商城管理", ecommerceItems)}
         {renderGroup("內容管理", contentItems)}
         {renderGroup("人員管理", userItems)}
         {renderGroup("加盟管理", franchiseItems)}
+        {isSuperAdmin && systemItems.length > 0 && renderGroup("Super Admin", systemItems)}
 
-        {/* 來點什麼 */}
-        {(storeOperationItems.length > 0 || showOsErpSection) && (
-          <div className="px-4 pt-3 pb-1">
-            <p className="text-[10px] font-bold text-[#78716c] uppercase tracking-widest">來點什麼</p>
-          </div>
-        )}
-        {renderGroup("門市管理", storeOperationItems)}
-        {showOsErpSection && (
-          <div>
-            <div className={groupLabelClass} onClick={() => !isDragMode && toggleGroup("來點什麼 ERP")}>
-              <span>來點什麼 ERP</span>
-              <div className="flex items-center gap-1">
-                {isSuperAdmin && !isDragMode && (
-                  <button
-                    className="text-[10px] px-1.5 py-0.5 rounded bg-[#292524] text-amber-400/70 hover:text-amber-400 hover:bg-[#3c3836] transition-colors"
-                    onClick={e => { e.stopPropagation(); setIsDragMode(true); setCollapsedGroups(prev => ({ ...prev, "來點什麼 ERP": false })); }}
-                  >
-                    排列
-                  </button>
-                )}
-                {!isDragMode && (!!collapsedGroups["來點什麼 ERP"]
-                  ? <ChevronRight className="h-3 w-3 shrink-0" />
-                  : <ChevronDown className="h-3 w-3 shrink-0" />
-                )}
-              </div>
+        {/* ── 群組二：來點什麼 ── */}
+        {showOsSection && (
+          <>
+            <div className="px-4 pt-3 pb-1">
+              <p className="text-[10px] font-bold text-[#78716c] uppercase tracking-widest">來點什麼</p>
             </div>
-            {!collapsedGroups["來點什麼 ERP"] && (
-              <>
-                {isDragMode ? (
-                  <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={(event: DragEndEvent) => {
-                      const { active, over } = event;
-                      if (over && active.id !== over.id) {
-                        setErpOrder(prev => {
-                          const oldIdx = prev.indexOf(active.id as string);
-                          const newIdx = prev.indexOf(over.id as string);
-                          return arrayMove(prev, oldIdx, newIdx);
-                        });
-                        setHasUnsaved(true);
-                      }
-                    }}
-                  >
-                    <SortableContext items={erpOrder} strategy={verticalListSortingStrategy}>
-                      {erpOrder.map(key => {
-                        const item = osErpEnabled.find(i => (i.path ?? i.label) === key);
-                        if (!item) return null;
-                        return <SortableErpItem key={key} id={key} item={item} menuItemClass={menuItemClass} inventoryAlertCount={inventoryAlertCount as number} needsReviewCount={needsReviewCount} accountingBadge={accountingBadge} setMobileOpen={setMobileOpen} />;
-                      })}
-                    </SortableContext>
-                  </DndContext>
-                ) : (
-                  erpOrder.map(key => {
-                    const item = osErpEnabled.find(i => (i.path ?? i.label) === key);
-                    if (!item) return null;
-                    const badge =
-                      item.path === "/dashboard/inventory" && (inventoryAlertCount as number) > 0 ? (inventoryAlertCount as number) :
-                      item.path === "/dashboard/purchasing" && needsReviewCount > 0 ? needsReviewCount :
-                      item.path === "/dashboard/accounting" && accountingBadge > 0 ? accountingBadge :
-                      0;
-                    const badgeColor = item.path === "/dashboard/purchasing" ? "bg-orange-500" : "bg-red-500";
-                    return (
-                      <Link key={item.path} href={item.path!}>
-                        <a className={menuItemClass(item.path!)} onClick={() => setMobileOpen(false)}>
-                          <item.icon className="h-4 w-4 shrink-0" />
-                          <span className="flex-1">{item.label}</span>
-                          {badge > 0 && (
-                            <span className={`ml-auto min-w-[20px] h-5 px-1.5 ${badgeColor} text-white text-[10px] font-bold rounded-full flex items-center justify-center`}>
-                              {badge}
-                            </span>
-                          )}
-                        </a>
-                      </Link>
-                    );
-                  })
-                )}
-                {isDragMode && hasUnsaved && (
-                  <div className="mx-2 mt-1 mb-1 flex gap-1">
-                    <Button
-                      size="sm"
-                      className="h-7 text-xs flex-1 bg-amber-600 hover:bg-amber-700 text-white"
-                      onClick={async () => {
-                        await saveSidebarOrder.mutateAsync({
-                          items: erpOrder.map((key, idx) => ({ menuKey: key, sortOrder: idx })),
-                        });
-                        setIsDragMode(false);
-                        setHasUnsaved(false);
+            <div>
+              <div className={groupLabelClass} onClick={() => !isDragMode && toggleGroup("來點什麼")}>
+                <span>來點什麼</span>
+                <div className="flex items-center gap-1">
+                  {isSuperAdmin && !isDragMode && (
+                    <button
+                      className="text-[10px] px-1.5 py-0.5 rounded bg-[#292524] text-amber-400/70 hover:text-amber-400 hover:bg-[#3c3836] transition-colors"
+                      onClick={e => {
+                        e.stopPropagation();
+                        setIsDragMode(true);
+                        setCollapsedGroups(prev => ({ ...prev, "來點什麼": false }));
                       }}
-                      disabled={saveSidebarOrder.isPending}
                     >
-                      {saveSidebarOrder.isPending ? "儲存中..." : "儲存排列"}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 text-xs text-[#a8a29e]"
-                      onClick={() => { setIsDragMode(false); setHasUnsaved(false); }}
+                      排列
+                    </button>
+                  )}
+                  {!isDragMode && (!!collapsedGroups["來點什麼"]
+                    ? <ChevronRight className="h-3 w-3 shrink-0" />
+                    : <ChevronDown className="h-3 w-3 shrink-0" />
+                  )}
+                </div>
+              </div>
+              {!collapsedGroups["來點什麼"] && (
+                <>
+                  {isDragMode ? (
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={(event: DragEndEvent) => {
+                        const { active, over } = event;
+                        if (over && active.id !== over.id) {
+                          setErpOrder(prev => {
+                            const oldIdx = prev.indexOf(active.id as string);
+                            const newIdx = prev.indexOf(over.id as string);
+                            return arrayMove(prev, oldIdx, newIdx);
+                          });
+                          setHasUnsaved(true);
+                        }
+                      }}
                     >
-                      取消
-                    </Button>
-                  </div>
-                )}
-                {!isDragMode && renderComingSoonItems(osErpComingSoon)}
-              </>
-            )}
-          </div>
+                      <SortableContext items={erpOrder} strategy={verticalListSortingStrategy}>
+                        {erpOrder.map(key => {
+                          const item = osErpEnabled.find(i => (i.path ?? i.label) === key);
+                          if (!item) return null;
+                          return (
+                            <SortableErpItem
+                              key={key}
+                              id={key}
+                              item={item}
+                              menuItemClass={menuItemClass}
+                              inventoryAlertCount={inventoryAlertCount as number}
+                              needsReviewCount={needsReviewCount}
+                              accountingBadge={accountingBadge}
+                              setMobileOpen={setMobileOpen}
+                            />
+                          );
+                        })}
+                      </SortableContext>
+                    </DndContext>
+                  ) : (
+                    renderOsItemsWithSubGroups(erpOrder)
+                  )}
+                  {isDragMode && hasUnsaved && (
+                    <div className="mx-2 mt-1 mb-1 flex gap-1">
+                      <Button
+                        size="sm"
+                        className="h-7 text-xs flex-1 bg-amber-600 hover:bg-amber-700 text-white"
+                        onClick={async () => {
+                          await saveSidebarOrder.mutateAsync({
+                            items: erpOrder.map((key, idx) => ({ menuKey: key, sortOrder: idx })),
+                          });
+                          setIsDragMode(false);
+                          setHasUnsaved(false);
+                        }}
+                        disabled={saveSidebarOrder.isPending}
+                      >
+                        {saveSidebarOrder.isPending ? "儲存中..." : "儲存排列"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-xs text-[#a8a29e]"
+                        onClick={() => { setIsDragMode(false); setHasUnsaved(false); }}
+                      >
+                        取消
+                      </Button>
+                    </div>
+                  )}
+                  {!isDragMode && renderComingSoonItems(osErpComingSoon)}
+                </>
+              )}
+            </div>
+          </>
         )}
 
-        {/* 大永蛋品 */}
+        {/* ── 群組三：大永蛋品 ERP ── */}
         {showDyErpSection && (
           <div className="px-4 pt-3 pb-1">
             <p className="text-[10px] font-bold text-[#78716c] uppercase tracking-widest">大永蛋品</p>
@@ -708,8 +757,6 @@ export default function AdminDashboardLayout({
           </div>
         )}
 
-        {/* 系統 */}
-        {renderGroup("系統管理", systemItems)}
         {renderGroup("其他", bottomItems)}
       </nav>
 
