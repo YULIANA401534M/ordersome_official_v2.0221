@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md，歷史記錄請讀 DEVELOPMENT_LOG.md
 
-> **版本**：v5.64。**最後更新**：2026-04-19。
+> **版本**：v5.65。**最後更新**：2026-04-19。
 > **給 Claude 架構**：大腦（Claude.ai）+ 手腳（Claude Code）
 
 ---
@@ -47,12 +47,12 @@ git status && git log --oneline -3
 
 ## 當前開發狀態（換對話框必讀）
 
-### 最新 Git 狀態（2026-04-19 v5.64）
+### 最新 Git 狀態（2026-04-19 v5.65）
 
 最後三個 commit：
-1. `本次commit` — fix: v5.64 損益表欄位名修正+庫存金額統計
-2. `前次commit` — fix: v5.62 帳務修正：清理宇聯應付錯誤資料+補month欄位+修正import腳本排除B類自配
-3. `fc3719e` — feat: v5.61 撿貨單邏輯修正：相同品項跨門市數量加總，新增門市分配小字
+1. `本次commit` — feat: v5.65 損益儀表板圖表升級+庫存最後修改時間+近10筆記錄
+2. `ecf0d77` — fix: v5.64 損益表欄位名修正+庫存金額統計
+3. `9d51e9e` — fix: v5.63 帳務七項修正：netPayable補寫/退佣表名/韓濟登記/食材成本接真實數據/updateRebate同步netRebate
 
 working tree: clean
 
@@ -219,6 +219,10 @@ working tree: clean
 - os_monthly_reports 欄位全 camelCase：tenantId, electricityFee, waterFee, staffSalaryCost, performanceReview, monthlyPlan
 - profitLoss 日報 totalSales = instoreSales+uberSales+pandaSales+phoneOrderAmount+deliveryOrderAmount
 - os_inventory.itemValue = currentQty × unitCost（查詢時計算，非實體欄位）
+- profitLoss 新增 dailyTrend（每日趨勢陣列）和 channelSales（通路分拆物件）
+- OSProfitLoss 使用 recharts：AreaChart 每日趨勢、PieChart 通路分拆、BarChart 費用結構
+- os_inventory.updatedAt 顯示最後修改時間（取代 lastCountDate 欄位）
+- getHistory LIMIT 改為 10，historyDialog 顯示「近 10 筆異動記錄」
 - os_stores 表於 2026-04-19 新建，含 12 間門市，schema 需一併更新
 
 **os_stores 表結構：**

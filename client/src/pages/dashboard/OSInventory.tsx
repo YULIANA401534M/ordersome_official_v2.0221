@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -258,7 +259,7 @@ export default function OSInventory() {
                     />
                   </th>
                 )}
-                {["廠商", "品項名稱", "分類", "目前庫存", "庫存金額", "安全庫存", "狀態", "最後盤點", "操作"].map(h => (
+                {["廠商", "品項名稱", "分類", "目前庫存", "庫存金額", "安全庫存", "狀態", "最後修改", "操作"].map(h => (
                   <th key={h} className="px-4 py-3 text-left font-semibold text-stone-600 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -298,7 +299,14 @@ export default function OSInventory() {
                       {Number(item.safetyQty) === 0 ? "-" : `${Math.round(Number(item.safetyQty)).toLocaleString()} ${item.unit}`}
                     </td>
                     <td className="px-4 py-3"><StatusBadge item={item} /></td>
-                    <td className="px-4 py-3 text-stone-400 text-xs">{item.lastCountDate ?? "-"}</td>
+                    <td className="px-4 py-3 text-stone-400 text-xs whitespace-nowrap">
+                      {(item as any).updatedAt
+                        ? new Date((item as any).updatedAt).toLocaleString("zh-TW", {
+                            year:"numeric", month:"2-digit", day:"2-digit",
+                            hour:"2-digit", minute:"2-digit", hour12:false
+                          }).replace(/\//g,"-")
+                        : "-"}
+                    </td>
                     <td className="px-4 py-3">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -580,6 +588,7 @@ export default function OSInventory() {
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>庫存異動記錄 — {historyDialog.item?.productName}</DialogTitle>
+            <DialogDescription>近 10 筆異動記錄</DialogDescription>
           </DialogHeader>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -598,7 +607,12 @@ export default function OSInventory() {
                   const qty = Math.round(Number(r.qty));
                   return (
                     <tr key={i} className="border-b hover:bg-stone-50">
-                      <td className="px-3 py-2 text-xs text-stone-500 whitespace-nowrap">{String(r.createdAt).slice(0, 16)}</td>
+                      <td className="px-3 py-2 text-xs text-stone-500 whitespace-nowrap">
+                        {new Date(r.createdAt).toLocaleString("zh-TW",{
+                          month:"2-digit", day:"2-digit",
+                          hour:"2-digit", minute:"2-digit", hour12:false
+                        })}
+                      </td>
                       <td className="px-3 py-2 whitespace-nowrap">{typeMap[r.changeType] ?? r.changeType}</td>
                       <td className="px-3 py-2 text-right font-medium">{qty > 0 ? `+${qty.toLocaleString()}` : qty.toLocaleString()}</td>
                       <td className="px-3 py-2 text-right text-stone-500">{Math.round(Number(r.qtyBefore)).toLocaleString()}</td>

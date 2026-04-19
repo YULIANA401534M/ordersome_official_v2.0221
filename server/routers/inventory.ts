@@ -189,7 +189,7 @@ export const inventoryRouter = router({
         `SELECT changeType, qty, qtyBefore, qtyAfter, refType, refId, note, createdAt
          FROM os_inventory_logs
          WHERE inventoryId=? AND tenantId=?
-         ORDER BY createdAt DESC LIMIT 100`,
+         ORDER BY createdAt DESC LIMIT 10`,
         [input.inventoryId, ctx.tenantId ?? TENANT_ID]
       );
       return rows as any[];

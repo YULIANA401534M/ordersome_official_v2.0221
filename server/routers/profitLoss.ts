@@ -32,6 +32,40 @@ export const profitLossRouter = router({
       const totalSales = Number(daily.totalSales ?? 0);
       const guestTotal = Number(daily.guestTotal ?? 0);
 
+      // 每日銷售趨勢（折線圖）
+      const [trendRows] = await (db as any).$client.execute(`
+        SELECT
+          DATE_FORMAT(reportDate, '%m/%d') AS day,
+          SUM(instoreSales + uberSales + pandaSales
+              + COALESCE(phoneOrderAmount,0)
+              + COALESCE(deliveryOrderAmount,0)) AS sales,
+          SUM(guestInstore + guestUber + guestPanda) AS guests
+        FROM os_daily_reports
+        WHERE tenantId=1 AND YEAR(reportDate)=? AND MONTH(reportDate)=?
+        GROUP BY reportDate
+        ORDER BY reportDate ASC
+      `, [year, month]);
+      const dailyTrend = trendRows as any[];
+
+      // 各通路分拆（圓餅圖）
+      const [[channelRow]] = await (db as any).$client.execute(`
+        SELECT
+          COALESCE(SUM(instoreSales),0)        AS instore,
+          COALESCE(SUM(uberSales),0)           AS uber,
+          COALESCE(SUM(pandaSales),0)          AS panda,
+          COALESCE(SUM(phoneOrderAmount),0)    AS phone,
+          COALESCE(SUM(deliveryOrderAmount),0) AS delivery
+        FROM os_daily_reports
+        WHERE tenantId=1 AND YEAR(reportDate)=? AND MONTH(reportDate)=?
+      `, [year, month]);
+      const channelSales = {
+        instore:  Number(channelRow?.instore  ?? 0),
+        uber:     Number(channelRow?.uber     ?? 0),
+        panda:    Number(channelRow?.panda    ?? 0),
+        phone:    Number(channelRow?.phone    ?? 0),
+        delivery: Number(channelRow?.delivery ?? 0),
+      };
+
       // b. 月報費用
       const monthlySql = `
         SELECT
@@ -119,6 +153,9 @@ export const profitLossRouter = router({
         // 採購成本
         procurementCost,
         isCostEstimated,
+        // 趨勢與通路
+        dailyTrend,
+        channelSales,
         // 備註
         performanceReview,
         monthlyPlan,
