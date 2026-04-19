@@ -411,3 +411,33 @@ check().catch(console.error);
 - **資料庫**：TiDB Cloud（MySQL 相容）
 - **套件管理**：pnpm 10
 - **Git 規則**：commit 只用 `git add 指定檔案`，絕不用 `git add -A`
+
+---
+
+## 待建置大任務：集中式權限管理系統
+
+**目標**：取代目前散落在各頁面的 role 判斷邏輯，建立集中式權限控制。
+
+**規劃架構：**
+1. DB 新增 `os_user_permissions` 表
+   - `userId, moduleKey, canView, canEdit, canDelete`
+2. 後端新增 `permissionMiddleware`（取代 adminProcedure/managerAllowed）
+3. 前端用戶管理頁面加「權限設定」UI，管理員可對每個 user 開關模組
+4. `AdminDashboardLayout` 改從 permissions API 讀取可見模組，不再 hardcode
+5. 各頁面的 `isSuperAdmin`/`isManager`/`canSeeCost` 判斷統一從 permissions 讀
+
+**優先順序**：P2，在目前 UAT fix 全部完成後執行。
+**預估影響範圍**：`AdminDashboardLayout.tsx`、所有 OS ERP 頁面、後端 `trpc.ts`
+
+---
+
+## 待建置：菜單成本 os_menu_items 表
+
+**問題**：`os_menu_items` 資料表在 TiDB 不存在，導致 OSCaMenu 頁面無資料。
+
+**需要：**
+1. 執行 migration 建立 `os_menu_items` 和 `os_menu_item_ingredients` 表
+2. 匯入現有菜單品項資料
+3. 聯動 `os_products.unitCost` 計算成本
+
+**優先順序**：P2，下一輪處理。
