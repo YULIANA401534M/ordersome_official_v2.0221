@@ -296,6 +296,10 @@ export default function OSPurchasing() {
     onError: (e) => toast.error(e.message),
   });
 
+  const selectableOrders = (orders as any[]).filter(
+    (o) => o.status === "pending" || o.status === "sent"
+  );
+
   // KPI 用月份資料
   const kpi = useMemo(() => {
     const list = monthOrders as any[];
@@ -676,6 +680,27 @@ export default function OSPurchasing() {
 
         {/* 叫貨單列表 */}
         <div className="space-y-3">
+          {/* 全選列 */}
+          {isSuperAdmin && selectableOrders.length > 0 && (
+            <div className="flex items-center gap-3 px-4 py-2 bg-white rounded-xl shadow-sm">
+              <Checkbox
+                checked={
+                  selectableOrders.length > 0 &&
+                  selectableOrders.every((o) => selectedIds.has(o.id))
+                }
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    setSelectedIds(new Set(selectableOrders.map((o) => o.id)));
+                  } else {
+                    setSelectedIds(new Set());
+                  }
+                }}
+              />
+              <span className="text-xs text-gray-500">
+                全選（待處理 + 已傳送，共 {selectableOrders.length} 張）
+              </span>
+            </div>
+          )}
           {(orders as any[]).length === 0 ? (
             <div className="bg-white rounded-xl p-8 text-center text-gray-600">無符合條件的叫貨紀錄</div>
           ) : (
@@ -914,7 +939,7 @@ export default function OSPurchasing() {
             <DialogTitle>批量刪除確認</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-gray-600 py-2">
-            確定要刪除選取的 {selectedIds.size} 張叫貨單（僅限待處理）？此操作無法復原。
+            確定要刪除選取的 {selectedIds.size} 張叫貨單（僅限待處理及已傳送）？此操作無法復原。
           </p>
           <div>
             <Label className="text-sm">刪除原因（必填，永久保存）</Label>
