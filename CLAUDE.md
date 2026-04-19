@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md，歷史記錄請讀 DEVELOPMENT_LOG.md
 
-> **版本**：v5.62。**最後更新**：2026-04-19。
+> **版本**：v5.63。**最後更新**：2026-04-19。
 > **給 Claude 架構**：大腦（Claude.ai）+ 手腳（Claude Code）
 
 ---
@@ -207,6 +207,9 @@ working tree: clean
 - 短期不要修，優先業務功能
 
 **DB 注意事項：**
+- os_payables.netPayable = totalAmount - rebateAmount，由 generateMonthlyPayables 初始化（初始值=totalAmount），calculateRebates offset 時更新
+- profitLoss 退佣讀 os_rebates.netRebate（非 os_rebate_records）
+- profitLoss 食材成本：有 os_payables 真實資料時用真實值，否則估算 35%（前端顯示標注來源）
 - os_products 共 704 筆（v5.57後，含大麥歷史匯入新建137筆 needsReview=1）
 - os_products 的 `temperature` 欄位不存在，溫層存在 `category2`
 - os_delivery_orders.toStoreId 已改為允許 NULL

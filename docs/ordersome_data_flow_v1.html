@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OrderSome 資料流聯動表 v1.0</title>
+<title>OrderSome 資料流聯動表 v1.1</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f7f6f3; color: #1c1917; font-size: 13px; }
@@ -41,7 +41,7 @@ td:first-child { white-space: nowrap; width: 200px; }
 
 <div class="header">
   <h1>OrderSome 資料流聯動表</h1>
-  <span class="ver">v1.0 — 2026-04-19 | CLAUDE.md v5.57</span>
+  <span class="ver">v1.1 — 2026-04-19 | CLAUDE.md v5.63</span>
 </div>
 
 <div class="legend">
@@ -145,8 +145,8 @@ td:first-child { white-space: nowrap; width: 200px; }
 
     <tr>
       <td><span class="trigger">查看損益表格</span><br><span class="tag auto-tag">自動計算</span></td>
-      <td><div class="tables"><span class="tbl read">os_daily_reports</span><span class="tbl read">os_monthly_reports</span><span class="tbl read">os_rebate_records</span><span class="tbl read">os_franchisee_payments</span></div></td>
-      <td class="effect">營收 = 報表加總。成本 = 採購（來自 os_payables）。毛利 = 營收 - 成本 + 退佣。營業利潤 = 毛利 - 電費 - 水費 - 薪資</td>
+      <td><div class="tables"><span class="tbl read">os_daily_reports</span><span class="tbl read">os_monthly_reports</span><span class="tbl read">os_rebates</span><span class="tbl read">os_payables</span><span class="tbl read">os_franchisee_payments</span></div></td>
+      <td class="effect">營收 = 報表加總。成本 = os_payables.netPayable 真實採購金額（無資料時估算35%）。退佣 = os_rebates.netRebate（非 os_rebate_records）。營業利潤 = 毛利 - 電費 - 水費 - 薪資</td>
     </tr>
 
     <!-- 現場作業 -->
@@ -174,15 +174,15 @@ td:first-child { white-space: nowrap; width: 200px; }
     </tr>
 
     <tr>
-      <td><span class="trigger">採購成本接損益表</span><br><span class="tag todo-tag">待建</span></td>
-      <td><div class="tables"><span class="tbl read">os_payables</span><span class="tbl read">os_procurement_items</span></div></td>
-      <td class="effect">損益表目前缺採購成本來源，需接 os_payables.totalAmount 作為當期進貨成本</td>
+      <td><span class="trigger">採購成本接損益表</span><br><span class="tag auto-tag">已實作</span></td>
+      <td><div class="tables"><span class="tbl read">os_payables</span></div></td>
+      <td class="effect">損益表讀 os_payables.netPayable（SUM）作為本月採購成本，無資料時 fallback 估算35%，前端標註來源</td>
     </tr>
 
     <tr>
-      <td><span class="trigger">退佣啟用</span><br><span class="tag todo-tag">待建</span></td>
-      <td><div class="tables"><span class="tbl write">os_rebates</span></div></td>
-      <td class="effect">撿貨自動執行 osRebate router，不需人工點擊。規則已在 DB，只差啟用觸發</td>
+      <td><span class="trigger">退佣計算（os_rebates）</span><br><span class="tag auto-tag">已實作</span></td>
+      <td><div class="tables"><span class="tbl write">os_rebates</span><span class="tbl write">os_payables</span></div></td>
+      <td class="effect">廣弘：percentage÷1.12差額自動算。伯享/韓濟：建空殼（rebateAmount=0），人工輸入後 updateRebate 同步更新 netRebate。損益表讀 os_rebates.netRebate</td>
     </tr>
 
     <tr>
@@ -195,7 +195,7 @@ td:first-child { white-space: nowrap; width: 200px; }
 </table>
 
 <div class="footer">
-  OrderSome 資料流聯動表 v1.0 — 2026-04-19 | 依 server/routers/* 初始碼庫分析產出<br>
+  OrderSome 資料流聯動表 v1.1 — 2026-04-19 | 依 server/routers/* 初始碼庫分析產出<br>
   更新規則：每次涉及資料表新增/觸發邏輯變更的 commit，同步更新本表版本號與對應行
 </div>
 

@@ -484,10 +484,14 @@ export default function OSAccounting() {
                       <td className="p-3 text-right font-medium">{fmtAmt(r.netRebate)}</td>
                       <td className="p-3 text-center"><StatusBadge cfg={REBATE_BADGE} value={r.status ?? "pending"} /></td>
                       <td className="p-3 text-center space-x-1">
-                        {(r.rebateType === "manual" || r.status === "pending") && r.rebateType !== "offset" && (
+                        {(r.rebateType === "manual" || r.rebateType === "offset" || r.status === "pending") && (
                           <Button size="sm" variant="outline" className="h-7 text-xs"
                             onClick={() => { setRebateTarget(r); setRebateManualAmt(String(r.rebateAmount ?? "")); setRebateBankRef(r.bankRef ?? ""); setShowRebateEdit(true); }}>
-                            {r.rebateType === "manual" ? "人工輸入金額" : "登記收款"}
+                            {r.rebateType === "manual"
+                              ? "人工輸入金額"
+                              : r.rebateType === "offset"
+                              ? "登記抵貨款"
+                              : "登記收款"}
                           </Button>
                         )}
                       </td>

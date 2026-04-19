@@ -53,15 +53,15 @@ export const accountingRouter = router({
         );
         if ((existing as any[]).length > 0) {
           await (db as any).$client.execute(
-            'UPDATE os_payables SET totalAmount=?, updatedAt=NOW() WHERE id=?',
-            [row.totalAmount, (existing as any[])[0].id]
+            'UPDATE os_payables SET totalAmount=?, netPayable=?, updatedAt=NOW() WHERE id=?',
+            [row.totalAmount, row.totalAmount, (existing as any[])[0].id]
           );
           updated++;
         } else {
           await (db as any).$client.execute(
-            `INSERT INTO os_payables (tenantId, supplierName, month, periodStart, periodEnd, totalAmount, createdBy, createdAt, updatedAt)
-             VALUES (?,?,?,?,?,?,?,NOW(),NOW())`,
-            [tenantId, row.supplierName, input.month, periodStart, periodEnd, row.totalAmount, ctx.user?.id ?? null]
+            `INSERT INTO os_payables (tenantId, supplierName, month, periodStart, periodEnd, totalAmount, netPayable, createdBy, createdAt, updatedAt)
+             VALUES (?,?,?,?,?,?,?,?,NOW(),NOW())`,
+            [tenantId, row.supplierName, input.month, periodStart, periodEnd, row.totalAmount, row.totalAmount, ctx.user?.id ?? null]
           );
           created++;
         }
@@ -247,6 +247,10 @@ export const accountingRouter = router({
         if (rule.rebateType === 'percentage') {
           const untaxed = p.totalAmount / 1.12;
           rebateAmount = p.totalAmount - untaxed;
+        } else if (rule.rebateType === 'offset') {
+          rebateAmount = 0; // 韓濟：金額需人工確認，建空殼
+        } else {
+          rebateAmount = 0; // fixed_diff（伯享）：人工輸入
         }
         const netRebate = rebateAmount - (rule.handlingFee ?? 0);
 
@@ -265,8 +269,8 @@ export const accountingRouter = router({
 
         if (rule.rebateType === 'offset') {
           await (db as any).$client.execute(
-            'UPDATE os_payables SET rebateAmount=? WHERE id=?',
-            [rebateAmount, p.id]
+            'UPDATE os_payables SET rebateAmount=?, netPayable=GREATEST(0, totalAmount-?) WHERE id=?',
+            [rebateAmount, rebateAmount, p.id]
           );
         }
         created++;
@@ -464,6 +468,8 @@ export const accountingRouter = router({
       const params: any[] = [];
       if (input.rebateAmount !== undefined) {
         setClauses.push('rebateAmount=?');
+        params.push(input.rebateAmount);
+        setClauses.push('netRebate=GREATEST(0, ?-COALESCE(handlingFee,0))');
         params.push(input.rebateAmount);
       }
       if (input.bankRef !== undefined) { setClauses.push('bankRef=?'); params.push(input.bankRef); }

@@ -71,19 +71,15 @@ export const profitLossRouter = router({
       const monthlyPlan: string = monthly.monthlyPlan ?? '';
 
       // c. 退佣收入
-      let rebateSql = `
-        SELECT COALESCE(SUM(rebate_amount), 0) AS rebateIncome
-        FROM os_rebate_records
-        WHERE tenant_id = 1
-          AND year = ? AND month = ?
-          AND status IN ('confirmed', 'received')
+      const monthStr = `${year}-${String(month).padStart(2, '0')}`;
+      const rebateSql = `
+        SELECT COALESCE(SUM(netRebate), 0) AS rebateIncome
+        FROM os_rebates
+        WHERE tenantId = 1
+          AND month = ?
+          AND status IN ('received', 'offset', 'pending')
       `;
-      const rebateParams: (number | string)[] = [year, month];
-      if (storeId) {
-        rebateSql += ' AND store_id = ?';
-        rebateParams.push(storeId);
-      }
-      const [rebateRows] = await (db as any).$client.execute(rebateSql, rebateParams);
+      const [rebateRows] = await (db as any).$client.execute(rebateSql, [monthStr]);
       const rebateIncome = Number((rebateRows as any[])[0]?.rebateIncome ?? 0);
 
       // d. 本月出貨帳款應收
@@ -98,8 +94,18 @@ export const profitLossRouter = router({
       const [[arRow]] = await (db as any).$client.execute(arSql, [year, month]);
       const arIncome = Number((arRow as any)?.arIncome) || 0;
 
-      // e. 食材成本估算（35%）
-      const foodCost = Math.round(totalSales * 0.35);
+      // e. 食材成本：優先使用 os_payables 真實採購金額
+      const [[costRow]] = await (db as any).$client.execute(
+        `SELECT COALESCE(SUM(COALESCE(netPayable, totalAmount)), 0) AS procurementCost
+         FROM os_payables
+         WHERE tenantId=1 AND month=?`,
+        [monthStr]
+      );
+      const procurementCost = Number((costRow as any)?.procurementCost) || 0;
+      const foodCost = procurementCost > 0
+        ? procurementCost
+        : Math.round(totalSales * 0.35);
+      const isCostEstimated = procurementCost === 0;
 
       // f. 損益計算
       const grossProfit = totalSales - foodCost;
@@ -128,6 +134,9 @@ export const profitLossRouter = router({
         grossProfit,
         operatingProfit,
         profitRate,
+        // 採購成本
+        procurementCost,
+        isCostEstimated,
         // 備註
         performanceReview,
         monthlyPlan,

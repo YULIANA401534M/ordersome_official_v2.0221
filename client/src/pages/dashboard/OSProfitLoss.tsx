@@ -44,7 +44,7 @@ export default function OSProfitLoss() {
   const rows = data
     ? [
         { label: "本月營收",   value: `$ ${fmt(data.totalSales)}`,                  ratio: "100%",                            highlight: false },
-        { label: "食材成本",   value: mask(data.foodCost),                           ratio: maskPct(data.foodCost, data.totalSales),           highlight: false },
+        { label: data.isCostEstimated ? "食材成本（估算35%）" : "採購成本（實際）", value: mask(data.foodCost), ratio: maskPct(data.foodCost, data.totalSales), highlight: false },
         { label: "電費",       value: mask(data.electricityFee),                     ratio: maskPct(data.electricityFee, data.totalSales),     highlight: false },
         { label: "水費",       value: mask(data.waterFee),                           ratio: maskPct(data.waterFee, data.totalSales),           highlight: false },
         { label: "薪資",       value: mask(data.salaryTotal),                        ratio: maskPct(data.salaryTotal, data.totalSales),        highlight: false },
