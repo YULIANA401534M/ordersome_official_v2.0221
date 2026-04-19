@@ -368,8 +368,10 @@ interface MonthlyExpandState {
 
 function MonthlyOverviewTab() {
   const now = new Date();
-  const [year, setYear] = useState(now.getFullYear());
-  const [month, setMonth] = useState(now.getMonth() + 1);
+  const [viewYear, setViewYear] = useState(now.getFullYear());
+  const [viewMonth, setViewMonth] = useState(now.getMonth() + 1);
+  const year = viewYear;
+  const month = viewMonth;
   const [expanded, setExpanded] = useState<MonthlyExpandState>({});
   const [monthlyForms, setMonthlyForms] = useState<Record<string, any>>({});
   const utils = trpc.useUtils();
@@ -455,7 +457,7 @@ function MonthlyOverviewTab() {
       <Card>
         <CardContent className="pt-4 pb-3">
           <div className="flex items-center gap-3">
-            <Select value={String(year)} onValueChange={v => setYear(Number(v))}>
+            <Select value={String(viewYear)} onValueChange={v => setViewYear(Number(v))}>
               <SelectTrigger className="w-28 h-10 text-sm">
                 <SelectValue />
               </SelectTrigger>
@@ -463,7 +465,7 @@ function MonthlyOverviewTab() {
                 {years.map(y => <SelectItem key={y} value={String(y)}>{y} 年</SelectItem>)}
               </SelectContent>
             </Select>
-            <Select value={String(month)} onValueChange={v => setMonth(Number(v))}>
+            <Select value={String(viewMonth)} onValueChange={v => setViewMonth(Number(v))}>
               <SelectTrigger className="w-20 h-10 text-sm">
                 <SelectValue />
               </SelectTrigger>

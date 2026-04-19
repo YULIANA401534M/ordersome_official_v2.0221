@@ -42,11 +42,17 @@ export const osRebateRouter = router({
         const rebateType = supplier.rebateType || 'percentage';
 
         if (rebateType === 'percentage' && supplier.rebateRate > 0) {
-          rebateAmount = Math.round(row.totalAmount * supplier.rebateRate);
+          const rate = Number(supplier.rebateRate) > 1
+            ? Number(supplier.rebateRate) / 100
+            : Number(supplier.rebateRate);
+          rebateAmount = Math.round(row.totalAmount * rate);
         } else if (rebateType === 'fixed') {
           rebateAmount = Number(supplier.rebateRate) || 0;
         } else if (rebateType === 'offset') {
-          rebateAmount = Math.round(row.totalAmount * (Number(supplier.rebateRate) || 0));
+          const rate = Number(supplier.rebateRate) > 1
+            ? Number(supplier.rebateRate) / 100
+            : Number(supplier.rebateRate);
+          rebateAmount = Math.round(row.totalAmount * rate);
         }
 
         await (db as any).$client.execute(`

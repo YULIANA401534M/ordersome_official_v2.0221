@@ -60,6 +60,10 @@ export default function OSRebate() {
   const { data: rebates = [], refetch: refetchRebates, isLoading: loadingRebates } = trpc.osRebate.list.useQuery({ year, month });
   const { data: payables = [], refetch: refetchPayables, isLoading: loadingPayables } = trpc.osRebate.payableList.useQuery({ year, month });
 
+  // 查 os_rebates（accounting 路由寫入的正確資料）
+  const { data: rebatesFromAccounting = [], refetch: refetchRebates2 } =
+    trpc.accounting.listRebates.useQuery({ month: `${year}-${String(month).padStart(2, '0')}` });
+
   const calculateMutation = trpc.osRebate.calculate.useMutation({
     onSuccess: (data) => {
       toast.success(`計算完成，共 ${data.count} 筆廠商`);
@@ -67,6 +71,12 @@ export default function OSRebate() {
       refetchPayables();
     },
     onError: (e) => toast.error(e.message || "計算失敗"),
+  });
+
+  // 使用 accounting.calculateRebates 計算並寫入 os_rebates
+  const calcRebatesMut = trpc.accounting.calculateRebates.useMutation({
+    onSuccess: (d: any) => { toast.success(d.message || "退佣計算完成"); refetchRebates2(); },
+    onError: (e: any) => toast.error(e.message || "計算失敗"),
   });
 
   const confirmReceivedMutation = trpc.osRebate.confirmReceived.useMutation({
@@ -133,6 +143,11 @@ export default function OSRebate() {
           >
             <Calculator className="w-4 h-4 mr-2" />
             {calculateMutation.isPending ? "計算中..." : "重新計算退佣"}
+          </Button>
+          <Button size="sm" variant="outline" className="h-9 text-xs gap-1"
+            disabled={calcRebatesMut.isPending}
+            onClick={() => calcRebatesMut.mutate({ month: `${year}-${String(month).padStart(2, '0')}` })}>
+            <Calculator className="w-3.5 h-3.5" /> 計算本月退佣(os_rebates)
           </Button>
         </div>
 
