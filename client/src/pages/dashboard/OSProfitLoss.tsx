@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import AdminDashboardLayout from "@/components/AdminDashboardLayout";
@@ -29,8 +30,16 @@ const CHANNEL_LABELS: Record<string, string> = {
 
 export default function OSProfitLoss() {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const isSuperAdmin = (user as any)?.role === "super_admin";
   const canSeeCost = isSuperAdmin || (user as any)?.has_procurement_access === 1;
+
+  useEffect(() => {
+    if (!user) return;
+    if (user.role !== "super_admin" && !(user as any).has_procurement_access) {
+      setLocation("/dashboard");
+    }
+  }, [user]);
 
   const [year, setYear] = useState(DEFAULT_YEAR);
   const [month, setMonth] = useState(DEFAULT_MONTH);

@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { useLocation } from "wouter";
+import { useState, useMemo, useEffect } from "react";
+import { useLocation, useSearch } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import AdminDashboardLayout from "@/components/AdminDashboardLayout";
@@ -57,6 +57,7 @@ function getMonday(d: Date) {
 export default function OSPurchasing() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
+  const search = useSearch();
   const canEdit = user?.role === "super_admin" || user?.role === "manager";
   const isSuperAdmin = user?.role === "super_admin";
 
@@ -72,6 +73,14 @@ export default function OSPurchasing() {
   const [filterEndDate, setFilterEndDate] = useState("");
   const [filterStore, setFilterStore] = useState("all");
   const [filterSupplierSel, setFilterSupplierSel] = useState("all");
+
+  // URL 參數帶入廠商篩選（來自帳務管理「查看明細」跳轉）
+  useEffect(() => {
+    const params = new URLSearchParams(search);
+    const sup = params.get("supplier");
+    if (sup) setFilterSupplierSel(sup);
+  }, [search]);
+
   const [sortBy, setSortBy] = useState<"date" | "status" | "amount" | "supplier">("date");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
@@ -768,6 +777,7 @@ export default function OSPurchasing() {
               <span className="text-xs text-gray-500">
                 全選（待處理 + 已傳送，共 {selectableOrders.length} 張）
               </span>
+              <span className="text-xs text-stone-400 ml-1">僅限待處理及已傳送</span>
             </div>
           )}
           {(orders as any[]).length === 0 ? (

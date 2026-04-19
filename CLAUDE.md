@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md，歷史記錄請讀 DEVELOPMENT_LOG.md
 
-> **版本**：v5.67。**最後更新**：2026-04-19。
+> **版本**：v5.68。**最後更新**：2026-04-19。
 > **給 Claude 架構**：大腦（Claude.ai）+ 手腳（Claude Code）
 
 ---
@@ -47,12 +47,12 @@ git status && git log --oneline -3
 
 ## 當前開發狀態（換對話框必讀）
 
-### 最新 Git 狀態（2026-04-19 v5.67）
+### 最新 Git 狀態（2026-04-19 v5.68）
 
 最後三個 commit：
-1. `(v5.67)` — fix: 叫貨日期預設全部+帳務全月顯示+刪除品項mutation補接+損益採購成本修正
-2. `456004c` — feat: v5.65 損益儀表板圖表升級+庫存最後修改時間+近10筆記錄
-3. `ecf0d77` — fix: v5.64 損益表欄位名修正+庫存金額統計
+1. `(v5.68)` — feat: manager權限B方案+損益擋住+叫貨廠商下拉+庫存分頁+品項分頁needsReview+帳務跳轉
+2. `40912b8` — fix: v5.67 第一梯修正
+3. `456004c` — feat: v5.65 損益儀表板圖表升級
 
 working tree: clean
 
@@ -145,6 +145,7 @@ working tree: clean
 - [x] v5.64 損益表欄位名全面修正（camelCase）+ 庫存金額統計
 - [x] v5.65 損益儀表板圖表升級（recharts）+ 庫存最後修改時間 + 近10筆記錄
 - [x] v5.67 第一梯修正：叫貨日期預設全部+快速選項 / 帳務月份預設全部+操作按鈕保護 / profitLoss.ts 確認已正確 / OSInventory.tsx deleteMut 確認已正確
+- [x] v5.68 第二梯修正：manager權限B方案 / 損益擋住 / 庫存分頁30筆 / 品項分頁50筆+needsReview / 帳務查看明細跳轉
 
 ---
 
@@ -222,6 +223,12 @@ working tree: clean
 - OSInventory.tsx deleteMut 已接通 inventory.deleteItem（deleteTarget/deleteReason state 齊備）
 - 叫貨管理日期預設為空（查全部），快速選本週/本月/三個月/全部按鈕在日期輸入左側
 - 帳務管理 month 預設為空（顯示全部月份），操作型 mutation（generatePayables/calcRebates/autoMatch/billTransfers）在 month 為空時 disabled
+- manager 權限方案B：osModuleDefs 加 managerAllowed 欄位，只有 managerAllowed:true 的模組才對 manager 顯示（叫貨/配送/日報/SOP/設備報修/每日檢查表）
+- 損益儀表板加 useEffect role 檢查，非 super_admin 且無 has_procurement_access 者直接導回 /dashboard
+- 庫存管理加前端分頁每頁 30 筆，篩選（廠商/分類/低警戒）變動時重置頁碼
+- 品項成本加分頁每頁 50 筆 + needsReview 後端篩選（osProducts.productList input 加 needsReview: z.boolean().optional()）
+- 應付帳款每列加「查看明細」按鈕，跳轉 /dashboard/purchasing?supplier=廠商名
+- OSPurchasing.tsx 讀 URL ?supplier= 參數自動帶入廠商篩選（useSearch + useEffect）
 - os_products 共 704 筆（v5.57後，含大麥歷史匯入新建137筆 needsReview=1）
 - os_products 的 `temperature` 欄位不存在，溫層存在 `category2`
 - os_delivery_orders.toStoreId 已改為允許 NULL

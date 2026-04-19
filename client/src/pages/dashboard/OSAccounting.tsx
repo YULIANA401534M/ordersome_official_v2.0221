@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import AdminDashboardLayout from "@/components/AdminDashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ function StatusBadge({ cfg, value }: { cfg: Record<string, { label: string; colo
 }
 
 export default function OSAccounting() {
+  const [, navigate] = useLocation();
   const [tab, setTab] = useState("payables");
   const [month, setMonth] = useState("");
 
@@ -340,12 +342,18 @@ export default function OSAccounting() {
                       <td className="p-3 text-xs text-gray-500">{p.dueDate ?? "-"}</td>
                       <td className="p-3 text-xs text-gray-500 max-w-[120px] truncate">{p.bankRef ?? "-"}</td>
                       <td className="p-3 text-center">
-                        {p.status !== "paid" && (
-                          <Button size="sm" variant="outline" className="h-7 text-xs"
-                            onClick={() => { setPayTarget(p); setPayAmt(""); setPayBankRef(""); setPayNote(""); setShowPayDialog(true); }}>
-                            登記付款
+                        <div className="flex gap-1 justify-center">
+                          {p.status !== "paid" && (
+                            <Button size="sm" variant="outline" className="h-7 text-xs"
+                              onClick={() => { setPayTarget(p); setPayAmt(""); setPayBankRef(""); setPayNote(""); setShowPayDialog(true); }}>
+                              登記付款
+                            </Button>
+                          )}
+                          <Button size="sm" variant="ghost" className="h-7 text-xs"
+                            onClick={() => navigate(`/dashboard/purchasing?supplier=${encodeURIComponent(p.supplierName)}`)}>
+                            查看明細
                           </Button>
-                        )}
+                        </div>
                       </td>
                     </tr>
                   ))}

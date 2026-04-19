@@ -60,6 +60,8 @@ export default function OSInventory() {
   const [filterSupplier, setFilterSupplier] = useState("all");
   const [filterCategory, setFilterCategory] = useState("all");
   const [belowSafety, setBelowSafety] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 30;
 
   const [adjustDialog, setAdjustDialog] = useState<{ open: boolean; item?: InventoryItem }>({ open: false });
   const [safetyDialog, setSafetyDialog] = useState<{ open: boolean; item?: InventoryItem }>({ open: false });
@@ -115,6 +117,12 @@ export default function OSInventory() {
   );
 
   const categories = Array.from(new Set((items as InventoryItem[]).map(i => i.category).filter(Boolean)));
+
+  const totalPages = Math.ceil((items as InventoryItem[]).length / PAGE_SIZE);
+  const pagedItems = (items as InventoryItem[]).slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
 
   const outOfStock = (items as InventoryItem[]).filter(i => Number(i.currentQty) === 0).length;
   const lowStock = (items as InventoryItem[]).filter(i => Number(i.safetyQty) > 0 && Number(i.currentQty) > 0 && Number(i.currentQty) < Number(i.safetyQty)).length;
@@ -185,7 +193,7 @@ export default function OSInventory() {
         <div className="flex flex-wrap gap-3 items-center bg-white rounded-lg p-4 shadow-sm">
           <div className="flex items-center gap-2">
             <Label className="text-sm">廠商</Label>
-            <Select value={filterSupplier} onValueChange={setFilterSupplier}>
+            <Select value={filterSupplier} onValueChange={v => { setFilterSupplier(v); setCurrentPage(1); }}>
               <SelectTrigger className="w-36">
                 <SelectValue />
               </SelectTrigger>
@@ -199,7 +207,7 @@ export default function OSInventory() {
           </div>
           <div className="flex items-center gap-2">
             <Label className="text-sm">分類</Label>
-            <Select value={filterCategory} onValueChange={setFilterCategory}>
+            <Select value={filterCategory} onValueChange={v => { setFilterCategory(v); setCurrentPage(1); }}>
               <SelectTrigger className="w-36">
                 <SelectValue />
               </SelectTrigger>
@@ -215,7 +223,7 @@ export default function OSInventory() {
             <Checkbox
               id="below-safety"
               checked={belowSafety}
-              onCheckedChange={v => setBelowSafety(!!v)}
+              onCheckedChange={v => { setBelowSafety(!!v); setCurrentPage(1); }}
             />
             <Label htmlFor="below-safety" className="text-sm cursor-pointer">只看低於警戒</Label>
           </div>
@@ -272,7 +280,7 @@ export default function OSInventory() {
                   </td>
                 </tr>
               ) : (
-                (items as InventoryItem[]).map(item => (
+                pagedItems.map(item => (
                   <tr key={item.id} className={`border-b hover:bg-stone-50 transition-colors ${batchMode && selectedIds.has(item.id) ? "bg-amber-50" : ""}`}>
                     {batchMode && (
                       <td className="px-4 py-3">
@@ -288,7 +296,7 @@ export default function OSInventory() {
                     )}
                     <td className="px-4 py-3 whitespace-nowrap">{item.supplierName}</td>
                     <td className="px-4 py-3">{item.productName}</td>
-                    <td className="px-4 py-3 text-stone-500">{item.category || "-"}</td>
+                    <td className="px-4 py-3 text-stone-500 whitespace-nowrap">{item.category || "未分類"}</td>
                     <td className="px-4 py-3 font-medium">{Math.round(Number(item.currentQty)).toLocaleString()} {item.unit}</td>
                     <td className="px-4 py-3 text-right text-stone-500 text-xs">
                       {(item as any).itemValue > 0
@@ -337,6 +345,25 @@ export default function OSInventory() {
               )}
             </tbody>
           </table>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-stone-200">
+              <span className="text-xs text-stone-500">
+                第 {currentPage} / {totalPages} 頁，共 {(items as InventoryItem[]).length} 筆
+              </span>
+              <div className="flex gap-1">
+                <button
+                  className="px-2 py-1 text-xs border border-stone-300 rounded disabled:opacity-40"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(p => p - 1)}
+                >上一頁</button>
+                <button
+                  className="px-2 py-1 text-xs border border-stone-300 rounded disabled:opacity-40"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(p => p + 1)}
+                >下一頁</button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* KPI Cards */}
@@ -393,7 +420,7 @@ export default function OSInventory() {
             <Button
               onClick={() => {
                 if (!adjustDialog.item) return;
-                adjustMut.mutate({ id: adjustDialog.item.id, newQty: Number(adjustQty), note: adjustNote || "" });
+                adjustMut.mutate({ id: adjustDialog.item.id, newQty: Number(adjustQty), note: adjustNote });
               }}
               disabled={adjustMut.isPending || !adjustNote.trim()}
               className="bg-amber-700 hover:bg-amber-800 text-white"
@@ -415,6 +442,7 @@ export default function OSInventory() {
               <Label>安全庫存量（警戒值）</Label>
               <Input
                 type="number"
+                min="0"
                 value={safetyQtyInput}
                 onChange={e => setSafetyQtyInput(e.target.value)}
                 className="mt-1"
@@ -428,7 +456,7 @@ export default function OSInventory() {
                 if (!safetyDialog.item) return;
                 safetyMut.mutate({ id: safetyDialog.item.id, safetyQty: Number(safetyQtyInput) });
               }}
-              disabled={safetyMut.isPending}
+              disabled={safetyMut.isPending || Number(safetyQtyInput) < 0}
               className="bg-amber-700 hover:bg-amber-800 text-white"
             >
               {safetyMut.isPending ? "儲存中…" : "儲存"}

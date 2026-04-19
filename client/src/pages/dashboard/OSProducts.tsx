@@ -873,6 +873,9 @@ export default function OSProducts() {
   const { user } = useAuth();
   const [filterSupplier, setFilterSupplier] = useState<string>("");
   const [filterCategory, setFilterCategory] = useState<string>("");
+  const [filterNeedsReview, setFilterNeedsReview] = useState(false);
+  const [costPage, setCostPage] = useState(1);
+  const COST_PAGE_SIZE = 50;
   const [editProduct, setEditProduct] = useState<any | null>(null);
   const [showProductDialog, setShowProductDialog] = useState(false);
   const [editSupplier, setEditSupplier] = useState<any | null>(null);
@@ -898,6 +901,7 @@ export default function OSProducts() {
   const products = trpc.osProducts.productList.useQuery({
     supplierId: filterSupplier ? Number(filterSupplier) : undefined,
     category: filterCategory || undefined,
+    needsReview: filterNeedsReview || undefined,
   });
   const allProducts = trpc.osProducts.productList.useQuery({});
 
@@ -924,6 +928,9 @@ export default function OSProducts() {
   const supplierList = suppliers.data ?? [];
   const productList = products.data ?? [];
   const allProductList = allProducts.data ?? [];
+  const needsReviewCount = (allProducts.data as any[] ?? []).filter((p: any) => p.needsReview).length;
+  const costTotalPages = Math.ceil(productList.length / COST_PAGE_SIZE);
+  const pagedProductList = productList.slice((costPage - 1) * COST_PAGE_SIZE, costPage * COST_PAGE_SIZE);
   const menuItemList = menuItems.data ?? [];
   const oemItemList = oemItems.data ?? [];
 
@@ -949,20 +956,28 @@ export default function OSProducts() {
                 <div className="flex flex-wrap items-center gap-2">
                   <CardTitle className="text-base font-semibold">品項清單</CardTitle>
                   <div className="ml-auto flex flex-wrap gap-2 items-center">
-                    <Select value={filterSupplier || "__all"} onValueChange={v => setFilterSupplier(v === "__all" ? "" : v)}>
+                    <Select value={filterSupplier || "__all"} onValueChange={v => { setFilterSupplier(v === "__all" ? "" : v); setCostPage(1); }}>
                       <SelectTrigger className="w-36 h-8 text-sm"><SelectValue placeholder="全部廠商" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="__all">全部廠商</SelectItem>
                         {supplierList.map((s: any) => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
-                    <Select value={filterCategory || "__all"} onValueChange={v => setFilterCategory(v === "__all" ? "" : v)}>
+                    <Select value={filterCategory || "__all"} onValueChange={v => { setFilterCategory(v === "__all" ? "" : v); setCostPage(1); }}>
                       <SelectTrigger className="w-32 h-8 text-sm"><SelectValue placeholder="全部品類" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="__all">全部品類</SelectItem>
                         {categories.map((c: any) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                       </SelectContent>
                     </Select>
+                    <button
+                      className={`text-xs px-3 py-1 rounded border h-8 ${filterNeedsReview
+                        ? "bg-amber-100 border-amber-400 text-amber-800"
+                        : "border-stone-300 text-stone-600 hover:bg-stone-50"}`}
+                      onClick={() => { setFilterNeedsReview(v => !v); setCostPage(1); }}
+                    >
+                      ⚠ 只看待確認（{needsReviewCount}）
+                    </button>
                     <Button size="sm" className="h-8" onClick={() => { setEditProduct(null); setShowProductDialog(true); }}>
                       + 新增品項
                     </Button>
@@ -987,7 +1002,7 @@ export default function OSProducts() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                          {productList.map((p: any) => {
+                          {pagedProductList.map((p: any) => {
                             const margin = calcMargin(Number(p.packCost), Number(p.batchPrice));
                             const unitDisplay = p.unitQty && Number(p.unitQty) > 0
                               ? `${Number(p.unitQty)}${p.unitName || ""}`
@@ -1028,7 +1043,7 @@ export default function OSProducts() {
                     </div>
                     {/* 手機版 */}
                     <div className="md:hidden divide-y divide-gray-100">
-                      {productList.map((p: any) => {
+                      {pagedProductList.map((p: any) => {
                         const margin = calcMargin(Number(p.packCost), Number(p.batchPrice));
                         const unitDisplay = p.unitQty && Number(p.unitQty) > 0
                           ? `${Number(p.unitQty)}${p.unitName || ""}`
@@ -1062,6 +1077,25 @@ export default function OSProducts() {
                         );
                       })}
                     </div>
+                    {costTotalPages > 1 && (
+                      <div className="flex items-center justify-between px-4 py-3 border-t border-stone-200">
+                        <span className="text-xs text-stone-500">
+                          第 {costPage} / {costTotalPages} 頁，共 {productList.length} 筆
+                        </span>
+                        <div className="flex gap-1">
+                          <button
+                            className="px-2 py-1 text-xs border border-stone-300 rounded disabled:opacity-40"
+                            disabled={costPage === 1}
+                            onClick={() => setCostPage(p => p - 1)}
+                          >上一頁</button>
+                          <button
+                            className="px-2 py-1 text-xs border border-stone-300 rounded disabled:opacity-40"
+                            disabled={costPage === costTotalPages}
+                            onClick={() => setCostPage(p => p + 1)}
+                          >下一頁</button>
+                        </div>
+                      </div>
+                    )}
                   </>
                 )}
               </CardContent>

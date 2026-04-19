@@ -265,24 +265,25 @@ export default function AdminDashboardLayout({
     const enabled: OsErpItem[] = [];
     const comingSoon: { icon: React.ComponentType<{ className?: string }>; label: string }[] = [];
     if (isOSTenant && (isSuperAdmin || isManager)) {
-      const osModuleDefs = [
-        { key: "purchasing_os", icon: ShoppingCart,    label: "叫貨管理",    path: "/dashboard/purchasing",           costOnly: false },
-        { key: "inventory",     icon: Warehouse,       label: "庫存管理",    path: "/dashboard/inventory",            costOnly: false },
-        { key: "products_os",   icon: Package,         label: "品項成本",    path: "/dashboard/products",             costOnly: true  },
-        { key: "products_os",   icon: UtensilsCrossed, label: "菜單成本管理", path: "/dashboard/ca-menu",             costOnly: true  },
-        { key: "delivery",      icon: Truck,           label: "配送管理",    path: "/dashboard/delivery",             costOnly: false },
-        { key: "accounting",    icon: Receipt,         label: "帳務管理",    path: "/dashboard/accounting",           costOnly: false },
-        { key: "franchisee_payments", icon: CreditCard, label: "加盟主帳款", path: "/dashboard/franchisee-payments", costOnly: false },
-        { key: "rebate_os",     icon: CreditCard,      label: "退佣帳款",    path: "/dashboard/rebate",               costOnly: true  },
-        { key: "profit_loss",   icon: TrendingUp,      label: "損益儀表板",  path: "/dashboard/profit-loss",          costOnly: true  },
-        { key: "daily_report_os", icon: ClipboardList, label: "門市日報",   path: "/dashboard/daily-report",         costOnly: false },
-        { key: "scheduling",    icon: CalendarDays,    label: "排班管理",    path: "/dashboard/scheduling",           costOnly: false },
-        { key: "sop",           icon: BookOpen,        label: "SOP知識庫",   path: "/dashboard/sop",                  costOnly: false },
-        { key: "equipment_repair", icon: Wrench,       label: "設備報修",    path: "/dashboard/repairs",              costOnly: false },
-        { key: "checklist",     icon: ClipboardCheck,  label: "每日檢查表",  path: "/dashboard/checklist",            costOnly: false },
+      const osModuleDefs: { key: string; icon: React.ComponentType<{ className?: string }>; label: string; path: string; costOnly: boolean; managerAllowed: boolean }[] = [
+        { key: "purchasing_os",       icon: ShoppingCart,    label: "叫貨管理",    path: "/dashboard/purchasing",          costOnly: false, managerAllowed: true  },
+        { key: "inventory",           icon: Warehouse,       label: "庫存管理",    path: "/dashboard/inventory",           costOnly: false, managerAllowed: false },
+        { key: "products_os",         icon: Package,         label: "品項成本",    path: "/dashboard/products",            costOnly: true,  managerAllowed: false },
+        { key: "products_os",         icon: UtensilsCrossed, label: "菜單成本管理", path: "/dashboard/ca-menu",            costOnly: true,  managerAllowed: false },
+        { key: "delivery",            icon: Truck,           label: "配送管理",    path: "/dashboard/delivery",            costOnly: false, managerAllowed: true  },
+        { key: "accounting",          icon: Receipt,         label: "帳務管理",    path: "/dashboard/accounting",          costOnly: false, managerAllowed: false },
+        { key: "franchisee_payments", icon: CreditCard,      label: "加盟主帳款",  path: "/dashboard/franchisee-payments", costOnly: false, managerAllowed: false },
+        { key: "rebate_os",           icon: CreditCard,      label: "退佣帳款",    path: "/dashboard/rebate",              costOnly: true,  managerAllowed: false },
+        { key: "profit_loss",         icon: TrendingUp,      label: "損益儀表板",  path: "/dashboard/profit-loss",         costOnly: true,  managerAllowed: false },
+        { key: "daily_report_os",     icon: ClipboardList,   label: "門市日報",    path: "/dashboard/daily-report",        costOnly: false, managerAllowed: true  },
+        { key: "scheduling",          icon: CalendarDays,    label: "排班管理",    path: "/dashboard/scheduling",          costOnly: false, managerAllowed: false },
+        { key: "sop",                 icon: BookOpen,        label: "SOP知識庫",   path: "/dashboard/sop",                 costOnly: false, managerAllowed: true  },
+        { key: "equipment_repair",    icon: Wrench,          label: "設備報修",    path: "/dashboard/repairs",             costOnly: false, managerAllowed: true  },
+        { key: "checklist",           icon: ClipboardCheck,  label: "每日檢查表",  path: "/dashboard/checklist",           costOnly: false, managerAllowed: true  },
       ];
       for (const def of osModuleDefs) {
         if (def.costOnly && !canSeeCostModules) continue;
+        if (!isSuperAdmin && isManager && !def.managerAllowed) continue;
         const isEnabled = isSuperAdmin || (orderSomeModules?.some((m: any) => m.moduleKey === def.key && !!m.isEnabled) ?? false);
         if (isEnabled) {
           enabled.push({ icon: def.icon, label: def.label, path: def.path });

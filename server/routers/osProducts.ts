@@ -70,6 +70,7 @@ export const osProductsRouter = router({
     .input(z.object({
       supplierId: z.number().optional(),
       category: z.string().optional(),
+      needsReview: z.boolean().optional(),
     }))
     .query(async ({ input }) => {
       const db = await getDb();
@@ -83,6 +84,7 @@ export const osProductsRouter = router({
       const params: any[] = [];
       if (input.supplierId) { sql += ` AND p.supplierId = ?`; params.push(input.supplierId); }
       if (input.category) { sql += ` AND p.category = ?`; params.push(input.category); }
+      if (input.needsReview) { sql += ` AND needsReview = 1`; }
       sql += ` ORDER BY p.category ASC, p.name ASC`;
       const [rows] = await (db as any).$client.execute(sql, params);
       return rows as any[];
