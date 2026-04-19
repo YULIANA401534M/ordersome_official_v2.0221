@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md，歷史記錄請讀 DEVELOPMENT_LOG.md
 
-> **版本**：v5.65。**最後更新**：2026-04-19。
+> **版本**：v5.66。**最後更新**：2026-04-19。
 > **給 Claude 架構**：大腦（Claude.ai）+ 手腳（Claude Code）
 
 ---
@@ -47,28 +47,28 @@ git status && git log --oneline -3
 
 ## 當前開發狀態（換對話框必讀）
 
-### 最新 Git 狀態（2026-04-19 v5.65）
+### 最新 Git 狀態（2026-04-19 v5.66）
 
 最後三個 commit：
-1. `本次commit` — feat: v5.65 損益儀表板圖表升級+庫存最後修改時間+近10筆記錄
+1. `456004c` — feat: v5.65 損益儀表板圖表升級+庫存最後修改時間+近10筆記錄
 2. `ecf0d77` — fix: v5.64 損益表欄位名修正+庫存金額統計
 3. `9d51e9e` — fix: v5.63 帳務七項修正：netPayable補寫/退佣表名/韓濟登記/食材成本接真實數據/updateRebate同步netRebate
 
-working tree: clean
+working tree: clean（本次為文件同步，無程式碼變更）
 
 ### 已完成模組
 
 | 路由 | 元件 | 狀態 | 說明 |
 |------|------|------|------|
 | `/dashboard/purchasing` | `OSPurchasing.tsx` | ✅ | 叫貨管理，Make串接，Excel匯入，撿貨單列印，排序 |
-| `/dashboard/inventory` | `OSInventory.tsx` | ✅ | 庫存管理，B類，批次盤點，異動歷史，下拉操作，刪除（super_admin），統計列 |
+| `/dashboard/inventory` | `OSInventory.tsx` | ✅ | 庫存管理，B類，批次盤點，異動歷史（近10筆），下拉操作，刪除（super_admin），統計列，庫存金額（itemValue），最後修改時間 |
 | `/dashboard/products` | `OSProducts.tsx` | ✅ | 品項成本，大麥244筆已匯入（共704筆），兩層分類 |
 | `/dashboard/ca-menu` | `OSCaMenu.tsx` | ✅ | 菜單成本管理 |
 | `/dashboard/delivery` | `OSDelivery.tsx` | ✅ | 配送管理，從叫貨單建立，簽收扣庫存 |
 | `/dashboard/accounting` | `OSAccounting.tsx` | ✅ | 帳務管理，四Tab，手動新增應付 |
 | `/dashboard/franchisee-payments` | `OSFranchiseePayments.tsx` | ✅ | 加盟主帳款 |
 | `/dashboard/rebate` | `OSRebate.tsx` | ✅ | 退佣帳款 |
-| `/dashboard/profit-loss` | `OSProfitLoss.tsx` | ✅ | 損益儀表板 |
+| `/dashboard/profit-loss` | `OSProfitLoss.tsx` | ✅ | 損益儀表板，KPI×4，AreaChart每日趨勢，PieChart通路分拆，BarChart費用結構，損益明細表 |
 | `/dashboard/scheduling` | `OSScheduling.tsx` | ⚠️ | 排班管理，需先新增員工資料 |
 | `/dashboard/daily-report` | `OSDailyReport.tsx` | ✅ | 門市日報 |
 | `/dashboard/franchisees` | `OSCustomers.tsx` | ✅ | 加盟主列表，功能開關，採購存取 |
@@ -120,24 +120,30 @@ working tree: clean
 
 ### 主線任務
 
-**P1 本週：**
-- [x] ~~3/31 盤點資料匯入~~ — 2026-04-19 完成（165筆，含B類24+其他資產141）
-- [x] ~~大麥歷史叫貨訂單匯入~~ — 2026-04-19 完成（453張，2025/12~2026/04）
-- [x] ~~廠商對帳報表匯入~~ — 2026-04-19 完成（25筆應付帳款，2026-02~04）
+**P1 待驗證（換對話框後優先確認）：**
 - [ ] **前端驗證**：/dashboard/purchasing、/dashboard/inventory、/dashboard/accounting 顯示歷史資料是否正確
 - [ ] **needsReview 品項確認**：137筆新建品項需人工至 /dashboard/products 逐一確認單位/成本
+- [ ] **損益表驗證**：確認 os_daily_reports 已有門市日報資料，損益表圖表有無正確顯示
 
 **P2 本月：**
 - [ ] 報價單功能（哪些店看哪些價格）
 - [ ] 派車單統整列印（跨門市合併撿貨單）
 - [ ] 銀行明細多格式支援（目前只有台新格式）
-- [ ] chunk size 優化（index.js 6453kB，需 code splitting）
+- [ ] chunk size 優化（index.js ~6500kB，需 code splitting）
 
 **P3 之後：**
 - [ ] BOM 物料清單（開工條件：採購資料穩定 + os_products 成本準確）
 - [ ] 大永 LIFF 正式 liffId（等蛋博）
 - [ ] 全系統 RWD 審查
 - [ ] 排班管理員工資料匯入
+
+**已完成（本對話框，2026-04-19）：**
+- [x] 3/31 盤點資料匯入（165筆，B類24+其他資產141）
+- [x] 大麥歷史叫貨訂單匯入（453張，2025/12~2026/04）
+- [x] 廠商對帳報表匯入（25筆應付帳款，2026-02~04）
+- [x] v5.63 帳務七項修正（netPayable/退佣表名/韓濟/食材成本接真實值）
+- [x] v5.64 損益表欄位名全面修正（camelCase）+ 庫存金額統計
+- [x] v5.65 損益儀表板圖表升級（recharts）+ 庫存最後修改時間 + 近10筆記錄
 
 ---
 
