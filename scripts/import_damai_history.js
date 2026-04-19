@@ -56,10 +56,15 @@ function parseAccountingExcel(filePath) {
     const pk = `${sup}||${month}`;
     if (totalAmount) payRaw[pk] = (payRaw[pk] || 0) + parseFloat(totalAmount);
   }
-  const payables = Object.entries(payRaw).map(([k, v]) => {
-    const [supplier, yearMonth] = k.split('||');
-    return { supplier, yearMonth, amount: Math.round(v * 100) / 100 };
-  });
+  const payables = Object.entries(payRaw)
+    .filter(([k]) => {
+      const sup = k.split('||')[0];
+      return sup !== '宇聯' && sup !== '宇聯_配合';  // B類自配，方向應為應收非應付
+    })
+    .map(([k, v]) => {
+      const [supplier, yearMonth] = k.split('||');
+      return { supplier, yearMonth, amount: Math.round(v * 100) / 100 };
+    });
   return { priceMap, payables };
 }
 
@@ -238,8 +243,8 @@ async function stage3(conn, payables) {
       'SELECT id FROM os_suppliers WHERE tenantId=? AND name=? LIMIT 1', [TENANT_ID, p.supplier]
     );
     await conn.execute(
-      "INSERT INTO os_payables (tenantId,supplierId,supplierName,yearMonth,totalAmount,paidAmount,status,sourceType,createdAt,updatedAt) VALUES (?,?,?,?,?,0,'unpaid','damai_import',NOW(),NOW())",
-      [TENANT_ID, sr.length ? sr[0].id : null, p.supplier, p.yearMonth, p.amount]
+      "INSERT INTO os_payables (tenantId,supplierId,supplierName,month,yearMonth,totalAmount,paidAmount,status,sourceType,createdAt,updatedAt) VALUES (?,?,?,?,?,?,0,'unpaid','damai_import',NOW(),NOW())",
+      [TENANT_ID, sr.length ? sr[0].id : null, p.supplier, p.yearMonth, p.yearMonth, p.amount]
     );
     inserted++;
   }
