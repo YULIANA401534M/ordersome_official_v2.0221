@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OrderSome ERP — 前端 UAT 驗收表 v1.0</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, "Noto Sans TC", sans-serif; background: #f7f6f3; color: #1c1917; font-size: 13px; padding: 24px; }
+h1 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+.meta { font-size: 11px; color: #78716c; margin-bottom: 24px; }
+
+.section { margin-bottom: 32px; }
+.sec-title {
+  font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  background: #1c1917; color: #fff; padding: 7px 14px; border-radius: 6px 6px 0 0;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.sec-title .route { font-family: monospace; font-size: 11px; opacity: .7; font-weight: 400; text-transform: none; letter-spacing: 0; }
+
+table { width: 100%; border-collapse: collapse; background: #fff; }
+thead th { font-size: 10px; font-weight: 600; color: #57534e; padding: 7px 10px; background: #fafaf9; border-bottom: 2px solid #e7e5e4; text-align: left; white-space: nowrap; }
+tbody td { border-bottom: 1px solid #f0efed; padding: 8px 10px; vertical-align: top; font-size: 12px; line-height: 1.55; }
+tbody tr:hover { background: #fafaf9; }
+
+td.id { width: 46px; font-family: monospace; font-size: 11px; color: #a8a29e; white-space: nowrap; }
+td.action { width: 280px; }
+td.expect { width: 260px; color: #44403c; }
+td.status { width: 72px; text-align: center; }
+td.note { min-width: 160px; }
+
+select.st {
+  appearance: none; border: 1px solid #d6d3d1; border-radius: 4px;
+  padding: 3px 6px; font-size: 11px; background: #fff; cursor: pointer; width: 68px;
+}
+select.st.pass { background: #EAF3DE; border-color: #3B6D11; color: #3B6D11; }
+select.st.fail { background: #FEE2E2; border-color: #b91c1c; color: #b91c1c; }
+select.st.skip { background: #F1F5F9; border-color: #94a3b8; color: #64748b; }
+
+textarea.nt {
+  width: 100%; min-height: 36px; resize: vertical; border: 1px solid #e7e5e4;
+  border-radius: 4px; padding: 4px 6px; font-size: 11px; font-family: inherit;
+  background: #fafaf9; color: #1c1917;
+}
+textarea.nt:focus { outline: none; border-color: #b45309; }
+
+.tag { display: inline-block; font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 10px; margin-right: 3px; }
+.t-data { background: #E6F1FB; color: #185FA5; }
+.t-flow { background: #EAF3DE; color: #3B6D11; }
+.t-ux   { background: #F3E8FF; color: #7c3aed; }
+.t-perm { background: #FEF3C7; color: #92400e; }
+.t-edge { background: #FFE4E6; color: #9f1239; }
+
+.summary-box { background: #fff; border: 1px solid #e7e5e4; border-radius: 8px; padding: 16px 20px; margin-top: 32px; }
+.summary-box h2 { font-size: 13px; font-weight: 700; margin-bottom: 12px; }
+.summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sf { display: flex; flex-direction: column; gap: 3px; }
+.sf label { font-size: 10px; color: #78716c; font-weight: 600; }
+.sf input, .sf textarea { border: 1px solid #e7e5e4; border-radius: 4px; padding: 5px 8px; font-size: 12px; font-family: inherit; }
+.sf textarea { min-height: 54px; resize: vertical; }
+
+.legend { display: flex; gap: 12px; flex-wrap: wrap; padding: 10px 0 16px; font-size: 11px; color: #57534e; align-items: center; }
+.leg { display: flex; align-items: center; gap: 4px; }
+
+.warn-row td { background: #FEF9C3 !important; }
+</style>
+
+<script>
+function updateStyle(sel) {
+  const v = sel.value;
+  sel.className = 'st' + (v === 'pass' ? ' pass' : v === 'fail' ? ' fail' : v === 'skip' ? ' skip' : '');
+}
+</script>
+</head>
+<body>
+
+<h1>OrderSome ERP — 前端 UAT 驗收表</h1>
+<p class="meta">版本：v1.0 ／ 系統版本：CLAUDE.md v5.66 ／ 環境：正式站 ordersome.com.tw ／ 測試人：＿＿＿＿＿ ／ 日期：＿＿＿＿＿</p>
+
+<div class="legend">
+  <strong>標籤說明：</strong>
+  <div class="leg"><span class="tag t-data">資料</span>驗證資料庫是否有正確資料</div>
+  <div class="leg"><span class="tag t-flow">流程</span>跨模組操作連動</div>
+  <div class="leg"><span class="tag t-ux">UX</span>介面顯示、操作體感</div>
+  <div class="leg"><span class="tag t-perm">權限</span>角色顯示差異</div>
+  <div class="leg"><span class="tag t-edge">邊界</span>空資料/錯誤狀態處理</div>
+  <div class="leg" style="margin-left:auto">狀態欄：<select class="st" disabled><option>—</option></select> <select class="st pass" disabled><option>pass</option></select> <select class="st fail" disabled><option>fail</option></select> <select class="st skip" disabled><option>skip</option></select></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- 0. 前置確認                                           -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section">
+<div class="sec-title">0 — 前置確認（所有測試開始前）<span class="route">Railway + 登入帳號</span></div>
+<table>
+<thead><tr><th>編號</th><th>測試動作</th><th>預期結果</th><th>狀態</th><th>問題描述 / 備註</th></tr></thead>
+<tbody>
+<tr><td class="id">0-1</td><td class="action"><span class="tag t-data">資料</span>Railway 最新 Deployment 狀態</td><td class="expect">狀態為綠色 Success，無 build error</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">0-2</td><td class="action"><span class="tag t-perm">權限</span>以 super_admin 帳號登入，確認側邊欄所有模組均可見</td><td class="expect">側邊欄顯示完整選單（叫貨/庫存/品項/菜單/配送/帳務/退佣/加盟主帳款/損益/排班/日報/加盟主/SOP/設備/清單）</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">0-3</td><td class="action"><span class="tag t-perm">權限</span>以 manager 帳號登入，確認受限模組不可見</td><td class="expect">損益費用數字隱藏為 ---；無法看到 super_admin 專屬操作</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">0-4</td><td class="action"><span class="tag t-ux">UX</span>桌機（1440px）下整體畫面無橫向捲軸</td><td class="expect">各頁面無溢出，側邊欄與內容區正常並排</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">0-5</td><td class="action"><span class="tag t-ux">UX</span>手機（375px）下側邊欄可收合，內容區可正常瀏覽</td><td class="expect">漢堡選單出現，點擊可展開/收合側邊欄</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- 1. 叫貨管理                                           -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section">
+<div class="sec-title">1 — 叫貨管理<span class="route">/dashboard/purchasing</span></div>
+<table>
+<thead><tr><th>編號</th><th>測試動作</th><th>預期結果</th><th>狀態</th><th>問題描述 / 備註</th></tr></thead>
+<tbody>
+<tr><td class="id">1-1</td><td class="action"><span class="tag t-data">資料</span>進入頁面，確認列表總筆數</td><td class="expect">應有約 484 筆叫貨單（453 大麥歷史 + 31 系統既有）</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">1-2</td><td class="action"><span class="tag t-data">資料</span>篩選廠商「廣弘」，確認結果正確</td><td class="expect">只顯示廣弘的叫貨單，筆數合理</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">1-3</td><td class="action"><span class="tag t-data">資料</span>篩選狀態「received」，確認歷史單出現</td><td class="expect">大麥歷史匯入的單狀態為 received，有金額（2026-02 後）</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">1-4</td><td class="action"><span class="tag t-data">資料</span>點擊一張叫貨單查看明細</td><td class="expect">明細視窗/頁面開啟，顯示品項清單、數量、金額</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">1-5</td><td class="action"><span class="tag t-flow">流程</span>新增一張叫貨單（廠商＋品項＋數量）→ 送出</td><td class="expect">單建立成功，出現在列表頂端，狀態為 pending</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">1-6</td><td class="action"><span class="tag t-flow">流程</span>將剛建立的 pending 單改為 sent</td><td class="expect">狀態更新，若廠商有 LINE 設定應可看到推播按鈕</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">1-7</td><td class="action"><span class="tag t-flow">流程</span>將一張 B類（宇聯）sent 單改為 received</td><td class="expect">狀態更新為 received；庫存管理對應品項 currentQty 增加</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">1-8</td><td class="action"><span class="tag t-flow">流程</span>撿貨單列印：多選數張 B類單 → 點「列印撿貨單」</td><td class="expect">預覽列印視窗開啟，顯示合併後的撿貨單，相同品項跨門市加總</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">1-9</td><td class="action"><span class="tag t-ux">UX</span>表頭全選 checkbox → 全選後批量刪除（super_admin）</td><td class="expect">所有行被勾選，刪除後列表更新，筆數減少</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">1-10</td><td class="action"><span class="tag t-edge">邊界</span>搜尋一個不存在的廠商名稱</td><td class="expect">列表顯示空白，有「無資料」提示文字，不崩潰</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">1-11</td><td class="action"><span class="tag t-ux">UX</span>手機寬度下，叫貨單列表橫向捲動</td><td class="expect">表格可橫向捲動，不截斷欄位</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- 2. 庫存管理                                           -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section">
+<div class="sec-title">2 — 庫存管理<span class="route">/dashboard/inventory</span></div>
+<table>
+<thead><tr><th>編號</th><th>測試動作</th><th>預期結果</th><th>狀態</th><th>問題描述 / 備註</th></tr></thead>
+<tbody>
+<tr><td class="id">2-1</td><td class="action"><span class="tag t-data">資料</span>進入頁面，確認品項總數</td><td class="expect">約 187 筆（B類24 + 其他141 + 既有22）</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">2-2</td><td class="action"><span class="tag t-data">資料</span>確認頁面頂部「庫存總資產」金額列有顯示</td><td class="expect">顯示總資產 $XXX、B類自配 $XXX（N品項）、其他資產 $XXX</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">2-3</td><td class="action"><span class="tag t-data">資料</span>表格「庫存金額」欄位有數字</td><td class="expect">有 unitCost 的品項顯示 $XXX；unitCost=0 的顯示 -</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">2-4</td><td class="action"><span class="tag t-data">資料</span>「最後修改」欄顯示格式</td><td class="expect">格式為 yyyy-mm-dd hh:mm，非 null 的品項均有顯示</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">2-5</td><td class="action"><span class="tag t-ux">UX</span>廠商篩選 → 選「宇聯」，確認只顯示宇聯品項</td><td class="expect">篩選後只顯示宇聯品項，筆數正確</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">2-6</td><td class="action"><span class="tag t-ux">UX</span>勾選「只看低於警戒」，確認篩選生效</td><td class="expect">只顯示 currentQty &lt; safetyQty 且 safetyQty&gt;0 的品項</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">2-7</td><td class="action"><span class="tag t-flow">流程</span>點一個品項的「⋯」→ 調整庫存 → 輸入新數量+原因 → 儲存</td><td class="expect">數量更新，最後修改時間更新，不需重新整理</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">2-8</td><td class="action"><span class="tag t-flow">流程</span>調整庫存後 → 點「異動歷史」，確認有最新一筆 adjust 記錄</td><td class="expect">Dialog 開啟顯示「近 10 筆」，最新一筆 changeType=adjust，數量正確</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">2-9</td><td class="action"><span class="tag t-flow">流程</span>設定安全庫存 → 輸入警戒值 → 儲存，確認狀態 badge 更新</td><td class="expect">若 currentQty &lt; safetyQty 則顯示橘色「低庫存」，否則綠色「正常」</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">2-10</td><td class="action"><span class="tag t-flow">流程</span>批次盤點：選 3-5 筆 → 輸入盤點數量 → 確認盤點</td><td class="expect">所有選取品項數量更新，顯示「已完成 N 筆盤點」</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">2-11</td><td class="action"><span class="tag t-flow">流程</span>新增品項：填廠商/品名/單位/成本 → 新增</td><td class="expect">品項出現在列表底部或刷新後出現，資料正確</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">2-12</td><td class="action"><span class="tag t-perm">權限</span>super_admin：下拉有「刪除品項」選項，填原因後刪除</td><td class="expect">品項從列表消失，os_audit_logs 有記錄（DB 層驗證可選）</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">2-13</td><td class="action"><span class="tag t-perm">權限</span>manager 帳號：下拉不顯示「刪除品項」</td><td class="expect">下拉選單只有「調整庫存」「設警戒值」「異動歷史」</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">2-14</td><td class="action"><span class="tag t-edge">邊界</span>調整庫存時不填寫原因欄 → 點儲存</td><td class="expect">按鈕 disabled 或彈出驗證錯誤，不可送出</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">2-15</td><td class="action"><span class="tag t-edge">邊界</span>新品項（無任何異動）點「異動歷史」</td><td class="expect">Dialog 顯示「尚無異動記錄」，不崩潰</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- 3. 配送管理                                           -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section">
+<div class="sec-title">3 — 配送管理<span class="route">/dashboard/delivery</span></div>
+<table>
+<thead><tr><th>編號</th><th>測試動作</th><th>預期結果</th><th>狀態</th><th>問題描述 / 備註</th></tr></thead>
+<tbody>
+<tr><td class="id">3-1</td><td class="action"><span class="tag t-data">資料</span>進入頁面，確認派車單列表有資料</td><td class="expect">列表有內容，狀態欄各種狀態（pending/dispatched/signed）顯示正確</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">3-2</td><td class="action"><span class="tag t-flow">流程</span>從叫貨管理點「建立派車單」→ 跳轉至配送管理</td><td class="expect">跳轉正常，派車單帶入對應叫貨單品項</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">3-3</td><td class="action"><span class="tag t-flow">流程</span>將一張派車單改為 signed（簽收）</td><td class="expect">狀態更新；B類品項在庫存管理 currentQty 減少；os_inventory_logs 有 type=out</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">3-4</td><td class="action"><span class="tag t-flow">流程</span>簽收後確認加盟主帳款有新增一筆應收</td><td class="expect">/dashboard/franchisee-payments 有對應的 direction=receivable 記錄</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">3-5</td><td class="action"><span class="tag t-ux">UX</span>派車單明細點開，確認品項列表、數量、門市資訊完整</td><td class="expect">品項名稱、數量、目標門市清楚顯示</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">3-6</td><td class="action"><span class="tag t-edge">邊界</span>月統計卡片（若有）：選無資料月份</td><td class="expect">顯示 0 或空值，不出現 NaN/null/崩潰</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- 4. 品項成本                                           -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section">
+<div class="sec-title">4 — 品項成本<span class="route">/dashboard/products</span></div>
+<table>
+<thead><tr><th>編號</th><th>測試動作</th><th>預期結果</th><th>狀態</th><th>問題描述 / 備註</th></tr></thead>
+<tbody>
+<tr><td class="id">4-1</td><td class="action"><span class="tag t-data">資料</span>進入頁面，確認品項總數</td><td class="expect">704 筆（原567 + 大麥匯入137筆）</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">4-2</td><td class="action"><span class="tag t-data">資料</span>篩選 needsReview，確認 137 筆標橘色⚠</td><td class="expect">137 筆帶有橘色警示標記，提醒人工確認單位/成本</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">4-3</td><td class="action"><span class="tag t-flow">流程</span>點一筆 needsReview 品項 → 修改單位/成本 → 儲存</td><td class="expect">儲存後 needsReview 標記消失，數值更新</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">4-4</td><td class="action"><span class="tag t-ux">UX</span>兩層分類篩選（大類 + 小類）正常切換</td><td class="expect">選大類後小類下拉更新，篩選結果正確</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">4-5</td><td class="action"><span class="tag t-edge">邊界</span>新增品項，品名留空直接送出</td><td class="expect">出現驗證錯誤，不可送出</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- 5. 帳務管理                                           -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section">
+<div class="sec-title">5 — 帳務管理<span class="route">/dashboard/accounting</span></div>
+<table>
+<thead><tr><th>編號</th><th>測試動作</th><th>預期結果</th><th>狀態</th><th>問題描述 / 備註</th></tr></thead>
+<tbody>
+<tr><td class="id">5-1</td><td class="action"><span class="tag t-data">資料</span>Tab1 應付帳款，確認筆數</td><td class="expect">約 27 筆（25筆大麥歷史 + 2筆手動），廠商×月份各自獨立</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">5-2</td><td class="action"><span class="tag t-data">資料</span>Tab1 點一筆應付帳款「查看明細」→ 跳轉叫貨管理</td><td class="expect">跳轉至叫貨管理，自動帶入對應廠商篩選</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">5-3</td><td class="action"><span class="tag t-flow">流程</span>Tab1 手動新增應付帳款（廠商+金額+月份）</td><td class="expect">新增後出現在列表，netPayable 欄位有值</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">5-4</td><td class="action"><span class="tag t-data">資料</span>Tab2 銀行對帳，確認匯入格式說明是否顯示</td><td class="expect">頁面有匯入按鈕和格式說明，不出現 JS 錯誤</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">5-5</td><td class="action"><span class="tag t-data">資料</span>Tab3 退佣，確認頁面是否顯示資料或空白提示</td><td class="expect">頁面正常載入，有退佣資料或顯示空白提示，不崩潰</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">5-6</td><td class="action"><span class="tag t-data">資料</span>Tab4 進貨調貨，確認頁面不崩潰</td><td class="expect">頁面正常載入，有資料或空白提示</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">5-7</td><td class="action"><span class="tag t-ux">UX</span>四個 Tab 切換流暢，不出現 loading 卡住</td><td class="expect">切換後資料 &lt;2s 載入，無白屏</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">5-8</td><td class="action"><span class="tag t-edge">邊界</span>Tab1 篩選一個無資料的月份</td><td class="expect">列表空白，顯示「無資料」提示，金額合計欄顯示 $0</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- 6. 退佣帳款                                           -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section">
+<div class="sec-title">6 — 退佣帳款<span class="route">/dashboard/rebate</span></div>
+<table>
+<thead><tr><th>編號</th><th>測試動作</th><th>預期結果</th><th>狀態</th><th>問題描述 / 備註</th></tr></thead>
+<tbody>
+<tr><td class="id">6-1</td><td class="action"><span class="tag t-data">資料</span>進入頁面，確認是否有退佣資料</td><td class="expect">頁面正常載入，顯示退佣列表或空白提示（取決於是否已計算退佣）</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">6-2</td><td class="action"><span class="tag t-data">資料</span>確認廠商欄顯示正確（廣弘/伯享/韓濟）</td><td class="expect">退佣來源廠商名稱正確，計算說明顯示對應規則（÷1.12差額等）</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">6-3</td><td class="action"><span class="tag t-ux">UX</span>月份篩選切換，列表更新</td><td class="expect">切換月份後列表重新載入，金額正確</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- 7. 損益儀表板                                         -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section">
+<div class="sec-title">7 — 損益儀表板<span class="route">/dashboard/profit-loss</span></div>
+<table>
+<thead><tr><th>編號</th><th>測試動作</th><th>預期結果</th><th>狀態</th><th>問題描述 / 備註</th></tr></thead>
+<tbody>
+<tr><td class="id">7-1</td><td class="action"><span class="tag t-data">資料</span>選一個有日報資料的月份，確認 KPI 卡片有數字</td><td class="expect">本月營收、營業利益、利潤率、退佣收入四張卡片均有數值（非0非—）</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">7-2</td><td class="action"><span class="tag t-data">資料</span>每日趨勢 AreaChart 有折線</td><td class="expect">圖表顯示有資料月份的每日折線，X 軸顯示日期（mm/dd），不空白</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">7-3</td><td class="action"><span class="tag t-data">資料</span>通路分拆 PieChart 顯示各通路比例</td><td class="expect">圓餅圖顯示內用/Uber/熊貓/電話/自送各通路，有圖例與金額</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">7-4</td><td class="action"><span class="tag t-data">資料</span>費用結構 BarChart 顯示（super_admin）</td><td class="expect">橫條圖顯示採購成本/薪資/電費/水費，有金額</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">7-5</td><td class="action"><span class="tag t-data">資料</span>損益明細表，採購成本欄確認「實際」vs「估算35%」標注</td><td class="expect">有 os_payables 資料的月份顯示「採購成本（實際）」；無資料月份顯示「食材成本（估算35%）」</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">7-6</td><td class="action"><span class="tag t-perm">權限</span>manager 帳號：費用欄位顯示 ---</td><td class="expect">採購成本/電費/水費/薪資/退佣/利潤率 全部顯示 ---，不洩漏數字</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">7-7</td><td class="action"><span class="tag t-perm">權限</span>manager 帳號：費用結構 BarChart 不顯示</td><td class="expect">費用結構圖表區塊不出現（canSeeCost=false）</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">7-8</td><td class="action"><span class="tag t-edge">邊界</span>選一個沒有日報資料的月份（如 2025/01）</td><td class="expect">顯示「本月無日報資料，請確認門市日報已提交」，圖表區不崩潰</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">7-9</td><td class="action"><span class="tag t-ux">UX</span>Hover tooltip 在各圖表正常顯示</td><td class="expect">滑鼠移到折線/圓餅/長條上，tooltip 顯示正確金額格式（$xxx,xxx）</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">7-10</td><td class="action"><span class="tag t-ux">UX</span>手機寬度下圖表可捲動瀏覽，不截斷</td><td class="expect">圖表 ResponsiveContainer 在手機寬度自適應，不溢出</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- 8. 加盟主帳款                                         -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section">
+<div class="sec-title">8 — 加盟主帳款<span class="route">/dashboard/franchisee-payments</span></div>
+<table>
+<thead><tr><th>編號</th><th>測試動作</th><th>預期結果</th><th>狀態</th><th>問題描述 / 備註</th></tr></thead>
+<tbody>
+<tr><td class="id">8-1</td><td class="action"><span class="tag t-data">資料</span>進入頁面，確認應收帳款列表有資料</td><td class="expect">派車簽收後自動產生的應收帳款出現，direction=receivable</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">8-2</td><td class="action"><span class="tag t-flow">流程</span>標記一筆應收為「已收款」</td><td class="expect">狀態更新，記錄保留（不刪除，只改狀態）</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">8-3</td><td class="action"><span class="tag t-ux">UX</span>月份篩選+加盟主篩選組合使用</td><td class="expect">兩個篩選條件同時生效，結果正確縮窄</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- 9. 門市日報                                           -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section">
+<div class="sec-title">9 — 門市日報<span class="route">/dashboard/daily-report</span></div>
+<table>
+<thead><tr><th>編號</th><th>測試動作</th><th>預期結果</th><th>狀態</th><th>問題描述 / 備註</th></tr></thead>
+<tbody>
+<tr><td class="id">9-1</td><td class="action"><span class="tag t-data">資料</span>進入頁面，選一個有日報的日期/門市</td><td class="expect">顯示 instoreSales/uberSales/pandaSales/phoneOrderAmount/deliveryOrderAmount 各通路數字</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">9-2</td><td class="action"><span class="tag t-data">資料</span>確認來客數欄位（guestInstore/guestUber/guestPanda）有數字</td><td class="expect">三個通路來客數均顯示，合計正確</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">9-3</td><td class="action"><span class="tag t-ux">UX</span>按日期/門市篩選，列表正常更新</td><td class="expect">篩選生效，資料正確對應</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">9-4</td><td class="action"><span class="tag t-edge">邊界</span>選無日報的日期</td><td class="expect">空白提示，不崩潰，不顯示 NaN</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- 10. 加盟主管理                                        -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section">
+<div class="sec-title">10 — 加盟主管理<span class="route">/dashboard/franchisees</span></div>
+<table>
+<thead><tr><th>編號</th><th>測試動作</th><th>預期結果</th><th>狀態</th><th>問題描述 / 備註</th></tr></thead>
+<tbody>
+<tr><td class="id">10-1</td><td class="action"><span class="tag t-data">資料</span>確認加盟主列表有資料</td><td class="expect">列表顯示加盟主名稱、門市、功能開關狀態</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">10-2</td><td class="action"><span class="tag t-flow">流程</span>切換某加盟主的「採購存取」開關</td><td class="expect">開關狀態切換並儲存，重新整理後狀態保留</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">10-3</td><td class="action"><span class="tag t-perm">權限</span>加盟主帳號登入，確認只能看到自己的採購資料</td><td class="expect">叫貨管理只顯示該加盟主的門市訂單</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- 11. 菜單成本管理                                      -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section">
+<div class="sec-title">11 — 菜單成本管理<span class="route">/dashboard/ca-menu</span></div>
+<table>
+<thead><tr><th>編號</th><th>測試動作</th><th>預期結果</th><th>狀態</th><th>問題描述 / 備註</th></tr></thead>
+<tbody>
+<tr><td class="id">11-1</td><td class="action"><span class="tag t-data">資料</span>進入頁面，確認菜單品項有資料</td><td class="expect">品項列表顯示，售價與成本欄有數字</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">11-2</td><td class="action"><span class="tag t-data">資料</span>毛利率計算是否合理（售價-成本/售價）</td><td class="expect">毛利率欄位顯示百分比，無 NaN/Infinity</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr><td class="id">11-3</td><td class="action"><span class="tag t-flow">流程</span>修改一個品項售價 → 儲存，確認毛利率即時更新</td><td class="expect">售價更新後毛利率重新計算，數字即時反映</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- 12. 跨模組連動驗證                                    -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section">
+<div class="sec-title">12 — 跨模組資料流連動（完整 Golden Path）<span class="route">多頁面</span></div>
+<table>
+<thead><tr><th>編號</th><th>測試動作</th><th>預期結果</th><th>狀態</th><th>問題描述 / 備註</th></tr></thead>
+<tbody>
+<tr class="warn-row"><td class="id">12-1</td><td class="action"><span class="tag t-flow">流程</span>Golden Path A：叫貨→庫存<br>新增 B類叫貨單 → received → 庫存管理確認 currentQty 增加</td><td class="expect">庫存品項數量 +，異動歷史有 type=in，最後修改時間更新</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr class="warn-row"><td class="id">12-2</td><td class="action"><span class="tag t-flow">流程</span>Golden Path B：配送→庫存→帳款<br>建立派車單 → signed → 庫存 -N → 加盟主帳款新增應收</td><td class="expect">三個地方同步更新，無遺漏</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr class="warn-row"><td class="id">12-3</td><td class="action"><span class="tag t-flow">流程</span>Golden Path C：帳務→損益<br>Tab1 有某月應付帳款 → 損益儀表板選同月 → 採購成本顯示「實際」</td><td class="expect">損益表食材成本欄顯示「採購成本（實際）」非「估算35%」</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+<tr class="warn-row"><td class="id">12-4</td><td class="action"><span class="tag t-flow">流程</span>Golden Path D：日報→損益<br>日報有資料月份 → 損益儀表板選同月 → 圖表顯示折線+通路</td><td class="expect">AreaChart 有折線，PieChart 有通路分拆，KPI 本月營收非 0</td><td class="status"><select class="st" onchange="updateStyle(this)"><option value="">—</option><option value="pass">pass</option><option value="fail">fail</option><option value="skip">skip</option></select></td><td class="note"><textarea class="nt"></textarea></td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- 測試結果摘要                                          -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="summary-box">
+<h2>測試結果摘要</h2>
+<div class="summary-grid">
+  <div class="sf"><label>測試日期</label><input type="text" placeholder="2026-xx-xx"></div>
+  <div class="sf"><label>測試人員</label><input type="text" placeholder="姓名/帳號"></div>
+  <div class="sf"><label>測試環境</label><input type="text" value="https://ordersome.com.tw" readonly></div>
+  <div class="sf"><label>系統版本</label><input type="text" value="CLAUDE.md v5.66" readonly></div>
+  <div class="sf"><label>通過 / 總計</label><input type="text" placeholder="xx / 72"></div>
+  <div class="sf"><label>失敗項目（填編號）</label><input type="text" placeholder="1-3, 7-2, ..."></div>
+  <div class="sf" style="grid-column:1/-1"><label>整體備註 / 優先修復項目</label><textarea style="min-height:80px;border:1px solid #e7e5e4;border-radius:4px;padding:6px 8px;font-size:12px;font-family:inherit;resize:vertical"></textarea></div>
+</div>
+</div>
+
+<p style="margin-top:20px;font-size:10px;color:#a8a29e;text-align:right">ordersome_uat_erp_v1.html — CLAUDE.md v5.66 — 2026-04-19</p>
+</body>
+</html>
