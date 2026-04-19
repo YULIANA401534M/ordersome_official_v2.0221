@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OrderSome 資料流聯動表 v1.0</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f7f6f3; color: #1c1917; font-size: 13px; }
+.header { background: #1c1917; color: #fff; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; }
+.header h1 { font-size: 16px; font-weight: 500; }
+.header .ver { font-size: 11px; color: #a8a29e; font-family: monospace; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; padding: 10px 16px; font-size: 11px; color: #57534e; border-bottom: 1px solid #e7e5e4; background: #fff; align-items: center; }
+.leg { display: flex; align-items: center; gap: 5px; }
+.lsq { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.tag { display: inline-block; font-size: 10px; font-weight: 500; padding: 1px 7px; border-radius: 20px; }
+.auto-tag { background: #EAF3DE; color: #3B6D11; }
+.manual-tag { background: #F1EFE8; color: #5F5E5A; }
+.todo-tag { background: #FAEEDA; color: #854F0B; }
+
+table { width: 100%; border-collapse: collapse; background: #fff; }
+thead th { font-size: 10px; font-weight: 600; color: #78716c; padding: 8px 12px; text-align: left; border-bottom: 2px solid #e7e5e4; letter-spacing: .04em; text-transform: uppercase; background: #fafaf9; }
+tbody tr { border-bottom: 1px solid #f0efed; }
+tbody tr:hover { background: #fafaf9; }
+tbody tr.sec-row td { background: #f7f6f3; font-size: 10px; font-weight: 600; color: #78716c; padding: 7px 12px; letter-spacing: .05em; text-transform: uppercase; border-top: 2px solid #e7e5e4; }
+td { padding: 9px 12px; vertical-align: top; font-size: 12px; line-height: 1.55; }
+td:first-child { white-space: nowrap; width: 200px; }
+
+.trigger { font-weight: 500; color: #1c1917; }
+.tables { display: flex; flex-wrap: wrap; gap: 4px; }
+.tbl { font-family: monospace; font-size: 10px; border: 1px solid; border-radius: 4px; padding: 2px 6px; }
+.tbl.write { border-color: #3B6D11; color: #3B6D11; background: #EAF3DE; }
+.tbl.read  { border-color: #185FA5; color: #185FA5; background: #E6F1FB; }
+
+.effect { color: #44403c; font-size: 11px; line-height: 1.6; }
+
+.footer { font-size: 10px; color: #a8a29e; padding: 10px 16px; text-align: right; background: #f7f6f3; border-top: 1px solid #e7e5e4; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>OrderSome 資料流聯動表</h1>
+  <span class="ver">v1.0 — 2026-04-19 | CLAUDE.md v5.57</span>
+</div>
+
+<div class="legend">
+  <div class="leg"><div class="lsq" style="background:#EAF3DE;border:1px solid #3B6D11"></div><span style="color:#3B6D11;font-family:monospace;font-size:10px">寫入表</span></div>
+  <div class="leg"><div class="lsq" style="background:#E6F1FB;border:1px solid #185FA5"></div><span style="color:#185FA5;font-family:monospace;font-size:10px">讀取表</span></div>
+  <div class="leg"><span class="tag auto-tag">自動</span>系統自動執行，無需人工</div>
+  <div class="leg"><span class="tag manual-tag">人工</span>需人工操作確認</div>
+  <div class="leg"><span class="tag todo-tag">待建</span>邏輯規劃中尚未實作</div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width:200px">觸發動作</th>
+      <th style="width:280px">寫入 / 讀取資料表</th>
+      <th>效果 / 下一步</th>
+    </tr>
+  </thead>
+  <tbody>
+
+    <!-- 採購 × 庫存 -->
+    <tr class="sec-row"><td colspan="3">採購 × 庫存循環</td></tr>
+
+    <tr>
+      <td><span class="trigger">Make 14:55 推播</span><br><span class="tag auto-tag">自動</span></td>
+      <td><div class="tables"><span class="tbl write">os_procurement_orders</span><span class="tbl write">os_procurement_items</span></div></td>
+      <td class="effect">status=pending，sourceType=damai_import。大麥 Excel 經 Gmail → Make → API 無人介建立完成</td>
+    </tr>
+
+    <tr>
+      <td><span class="trigger">叫貨單 → sent</span><br><span class="tag manual-tag">人工</span></td>
+      <td><div class="tables"><span class="tbl write">os_procurement_orders</span></div></td>
+      <td class="effect">通知廠商（LINE 推播）。B 類可對應撿貨單（含廠商 + 跨週彙整合預總數量）</td>
+    </tr>
+
+    <tr>
+      <td><span class="trigger">叫貨單 → received（A類）</span><br><span class="tag manual-tag">人工</span></td>
+      <td><div class="tables"><span class="tbl write">os_procurement_orders</span></div></td>
+      <td class="effect">僅更新狀態。廠商直運門市（庫存不記庫存）。帳款應付由 generateMonthlyPayables 彙總</td>
+    </tr>
+
+    <tr>
+      <td><span class="trigger">叫貨單 → received（B類）</span><br><span class="tag manual-tag">人工</span> <span class="tag auto-tag">自動連動</span></td>
+      <td><div class="tables"><span class="tbl write">os_procurement_orders</span><span class="tbl write">os_inventory</span><span class="tbl write">os_inventory_logs</span></div></td>
+      <td class="effect">currentQty += 數量，寫 type=in。初始 4/1 後設定（3/31 盤點為基準點，不重複累加）</td>
+    </tr>
+
+    <tr>
+      <td><span class="trigger">建立派車單</span><br><span class="tag manual-tag">人工</span></td>
+      <td><div class="tables"><span class="tbl write">os_delivery_orders</span><span class="tbl read">os_procurement_orders</span></div></td>
+      <td class="effect">從叫貨單商品預建派車單，status=pending → picking → dispatched → delivered</td>
+    </tr>
+
+    <tr>
+      <td><span class="trigger">派車單 → signed</span><br><span class="tag manual-tag">人工簽收</span> <span class="tag auto-tag">自動連動</span></td>
+      <td><div class="tables"><span class="tbl write">os_delivery_orders</span><span class="tbl write">os_inventory</span><span class="tbl write">os_inventory_logs</span><span class="tbl write">os_franchisee_payments</span></div></td>
+      <td class="effect">B類 currentQty -= 數量，寫 type=out。同步產生加盟主應收帳款（週結）</td>
+    </tr>
+
+    <tr>
+      <td><span class="trigger">手動盤點調整</span><br><span class="tag manual-tag">人工</span></td>
+      <td><div class="tables"><span class="tbl write">os_inventory</span><span class="tbl write">os_inventory_logs</span><span class="tbl write">os_audit_logs</span></div></td>
+      <td class="effect">必填原因，type=adjust/count。super_admin 可刪除紀錄（同步寫 audit log）</td>
+    </tr>
+
+    <!-- 帳務 -->
+    <tr class="sec-row"><td colspan="3">帳務 × 財務循環</td></tr>
+
+    <tr>
+      <td><span class="trigger">撿貨（自動可總帳款）</span><br><span class="tag manual-tag">手動觸發</span> <span class="tag todo-tag">待啟用</span></td>
+      <td><div class="tables"><span class="tbl write">os_payables</span><span class="tbl read">os_procurement_orders</span><span class="tbl read">os_procurement_items</span></div></td>
+      <td class="effect">按廠商 × 月份彙總叫貨總額，新建一筆 os_payables。歷史資料已有 25 筆 damai_import 來源</td>
+    </tr>
+
+    <tr>
+      <td><span class="trigger">進貨調貨記錄</span><br><span class="tag manual-tag">人工新增</span></td>
+      <td><div class="tables"><span class="tbl write">os_transfers</span></div></td>
+      <td class="effect">記錄 OEM 進貨門市間調貨，撿貨 billTransfers 產生加盟主應付帳款</td>
+    </tr>
+
+    <tr>
+      <td><span class="trigger">撿貨（退佣計算）</span><br><span class="tag manual-tag">手動觸發</span> <span class="tag todo-tag">待啟用</span></td>
+      <td><div class="tables"><span class="tbl write">os_rebates</span><span class="tbl read">os_payables</span><span class="tbl read">os_rebate_rules</span></div></td>
+      <td class="effect">廣式：叫貨批幅 ÷ 1.12 差額。伯享：進幅 - 成本。慶豐：流貨款。規則在 DB 可後台修改</td>
+    </tr>
+
+    <tr>
+      <td><span class="trigger">匯入對帳銀行 Excel</span><br><span class="tag manual-tag">人工匯入</span></td>
+      <td><div class="tables"><span class="tbl write">os_bank_transactions</span></div></td>
+      <td class="effect">系統計算 matchScore，建議對應 os_payables 或 os_franchisee_payments，人工點確認或標記完成</td>
+    </tr>
+
+    <tr>
+      <td><span class="trigger">銀行明細確認完成</span><br><span class="tag manual-tag">人工確認</span> <span class="tag todo-tag">高信心待自動化</span></td>
+      <td><div class="tables"><span class="tbl write">os_bank_transactions</span><span class="tbl write">os_payables</span></div></td>
+      <td class="effect">os_payables.paidAmount += 付款總額，status → paid。損益表數字才正確</td>
+    </tr>
+
+    <!-- 損益 -->
+    <tr class="sec-row"><td colspan="3">損益計算</td></tr>
+
+    <tr>
+      <td><span class="trigger">查看損益表格</span><br><span class="tag auto-tag">自動計算</span></td>
+      <td><div class="tables"><span class="tbl read">os_daily_reports</span><span class="tbl read">os_monthly_reports</span><span class="tbl read">os_rebate_records</span><span class="tbl read">os_franchisee_payments</span></div></td>
+      <td class="effect">營收 = 報表加總。成本 = 採購（來自 os_payables）。毛利 = 營收 - 成本 + 退佣。營業利潤 = 毛利 - 電費 - 水費 - 薪資</td>
+    </tr>
+
+    <!-- 現場作業 -->
+    <tr class="sec-row"><td colspan="3">現場報表 × 人員</td></tr>
+
+    <tr>
+      <td><span class="trigger">Make Webhook 推播報表</span><br><span class="tag auto-tag">自動</span></td>
+      <td><div class="tables"><span class="tbl write">os_daily_reports</span></div></td>
+      <td class="effect">內用 / Uber / 外賣分開，現場名稱 + 日期為唯一鍵（UPSERT）。損益表讀取此表計算營收</td>
+    </tr>
+
+    <tr>
+      <td><span class="trigger">排班設定</span><br><span class="tag manual-tag">人工</span></td>
+      <td><div class="tables"><span class="tbl write">os_schedules</span><span class="tbl read">os_stores</span></div></td>
+      <td class="effect">需先入員工資料。早班 / 午班 / 早晚（門市 ID 控制，HQ_STORE_ID=401534 為機動人員）</td>
+    </tr>
+
+    <!-- 待建置 -->
+    <tr class="sec-row"><td colspan="3">待建置連動</td></tr>
+
+    <tr>
+      <td><span class="trigger">欠款自動推播</span><br><span class="tag todo-tag">待建</span></td>
+      <td><div class="tables"><span class="tbl read">os_franchisee_payments</span></div></td>
+      <td class="effect">cron 每週查未付 → 超期自動 LINE 推播加盟主。基礎框架已建，需實作發送邏輯</td>
+    </tr>
+
+    <tr>
+      <td><span class="trigger">採購成本接損益表</span><br><span class="tag todo-tag">待建</span></td>
+      <td><div class="tables"><span class="tbl read">os_payables</span><span class="tbl read">os_procurement_items</span></div></td>
+      <td class="effect">損益表目前缺採購成本來源，需接 os_payables.totalAmount 作為當期進貨成本</td>
+    </tr>
+
+    <tr>
+      <td><span class="trigger">退佣啟用</span><br><span class="tag todo-tag">待建</span></td>
+      <td><div class="tables"><span class="tbl write">os_rebates</span></div></td>
+      <td class="effect">撿貨自動執行 osRebate router，不需人工點擊。規則已在 DB，只差啟用觸發</td>
+    </tr>
+
+    <tr>
+      <td><span class="trigger">銀行高信心自動確認</span><br><span class="tag todo-tag">待建</span></td>
+      <td><div class="tables"><span class="tbl write">os_bank_transactions</span><span class="tbl write">os_payables</span></div></td>
+      <td class="effect">matchScore ≥ 80 自動標記完成，不需人工。低信心推人工介面。去人化關鍵節點</td>
+    </tr>
+
+  </tbody>
+</table>
+
+<div class="footer">
+  OrderSome 資料流聯動表 v1.0 — 2026-04-19 | 依 server/routers/* 初始碼庫分析產出<br>
+  更新規則：每次涉及資料表新增/觸發邏輯變更的 commit，同步更新本表版本號與對應行
+</div>
+
+</body>
+</html>
