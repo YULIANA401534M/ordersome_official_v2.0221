@@ -43,7 +43,7 @@
     <div class="status-pill done">完成</div>
     <div class="card-top"><span class="card-icon">📦</span><span class="card-name">庫存管理</span></div>
     <div class="card-route">/dashboard/inventory</div>
-    <div class="card-real">代替：人工 Excel 庫存表<br>現況：數字整數顯示✅、單位合併✅、下拉操作選單✅、super_admin 刪除功能✅、統計列✅</div>
+    <div class="card-real">代替：人工 Excel 庫存表<br>現況：數字整數顯示✅、單位合併✅、下拉操作選單✅、super_admin 刪除功能✅、統計列✅、庫存金額統計（itemValue=currentQty×unitCost）✅、B類自配資產分類✅</div>
   </div>
   <div class="card" onclick="sendPrompt('詳細說明品項成本頁面的功能與待辦')">
     <div class="status-pill partial">部分完成</div>
@@ -93,7 +93,7 @@
     <div class="status-pill running">需資料</div>
     <div class="card-top"><span class="card-icon">📊</span><span class="card-name">損益表格</span></div>
     <div class="card-route">/dashboard/profit-loss</div>
-    <div class="card-real">代替：手動人工損益試算表<br>報表+月報+退佣+應收=損益，需匯報資料才完整</div>
+    <div class="card-real">代替：手動人工損益試算表<br>v5.64：日報欄位修正（tenantId/reportDate/instoreSales+uberSales+pandaSales+phoneOrderAmount+deliveryOrderAmount），月報欄位修正（electricityFee/waterFee/staffSalaryCost/performanceReview/monthlyPlan），日報營收正確接入✅</div>
   </div>
 </div>
 </div>
@@ -252,5 +252,5 @@
 </div>
 </div>
 
-<div class="ver">系統邏輯地圖 v1.1 — 2026-04-19 | 依 CLAUDE.md v5.60 + 庫存管理六項重構 | 點擊任一模組可詢問詳情</div>
+<div class="ver">系統邏輯地圖 v1.2 — 2026-04-19 | 依 CLAUDE.md v5.64 + 損益欄位修正+庫存金額統計 | 點擊任一模組可詢問詳情</div>
 </div>

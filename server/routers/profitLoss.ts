@@ -17,51 +17,33 @@ export const profitLossRouter = router({
       const { year, month, storeId } = input;
 
       // a. 日報加總（totalSales, guestTotal）
-      let dailySql = `
+      const dailySql = `
         SELECT
-          COALESCE(SUM(total_sales), 0)  AS totalSales,
-          COALESCE(SUM(guest_total), 0)  AS guestTotal
+          COALESCE(SUM(instoreSales + uberSales + pandaSales + COALESCE(phoneOrderAmount,0) + COALESCE(deliveryOrderAmount,0)), 0) AS totalSales,
+          COALESCE(SUM(guestInstore + guestUber + guestPanda), 0) AS guestTotal
         FROM os_daily_reports
-        WHERE tenant_id = 1
-          AND YEAR(report_date) = ?
-          AND MONTH(report_date) = ?
+        WHERE tenantId = 1
+          AND YEAR(reportDate) = ?
+          AND MONTH(reportDate) = ?
       `;
       const dailyParams: (number | string)[] = [year, month];
-      if (storeId) {
-        dailySql += ' AND store_id = ?';
-        dailyParams.push(storeId);
-      }
       const [dailyRows] = await (db as any).$client.execute(dailySql, dailyParams);
       const daily = (dailyRows as any[])[0] ?? {};
       const totalSales = Number(daily.totalSales ?? 0);
       const guestTotal = Number(daily.guestTotal ?? 0);
 
       // b. 月報費用
-      let monthlySql = `
+      const monthlySql = `
         SELECT
-          COALESCE(SUM(electricity_fee), 0) AS electricityFee,
-          COALESCE(SUM(water_fee), 0)       AS waterFee,
-          COALESCE(SUM(salary_total), 0)    AS salaryTotal,
-          GROUP_CONCAT(performance_review SEPARATOR '\n') AS performanceReview,
-          GROUP_CONCAT(monthly_plan SEPARATOR '\n')       AS monthlyPlan
+          COALESCE(SUM(electricityFee), 0)  AS electricityFee,
+          COALESCE(SUM(waterFee), 0)        AS waterFee,
+          COALESCE(SUM(staffSalaryCost), 0) AS salaryTotal,
+          GROUP_CONCAT(performanceReview SEPARATOR '\n') AS performanceReview,
+          GROUP_CONCAT(monthlyPlan SEPARATOR '\n')       AS monthlyPlan
         FROM os_monthly_reports
-        WHERE tenant_id = 1 AND year = ? AND month = ?
+        WHERE tenantId = 1 AND year = ? AND month = ?
       `;
       const monthlyParams: (number | string)[] = [year, month];
-      if (storeId) {
-        monthlySql = `
-          SELECT
-            COALESCE(SUM(electricity_fee), 0) AS electricityFee,
-            COALESCE(SUM(water_fee), 0)       AS waterFee,
-            COALESCE(SUM(salary_total), 0)    AS salaryTotal,
-            performance_review                AS performanceReview,
-            monthly_plan                      AS monthlyPlan
-          FROM os_monthly_reports
-          WHERE tenant_id = 1 AND year = ? AND month = ? AND store_id = ?
-          LIMIT 1
-        `;
-        monthlyParams.push(storeId);
-      }
       const [monthlyRows] = await (db as any).$client.execute(monthlySql, monthlyParams);
       const monthly = (monthlyRows as any[])[0] ?? {};
       const electricityFee = Number(monthly.electricityFee ?? 0);

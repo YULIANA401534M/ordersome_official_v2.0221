@@ -87,6 +87,8 @@ export default function OSInventory() {
   const [newUnitCost, setNewUnitCost] = useState("");
   const [newSafetyQty, setNewSafetyQty] = useState("");
 
+  const { data: valueStats } = trpc.inventory.getTotalValue.useQuery();
+
   const { data: items = [], refetch } = trpc.inventory.list.useQuery({
     supplierName: filterSupplier === "all" ? undefined : filterSupplier,
     category: filterCategory === "all" ? undefined : filterCategory,
@@ -224,6 +226,21 @@ export default function OSInventory() {
           <span>缺貨 <strong className="text-red-600">{outOfStock}</strong> 筆</span>
           <span>低庫存 <strong className="text-amber-600">{lowStock}</strong> 筆</span>
         </div>
+        {valueStats && (
+          <div className="flex gap-4 px-1 py-1 text-sm text-stone-500 border-t border-stone-100 mt-1 pt-2">
+            <span>庫存總資產 <strong className="text-stone-800">
+              ${Math.round(valueStats.totalValue).toLocaleString()}
+            </strong></span>
+            <span className="text-stone-300">|</span>
+            <span>B類自配 <strong className="text-amber-700">
+              ${Math.round(valueStats.bValue).toLocaleString()}
+            </strong>（{valueStats.bCount} 品項）</span>
+            <span className="text-stone-300">|</span>
+            <span>其他資產 <strong className="text-stone-600">
+              ${Math.round(valueStats.totalValue - valueStats.bValue).toLocaleString()}
+            </strong></span>
+          </div>
+        )}
 
         {/* Table */}
         <div className="bg-white rounded-lg shadow-sm overflow-auto">
@@ -241,7 +258,7 @@ export default function OSInventory() {
                     />
                   </th>
                 )}
-                {["廠商", "品項名稱", "分類", "目前庫存", "安全庫存", "狀態", "最後盤點", "操作"].map(h => (
+                {["廠商", "品項名稱", "分類", "目前庫存", "庫存金額", "安全庫存", "狀態", "最後盤點", "操作"].map(h => (
                   <th key={h} className="px-4 py-3 text-left font-semibold text-stone-600 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -249,7 +266,7 @@ export default function OSInventory() {
             <tbody>
               {(items as InventoryItem[]).length === 0 ? (
                 <tr>
-                  <td colSpan={batchMode ? 9 : 8} className="px-4 py-12 text-center text-stone-400">
+                  <td colSpan={batchMode ? 10 : 9} className="px-4 py-12 text-center text-stone-400">
                     尚無庫存品項，請點「新增品項」開始建立
                   </td>
                 </tr>
@@ -272,6 +289,11 @@ export default function OSInventory() {
                     <td className="px-4 py-3">{item.productName}</td>
                     <td className="px-4 py-3 text-stone-500">{item.category || "-"}</td>
                     <td className="px-4 py-3 font-medium">{Math.round(Number(item.currentQty)).toLocaleString()} {item.unit}</td>
+                    <td className="px-4 py-3 text-right text-stone-500 text-xs">
+                      {(item as any).itemValue > 0
+                        ? `$${Math.round((item as any).itemValue).toLocaleString()}`
+                        : "-"}
+                    </td>
                     <td className="px-4 py-3 text-stone-500">
                       {Number(item.safetyQty) === 0 ? "-" : `${Math.round(Number(item.safetyQty)).toLocaleString()} ${item.unit}`}
                     </td>

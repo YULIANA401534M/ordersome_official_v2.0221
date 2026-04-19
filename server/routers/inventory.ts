@@ -16,7 +16,9 @@ export const inventoryRouter = router({
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) return [];
-      let sql = 'SELECT * FROM os_inventory WHERE tenantId = ?';
+      let sql = `SELECT *,
+    ROUND(currentQty * unitCost, 0) AS itemValue
+    FROM os_inventory WHERE tenantId = ?`;
       const params: any[] = [TENANT_ID];
       if (input.supplierName) {
         sql += ' AND supplierName = ?';
@@ -32,6 +34,30 @@ export const inventoryRouter = router({
       sql += ' ORDER BY supplierName, productName';
       const [rows] = await (db as any).$client.execute(sql, params);
       return rows as any[];
+    }),
+
+  getTotalValue: adminProcedure
+    .query(async ({ ctx }) => {
+      const db = await getDb();
+      if (!db) return { totalValue: 0, bValue: 0, bCount: 0, totalCount: 0 };
+      const TENANT_ID = ctx.tenantId ?? 1;
+      const [[row]] = await (db as any).$client.execute(
+        `SELECT
+          ROUND(SUM(currentQty * unitCost), 0) AS totalValue,
+          COUNT(*) AS totalCount,
+          SUM(CASE WHEN s.deliveryType='yulian' THEN 1 ELSE 0 END) AS bCount,
+          ROUND(SUM(CASE WHEN s.deliveryType='yulian' THEN currentQty * unitCost ELSE 0 END), 0) AS bValue
+         FROM os_inventory i
+         LEFT JOIN os_suppliers s ON s.name = i.supplierName AND s.isActive=1
+         WHERE i.tenantId=?`,
+        [TENANT_ID]
+      );
+      return {
+        totalValue: Number(row?.totalValue ?? 0),
+        bValue: Number(row?.bValue ?? 0),
+        totalCount: Number(row?.totalCount ?? 0),
+        bCount: Number(row?.bCount ?? 0),
+      };
     }),
 
   getDetail: adminProcedure

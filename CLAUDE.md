@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md，歷史記錄請讀 DEVELOPMENT_LOG.md
 
-> **版本**：v5.63。**最後更新**：2026-04-19。
+> **版本**：v5.64。**最後更新**：2026-04-19。
 > **給 Claude 架構**：大腦（Claude.ai）+ 手腳（Claude Code）
 
 ---
@@ -47,12 +47,12 @@ git status && git log --oneline -3
 
 ## 當前開發狀態（換對話框必讀）
 
-### 最新 Git 狀態（2026-04-19 v5.62）
+### 最新 Git 狀態（2026-04-19 v5.64）
 
 最後三個 commit：
-1. `本次commit` — fix: v5.62 帳務修正：清理宇聯應付錯誤資料+補month欄位+修正import腳本排除B類自配
-2. `fc3719e` — feat: v5.61 撿貨單邏輯修正：相同品項跨門市數量加總，新增門市分配小字
-3. `ae6233d` — feat: v5.60 庫存管理六項重構：數字格式/單位合併/下拉操作/刪除功能/統計列
+1. `本次commit` — fix: v5.64 損益表欄位名修正+庫存金額統計
+2. `前次commit` — fix: v5.62 帳務修正：清理宇聯應付錯誤資料+補month欄位+修正import腳本排除B類自配
+3. `fc3719e` — feat: v5.61 撿貨單邏輯修正：相同品項跨門市數量加總，新增門市分配小字
 
 working tree: clean
 
@@ -215,6 +215,10 @@ working tree: clean
 - os_delivery_orders.toStoreId 已改為允許 NULL
 - os_franchisee_payments.userId 已改為允許 NULL
 - packCost = 大麥進貨價（直接對應），不是 unitQty × unit_cost
+- os_daily_reports 欄位全 camelCase：tenantId, reportDate, instoreSales, uberSales, pandaSales, guestInstore, guestUber, guestPanda, phoneOrderAmount, deliveryOrderAmount
+- os_monthly_reports 欄位全 camelCase：tenantId, electricityFee, waterFee, staffSalaryCost, performanceReview, monthlyPlan
+- profitLoss 日報 totalSales = instoreSales+uberSales+pandaSales+phoneOrderAmount+deliveryOrderAmount
+- os_inventory.itemValue = currentQty × unitCost（查詢時計算，非實體欄位）
 - os_stores 表於 2026-04-19 新建，含 12 間門市，schema 需一併更新
 
 **os_stores 表結構：**
