@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md，歷史記錄請讀 DEVELOPMENT_LOG.md
 
-> **版本**：v5.59。**最後更新**：2026-04-19。
+> **版本**：v5.60。**最後更新**：2026-04-19。
 > **給 Claude 架構**：大腦（Claude.ai）+ 手腳（Claude Code）
 
 ---
@@ -47,12 +47,12 @@ git status && git log --oneline -3
 
 ## 當前開發狀態（換對話框必讀）
 
-### 最新 Git 狀態（2026-04-19 v5.57）
+### 最新 Git 狀態（2026-04-19 v5.60）
 
 最後三個 commit：
-1. `本次commit` — feat: v5.57 大麥三階段歷史資料匯入腳本 + os_stores建立 + 健康檢查四項修復
-2. `dcb0f48` — feat: v5.56 叫貨管理刪除按鈕擴展至sent + 大麥244筆品項匯入 + CLAUDE.md v5.56
-3. `f251968` — feat: v5.55 派車單簽收userId null修正 + 帳務手動新增應付帳款 + 庫存異動歷史查詢
+1. `本次commit` — feat: v5.60 庫存管理六項重構：數字格式/單位合併/下拉操作/刪除功能/統計列
+2. `前次commit` — feat: v5.57 大麥三階段歷史資料匯入腳本 + os_stores建立 + 健康檢查四項修復
+3. `dcb0f48` — feat: v5.56 叫貨管理刪除按鈕擴展至sent + 大麥244筆品項匯入 + CLAUDE.md v5.56
 
 working tree: clean
 
@@ -61,7 +61,7 @@ working tree: clean
 | 路由 | 元件 | 狀態 | 說明 |
 |------|------|------|------|
 | `/dashboard/purchasing` | `OSPurchasing.tsx` | ✅ | 叫貨管理，Make串接，Excel匯入，撿貨單列印，排序 |
-| `/dashboard/inventory` | `OSInventory.tsx` | ✅ | 庫存管理，B類，批次盤點，異動歷史 |
+| `/dashboard/inventory` | `OSInventory.tsx` | ✅ | 庫存管理，B類，批次盤點，異動歷史，下拉操作，刪除（super_admin），統計列 |
 | `/dashboard/products` | `OSProducts.tsx` | ✅ | 品項成本，大麥244筆已匯入（共704筆），兩層分類 |
 | `/dashboard/ca-menu` | `OSCaMenu.tsx` | ✅ | 菜單成本管理 |
 | `/dashboard/delivery` | `OSDelivery.tsx` | ✅ | 配送管理，從叫貨單建立，簽收扣庫存 |

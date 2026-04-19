@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
 import { router, adminProcedure } from '../_core/trpc';
 import { getDb } from '../db';
 
@@ -188,5 +189,28 @@ export const inventoryRouter = router({
         []
       );
       return rows as { name: string }[];
+    }),
+
+  deleteItem: adminProcedure
+    .input(z.object({ id: z.number(), reason: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      const [rows] = await (db as any).$client.execute(
+        'SELECT * FROM os_inventory WHERE id=? AND tenantId=?',
+        [input.id, TENANT_ID]
+      );
+      const item = (rows as any[])[0];
+      if (!item) throw new TRPCError({ code: 'NOT_FOUND' });
+      await (db as any).$client.execute(
+        `INSERT INTO os_audit_logs (tenantId, action, targetTable, targetId, snapshot, reason, operatorId, createdAt)
+         VALUES (?, 'delete', 'os_inventory', ?, ?, ?, ?, NOW())`,
+        [TENANT_ID, input.id, JSON.stringify(item), input.reason, ctx.user?.id ?? null]
+      );
+      await (db as any).$client.execute(
+        'DELETE FROM os_inventory WHERE id=? AND tenantId=?',
+        [input.id, TENANT_ID]
+      );
+      return { success: true };
     }),
 });

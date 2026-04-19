@@ -4,6 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -18,9 +19,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-
+import { MoreHorizontal } from "lucide-react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { toast } from "sonner";
 
 type InventoryItem = {
   id: number;
@@ -43,6 +53,9 @@ function StatusBadge({ item }: { item: InventoryItem }) {
 }
 
 export default function OSInventory() {
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === "super_admin";
+
   const [filterSupplier, setFilterSupplier] = useState("all");
   const [filterCategory, setFilterCategory] = useState("all");
   const [belowSafety, setBelowSafety] = useState(false);
@@ -51,6 +64,8 @@ export default function OSInventory() {
   const [safetyDialog, setSafetyDialog] = useState<{ open: boolean; item?: InventoryItem }>({ open: false });
   const [addDialog, setAddDialog] = useState(false);
   const [historyDialog, setHistoryDialog] = useState<{ open: boolean; item?: InventoryItem }>({ open: false });
+  const [deleteTarget, setDeleteTarget] = useState<InventoryItem | null>(null);
+  const [deleteReason, setDeleteReason] = useState("");
 
   // 批次盤點
   const [batchMode, setBatchMode] = useState(false);
@@ -82,6 +97,14 @@ export default function OSInventory() {
   const safetyMut = trpc.inventory.setSafety.useMutation({ onSuccess: () => { refetch(); setSafetyDialog({ open: false }); } });
   const countMut = trpc.inventory.count.useMutation();
   const addMut = trpc.inventory.addProduct.useMutation({ onSuccess: () => { refetch(); setAddDialog(false); resetAddForm(); } });
+  const deleteMut = trpc.inventory.deleteItem.useMutation({
+    onSuccess: () => {
+      toast.success("品項已刪除");
+      setDeleteTarget(null);
+      setDeleteReason("");
+      refetch();
+    },
+  });
 
   const { data: historyRows = [] } = trpc.inventory.getHistory.useQuery(
     { inventoryId: historyDialog.item?.id ?? 0 },
@@ -103,13 +126,13 @@ export default function OSInventory() {
   }
 
   function openAdjust(item: InventoryItem) {
-    setAdjustQty(String(Number(item.currentQty)));
+    setAdjustQty(String(Math.round(Number(item.currentQty))));
     setAdjustNote("");
     setAdjustDialog({ open: true, item });
   }
 
   function openSafety(item: InventoryItem) {
-    setSafetyQtyInput(String(Number(item.safetyQty)));
+    setSafetyQtyInput(String(Math.round(Number(item.safetyQty))));
     setSafetyDialog({ open: true, item });
   }
 
@@ -127,7 +150,7 @@ export default function OSInventory() {
                   onClick={() => {
                     const selected = (items as InventoryItem[]).filter(i => selectedIds.has(i.id));
                     const initQtys: Record<number, string> = {};
-                    selected.forEach(i => { initQtys[i.id] = String(Number(i.currentQty)); });
+                    selected.forEach(i => { initQtys[i.id] = String(Math.round(Number(i.currentQty))); });
                     setBatchQtys(initQtys);
                     setBatchNote("");
                     setBatchDone(null);
@@ -195,6 +218,13 @@ export default function OSInventory() {
           </div>
         </div>
 
+        {/* Stats row */}
+        <div className="flex gap-4 px-1 py-2 text-sm text-stone-500">
+          <span>共 <strong className="text-stone-800">{(items as InventoryItem[]).length}</strong> 筆</span>
+          <span>缺貨 <strong className="text-red-600">{outOfStock}</strong> 筆</span>
+          <span>低庫存 <strong className="text-amber-600">{lowStock}</strong> 筆</span>
+        </div>
+
         {/* Table */}
         <div className="bg-white rounded-lg shadow-sm overflow-auto">
           <table className="w-full text-sm">
@@ -211,7 +241,7 @@ export default function OSInventory() {
                     />
                   </th>
                 )}
-                {["廠商", "品項名稱", "分類", "單位", "目前庫存", "安全庫存", "狀態", "最後盤點", "操作"].map(h => (
+                {["廠商", "品項名稱", "分類", "目前庫存", "安全庫存", "狀態", "最後盤點", "操作"].map(h => (
                   <th key={h} className="px-4 py-3 text-left font-semibold text-stone-600 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -219,7 +249,7 @@ export default function OSInventory() {
             <tbody>
               {(items as InventoryItem[]).length === 0 ? (
                 <tr>
-                  <td colSpan={batchMode ? 10 : 9} className="px-4 py-12 text-center text-stone-400">
+                  <td colSpan={batchMode ? 9 : 8} className="px-4 py-12 text-center text-stone-400">
                     尚無庫存品項，請點「新增品項」開始建立
                   </td>
                 </tr>
@@ -241,17 +271,36 @@ export default function OSInventory() {
                     <td className="px-4 py-3 whitespace-nowrap">{item.supplierName}</td>
                     <td className="px-4 py-3">{item.productName}</td>
                     <td className="px-4 py-3 text-stone-500">{item.category || "-"}</td>
-                    <td className="px-4 py-3 text-stone-500">{item.unit}</td>
-                    <td className="px-4 py-3 font-medium">{Number(item.currentQty).toFixed(2)}</td>
-                    <td className="px-4 py-3 text-stone-500">{Number(item.safetyQty).toFixed(2)}</td>
+                    <td className="px-4 py-3 font-medium">{Math.round(Number(item.currentQty)).toLocaleString()} {item.unit}</td>
+                    <td className="px-4 py-3 text-stone-500">
+                      {Number(item.safetyQty) === 0 ? "-" : `${Math.round(Number(item.safetyQty)).toLocaleString()} ${item.unit}`}
+                    </td>
                     <td className="px-4 py-3"><StatusBadge item={item} /></td>
                     <td className="px-4 py-3 text-stone-400 text-xs">{item.lastCountDate ?? "-"}</td>
                     <td className="px-4 py-3">
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => openAdjust(item)}>調整</Button>
-                        <Button size="sm" variant="outline" onClick={() => openSafety(item)}>設警戒值</Button>
-                        <Button size="sm" variant="outline" onClick={() => setHistoryDialog({ open: true, item })}>歷史</Button>
-                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openAdjust(item)}>調整庫存</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openSafety(item)}>設警戒值</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setHistoryDialog({ open: true, item })}>異動歷史</DropdownMenuItem>
+                          {isSuperAdmin && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-red-600"
+                                onClick={() => setDeleteTarget(item)}
+                              >
+                                刪除品項
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </td>
                   </tr>
                 ))
@@ -443,7 +492,7 @@ export default function OSInventory() {
                   <div key={item.id} className="flex items-center gap-3 border rounded-md p-3">
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">{item.productName}</p>
-                      <p className="text-xs text-stone-400">目前庫存：{Number(item.currentQty).toFixed(2)} {item.unit}</p>
+                      <p className="text-xs text-stone-400">目前庫存：{Math.round(Number(item.currentQty)).toLocaleString()} {item.unit}</p>
                     </div>
                     <Input
                       type="number"
@@ -524,13 +573,14 @@ export default function OSInventory() {
                   <tr><td colSpan={7} className="px-3 py-8 text-center text-stone-400">尚無異動記錄</td></tr>
                 ) : (historyRows as any[]).map((r: any, i: number) => {
                   const typeMap: Record<string, string> = { in: "入庫", out: "出庫", adjust: "手動調整", count: "盤點" };
+                  const qty = Math.round(Number(r.qty));
                   return (
                     <tr key={i} className="border-b hover:bg-stone-50">
                       <td className="px-3 py-2 text-xs text-stone-500 whitespace-nowrap">{String(r.createdAt).slice(0, 16)}</td>
                       <td className="px-3 py-2 whitespace-nowrap">{typeMap[r.changeType] ?? r.changeType}</td>
-                      <td className="px-3 py-2 text-right font-medium">{Number(r.qty) > 0 ? `+${Number(r.qty).toFixed(2)}` : Number(r.qty).toFixed(2)}</td>
-                      <td className="px-3 py-2 text-right text-stone-500">{Number(r.qtyBefore).toFixed(2)}</td>
-                      <td className="px-3 py-2 text-right text-stone-500">{Number(r.qtyAfter).toFixed(2)}</td>
+                      <td className="px-3 py-2 text-right font-medium">{qty > 0 ? `+${qty.toLocaleString()}` : qty.toLocaleString()}</td>
+                      <td className="px-3 py-2 text-right text-stone-500">{Math.round(Number(r.qtyBefore)).toLocaleString()}</td>
+                      <td className="px-3 py-2 text-right text-stone-500">{Math.round(Number(r.qtyAfter)).toLocaleString()}</td>
                       <td className="px-3 py-2 text-xs text-stone-400">{r.refType ?? "-"}{r.refId ? ` #${r.refId}` : ""}</td>
                       <td className="px-3 py-2 text-xs text-stone-400 max-w-[160px] truncate">{r.note ?? "-"}</td>
                     </tr>
@@ -541,6 +591,24 @@ export default function OSInventory() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setHistoryDialog({ open: false })}>關閉</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 刪除確認 Dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) { setDeleteTarget(null); setDeleteReason(""); } }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>刪除庫存品項</DialogTitle></DialogHeader>
+          <p className="text-sm text-stone-600">確定刪除「{deleteTarget?.productName}」？此操作會寫入稽核記錄，無法復原。</p>
+          <Label>刪除原因（必填）</Label>
+          <Textarea value={deleteReason} onChange={e => setDeleteReason(e.target.value)} placeholder="請說明刪除原因" />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>取消</Button>
+            <Button variant="destructive"
+              disabled={!deleteReason.trim() || deleteMut.isPending}
+              onClick={() => deleteTarget && deleteMut.mutate({ id: deleteTarget.id, reason: deleteReason })}>
+              確認刪除
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
