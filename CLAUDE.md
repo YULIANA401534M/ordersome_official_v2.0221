@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md，歷史記錄請讀 DEVELOPMENT_LOG.md
 
-> **版本**：v5.70。**最後更新**：2026-04-19。
+> **版本**：v5.71。**最後更新**：2026-04-19。
 > **給 Claude 架構**：大腦（Claude.ai）+ 手腳（Claude Code）
 
 ---
@@ -47,12 +47,12 @@ git status && git log --oneline -3
 
 ## 當前開發狀態（換對話框必讀）
 
-### 最新 Git 狀態（2026-04-19 v5.70）
+### 最新 Git 狀態（2026-04-19 v5.71）
 
 最後三個 commit：
-1. `(v5.70)` — fix: v5.70 退佣計算修正+損益圖表資料+退佣帳款改查os_rebates+日報月彙整
-2. `(v5.69)` — fix: 補齊v5.68未套用的五項修正：損益圖表+manager擋住+查看明細+庫存分頁+品項分頁
-3. `cf41c75` — feat: v5.68 manager權限B方案+損益擋住+叫貨廠商下拉+庫存分頁+品項分頁needsReview+帳務跳轉
+1. `(v5.71)` — fix: v5.71 加盟主叫貨單只看自己門市+隱藏操作按鈕
+2. `1bf182f` — fix: v5.70 退佣計算修正+損益圖表資料+退佣帳款改查os_rebates+日報月彙整
+3. `cb57eac` — fix: v5.69 補齊v5.68未套用的五項修正：損益圖表+manager擋住+查看明細+庫存分頁+品項分頁
 
 working tree: clean
 
@@ -148,6 +148,7 @@ working tree: clean
 - [x] v5.68 第二梯修正：manager權限B方案 / 損益擋住 / 庫存分頁30筆 / 品項分頁50筆+needsReview / 帳務查看明細跳轉
 - [x] v5.69 補齊五項修正：DB開啟purchasing_os/daily_report_os / OSProfitLoss圖表+redirect確認 / 查看明細確認 / 庫存分頁確認 / 品項分頁+待確認確認
 - [x] v5.70 退佣計算修正（rebateRate > 1 除以 100）/ profitLoss 已有 channelSales/dailyTrend/procurementCost/isCostEstimated / 退佣帳款加 accounting.listRebates + calculateRebates 按鈕 / OSDailyReport 月彙整改用 viewYear/viewMonth
+- [x] v5.71 加盟主叫貨單權限：procurement list 改 franchiseeOrAdminProcedure，franchisee 用 storeId→os_stores 取得 storeName 自動篩選；OSPurchasing 加 isFranchisee 隱藏店別篩選/批量刪除/操作按鈕
 
 ---
 
@@ -242,6 +243,8 @@ working tree: clean
 - os_inventory.itemValue = currentQty × unitCost（查詢時計算，非實體欄位）
 - profitLoss 新增 dailyTrend（每日趨勢陣列）和 channelSales（通路分拆物件）和 procurementCost/isCostEstimated
 - osRebate.calculate：rebateRate > 1 時除以 100（os_suppliers 存的是百分比整數，如 10.71 = 10.71%）
+- procurement list 改用 franchiseeOrAdminProcedure（server/_core/trpc.ts 新增），franchisee 自動篩選只看 storeId→os_stores 對應的門市訂單
+- OSPurchasing.tsx：isFranchisee = user.role==='franchisee'，隱藏店別篩選/批量刪除/新增叫貨/手動補單/匯入/列印等所有 canEdit 操作按鈕（canEdit 本已排除 franchisee）
 - OSRebate.tsx 加 accounting.listRebates（查 os_rebates）和 accounting.calculateRebates 按鈕（計算本月退佣寫入 os_rebates）
 - OSDailyReport MonthlyOverviewTab 年月 state 改名為 viewYear/viewMonth（Select 已同步更新）
 - OSProfitLoss 使用 recharts：AreaChart 每日趨勢、PieChart 通路分拆、BarChart 費用結構

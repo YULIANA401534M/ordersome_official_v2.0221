@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { router, adminProcedure, publicProcedure, superAdminProcedure } from '../_core/trpc';
+import { router, adminProcedure, publicProcedure, superAdminProcedure, franchiseeOrAdminProcedure } from '../_core/trpc';
 import { getDb } from '../db';
 
 function genOrderNo() {
@@ -124,7 +124,7 @@ export const procurementRouter = router({
     }),
 
   // 列表（可篩選日期、狀態、門市、廠商）
-  list: adminProcedure
+  list: franchiseeOrAdminProcedure
     .input(z.object({
       startDate: z.string().optional(),
       endDate: z.string().optional(),
@@ -135,7 +135,7 @@ export const procurementRouter = router({
       sortOrder: z.enum(['asc','desc']).optional().default('desc'),
       sourceType: z.string().optional(),
     }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) return [] as any[];
       let sql = `
@@ -149,6 +149,31 @@ export const procurementRouter = router({
         WHERE po.tenantId = 1
       `;
       const params: any[] = [];
+
+      // 加盟主只能看自己門市的訂單
+      if (ctx.user.role === 'franchisee') {
+        const userStoreId = (ctx.user as any).storeId ?? null;
+        if (userStoreId) {
+          const [storeRows] = await (db as any).$client.execute(
+            'SELECT name FROM os_stores WHERE id=? LIMIT 1',
+            [userStoreId]
+          );
+          const storeFullName = (storeRows as any[])[0]?.name ?? null;
+          if (storeFullName) {
+            sql += ` AND EXISTS (
+              SELECT 1 FROM os_procurement_items pi_f
+              WHERE pi_f.procurementOrderId = po.id
+                AND pi_f.storeName LIKE ?
+            )`;
+            params.push(`%${storeFullName.replace('來點什麼-', '')}%`);
+          } else {
+            sql += ` AND 1=0`;
+          }
+        } else {
+          sql += ` AND 1=0`;
+        }
+      }
+
       if (input.startDate) { sql += ` AND po.orderDate >= ?`; params.push(input.startDate); }
       if (input.endDate) { sql += ` AND po.orderDate <= ?`; params.push(input.endDate); }
       if (input.status) { sql += ` AND po.status = ?`; params.push(input.status); }

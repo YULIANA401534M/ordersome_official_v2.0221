@@ -64,6 +64,21 @@ export const superAdminProcedure = t.procedure.use(
 );
 
 /**
+ * franchiseeOrAdminProcedure: 允許 super_admin / manager / franchisee
+ * 供加盟主可查看（但受資料過濾）的 procedure 使用
+ */
+export const franchiseeOrAdminProcedure = t.procedure.use(
+  t.middleware(async opts => {
+    const { ctx, next } = opts;
+    const allowed = ['super_admin', 'manager', 'franchisee'];
+    if (!ctx.user || !allowed.includes(ctx.user.role)) {
+      throw new TRPCError({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
+    }
+    return next({ ctx: { ...ctx, user: ctx.user } });
+  }),
+);
+
+/**
  * tenantProcedure: 繼承 protectedProcedure，確保 ctx 中有 tenantId
  * 供需要資料隔離的 router 使用
  */

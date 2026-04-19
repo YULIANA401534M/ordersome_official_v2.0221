@@ -60,6 +60,7 @@ export default function OSPurchasing() {
   const search = useSearch();
   const canEdit = user?.role === "super_admin" || user?.role === "manager";
   const isSuperAdmin = user?.role === "super_admin";
+  const isFranchisee = user?.role === "franchisee";
 
   const now = new Date();
   // 本月固定範圍（KPI 用）
@@ -635,16 +636,18 @@ export default function OSPurchasing() {
             className="h-8 text-sm w-36"
           />
 
-          {/* 店別篩選 */}
-          <Select value={filterStore} onValueChange={setFilterStore}>
-            <SelectTrigger className="w-32 h-8 text-sm"><SelectValue placeholder="全部門市" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">全部門市</SelectItem>
-              {(storeNames as string[]).map(s => (
-                <SelectItem key={s} value={s}>{s}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {/* 店別篩選（加盟主只看自己門市，無需顯示） */}
+          {!isFranchisee && (
+            <Select value={filterStore} onValueChange={setFilterStore}>
+              <SelectTrigger className="w-32 h-8 text-sm"><SelectValue placeholder="全部門市" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部門市</SelectItem>
+                {(storeNames as string[]).map(s => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
           {/* 廠商篩選 */}
           <Select value={filterSupplierSel} onValueChange={setFilterSupplierSel}>
@@ -679,7 +682,7 @@ export default function OSPurchasing() {
 
           {/* 右側按鈕 */}
           <div className="ml-auto flex gap-2">
-            {isSuperAdmin && selectedIds.size > 0 && (
+            {!isFranchisee && isSuperAdmin && selectedIds.size > 0 && (
               <Button
                 size="sm" variant="outline"
                 className="h-8 text-xs text-red-600 border-red-400 hover:bg-red-50"
@@ -688,7 +691,7 @@ export default function OSPurchasing() {
                 <Trash2 className="w-3.5 h-3.5 mr-1" /> 批量刪除 ({selectedIds.size}張)
               </Button>
             )}
-            {isSuperAdmin && selectedIds.size === 0 && (
+            {!isFranchisee && isSuperAdmin && selectedIds.size === 0 && (
               <Button size="sm" variant="outline" disabled className="h-8 text-xs opacity-40">
                 <Trash2 className="w-3.5 h-3.5 mr-1" /> 批量刪除
               </Button>
@@ -781,7 +784,9 @@ export default function OSPurchasing() {
             </div>
           )}
           {(orders as any[]).length === 0 ? (
-            <div className="bg-white rounded-xl p-8 text-center text-gray-600">無符合條件的叫貨紀錄</div>
+            <div className="bg-white rounded-xl p-8 text-center text-gray-600">
+              {isFranchisee ? "尚無您門市的叫貨紀錄" : "無符合條件的叫貨紀錄"}
+            </div>
           ) : (
             (orders as any[]).map((order: any) => {
               const sc = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.pending;
