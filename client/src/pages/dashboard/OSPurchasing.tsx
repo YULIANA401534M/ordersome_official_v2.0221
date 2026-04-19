@@ -379,7 +379,7 @@ export default function OSPurchasing() {
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "叫貨管理");
-    XLSX.writeFile(wb, `叫貨管理_${year}${String(month).padStart(2, "0")}.xlsx`);
+    XLSX.writeFile(wb, `叫貨管理_${now.getFullYear()}${String(now.getMonth()+1).padStart(2, "0")}.xlsx`);
   }
 
   function parseDamaiExcel(file: File) {
@@ -877,7 +877,7 @@ export default function OSPurchasing() {
                               <XCircle className="w-3 h-3 mr-1" /> 作廢
                             </Button>
                           )}
-                          {isPending && isSuperAdmin && (
+                          {(isPending || order.status === "sent") && isSuperAdmin && (
                             <Button
                               size="sm" variant="outline"
                               className="h-7 text-xs text-red-600 border-red-400 hover:bg-red-50"
