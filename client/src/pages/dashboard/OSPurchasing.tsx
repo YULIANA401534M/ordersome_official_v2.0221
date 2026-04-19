@@ -67,9 +67,9 @@ export default function OSPurchasing() {
 
   const [filterStatus, setFilterStatus] = useState("");
 
-  // 篩選器：預設本月 1 日 ～ 今天
-  const [filterStartDate, setFilterStartDate] = useState(thisMonthStart);
-  const [filterEndDate, setFilterEndDate] = useState(thisMonthEnd);
+  // 篩選器：預設空值（查全部）
+  const [filterStartDate, setFilterStartDate] = useState("");
+  const [filterEndDate, setFilterEndDate] = useState("");
   const [filterStore, setFilterStore] = useState("all");
   const [filterSupplierSel, setFilterSupplierSel] = useState("all");
   const [sortBy, setSortBy] = useState<"date" | "status" | "amount" | "supplier">("date");
@@ -585,6 +585,32 @@ export default function OSPurchasing() {
             </SelectContent>
           </Select>
 
+          {/* 日期範圍快速選項 */}
+          <div className="flex items-center gap-1 flex-wrap">
+            {[
+              { label: "本週", days: 7 },
+              { label: "本月", days: 30 },
+              { label: "三個月", days: 90 },
+              { label: "全部", days: 0 },
+            ].map(({ label, days }) => (
+              <button
+                key={label}
+                className="text-xs px-2 py-1 rounded border border-stone-300 hover:bg-stone-100 text-stone-600"
+                onClick={() => {
+                  if (days === 0) {
+                    setFilterStartDate("");
+                    setFilterEndDate("");
+                  } else {
+                    const end = new Date();
+                    const start = new Date();
+                    start.setDate(end.getDate() - days);
+                    setFilterStartDate(start.toISOString().slice(0, 10));
+                    setFilterEndDate(end.toISOString().slice(0, 10));
+                  }
+                }}
+              >{label}</button>
+            ))}
+          </div>
           {/* 日期範圍 */}
           <Input
             type="date"

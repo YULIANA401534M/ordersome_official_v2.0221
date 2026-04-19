@@ -43,7 +43,7 @@ function StatusBadge({ cfg, value }: { cfg: Record<string, { label: string; colo
 
 export default function OSAccounting() {
   const [tab, setTab] = useState("payables");
-  const [month, setMonth] = useState(nowMonth());
+  const [month, setMonth] = useState("");
 
   // Tab1
   const [payFilterStatus, setPayFilterStatus] = useState("all");
@@ -248,7 +248,16 @@ export default function OSAccounting() {
   }
 
   const MonthInput = () => (
-    <Input type="month" value={month} onChange={e => setMonth(e.target.value)} className="h-8 text-sm w-36" />
+    <div className="flex items-center gap-1">
+      <Input type="month" value={month} onChange={e => setMonth(e.target.value)}
+        className="h-8 text-sm w-36" />
+      {month && (
+        <button className="text-xs px-2 py-1 rounded border border-stone-300 hover:bg-stone-100 text-stone-600"
+          onClick={() => setMonth("")}>
+          全部
+        </button>
+      )}
+    </div>
   );
 
   return (
@@ -291,7 +300,7 @@ export default function OSAccounting() {
               </Select>
               <div className="ml-auto flex gap-2">
                 <Button size="sm" variant="outline" className="h-8 text-xs gap-1"
-                  onClick={() => generatePayables.mutate({ month })} disabled={generatePayables.isPending}>
+                  onClick={() => generatePayables.mutate({ month })} disabled={generatePayables.isPending || !month}>
                   <RefreshCw className="w-3.5 h-3.5" /> 自動匯總本月帳款
                 </Button>
                 <Button size="sm" variant="outline" className="h-8 text-xs gap-1"
@@ -364,7 +373,7 @@ export default function OSAccounting() {
                   <Upload className="w-3.5 h-3.5" /> 匯入銀行明細 Excel
                 </Button>
                 <Button size="sm" variant="outline" className="h-8 text-xs gap-1"
-                  onClick={() => autoMatch.mutate({ month })} disabled={autoMatch.isPending}>
+                  onClick={() => autoMatch.mutate({ month })} disabled={autoMatch.isPending || !month}>
                   <RefreshCw className="w-3.5 h-3.5" /> 自動比對
                 </Button>
               </div>
@@ -438,7 +447,7 @@ export default function OSAccounting() {
               <MonthInput />
               <div className="ml-auto">
                 <Button size="sm" variant="outline" className="h-8 text-xs gap-1"
-                  onClick={() => calcRebates.mutate({ month })} disabled={calcRebates.isPending}>
+                  onClick={() => calcRebates.mutate({ month })} disabled={calcRebates.isPending || !month}>
                   <RefreshCw className="w-3.5 h-3.5" /> 計算本月退佣
                 </Button>
               </div>
@@ -794,7 +803,7 @@ export default function OSAccounting() {
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowBillConfirm(false)}>取消</Button>
-            <Button style={{ background: "#b45309" }} disabled={billTransfers.isPending}
+            <Button style={{ background: "#b45309" }} disabled={billTransfers.isPending || !month}
               onClick={() => {
                 try { billTransfers.mutate({ month }); }
                 catch (e: any) { toast.error(e.message); }

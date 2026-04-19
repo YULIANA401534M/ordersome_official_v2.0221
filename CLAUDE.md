@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md，歷史記錄請讀 DEVELOPMENT_LOG.md
 
-> **版本**：v5.66。**最後更新**：2026-04-19。
+> **版本**：v5.67。**最後更新**：2026-04-19。
 > **給 Claude 架構**：大腦（Claude.ai）+ 手腳（Claude Code）
 
 ---
@@ -47,14 +47,14 @@ git status && git log --oneline -3
 
 ## 當前開發狀態（換對話框必讀）
 
-### 最新 Git 狀態（2026-04-19 v5.66）
+### 最新 Git 狀態（2026-04-19 v5.67）
 
 最後三個 commit：
-1. `456004c` — feat: v5.65 損益儀表板圖表升級+庫存最後修改時間+近10筆記錄
-2. `ecf0d77` — fix: v5.64 損益表欄位名修正+庫存金額統計
-3. `9d51e9e` — fix: v5.63 帳務七項修正：netPayable補寫/退佣表名/韓濟登記/食材成本接真實數據/updateRebate同步netRebate
+1. `(v5.67)` — fix: 叫貨日期預設全部+帳務全月顯示+刪除品項mutation補接+損益採購成本修正
+2. `456004c` — feat: v5.65 損益儀表板圖表升級+庫存最後修改時間+近10筆記錄
+3. `ecf0d77` — fix: v5.64 損益表欄位名修正+庫存金額統計
 
-working tree: clean（本次為文件同步，無程式碼變更）
+working tree: clean
 
 ### 已完成模組
 
@@ -144,6 +144,7 @@ working tree: clean（本次為文件同步，無程式碼變更）
 - [x] v5.63 帳務七項修正（netPayable/退佣表名/韓濟/食材成本接真實值）
 - [x] v5.64 損益表欄位名全面修正（camelCase）+ 庫存金額統計
 - [x] v5.65 損益儀表板圖表升級（recharts）+ 庫存最後修改時間 + 近10筆記錄
+- [x] v5.67 第一梯修正：叫貨日期預設全部+快速選項 / 帳務月份預設全部+操作按鈕保護 / profitLoss.ts 確認已正確 / OSInventory.tsx deleteMut 確認已正確
 
 ---
 
@@ -216,6 +217,11 @@ working tree: clean（本次為文件同步，無程式碼變更）
 - os_payables.netPayable = totalAmount - rebateAmount，由 generateMonthlyPayables 初始化（初始值=totalAmount），calculateRebates offset 時更新
 - profitLoss 退佣讀 os_rebates.netRebate（非 os_rebate_records）
 - profitLoss 食材成本：有 os_payables 真實資料時用真實值，否則估算 35%（前端顯示標注來源）
+- profitLoss.ts 月報表用 tenantId（camelCase），storeId 分支已無（os_monthly_reports 無 storeId 欄位）
+- profitLoss 採購成本從 os_payables WHERE month=YYYY-MM 查，無資料 fallback 35%
+- OSInventory.tsx deleteMut 已接通 inventory.deleteItem（deleteTarget/deleteReason state 齊備）
+- 叫貨管理日期預設為空（查全部），快速選本週/本月/三個月/全部按鈕在日期輸入左側
+- 帳務管理 month 預設為空（顯示全部月份），操作型 mutation（generatePayables/calcRebates/autoMatch/billTransfers）在 month 為空時 disabled
 - os_products 共 704 筆（v5.57後，含大麥歷史匯入新建137筆 needsReview=1）
 - os_products 的 `temperature` 欄位不存在，溫層存在 `category2`
 - os_delivery_orders.toStoreId 已改為允許 NULL
