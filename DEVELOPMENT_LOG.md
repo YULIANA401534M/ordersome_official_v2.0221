@@ -235,3 +235,25 @@
 - 派車單跨門市合併撿貨單列印
 
 *DEVELOPMENT_LOG.md — 查閱用，新對話只讀 CLAUDE.md 即可*
+
+---
+
+## 2026-04-19 v5.57–v5.71 — 歷史資料匯入、圖表升級、UAT 修正
+
+- **v5.57** `c7588d6`：大麥三階段歷史資料匯入（453張叫貨單/10263筆品項/706筆庫存記錄）、os_stores 建立12間門市、健康檢查四項修復（tenantId型別/has_procurement_access欄位/storeId允許NULL/deliveryOrder userId允許NULL）
+- **v5.58** `98fde53`：新增系統模組地圖（ordersome_module_map_v1.html）、CLAUDE.md 更新守則第5條（commit前同步模組地圖狀態）
+- **v5.59** `3e1572f`：叫貨管理補表頭全選 checkbox、CLAUDE.md 版本號更新
+- **v5.60** `ae6233d`：庫存管理六項重構——數字格式千分位、單位合併欄、下拉操作選單、刪除功能（super_admin）、統計列（總筆數/總庫存金額）、itemValue = currentQty × unitCost
+- **v5.61** `fc3719e`：撿貨單邏輯修正——相同品項跨門市數量加總，小字顯示各門市分配明細
+- **v5.62** `2847b0e`：帳務修正——清理宇聯應付錯誤資料、補 os_payables.month 欄位、修正 import 腳本排除 B 類自配廠商
+- **v5.63** `9d51e9e`：帳務七項修正——netPayable 補寫、退佣表名統一、韓濟抵貨款登記、食材成本接真實數據（os_payables）、updateRebate 同步 netRebate
+- **v5.64** `ecf0d77`：損益表欄位名全面修正（camelCase 統一）、庫存金額統計列
+- **v5.65** `456004c`：損益儀表板圖表升級——recharts AreaChart 每日趨勢、PieChart 通路分拆、BarChart 費用結構；庫存最後修改時間（updatedAt）；近10筆異動記錄
+- **v5.66** `99b4650`：對話框交接文件同步——commit hash 補全、模組說明更新、待辦清單重整
+- **v5.66** `887e6d7`：新增 ERP 前端 UAT 驗收表 v1.0（72 項測試，含跨模組 Golden Path）
+- **v5.67** `40912b8`：UAT 第一梯修正——叫貨日期預設空（查全部）+快速選本週/本月/三個月/全部、帳務月份預設空（顯示全部）+操作按鈕在 month 為空時 disabled、profitLoss 採購成本確認、deleteMut 確認接通
+- **v5.68** `cf41c75`：UAT 第二梯修正——manager 權限 B 方案（osModuleDefs.managerAllowed 控制可見模組）、損益儀表板非授權者導回 /dashboard、叫貨管理廠商下拉篩選、庫存分頁每頁30筆、品項分頁每頁50筆+needsReview篩選、帳務「查看明細」跳轉叫貨管理帶廠商篩選
+- **v5.69** `cb57eac`：補齊 v5.68 未套用的五項修正——DB 開放 purchasing_os/daily_report_os 模組、OSProfitLoss 圖表確認、查看明細確認、庫存分頁確認、品項分頁+待確認確認
+- **v5.70** `1bf182f`：退佣計算修正（rebateRate > 1 時除以100，os_suppliers 存百分比整數如10.71）、os_rebate_records 清空重算、profitLoss 補齊 channelSales/dailyTrend/procurementCost/isCostEstimated、退佣帳款頁新增 accounting.listRebates query 和「計算本月退佣」按鈕、OSDailyReport 月彙整 state 改名 viewYear/viewMonth
+- **v5.71** `d5868fd`：加盟主叫貨單權限——server/_core/trpc.ts 新增 franchiseeOrAdminProcedure、procurement list 改用新 procedure、franchisee 自動用 storeId→os_stores 取得 storeName 篩選（storeId 為 null 回傳空）、OSPurchasing 加 isFranchisee 隱藏店別篩選/批量刪除/所有 canEdit 操作按鈕、空狀態提示依角色切換
+- **v5.71** `7c877fe`：CLAUDE.md 新增兩個大任務規劃——集中式權限管理系統（os_user_permissions、permissionMiddleware，P2）、菜單成本 os_menu_items 表建置（P2）
