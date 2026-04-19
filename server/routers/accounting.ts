@@ -374,6 +374,32 @@ export const accountingRouter = router({
       return { billed, message: `${billed} 間門市提貨款已開帳` };
     }),
 
+  createPayable: adminProcedure
+    .input(z.object({
+      supplierName: z.string(),
+      month: z.string(),
+      totalAmount: z.number().positive(),
+      dueDate: z.string().optional(),
+      note: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new Error('DB unavailable');
+      const [year, mon] = input.month.split('-').map(Number);
+      const periodStart = `${input.month}-01`;
+      const lastDay = new Date(year, mon, 0).getDate();
+      const periodEnd = `${input.month}-${String(lastDay).padStart(2, '0')}`;
+      await (db as any).$client.execute(
+        `INSERT INTO os_payables
+         (tenantId, supplierName, month, periodStart, periodEnd, totalAmount, dueDate, note, createdBy, createdAt, updatedAt)
+         VALUES (?,?,?,?,?,?,?,?,?,NOW(),NOW())`,
+        [ctx.tenantId ?? 1, input.supplierName, input.month,
+         periodStart, periodEnd, input.totalAmount,
+         input.dueDate || null, input.note || null, ctx.user?.id ?? null]
+      );
+      return { ok: true };
+    }),
+
   exportPayables: adminProcedure
     .input(z.object({ month: z.string() }))
     .query(async ({ ctx, input }) => {

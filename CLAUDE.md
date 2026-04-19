@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md，歷史記錄請讀 DEVELOPMENT_LOG.md
 
-> **版本**：v5.54。**最後更新**：2026-04-19。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.55。**最後更新**：2026-04-19。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
 
 ---
 
@@ -40,12 +40,12 @@ git status && git log --oneline -3
 
 ---
 
-### 最新 Git 狀態（2026-04-19 v5.54）
+### 最新 Git 狀態（2026-04-19 v5.55）
 
 最後三個 commit（已 push）：
-1. `6ac2a05` — docs: CLAUDE.md v5.54
-2. `73864a0` — feat: v5.54 派車單重構 — 從叫貨單自動建立、中文狀態按鈕、URL參數跳轉
-3. `10023c6` — feat: v5.53 OSPurchasing 月份切換移除 + 標題 + badge 簡化 + storeName 原樣
+1. `(v5.55)` — feat: v5.55 派車單簽收userId null修正 + 帳務手動新增應付帳款 + 庫存異動歷史查詢
+2. `6ac2a05` — docs: CLAUDE.md v5.54
+3. `73864a0` — feat: v5.54 派車單重構 — 從叫貨單自動建立、中文狀態按鈕、URL參數跳轉
 
 working tree: clean
 

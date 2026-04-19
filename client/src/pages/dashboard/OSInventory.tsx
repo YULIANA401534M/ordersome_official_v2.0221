@@ -50,6 +50,7 @@ export default function OSInventory() {
   const [adjustDialog, setAdjustDialog] = useState<{ open: boolean; item?: InventoryItem }>({ open: false });
   const [safetyDialog, setSafetyDialog] = useState<{ open: boolean; item?: InventoryItem }>({ open: false });
   const [addDialog, setAddDialog] = useState(false);
+  const [historyDialog, setHistoryDialog] = useState<{ open: boolean; item?: InventoryItem }>({ open: false });
 
   // 批次盤點
   const [batchMode, setBatchMode] = useState(false);
@@ -81,6 +82,11 @@ export default function OSInventory() {
   const safetyMut = trpc.inventory.setSafety.useMutation({ onSuccess: () => { refetch(); setSafetyDialog({ open: false }); } });
   const countMut = trpc.inventory.count.useMutation();
   const addMut = trpc.inventory.addProduct.useMutation({ onSuccess: () => { refetch(); setAddDialog(false); resetAddForm(); } });
+
+  const { data: historyRows = [] } = trpc.inventory.getHistory.useQuery(
+    { inventoryId: historyDialog.item?.id ?? 0 },
+    { enabled: historyDialog.open && !!historyDialog.item }
+  );
 
   const categories = Array.from(new Set((items as InventoryItem[]).map(i => i.category).filter(Boolean)));
 
@@ -244,6 +250,7 @@ export default function OSInventory() {
                       <div className="flex gap-2">
                         <Button size="sm" variant="outline" onClick={() => openAdjust(item)}>調整</Button>
                         <Button size="sm" variant="outline" onClick={() => openSafety(item)}>設警戒值</Button>
+                        <Button size="sm" variant="outline" onClick={() => setHistoryDialog({ open: true, item })}>歷史</Button>
                       </div>
                     </td>
                   </tr>
@@ -493,6 +500,47 @@ export default function OSInventory() {
                 {countMut.isPending ? "盤點中…" : "確認盤點"}
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 歷史異動 Dialog */}
+      <Dialog open={historyDialog.open} onOpenChange={o => setHistoryDialog({ open: o })}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>庫存異動記錄 — {historyDialog.item?.productName}</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-stone-50 border-b">
+                <tr>
+                  {["時間", "類型", "變動數量", "變動前", "變動後", "來源", "備註"].map(h => (
+                    <th key={h} className="px-3 py-2 text-left font-semibold text-stone-600 whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {(historyRows as any[]).length === 0 ? (
+                  <tr><td colSpan={7} className="px-3 py-8 text-center text-stone-400">尚無異動記錄</td></tr>
+                ) : (historyRows as any[]).map((r: any, i: number) => {
+                  const typeMap: Record<string, string> = { in: "入庫", out: "出庫", adjust: "手動調整", count: "盤點" };
+                  return (
+                    <tr key={i} className="border-b hover:bg-stone-50">
+                      <td className="px-3 py-2 text-xs text-stone-500 whitespace-nowrap">{String(r.createdAt).slice(0, 16)}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">{typeMap[r.changeType] ?? r.changeType}</td>
+                      <td className="px-3 py-2 text-right font-medium">{Number(r.qty) > 0 ? `+${Number(r.qty).toFixed(2)}` : Number(r.qty).toFixed(2)}</td>
+                      <td className="px-3 py-2 text-right text-stone-500">{Number(r.qtyBefore).toFixed(2)}</td>
+                      <td className="px-3 py-2 text-right text-stone-500">{Number(r.qtyAfter).toFixed(2)}</td>
+                      <td className="px-3 py-2 text-xs text-stone-400">{r.refType ?? "-"}{r.refId ? ` #${r.refId}` : ""}</td>
+                      <td className="px-3 py-2 text-xs text-stone-400 max-w-[160px] truncate">{r.note ?? "-"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setHistoryDialog({ open: false })}>關閉</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

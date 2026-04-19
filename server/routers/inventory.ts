@@ -153,6 +153,21 @@ export const inventoryRouter = router({
       return { success: true };
     }),
 
+  getHistory: adminProcedure
+    .input(z.object({ inventoryId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) return [];
+      const [rows] = await (db as any).$client.execute(
+        `SELECT changeType, qty, qtyBefore, qtyAfter, refType, refId, note, createdAt
+         FROM os_inventory_logs
+         WHERE inventoryId=? AND tenantId=?
+         ORDER BY createdAt DESC LIMIT 100`,
+        [input.inventoryId, ctx.tenantId ?? TENANT_ID]
+      );
+      return rows as any[];
+    }),
+
   alertCount: adminProcedure
     .query(async () => {
       const db = await getDb();

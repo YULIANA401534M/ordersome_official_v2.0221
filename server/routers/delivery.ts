@@ -127,6 +127,9 @@ export const deliveryRouter = router({
       const currentIdx = statusFlow.indexOf(order.status);
       const newIdx = statusFlow.indexOf(input.status);
       if (newIdx !== currentIdx + 1) {
+        if (order.status === 'signed') {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "此派車單已完成簽收，無法重複操作" });
+        }
         throw new TRPCError({ code: "BAD_REQUEST", message: `狀態必須依序推進。目前狀態：「${order.status}」，請先執行上一步驟。` });
       }
 
@@ -158,7 +161,7 @@ export const deliveryRouter = router({
             "SELECT id FROM users WHERE storeId=? AND role IN ('franchisee','store_manager') AND tenantId=1 LIMIT 1",
             [order.toStoreId]
           );
-          const userId = (userRows as any[])[0]?.id ?? null;
+          const userId = (userRows as any[])[0]?.id ?? ctx.userId ?? null;
 
           await conn.execute(
             `INSERT INTO os_franchisee_payments

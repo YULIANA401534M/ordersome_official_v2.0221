@@ -53,6 +53,14 @@ export default function OSAccounting() {
   const [payBankRef, setPayBankRef] = useState("");
   const [payNote, setPayNote] = useState("");
 
+  // Tab1 手動新增
+  const [showCreatePayable, setShowCreatePayable] = useState(false);
+  const [cpSupplier, setCpSupplier] = useState("");
+  const [cpMonth, setCpMonth] = useState(nowMonth());
+  const [cpAmount, setCpAmount] = useState("");
+  const [cpDueDate, setCpDueDate] = useState("");
+  const [cpNote, setCpNote] = useState("");
+
   // Tab2
   const [bankFilterStatus, setBankFilterStatus] = useState("all");
   const [showBankImport, setShowBankImport] = useState(false);
@@ -81,6 +89,8 @@ export default function OSAccounting() {
   const [showBillConfirm, setShowBillConfirm] = useState(false);
   const [showTransferImport, setShowTransferImport] = useState(false);
   const [transferPreview, setTransferPreview] = useState<any[]>([]);
+
+  const { data: allSuppliers = [] } = trpc.procurement.getSuppliers.useQuery();
 
   const { data: payables = [], refetch: refetchPayables } = trpc.accounting.listPayables.useQuery({
     month,
@@ -146,6 +156,16 @@ export default function OSAccounting() {
 
   const billTransfers = trpc.accounting.billTransfers.useMutation({
     onSuccess: (d: any) => { toast.success(d.message); setShowBillConfirm(false); refetchTransfers(); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const createPayable = trpc.accounting.createPayable.useMutation({
+    onSuccess: () => {
+      toast.success("應付帳款已新增");
+      setShowCreatePayable(false);
+      setCpSupplier(""); setCpAmount(""); setCpDueDate(""); setCpNote("");
+      refetchPayables();
+    },
     onError: (e) => toast.error(e.message),
   });
 
@@ -273,6 +293,10 @@ export default function OSAccounting() {
                 <Button size="sm" variant="outline" className="h-8 text-xs gap-1"
                   onClick={() => generatePayables.mutate({ month })} disabled={generatePayables.isPending}>
                   <RefreshCw className="w-3.5 h-3.5" /> 自動匯總本月帳款
+                </Button>
+                <Button size="sm" variant="outline" className="h-8 text-xs gap-1"
+                  onClick={() => { setCpMonth(month); setShowCreatePayable(true); }}>
+                  <Plus className="w-3.5 h-3.5" /> 手動新增
                 </Button>
                 <Button size="sm" variant="outline" className="h-8 text-xs gap-1" onClick={handleExportPayables}>
                   <FileSpreadsheet className="w-3.5 h-3.5" /> 匯出 Excel
@@ -771,6 +795,68 @@ export default function OSAccounting() {
                 try { billTransfers.mutate({ month }); }
                 catch (e: any) { toast.error(e.message); }
               }}>確認結算</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 手動新增應付帳款 Dialog */}
+      <Dialog open={showCreatePayable} onOpenChange={setShowCreatePayable}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>手動新增應付帳款</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label>廠商名稱</Label>
+              <Select value={cpSupplier} onValueChange={setCpSupplier}>
+                <SelectTrigger className="mt-1"><SelectValue placeholder="選擇廠商" /></SelectTrigger>
+                <SelectContent>
+                  {(allSuppliers as any[]).map((s: any) => (
+                    <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>月份</Label>
+              <Input type="month" value={cpMonth} onChange={e => setCpMonth(e.target.value)} className="mt-1" />
+            </div>
+            <div>
+              <Label>應付金額（必填）</Label>
+              <Input type="number" value={cpAmount} onChange={e => setCpAmount(e.target.value)} className="mt-1" placeholder="0" />
+            </div>
+            <div>
+              <Label>預計付款日（選填）</Label>
+              <Input type="date" value={cpDueDate} onChange={e => setCpDueDate(e.target.value)} className="mt-1" />
+            </div>
+            <div>
+              <Label>備註（選填）</Label>
+              <textarea
+                className="w-full border rounded-md p-2 text-sm mt-1 min-h-[72px] resize-none focus:outline-none focus:ring-1 focus:ring-amber-500"
+                value={cpNote}
+                onChange={e => setCpNote(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreatePayable(false)}>取消</Button>
+            <Button
+              onClick={() => {
+                if (!cpSupplier || !cpAmount || Number(cpAmount) <= 0) {
+                  toast.error("請填寫廠商名稱與應付金額");
+                  return;
+                }
+                createPayable.mutate({
+                  supplierName: cpSupplier,
+                  month: cpMonth,
+                  totalAmount: Number(cpAmount),
+                  dueDate: cpDueDate || undefined,
+                  note: cpNote || undefined,
+                });
+              }}
+              disabled={createPayable.isPending}
+              className="bg-amber-700 hover:bg-amber-800 text-white"
+            >
+              {createPayable.isPending ? "新增中…" : "新增"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
