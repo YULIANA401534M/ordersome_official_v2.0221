@@ -203,5 +203,35 @@
 - **v5.46-v5.49**：帳務系統完成（四Tab），五個bug修正（撿貨單/派車/packCost/批次盤點/checkbox）
 - **v5.52-v5.53**：Make診斷修正，OSPurchasing視覺/排序，移除月份切換，storeName原樣顯示
 - **v5.54**：派車單重構，從叫貨單自動建立，中文狀態按鈕，URL參數跳轉
+- **v5.55**：派車單簽收 userId null bug 修正，帳務手動新增應付帳款，庫存異動歷史查詢
+- **v5.56**：大麥商品244筆匯入 os_products（共567筆，無重複），叫貨管理刪除按鈕擴展至sent狀態，exportExcel 年月 bug 修正，文件大整理
+
+---
+
+## 2026-04-19 v5.45-v5.56 — 採購帳務配送系統完整建立
+
+### 完成項目
+- 帳務系統五張表建立（os_payables/os_bank_transactions/os_rebates/os_rebate_rules/os_transfers）
+- OSAccounting.tsx 四Tab前端（應付/銀行對帳/退佣/提貨調貨）
+- 配送派車單從叫貨單自動建立（createFromProcurement）
+- 派車單 signed → 庫存減少連動
+- 庫存批次盤點多選 + 異動歷史查詢
+- 大麥商品244筆匯入（別名對照建立，原有325筆+新增242筆=共567筆，無重複）
+- 叫貨管理：日期篩選修正、排序功能、刪除按鈕擴展至sent、exportExcel bug修正
+- 撿貨單列印（A4，按廠商分區）
+- 大麥Excel匯入（防重複，needsReview標記）
+- 側邊欄重構（宇聯集團/來點什麼/大永ERP）
+- BUSINESS.md 完整重寫，CLAUDE.md 文件大整理
+
+### 已知問題與待確認
+- 骰子雞球/港式蘿蔔糕等品項「箱 vs 包」單位差異，需人工到品項成本頁確認
+- 3/31 盤點資料待匯入（庫存基準點尚未建立）
+- 排班管理需先新增員工資料才能使用
+- os_products 的 `temperature` 欄位不存在，溫層目前存在 `category2`
+
+### 下一階段重點
+- 大麥歷史資料批次匯入（廠商對帳89772筆/採購出貨11112筆）
+- 盤點資料匯入
+- 派車單跨門市合併撿貨單列印
 
 *DEVELOPMENT_LOG.md — 查閱用，新對話只讀 CLAUDE.md 即可*

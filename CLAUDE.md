@@ -2,7 +2,8 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md，歷史記錄請讀 DEVELOPMENT_LOG.md
 
-> **版本**：v5.56。**最後更新**：2026-04-19。**給 Claude 架構**：大覽（Claude.ai）+ 實作（Claude Code）
+> **版本**：v5.56。**最後更新**：2026-04-19。
+> **給 Claude 架構**：大腦（Claude.ai）+ 手腳（Claude Code）
 
 ---
 
@@ -16,55 +17,53 @@ git status && git log --oneline -3
 
 ---
 
-## 當前開發狀態（換對話框必讀）
+## 開發守則（每次換對話框必讀）
 
-### ⚠️ 開發守則
-
-1. 每次 commit 前**必須更新 CLAUDE.md**，反映最新完成項目和下一步
+1. 每次 commit 前**必須更新 CLAUDE.md**，版本號 +0.01
 2. CLAUDE.md 是跨對話框的唯一記憶體，不更新等於下一個 Claude 失憶
-3. 版本號每次 +0.01，格式 v5.XX
+3. 版本號格式 v5.XX
 4. 零 TS 錯誤才 commit
 
 ---
 
-### 開發原則（永久有效，每次換對話框必讀）
+## 開發原則（永久有效）
 
-1. **RWD 優先**：所有頁面必須支援手機、平板、桌機，表格在手機上要能橫向捲動，文字必須清晰可讀
-2. **模組完整性**：每個功能模組必須包含列表、新增、修改、詳情/明細、刪除（super_admin）或作廢（manager）
-3. **資料關聯**：跨模組資料必須有 DB 層級關聯（JOIN 或外鍵），不能只靠前端組合
-4. **稽核追蹤**：所有刪除寫 os_audit_logs（快照+原因），所有修改寫快照，os_inventory 異動寫 os_inventory_logs
-5. **防重複**：所有匯入功能必須有唯一鍵防重複，匯入後輸出驗證報告（成功N筆/失敗N筆/原因）
-6. **命名規則**：品項正式名稱存 os_products.name，外部系統名稱（大麥等）存 aliases JSON 陣列
-7. **可修改性**：所有業務規則（B類廠商清單、退佣比率等）存 DB 不寫死在程式碼
+1. **RWD 優先**：手機/平板/桌機，表格橫向捲動
+2. **模組完整性**：列表、新增、修改、詳情、刪除（super_admin）或作廢（manager）
+3. **資料關聯**：跨模組必須有 DB 層級關聯，不能只靠前端組合
+4. **稽核追蹤**：所有刪除寫 os_audit_logs（快照+原因），庫存異動寫 os_inventory_logs
+5. **防重複**：所有匯入必須有唯一鍵防重複，匯入後輸出驗證報告
+6. **命名規則**：品項正式名稱存 os_products.name，外部系統名稱存 aliases JSON 陣列
+7. **可修改性**：所有業務規則存 DB 不寫死程式碼
 8. **不動範圍**：大永 ERP（/dayone） + server/_core/ 不動
 
 ---
 
+## 當前開發狀態（換對話框必讀）
+
 ### 最新 Git 狀態（2026-04-19 v5.56）
 
-最後三個 commit（已 push）：
-1. `(v5.56)` — feat: v5.56 叫貨管理刪除按鈕擴展至sent狀態 + exportExcel年月修正
-2. `(v5.55)` — feat: v5.55 派車單簽收userId null修正 + 帳務手動新增應付帳款 + 庫存異動歷史查詢
-3. `6ac2a05` — docs: CLAUDE.md v5.54
+最後三個 commit：
+1. `dcb0f48` — feat: v5.56 叫貨管理刪除按鈕擴展至sent + 大麥244筆品項匯入 + CLAUDE.md v5.56
+2. `f251968` — feat: v5.55 派車單簽收userId null修正 + 帳務手動新增應付帳款 + 庫存異動歷史查詢
+3. `10023c6` — fix: 叫貨管理五項修正
 
 working tree: clean
 
----
-
-### 已完成模組一覽
+### 已完成模組
 
 | 路由 | 元件 | 狀態 | 說明 |
 |------|------|------|------|
-| `/dashboard/purchasing` | `OSPurchasing.tsx` | ✅ | 叫貨管理，Make串接，Excel匯入，撿貨單列印 |
-| `/dashboard/inventory` | `OSInventory.tsx` | ✅ | 庫存管理，B類，批次盤點，安全庫存 |
-| `/dashboard/products` | `OSProducts.tsx` | ✅ | 品項成本，326筆，兩層分類，毛利率計算 |
-| `/dashboard/ca-menu` | `OSCaMenu.tsx` | ✅ | 菜單成本管理（0024表已補建） |
+| `/dashboard/purchasing` | `OSPurchasing.tsx` | ✅ | 叫貨管理，Make串接，Excel匯入，撿貨單列印，排序 |
+| `/dashboard/inventory` | `OSInventory.tsx` | ✅ | 庫存管理，B類，批次盤點，異動歷史 |
+| `/dashboard/products` | `OSProducts.tsx` | ✅ | 品項成本，大麥244筆已匯入（共567筆），兩層分類 |
+| `/dashboard/ca-menu` | `OSCaMenu.tsx` | ✅ | 菜單成本管理 |
 | `/dashboard/delivery` | `OSDelivery.tsx` | ✅ | 配送管理，從叫貨單建立，簽收扣庫存 |
-| `/dashboard/accounting` | `OSAccounting.tsx` | ✅ | 帳務管理，四Tab（應付/銀行對帳/退佣/提貨調貨） |
-| `/dashboard/franchisee-payments` | `OSFranchiseePayments.tsx` | ✅ | 加盟主帳款，週結，匯出Excel |
+| `/dashboard/accounting` | `OSAccounting.tsx` | ✅ | 帳務管理，四Tab，手動新增應付 |
+| `/dashboard/franchisee-payments` | `OSFranchiseePayments.tsx` | ✅ | 加盟主帳款 |
 | `/dashboard/rebate` | `OSRebate.tsx` | ✅ | 退佣帳款 |
-| `/dashboard/profit-loss` | `OSProfitLoss.tsx` | ✅ | 損益儀表板，KPI三卡片 |
-| `/dashboard/scheduling` | `OSScheduling.tsx` | ✅ | 排班管理，假日標示，月統計 |
+| `/dashboard/profit-loss` | `OSProfitLoss.tsx` | ✅ | 損益儀表板 |
+| `/dashboard/scheduling` | `OSScheduling.tsx` | ⚠️ | 排班管理，需先新增員工資料 |
 | `/dashboard/daily-report` | `OSDailyReport.tsx` | ✅ | 門市日報 |
 | `/dashboard/franchisees` | `OSCustomers.tsx` | ✅ | 加盟主列表，功能開關，採購存取 |
 | `/dashboard/customers` | `ComingSoon` | ⏳ | 客戶管理，未開發 |
@@ -72,110 +71,118 @@ working tree: clean
 
 ---
 
-### 下一步待辦
+## 待完成功能清單
 
-#### 明天立刻要做
-- [ ] 從採購取得 3/31 盤點 Excel → 傳給大腦 → 出匯入腳本
-- [ ] 測試派車單：叫貨單建立派車單 → 推進到 signed → 確認庫存減少
-- [ ] 從大麥匯出各門市 4/1 到今天歷史訂單 Excel
-
-#### 本週內
-- [ ] 盤點資料匯入（庫存基準點，os_inventory.currentQty = 盤點數量，lastCountDate='2026-03-31'）
-- [ ] 歷史訂單批次匯入（4/1後B類自動觸發庫存）
-- [ ] 退佣規則實際測試（廣弘3月份數字驗算）
-- [ ] 排班管理：新增員工後測試功能
-
-#### 之後
-- [ ] BOM 物料清單（os_bom 表，開工條件：採購資料穩定且 os_products 成本準確）
-- [ ] 全系統 RWD 審查（所有頁面手機版）
-- [ ] 客戶管理 /dashboard/customers
-
----
-
-### 給新大腦的重要提醒
-
-**郵件系統**：
-- Railway 封鎖 SMTP 出口（IPv6 問題），nodemailer 無法連接 Gmail SMTP
-- 短期不要嘗試修復，優先處理業務功能
-
-**CA 表（菜單成本）**：
-- `os_menu_items` 等 5 張表原本未執行 0024 migration
-- 已於 2026-04-18 用 node script 補建，現在正常
-
-**連動關係（重要）**：
-- 叫貨單（confirmed）→ 配送管理（新增派車單時可選關聯叫貨單，自動帶入品項）
-- 配送管理簽收 → 自動產生 `os_franchisee_payments`（應收帳款）
-- 應收帳款 → 損益儀表板（`arIncome` 欄位）
-- 退佣 → 損益儀表板（`rebateIncome` 欄位）
-- 加盟主管理頁 → 點「查看帳款往來」跳轉到帳款頁（帶 userId 篩選）
-- **叫貨單（received）→ 查 `os_suppliers.deliveryType='yulian'`（用 os_procurement_items 的 supplierName 查）→ 寫 `os_inventory`（changeType='in'）+ `os_inventory_logs`**
-- **配送派車單（signed）→ JOIN os_inventory + os_suppliers 確認 B類品項 → 寫 `os_inventory`（currentQty-，不低於0）+ `os_inventory_logs(out)`**
-
-**宇聯總部 storeId = 401534**（機動人員排班用，不要改這個數字）
-
-**B類廠商清單（deliveryType='yulian'）**：現有5筆：宇聯_配合/宇聯/立墩/三柳/凱蒂
-
-**下次換對話框前務必確認**：
-1. `git status` clean
-2. `pnpm run build` 零錯誤
-3. CLAUDE.md 已更新版本號和 git 狀態
-
----
-
-### 資料整合規劃
-
-**基準點：2026-03-31 全宇聯資產盤點**
-- 盤點資料格式待確認（4/19 從採購取得）
-- 匯入後：os_inventory.currentQty = 盤點數量，lastCountDate = '2026-03-31'
-
-**歷史訂單匯入（大麥 Excel 格式）**
-- 欄位對應：訂單編號→orderNo, 供應商→supplierName, 訂購店家→storeName, 商品名稱→productName, 計價單位→unit, 計價數量→quantity, 進貨價→unitPrice, 溫層→temperature, 訂單日期→orderDate
-- 防重複：以訂單編號（orderNo）為唯一鍵，重複略過
-- B類叫貨單匯入後：3月以前只記帳不觸發庫存，4/1後觸發庫存入庫
-- 匯入工具路徑：/dashboard/purchasing → 「匯入 Excel」按鈕
-
-**大麥 vs 系統品名對照**
-- 大麥品名格式：「勁辣雞腿排(特大)_10片*8包/箱」
-- CA表品名格式：「東豪-勁辣雞腿(特大)10片/包」
-- 匯入時：先比對 name，找不到比對 aliases，都找不到建立新品項並 flag 待確認（needsReview=1）
-- 品名統一需等大麥歷史訂單匯入後，以實際大麥品名建立 aliases 對照
-
----
-
-### 待完成功能清單
-
-**已完成（v5.56 本次）：**
-- [x] 大麥商品資料 244 筆匯入 os_products（別名對照建立，category2 存溫層，os_products 共 567 筆）
-- [x] 派車單簽收 userId null bug 修正
-- [x] 帳務手動新增應付帳款
-- [x] 庫存異動歷史查詢
-- [x] 叫貨管理刪除按鈕擴展至 sent 狀態（原本只限 pending）
-- [x] exportExcel 檔名年月 bug 修正（year/month 未定義）
-
-**⚠️ 已知資料問題（需人工確認）：**
-骰子雞球、港式蘿蔔糕等「箱 vs 包」單位差異品項，進貨價差10倍，
-需人工到 /dashboard/products 品項成本頁確認單位是否統一。
+### 主線任務（採購系統對齊大麥）
 
 **P1 本週：**
-- [ ] 3/31 盤點資料匯入庫存（4/19 取得資料後執行）
+- [ ] 3/31 盤點資料匯入（等採購提供 Excel）
+  格式需求：廠商、品名、單位、數量
+- [ ] 大麥歷史叫貨訂單匯入（各門市 4/1 到今天）
+  從大麥後台匯出各門市 Excel，每間一份
+- [ ] 廠商/供應商對帳 89772 筆匯入（從大麥匯出 xls）
+  → 對應 os_payables 歷史應付帳款
+- [ ] 採購出貨管理 11112 筆匯入（從大麥下載 Excel）
+  → 對應 os_procurement_orders 歷史叫貨記錄
 
-**P2 之後：**
-- [ ] 全系統 RWD 審查（所有頁面手機版）
-- [ ] 歷史資料批次匯入工具（銀行明細、日記帳）
-- [ ] 退佣自動計算（廣弘10.71%、伯享差價、韓濟抵貨款）
-- [ ] BOM 物料清單（os_bom 表，開工條件：採購資料穩定且 os_products 成本準確）
+**P2 本月：**
+- [ ] 客戶/分店資料 14 筆（手動新增或腳本匯入）
+  從大麥截圖可看到：OS014西屯福上/OS013瀋陽梅川/OS012北屯昌平/OS011草屯中山等
+- [ ] 報價單功能（哪些店看哪些價格）
+- [ ] 派車單統整列印（跨門市合併撿貨單）
+- [ ] 銀行明細多格式支援（目前只有台新格式）
 
-**P3 等外部配合：**
+**P3 之後：**
+- [ ] BOM 物料清單（開工條件：採購資料穩定 + os_products 成本準確）
 - [ ] 大永 LIFF 正式 liffId（等蛋博）
-- [ ] 積欠款 LINE 推播
+- [ ] 全系統 RWD 審查
+- [ ] 排班管理員工資料匯入
 
 ---
 
-### 重要常數（開發時用）
+## 需要 Leo 提供的資料清單
+
+以下資料需要 Leo 從大麥匯出後傳給大腦（Claude.ai），
+大腦解析格式後出匯入腳本，手腳執行：
+
+| 資料 | 從哪裡匯出 | 格式 | 用途 |
+|------|----------|------|------|
+| 3/31 盤點資料 | 採購人員提供 | Excel（廠商/品名/單位/數量） | 庫存基準點 |
+| 各門市歷史叫貨 4/1-今天 | 大麥→網站訂單管理 | Excel（每門市一份） | 歷史叫貨記錄 |
+| 廠商對帳報表 | 大麥→廠商/供應商管理→廠商對帳→匯出 | xls/xlsx | 歷史應付帳款 |
+| 採購出貨管理 | 大麥→進出貨管理→採購出貨管理→下載報表 | Excel | 歷史進出貨記錄 |
+| 客戶/分店資料 | 大麥截圖已有，手動新增或腳本 | 手動 | 門市基本資料 |
+| 銀行明細（最新） | 台新銀行網銀匯出 | xlsx | 銀行對帳 |
+
+---
+
+## 重要業務邏輯（永久有效）
+
+### 供應商分類
+- **A類（直送）**：廣弘/凱田/韓濟/米谷/裕展/美食家等
+  叫貨單 received → 只記應付帳款，不記庫存
+- **B類（自配）**：宇聯/宇聯_配合/立墩/三柳/凱蒂
+  叫貨單 received → 庫存增加 + 應付帳款
+  派車單 signed → 庫存減少 + 應收帳款
+  由 `os_suppliers.deliveryType='yulian'` 控制，不寫死程式碼
+
+### 庫存邏輯
+- 叫貨單 received（B類）→ os_inventory currentQty +，寫 os_inventory_logs(in)
+- 派車單 signed（B類）→ os_inventory currentQty -，寫 os_inventory_logs(out)
+- 手動調整：必填原因，寫 os_inventory_logs(adjust)
+- 庫存基準點：2026-03-31 盤點（待匯入）
+
+### 帳務連動
+- 叫貨單 received → os_payables 累加（月底執行 generateMonthlyPayables）
+- 銀行明細匯入 → autoMatchTransactions → 人工確認（不自動標記）
+- 退佣：廣弘批價÷1.12差額 / 伯享差價 / 韓濟抵貨款（os_rebate_rules 存 DB）
+- 提貨調貨 → 月底 billTransfers → os_franchisee_payments
+
+### 品項命名規範
+- 格式：品名_規格/計價單位（廠商不放品名裡，只存 supplierName）
+- 別名：CA表舊名/大麥品名存 aliases JSON 陣列
+
+---
+
+## 給新大腦的重要提醒
+
+**Make 串接：**
+- 每天 14:55 自動執行，送資料到 /api/procurement/import
+- secret: ordersome-sync-2026
+- 已確認正常（Railway log 有 \[Procurement Import\] 記錄）
+
+**郵件系統：**
+- Railway 封鎖 SMTP，nodemailer 不可用
+- 短期不要修，優先業務功能
+
+**DB 注意事項：**
+- os_products 共 567 筆（原有 325 筆 + 大麥匯入新增 242 筆），無重複
+- os_products 的 `temperature` 欄位不存在，溫層存在 `category2`
+- os_delivery_orders.toStoreId 已改為允許 NULL
+- os_franchisee_payments.userId 已改為允許 NULL
+- packCost = 大麥進貨價（直接對應），不是 unitQty × unit_cost
+
+**⚠️ 已知資料問題（需人工確認）：**
+骰子雞球、港式蘿蔔糕等品項「箱 vs 包」單位差異，進貨價差10倍，
+需人工到 /dashboard/products 品項成本頁確認單位是否統一。
+
+**連動關係：**
+- 叫貨單 confirmed → 叫貨管理有「建立派車單」按鈕 → 跳轉 /dashboard/delivery
+- 派車單 signed → 庫存減少 + os_franchisee_payments 自動產生
+- 帳務管理 Tab1 應付帳款「查看明細」→ 跳轉叫貨管理帶廠商篩選
+
+**下次換對話框前確認：**
+1. `git status` clean
+2. `pnpm run build` 零錯誤
+3. CLAUDE.md 版本號已更新
+
+---
+
+## 系統常數
 
 | 常數 | 值 | 說明 |
 |------|----|------|
-| `HQ_STORE_ID` | `401534` | 宇聯總部 storeId，機動人員用 |
+| `HQ_STORE_ID` | `401534` | 宇聯總部 storeId，機動人員排班用 |
 | `SYNC_SECRET` | `ordersome-sync-2026` | Make Webhook 驗證 |
 | `DAYONE_TENANT_ID` | `90004` | 大永蛋品 tenantId |
 | `OS_TENANT_ID` | `1` | 來點什麼 tenantId |
@@ -183,7 +190,7 @@ working tree: clean
 
 ---
 
-### 系統架構總覽（2026-04-19 定案）
+## 系統架構總覽
 
 **多租戶架構**
 ```
@@ -218,24 +225,7 @@ working tree: clean
 
 ---
 
-### 帳務流程（定案）
-
-**退佣計算**
-- 廣弘：叫貨總金額 ÷ 1.12 = 未稅金額，差額 = 退佣
-- 伯享：（系統銷價 - 宇聯成本價）× 數量 = 退佣
-- 韓濟：同伯享計算，但退佣直接抵當月貨款
-
-**月底對帳流程**
-- 月結時間不固定，由會計彈性安排
-- 宇聯：每週匯款支出，整理銀行明細建憑證給事務所
-- 雙月整理發票給事務所
-
-**加盟主帳款（週結：加盟主付給宇聯）**
-- 配送簽收後自動產生 os_franchisee_payments
-
----
-
-### 權限與稽核規則（永久有效，不得移除）
+## 權限與稽核規則（永久有效）
 
 | 角色 | 刪除 | 作廢 | 修改 | 新增 |
 |------|------|------|------|------|
@@ -246,25 +236,7 @@ working tree: clean
 
 ---
 
-### 品項命名規範（永久有效）
-
-**命名格式**：品名_規格/計價單位（廠商資訊只存 supplierName 欄位，不放品名裡）
-**範例**：勁辣雞腿排(特大)_10片*8包/箱 / 壽司米_30KG/袋
-**別名（aliases）**：外部系統名稱（大麥、CA表原始名）存 JSON 陣列
-
-**兩層分類**：category1（冷凍食材/韓國食材/乾貨類 等）/ category2（由 os_product_categories 管理）
-
----
-
-### 庫存範圍規範
-
-- B類廠商（deliveryType='yulian'）：記宇聯總倉庫存，存 os_inventory
-- A類廠商（deliveryType='direct'）：直送各門市，無庫存壓力，但需記帳（os_payables）
-- 門市庫存：未來規劃，暫不實作
-
----
-
-### 技術債
+## 技術債
 
 - `has_procurement_access` 前端 any cast 補型別（`useAuth` User 型別正式擴充）
 - 大永/來點什麼 ERP 的 `dy_`/`os_` 表不在 `schema.ts`，用 raw SQL
@@ -273,7 +245,7 @@ working tree: clean
 
 ---
 
-### Migration 標準驗證程序（每次必做）
+## Migration 標準驗證程序（每次必做）
 
 執行任何 migration 後，**必須** DESCRIBE 確認欄位真的存在於 TiDB：
 ```bash
@@ -300,24 +272,7 @@ check().catch(console.error);
 
 ---
 
-### 大永待辦（等蛋博確認）
-
-- LIFF 正式 liffId（蛋博建立後只改 `client/src/pages/liff/LiffOrder.tsx` 一行）
-- 積欠款 LINE 推播通知（cron 基礎已建，需實作發送邏輯）
-- Portal 客戶重設密碼 email（需驗證自有網域後使用 Resend）
-
----
-
-### Make 自動化串接
-
-- 門市自動報表 Webhook → 直接寫進 `os_daily_reports`（SYNC_SECRET 已設）
-- 採購 importFromDamai → 不再走 Google Sheets
-- Make Webhook URL：`https://hook.us2.make.com/6ihglkavm26i29mdgg33dvxngggv1xiu`
-- SYNC_SECRET：`ordersome-sync-2026`
-
----
-
-### tRPC Procurement Router 完整 Procedures（截至 v5.54）
+## tRPC Procurement Router 完整 Procedures
 
 - `list` / `create` / `getDetail` / `updateStatus` / `groupBySupplier`
 - `pushToLine` / `supplierLineList` / `supplierLineUpsert` / `getSuppliers`
@@ -326,10 +281,27 @@ check().catch(console.error);
 - `getPickList` / `markPrinted` / `importFromDamai`（public） / `importFromDamaiExcel`
 - `listNeedsReview`
 
-### tRPC Delivery Router 完整 Procedures
+## tRPC Delivery Router 完整 Procedures
 
 - `listDeliveryOrders` / `getDeliveryDetail` / `createDeliveryOrder`
 - `createFromProcurement` / `updateStatus` / `getMonthStats`
+
+---
+
+## 大永待辦（等蛋博確認）
+
+- LIFF 正式 liffId（蛋博建立後只改 `client/src/pages/liff/LiffOrder.tsx` 一行）
+- 積欠款 LINE 推播通知（cron 基礎已建，需實作發送邏輯）
+- Portal 客戶重設密碼 email（需驗證自有網域後使用 Resend）
+
+---
+
+## Make 自動化串接
+
+- 門市自動報表 Webhook → 直接寫進 `os_daily_reports`（SYNC_SECRET 已設）
+- 採購 importFromDamai → 不再走 Google Sheets
+- Make Webhook URL：`https://hook.us2.make.com/6ihglkavm26i29mdgg33dvxngggv1xiu`
+- SYNC_SECRET：`ordersome-sync-2026`
 
 ---
 
