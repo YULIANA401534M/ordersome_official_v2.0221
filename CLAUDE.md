@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md，歷史記錄請讀 DEVELOPMENT_LOG.md
 
-> **版本**：v5.56。**最後更新**：2026-04-19。
+> **版本**：v5.57。**最後更新**：2026-04-19。
 > **給 Claude 架構**：大腦（Claude.ai）+ 手腳（Claude Code）
 
 ---
@@ -41,12 +41,12 @@ git status && git log --oneline -3
 
 ## 當前開發狀態（換對話框必讀）
 
-### 最新 Git 狀態（2026-04-19 v5.56）
+### 最新 Git 狀態（2026-04-19 v5.57）
 
 最後三個 commit：
-1. `dcb0f48` — feat: v5.56 叫貨管理刪除按鈕擴展至sent + 大麥244筆品項匯入 + CLAUDE.md v5.56
-2. `f251968` — feat: v5.55 派車單簽收userId null修正 + 帳務手動新增應付帳款 + 庫存異動歷史查詢
-3. `10023c6` — fix: 叫貨管理五項修正
+1. `本次commit` — feat: v5.57 大麥三階段歷史資料匯入腳本 + os_stores建立 + 健康檢查四項修復
+2. `dcb0f48` — feat: v5.56 叫貨管理刪除按鈕擴展至sent + 大麥244筆品項匯入 + CLAUDE.md v5.56
+3. `f251968` — feat: v5.55 派車單簽收userId null修正 + 帳務手動新增應付帳款 + 庫存異動歷史查詢
 
 working tree: clean
 
@@ -56,7 +56,7 @@ working tree: clean
 |------|------|------|------|
 | `/dashboard/purchasing` | `OSPurchasing.tsx` | ✅ | 叫貨管理，Make串接，Excel匯入，撿貨單列印，排序 |
 | `/dashboard/inventory` | `OSInventory.tsx` | ✅ | 庫存管理，B類，批次盤點，異動歷史 |
-| `/dashboard/products` | `OSProducts.tsx` | ✅ | 品項成本，大麥244筆已匯入（共567筆），兩層分類 |
+| `/dashboard/products` | `OSProducts.tsx` | ✅ | 品項成本，大麥244筆已匯入（共704筆），兩層分類 |
 | `/dashboard/ca-menu` | `OSCaMenu.tsx` | ✅ | 菜單成本管理 |
 | `/dashboard/delivery` | `OSDelivery.tsx` | ✅ | 配送管理，從叫貨單建立，簽收扣庫存 |
 | `/dashboard/accounting` | `OSAccounting.tsx` | ✅ | 帳務管理，四Tab，手動新增應付 |
@@ -71,26 +71,61 @@ working tree: clean
 
 ---
 
+## DB 現況快照（2026-04-19 匯入後）
+
+| 表 | 筆數 | 說明 |
+|----|------|------|
+| os_procurement_orders | 484 | 453張大麥歷史 + 31張系統既有 |
+| os_procurement_items | 10263 | 含歷史品項行 |
+| os_inventory | 187 | B類24 + 其他資產141 + 既有22 |
+| os_inventory_logs | 706 | 含3/31盤點基準點165筆 + 4/1後庫存觸發181筆 |
+| os_payables | 27 | 25筆大麥歷史（廠商×月份）+ 2筆手動 |
+| os_products | 704 | 原567 + 大麥匯入新建137筆（needsReview=1） |
+| os_stores | 12 | 來點什麼12間門市（2026-04-19建立） |
+| os_suppliers | 9+ | 廣弘/裕展/韓濟/米谷/裕展/美食家/伯享/宇聯/宇聯_週活（+其他） |
+
+### ⚠️ 已知資料缺陷
+
+- `os_procurement_orders.storeId`：16筆仍為NULL（storeName空字串或非門市，屬正常）
+- `os_procurement_items.unitPrice=0`：3376筆（對帳報表只涵蓋2026-02後，更早訂單無進貨價，預期行為）
+- `os_products.needsReview=1`：137筆（大麥歷史匯入新建品項，需人工至 /dashboard/products 確認）
+- 骰子雞球、港式蘿蔔糕等品項「箱 vs 包」單位差異，進貨價差10倍，需人工確認
+
+### os_stores 門市清單（tenantId=1）
+
+| 門市全名 | 短名 |
+|---------|------|
+| 來點什麼-北屯昌平店 | 北屯昌平店 |
+| 來點什麼-南屯林新店 | 南屯林新店 |
+| 來點什麼-大里店 | 大里店 |
+| 來點什麼-東勢店 | 東勢店 |
+| 來點什麼-東山店 | 東山店 |
+| 來點什麼-民權店 | 民權店 |
+| 來點什麼-永興店 | 永興店 |
+| 來點什麼-瀋陽梅川店 | 瀋陽梅川店 |
+| 來點什麼-草屯中山店 | 草屯中山店 |
+| 來點什麼-西屯福上店 | 西屯福上店 |
+| 來點什麼-財神店 | 財神店 |
+| 來點什麼-逢甲旗艦店 | 逢甲旗艦店 |
+
+---
+
 ## 待完成功能清單
 
-### 主線任務（採購系統對齊大麥）
+### 主線任務
 
 **P1 本週：**
-- [ ] 3/31 盤點資料匯入（等採購提供 Excel）
-  格式需求：廠商、品名、單位、數量
-- [ ] 大麥歷史叫貨訂單匯入（各門市 4/1 到今天）
-  從大麥後台匯出各門市 Excel，每間一份
-- [ ] 廠商/供應商對帳 89772 筆匯入（從大麥匯出 xls）
-  → 對應 os_payables 歷史應付帳款
-- [ ] 採購出貨管理 11112 筆匯入（從大麥下載 Excel）
-  → 對應 os_procurement_orders 歷史叫貨記錄
+- [x] ~~3/31 盤點資料匯入~~ — 2026-04-19 完成（165筆，含B類24+其他資產141）
+- [x] ~~大麥歷史叫貨訂單匯入~~ — 2026-04-19 完成（453張，2025/12~2026/04）
+- [x] ~~廠商對帳報表匯入~~ — 2026-04-19 完成（25筆應付帳款，2026-02~04）
+- [ ] **前端驗證**：/dashboard/purchasing、/dashboard/inventory、/dashboard/accounting 顯示歷史資料是否正確
+- [ ] **needsReview 品項確認**：137筆新建品項需人工至 /dashboard/products 逐一確認單位/成本
 
 **P2 本月：**
-- [ ] 客戶/分店資料 14 筆（手動新增或腳本匯入）
-  從大麥截圖可看到：OS014西屯福上/OS013瀋陽梅川/OS012北屯昌平/OS011草屯中山等
 - [ ] 報價單功能（哪些店看哪些價格）
 - [ ] 派車單統整列印（跨門市合併撿貨單）
 - [ ] 銀行明細多格式支援（目前只有台新格式）
+- [ ] chunk size 優化（index.js 6453kB，需 code splitting）
 
 **P3 之後：**
 - [ ] BOM 物料清單（開工條件：採購資料穩定 + os_products 成本準確）
@@ -102,35 +137,39 @@ working tree: clean
 
 ## 需要 Leo 提供的資料清單
 
-以下資料需要 Leo 從大麥匯出後傳給大腦（Claude.ai），
-大腦解析格式後出匯入腳本，手腳執行：
-
-| 資料 | 從哪裡匯出 | 格式 | 用途 |
-|------|----------|------|------|
-| 3/31 盤點資料 | 採購人員提供 | Excel（廠商/品名/單位/數量） | 庫存基準點 |
-| 各門市歷史叫貨 4/1-今天 | 大麥→網站訂單管理 | Excel（每門市一份） | 歷史叫貨記錄 |
-| 廠商對帳報表 | 大麥→廠商/供應商管理→廠商對帳→匯出 | xls/xlsx | 歷史應付帳款 |
-| 採購出貨管理 | 大麥→進出貨管理→採購出貨管理→下載報表 | Excel | 歷史進出貨記錄 |
-| 客戶/分店資料 | 大麥截圖已有，手動新增或腳本 | 手動 | 門市基本資料 |
-| 銀行明細（最新） | 台新銀行網銀匯出 | xlsx | 銀行對帳 |
+| 資料 | 從哪裡匯出 | 格式 | 用途 | 狀態 |
+|------|----------|------|------|------|
+| 3/31 盤點資料 | 採購人員提供 | Excel | 庫存基準點 | ✅ 已匯入 |
+| 大麥歷史叫貨 | 大麥→出貨報表 | Excel | 歷史叫貨記錄 | ✅ 已匯入（2025/12起） |
+| 廠商對帳報表 | 大麥→廠商對帳 | Excel | 歷史應付帳款 | ✅ 已匯入（2026-02起） |
+| 採購出貨管理（2025全年） | 大麥→進出貨管理 | Excel | 2025歷史補齊 | ⏳ 後補（目前只有2025/12後） |
+| 銀行明細（最新） | 台新銀行網銀匯出 | xlsx | 銀行對帳 | ⏳ 待提供 |
 
 ---
 
 ## 重要業務邏輯（永久有效）
 
 ### 供應商分類
-- **A類（直送）**：廣弘/凱田/韓濟/米谷/裕展/美食家等
+- **A類（直送）**：廣弘/凱田/韓濟/米谷/裕展/美食家/伯享
   叫貨單 received → 只記應付帳款，不記庫存
-- **B類（自配）**：宇聯/宇聯_配合/立墩/三柳/凱蒂
+- **B類（自配）**：宇聯/宇聯_週活/立璋/三洋泰/屈臣/永豐
   叫貨單 received → 庫存增加 + 應付帳款
   派車單 signed → 庫存減少 + 應收帳款
   由 `os_suppliers.deliveryType='yulian'` 控制，不寫死程式碼
+  > **注意**：B類廠商正式名稱為「三洋泰」（非三洋），os_suppliers 與庫存統計表均以此為準
 
 ### 庫存邏輯
+- **基準點**：2026-03-31 盤點已匯入（165筆，reason='3/31盤點基準點匯入'）
 - 叫貨單 received（B類）→ os_inventory currentQty +，寫 os_inventory_logs(in)
 - 派車單 signed（B類）→ os_inventory currentQty -，寫 os_inventory_logs(out)
 - 手動調整：必填原因，寫 os_inventory_logs(adjust)
-- 庫存基準點：2026-03-31 盤點（待匯入）
+- **觸發條件**：B類 AND orderDate >= 2026-04-01（3/31前已含在基準點內，不重複觸發）
+
+### 歷史匯入識別
+- `os_procurement_orders.sourceType = 'damai_import'`：大麥歷史匯入的單
+- `os_payables.sourceType = 'damai_import'`：大麥歷史應付帳款
+- `os_inventory_logs.reason LIKE '大麥%'` 或 `'3/31盤點%'`：歷史匯入的庫存記錄
+- 防重複鍵：叫貨單用 externalOrderId，應付帳款用 supplierName+yearMonth+sourceType
 
 ### 帳務連動
 - 叫貨單 received → os_payables 累加（月底執行 generateMonthlyPayables）
@@ -141,6 +180,12 @@ working tree: clean
 ### 品項命名規範
 - 格式：品名_規格/計價單位（廠商不放品名裡，只存 supplierName）
 - 別名：CA表舊名/大麥品名存 aliases JSON 陣列
+- needsReview=1：大麥匯入新建品項，需人工確認，前端標橘色⚠
+
+### os_stores 門市命名規範
+- 全名格式：`來點什麼-{門市短名}`（例：來點什麼-大里店）
+- 查詢時務必比對 name 與 CONCAT('來點什麼-', shortName) 避免不一致
+- storeName（文字欄位）永遠存全名，storeId 為 FK
 
 ---
 
@@ -156,15 +201,25 @@ working tree: clean
 - 短期不要修，優先業務功能
 
 **DB 注意事項：**
-- os_products 共 567 筆（原有 325 筆 + 大麥匯入新增 242 筆），無重複
+- os_products 共 704 筆（v5.57後，含大麥歷史匯入新建137筆 needsReview=1）
 - os_products 的 `temperature` 欄位不存在，溫層存在 `category2`
 - os_delivery_orders.toStoreId 已改為允許 NULL
 - os_franchisee_payments.userId 已改為允許 NULL
 - packCost = 大麥進貨價（直接對應），不是 unitQty × unit_cost
+- os_stores 表於 2026-04-19 新建，含 12 間門市，schema 需一併更新
 
-**⚠️ 已知資料問題（需人工確認）：**
-骰子雞球、港式蘿蔔糕等品項「箱 vs 包」單位差異，進貨價差10倍，
-需人工到 /dashboard/products 品項成本頁確認單位是否統一。
+**os_stores 表結構：**
+```sql
+id INT AUTO_INCREMENT PRIMARY KEY
+tenantId INT NOT NULL
+name VARCHAR(100) NOT NULL        -- 全名，如「來點什麼-大里店」
+shortName VARCHAR(50)             -- 短名，如「大里店」
+storeCode VARCHAR(20)             -- 預留門市代碼
+isActive TINYINT DEFAULT 1
+createdAt DATETIME
+updatedAt DATETIME
+INDEX idx_tenant_name (tenantId, name)
+```
 
 **連動關係：**
 - 叫貨單 confirmed → 叫貨管理有「建立派車單」按鈕 → 跳轉 /dashboard/delivery
@@ -195,7 +250,7 @@ working tree: clean
 **多租戶架構**
 ```
 宇聯國際（母公司）
-├── 來點什麼（tenantId=1）：早午餐連鎖，13間門市
+├── 來點什麼（tenantId=1）：早午餐連鎖，12間門市（os_stores已建）
 └── 大永蛋品（tenantId=90004）：付費SaaS客戶
 
 來點什麼 ERP 模組：
@@ -241,7 +296,7 @@ working tree: clean
 - `has_procurement_access` 前端 any cast 補型別（`useAuth` User 型別正式擴充）
 - 大永/來點什麼 ERP 的 `dy_`/`os_` 表不在 `schema.ts`，用 raw SQL
 - 本機菜單圖尚未遷移到 R2（`client/public/images/menu/korean-roll/`）
-- chunk size 超標（index.js 6266 kB），需 code splitting
+- chunk size 超標（index.js 6453kB），需 code splitting
 
 ---
 
