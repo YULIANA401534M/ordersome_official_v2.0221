@@ -23,6 +23,12 @@ git status && git log --oneline -3
 2. CLAUDE.md 是跨對話框的唯一記憶體，不更新等於下一個 Claude 失憶
 3. 版本號格式 v5.XX
 4. 零 TS 錯誤才 commit
+5. 每次 commit 前必須檢查 docs/ordersome_module_map_v1.html，若該次 commit 涉及模組狀態變更（功能完成、新問題發現、新功能建立），必須同步更新對應卡片的 status-pill class：
+   - done（綠）= 完成正常運作
+   - partial（藍）= 部分完成有問題
+   - running（橘）= 需資料或連動
+   - pending（灰）= 待建置
+   同時更新 footer 的版本號（v1.0 → v1.1）與日期。
 
 ---
 
