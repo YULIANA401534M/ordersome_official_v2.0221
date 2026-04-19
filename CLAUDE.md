@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md，歷史記錄請讀 DEVELOPMENT_LOG.md
 
-> **版本**：v5.68。**最後更新**：2026-04-19。
+> **版本**：v5.69。**最後更新**：2026-04-19。
 > **給 Claude 架構**：大腦（Claude.ai）+ 手腳（Claude Code）
 
 ---
@@ -47,12 +47,12 @@ git status && git log --oneline -3
 
 ## 當前開發狀態（換對話框必讀）
 
-### 最新 Git 狀態（2026-04-19 v5.68）
+### 最新 Git 狀態（2026-04-19 v5.69）
 
 最後三個 commit：
-1. `(v5.68)` — feat: manager權限B方案+損益擋住+叫貨廠商下拉+庫存分頁+品項分頁needsReview+帳務跳轉
-2. `40912b8` — fix: v5.67 第一梯修正
-3. `456004c` — feat: v5.65 損益儀表板圖表升級
+1. `(v5.69)` — fix: 補齊v5.68未套用的五項修正：損益圖表+manager擋住+查看明細+庫存分頁+品項分頁
+2. `cf41c75` — feat: v5.68 manager權限B方案+損益擋住+叫貨廠商下拉+庫存分頁+品項分頁needsReview+帳務跳轉
+3. `40912b8` — fix: v5.67 第一梯修正
 
 working tree: clean
 
@@ -146,6 +146,7 @@ working tree: clean
 - [x] v5.65 損益儀表板圖表升級（recharts）+ 庫存最後修改時間 + 近10筆記錄
 - [x] v5.67 第一梯修正：叫貨日期預設全部+快速選項 / 帳務月份預設全部+操作按鈕保護 / profitLoss.ts 確認已正確 / OSInventory.tsx deleteMut 確認已正確
 - [x] v5.68 第二梯修正：manager權限B方案 / 損益擋住 / 庫存分頁30筆 / 品項分頁50筆+needsReview / 帳務查看明細跳轉
+- [x] v5.69 補齊五項修正：DB開啟purchasing_os/daily_report_os / OSProfitLoss圖表+redirect確認 / 查看明細確認 / 庫存分頁確認 / 品項分頁+待確認確認
 
 ---
 
