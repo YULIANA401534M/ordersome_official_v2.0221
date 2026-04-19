@@ -425,38 +425,80 @@ export default function OSPurchasing() {
 
     const timestamp = new Date().toLocaleString("zh-TW", { hour12: false });
 
-    // 按廠商分組，宇聯和宇聯_配合排最前
-    const groupedBySupplier = new Map<string, { storeName: string; items: any[] }[]>();
+    // 按廠商分組
+    const groupedBySupplier = new Map<string, Map<string, {
+      unit: string;
+      temperature: string;
+      totalQty: number;
+      stores: { storeName: string; qty: number }[];
+    }>>();
+
     for (const row of filtered) {
-      if (!groupedBySupplier.has(row.supplierName)) groupedBySupplier.set(row.supplierName, []);
-      const supplierRows = groupedBySupplier.get(row.supplierName)!;
-      let storeGroup = supplierRows.find((g) => g.storeName === row.storeName);
-      if (!storeGroup) { storeGroup = { storeName: row.storeName, items: [] }; supplierRows.push(storeGroup); }
-      storeGroup.items.push(row);
+      if (!groupedBySupplier.has(row.supplierName)) {
+        groupedBySupplier.set(row.supplierName, new Map());
+      }
+      const productMap = groupedBySupplier.get(row.supplierName)!;
+      if (!productMap.has(row.productName)) {
+        productMap.set(row.productName, {
+          unit: row.unit,
+          temperature: row.temperature ?? "常溫",
+          totalQty: 0,
+          stores: [],
+        });
+      }
+      const entry = productMap.get(row.productName)!;
+      entry.totalQty += Number(row.quantity);
+      const existing = entry.stores.find(s => s.storeName === row.storeName);
+      if (existing) {
+        existing.qty += Number(row.quantity);
+      } else {
+        entry.stores.push({ storeName: row.storeName, qty: Number(row.quantity) });
+      }
     }
 
     const SUPPLIER_ORDER = ["宇聯", "宇聯_配合"];
     const allSupplierKeys = Array.from(groupedBySupplier.keys());
     const supplierKeys = [
-      ...SUPPLIER_ORDER.filter((k) => groupedBySupplier.has(k)),
-      ...allSupplierKeys.filter((k) => !SUPPLIER_ORDER.includes(k)),
+      ...SUPPLIER_ORDER.filter(k => groupedBySupplier.has(k)),
+      ...allSupplierKeys.filter(k => !SUPPLIER_ORDER.includes(k)),
     ];
 
-    const sectionHtml = supplierKeys.map((supplierName) => {
-      const storeGroups = groupedBySupplier.get(supplierName)!;
-      const storesHtml = storeGroups.map((sg) => {
-        const rowsHtml = sg.items
-          .map(
-            (item) =>
-              `<tr><td>${item.productName}</td><td class="qty-col">${item.quantity}</td><td>${item.unit}</td><td>${item.temperature}</td><td></td></tr>`
-          )
-          .join("");
-        return `<div class="store-title">▸ ${sg.storeName}</div>
-          <table><thead><tr><th>品項名稱</th><th>數量</th><th>單位</th><th>溫層</th><th>備註</th></tr></thead><tbody>${rowsHtml}</tbody></table>`;
+    const sectionHtml = supplierKeys.map(supplierName => {
+      const productMap = groupedBySupplier.get(supplierName)!;
+      const rowsHtml = Array.from(productMap.entries()).map(([productName, entry]) => {
+        const storeDetail = entry.stores
+          .sort((a, b) => a.storeName.localeCompare(b.storeName))
+          .map(s => `${s.storeName} ×${s.qty}`)
+          .join("、");
+        return `<tr>
+          <td style="width:35%">${productName}</td>
+          <td class="qty-col" style="width:12%;font-size:16px;font-weight:bold;color:#c0392b">${entry.totalQty}</td>
+          <td style="width:8%">${entry.unit}</td>
+          <td style="width:8%">${entry.temperature}</td>
+          <td style="width:32%;font-size:10px;color:#666">${storeDetail}</td>
+          <td style="width:10%"></td>
+        </tr>`;
       }).join("");
-      return `<div class="section-title">▶ ${supplierName}</div>${storesHtml}
+
+      const totalItems = productMap.size;
+      const totalQty = Array.from(productMap.values()).reduce((s, e) => s + e.totalQty, 0);
+
+      return `<div class="section-title">▶ ${supplierName}（${totalItems} 品項，共 ${totalQty} 件）</div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width:35%">品項名稱</th>
+              <th style="width:12%;text-align:center">合計數量</th>
+              <th style="width:8%">單位</th>
+              <th style="width:8%">溫層</th>
+              <th style="width:32%">門市分配</th>
+              <th style="width:10%">備註</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
         <div class="sign-row">
-          <div>經手人：<span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></div>
+          <div>揀貨人：<span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></div>
           <div>確認日期：<span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></div>
           <div>主管簽核：<span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></div>
         </div>`;
@@ -489,6 +531,7 @@ export default function OSPurchasing() {
     th { background: #f5f5f5; padding: 5px 8px; text-align: left; font-size: 11px; border: 1px solid #ddd; }
     td { padding: 5px 8px; border: 1px solid #ddd; font-size: 11px; }
     .qty-col { text-align: center; font-weight: bold; }
+    td { vertical-align: middle; }
     .sign-row { display: flex; justify-content: space-between; margin-top: 10px; padding-top: 8px; border-top: 1px solid #ccc; font-size: 11px; }
     .sign-row span { border-bottom: 1px solid #333; min-width: 120px; display: inline-block; margin-left: 8px; }
     .footer { text-align: right; font-size: 10px; color: #999; margin-top: 20px; border-top: 1px solid #eee; padding-top: 6px; }
@@ -1444,7 +1487,10 @@ export default function OSPurchasing() {
       {/* ===== 撿貨單列印 Dialog ===== */}
       <Dialog open={showPickPrint} onOpenChange={setShowPickPrint}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>列印撿貨單</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>列印撿貨單</DialogTitle>
+            <p className="text-xs text-gray-500 mt-1">撿貨單：相同品項跨門市數量已自動加總，右側小字為各門市分配量</p>
+          </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="grid grid-cols-2 gap-3">
               <div>

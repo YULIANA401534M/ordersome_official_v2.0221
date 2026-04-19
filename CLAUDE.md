@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md，歷史記錄請讀 DEVELOPMENT_LOG.md
 
-> **版本**：v5.60。**最後更新**：2026-04-19。
+> **版本**：v5.61。**最後更新**：2026-04-19。
 > **給 Claude 架構**：大腦（Claude.ai）+ 手腳（Claude Code）
 
 ---
@@ -47,12 +47,12 @@ git status && git log --oneline -3
 
 ## 當前開發狀態（換對話框必讀）
 
-### 最新 Git 狀態（2026-04-19 v5.60）
+### 最新 Git 狀態（2026-04-19 v5.61）
 
 最後三個 commit：
-1. `本次commit` — feat: v5.60 庫存管理六項重構：數字格式/單位合併/下拉操作/刪除功能/統計列
-2. `前次commit` — feat: v5.57 大麥三階段歷史資料匯入腳本 + os_stores建立 + 健康檢查四項修復
-3. `dcb0f48` — feat: v5.56 叫貨管理刪除按鈕擴展至sent + 大麥244筆品項匯入 + CLAUDE.md v5.56
+1. `本次commit` — feat: v5.61 撿貨單邏輯修正：相同品項跨門市數量加總，新增門市分配小字
+2. `ae6233d` — feat: v5.60 庫存管理六項重構：數字格式/單位合併/下拉操作/刪除功能/統計列
+3. `a4f3d31` — docs: v5.59 CLAUDE.md版本號更新 + 叫貨管理卡片改為done
 
 working tree: clean
 
