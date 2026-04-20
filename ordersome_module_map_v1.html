@@ -1,0 +1,256 @@
+
+<style>
+.mod { font-family: var(--font-sans); }
+.legend { display:flex; gap:16px; flex-wrap:wrap; padding:12px 16px; font-size:12px; color:var(--color-text-secondary); border-bottom:1px solid var(--color-border-tertiary); }
+.leg { display:flex; align-items:center; gap:6px; }
+.dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.section { margin:0 0 2px; }
+.sec-hd { font-size:11px; font-weight:500; color:var(--color-text-secondary); padding:8px 16px 4px; letter-spacing:.04em; text-transform:uppercase; }
+.row { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:8px; padding:0 12px 8px; }
+.card { border:1px solid var(--color-border-tertiary); border-radius:10px; padding:10px 12px; cursor:pointer; transition:border-color .15s, background .15s; position:relative; }
+.card:hover { border-color:var(--color-border-secondary); background:var(--color-background-secondary); }
+.card-top { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
+.card-icon { font-size:16px; width:20px; text-align:center; }
+.card-name { font-size:13px; font-weight:500; color:var(--color-text-primary); }
+.card-route { font-size:10px; color:var(--color-text-tertiary); font-family:var(--font-mono); margin-bottom:4px; }
+.card-real { font-size:11px; color:var(--color-text-secondary); line-height:1.5; }
+.status-pill { position:absolute; top:8px; right:8px; font-size:10px; font-weight:500; padding:2px 7px; border-radius:20px; }
+.done { background:#EAF3DE; color:#3B6D11; }
+.running { background:#FAEEDA; color:#854F0B; }
+.pending { background:#F1EFE8; color:#5F5E5A; }
+.partial { background:#E6F1FB; color:#185FA5; }
+.divider { height:1px; background:var(--color-border-tertiary); margin:4px 0; }
+.ver { font-size:11px; color:var(--color-text-tertiary); padding:8px 16px; text-align:right; }
+</style>
+<div class="mod">
+<div class="legend">
+  <div class="leg"><div class="dot" style="background:#639922"></div>完成 — 正常運作中</div>
+  <div class="leg"><div class="dot" style="background:#BA7517"></div>部分完成 — 功能存在但有問題</div>
+  <div class="leg"><div class="dot" style="background:#378ADD"></div>骨架存在 — 需資料或連動</div>
+  <div class="leg"><div class="dot" style="background:#888780"></div>待建置 — 尚未開發</div>
+</div>
+
+<div class="section">
+<div class="sec-hd">採購 × 庫存 — 取代大麥採購系統 + 人工 Excel 追蹤</div>
+<div class="row">
+  <div class="card" onclick="sendPrompt('詳細說明叫貨管理的問題與改善方案')">
+    <div class="status-pill partial">部分完成</div>
+    <div class="card-top"><span class="card-icon">📋</span><span class="card-name">叫貨管理</span></div>
+    <div class="card-route">/dashboard/purchasing</div>
+    <div class="card-real">取代：大麥採購訂單管理<br>現況：缺多選批量刪除、撿貨單邏輯混淆</div>
+  </div>
+  <div class="card" onclick="sendPrompt('詳細說明庫存管理的問題與改善方案')">
+    <div class="status-pill partial">部分完成</div>
+    <div class="card-top"><span class="card-icon">📦</span><span class="card-name">庫存管理</span></div>
+    <div class="card-route">/dashboard/inventory</div>
+    <div class="card-real">取代：人工 Excel 庫存表<br>現況：排版混亂、缺刪除、單位格式異常</div>
+  </div>
+  <div class="card" onclick="sendPrompt('詳細說明品項成本頁面的功能與待辦')">
+    <div class="status-pill partial">部分完成</div>
+    <div class="card-top"><span class="card-icon">🏷️</span><span class="card-name">品項成本</span></div>
+    <div class="card-route">/dashboard/products</div>
+    <div class="card-real">取代：CA表成本計算 Excel<br>現況：704筆，137筆 needsReview 待確認</div>
+  </div>
+  <div class="card" onclick="sendPrompt('配送管理與派車單的正確流程說明')">
+    <div class="status-pill partial">部分完成</div>
+    <div class="card-top"><span class="card-icon">🚛</span><span class="card-name">配送管理</span></div>
+    <div class="card-route">/dashboard/delivery</div>
+    <div class="card-real">取代：人工派車單 + 司機聯絡<br>現況：簽收→扣庫存✅ 但列印版式待優化</div>
+  </div>
+  <div class="card" onclick="sendPrompt('菜單成本管理的功能說明')">
+    <div class="status-pill done">完成</div>
+    <div class="card-top"><span class="card-icon">🍽️</span><span class="card-name">菜單成本</span></div>
+    <div class="card-route">/dashboard/ca-menu</div>
+    <div class="card-real">取代：CA菜單定價 Excel<br>售價 × 食材成本率計算</div>
+  </div>
+</div>
+</div>
+
+<div class="divider"></div>
+
+<div class="section">
+<div class="sec-hd">帳務財務 — 取代人工 Excel 記帳 + 事務所月結</div>
+<div class="row">
+  <div class="card" onclick="sendPrompt('帳務管理四個Tab的完整邏輯與問題說明')">
+    <div class="status-pill partial">部分完成</div>
+    <div class="card-top"><span class="card-icon">💰</span><span class="card-name">帳務管理</span></div>
+    <div class="card-route">/dashboard/accounting</div>
+    <div class="card-real">取代：廠商月結記帳 + 銀行對帳本<br>Tab1應付✅ Tab2銀行對帳✅ Tab3退佣空白⚠ Tab4提貨調貨✅</div>
+  </div>
+  <div class="card" onclick="sendPrompt('退佣帳款頁面的邏輯說明')">
+    <div class="status-pill running">需資料</div>
+    <div class="card-top"><span class="card-icon">↩️</span><span class="card-name">退佣帳款</span></div>
+    <div class="card-route">/dashboard/rebate</div>
+    <div class="card-real">取代：廣弘/伯享/韓濟退佣手動計算<br>規則已在DB，月底執行後才有數字</div>
+  </div>
+  <div class="card" onclick="sendPrompt('加盟主帳款的流程說明')">
+    <div class="status-pill done">完成</div>
+    <div class="card-top"><span class="card-icon">🏪</span><span class="card-name">加盟主帳款</span></div>
+    <div class="card-route">/dashboard/franchisee-payments</div>
+    <div class="card-real">取代：ASANA追蹤 + 人工週結<br>派車簽收→自動產生應收帳款</div>
+  </div>
+  <div class="card" onclick="sendPrompt('損益儀表板的計算邏輯說明')">
+    <div class="status-pill running">需資料</div>
+    <div class="card-top"><span class="card-icon">📊</span><span class="card-name">損益儀表板</span></div>
+    <div class="card-route">/dashboard/profit-loss</div>
+    <div class="card-real">取代：月底人工損益試算表<br>日報+月報+退佣+應收=損益，需門市日報資料才完整</div>
+  </div>
+</div>
+</div>
+
+<div class="divider"></div>
+
+<div class="section">
+<div class="sec-hd">門市作業 — 取代人工紙本 + LINE群回報</div>
+<div class="row">
+  <div class="card" onclick="sendPrompt('門市日報的欄位與Make串接說明')">
+    <div class="status-pill done">完成</div>
+    <div class="card-top"><span class="card-icon">📅</span><span class="card-name">門市日報</span></div>
+    <div class="card-route">/dashboard/daily-report</div>
+    <div class="card-real">取代：LINE群每日手動回報營業額<br>Make Webhook自動寫入，含內用/Uber/熊貓</div>
+  </div>
+  <div class="card" onclick="sendPrompt('排班管理的現況與缺少的資料')">
+    <div class="status-pill running">需員工資料</div>
+    <div class="card-top"><span class="card-icon">🗓️</span><span class="card-name">排班管理</span></div>
+    <div class="card-route">/dashboard/scheduling</div>
+    <div class="card-real">取代：人工排班表 Excel<br>框架完成，需先匯入員工資料才能使用</div>
+  </div>
+  <div class="card" onclick="sendPrompt('SOP知識庫的功能說明')">
+    <div class="status-pill done">完成</div>
+    <div class="card-top"><span class="card-icon">📚</span><span class="card-name">SOP 知識庫</span></div>
+    <div class="card-route">/dashboard/sop</div>
+    <div class="card-real">取代：Google Drive SOP文件<br>支援PDF上傳，R2儲存，權限控管</div>
+  </div>
+  <div class="card" onclick="sendPrompt('設備維修記錄的功能說明')">
+    <div class="status-pill done">完成</div>
+    <div class="card-top"><span class="card-icon">🔧</span><span class="card-name">設備維修</span></div>
+    <div class="card-route">/dashboard/repairs</div>
+    <div class="card-real">取代：LINE回報 + 人工追蹤<br>設備報修記錄與進度追蹤</div>
+  </div>
+  <div class="card" onclick="sendPrompt('每日作業清單的功能說明')">
+    <div class="status-pill done">完成</div>
+    <div class="card-top"><span class="card-icon">✅</span><span class="card-name">每日作業清單</span></div>
+    <div class="card-route">/dashboard/checklist</div>
+    <div class="card-real">取代：紙本開店/關店 checklist<br>門市人員自行勾選回報</div>
+  </div>
+</div>
+</div>
+
+<div class="divider"></div>
+
+<div class="section">
+<div class="sec-hd">加盟管理 — 取代人工加盟業務流程</div>
+<div class="row">
+  <div class="card" onclick="sendPrompt('加盟主管理頁面的功能說明')">
+    <div class="status-pill done">完成</div>
+    <div class="card-top"><span class="card-icon">🤝</span><span class="card-name">加盟主管理</span></div>
+    <div class="card-route">/dashboard/franchisees</div>
+    <div class="card-real">取代：人工名冊 + LINE溝通<br>功能開關、採購存取權限控管</div>
+  </div>
+  <div class="card" onclick="sendPrompt('加盟諮詢管理的功能說明')">
+    <div class="status-pill done">完成</div>
+    <div class="card-top"><span class="card-icon">💬</span><span class="card-name">加盟諮詢</span></div>
+    <div class="card-route">/dashboard/franchise-inquiries</div>
+    <div class="card-real">取代：人工接洽 + Excel追蹤<br>官網表單→自動通知→狀態追蹤</div>
+  </div>
+  <div class="card">
+    <div class="status-pill pending">待建置</div>
+    <div class="card-top"><span class="card-icon">💲</span><span class="card-name">報價單</span></div>
+    <div class="card-route">/dashboard/quotation（未建）</div>
+    <div class="card-real">取代：大麥採購報價管理<br>各門市看到不同售價結構</div>
+  </div>
+</div>
+</div>
+
+<div class="divider"></div>
+
+<div class="section">
+<div class="sec-hd">自動化節點 — Make + 系統自動觸發</div>
+<div class="row">
+  <div class="card" onclick="sendPrompt('Make自動化的完整串接說明')">
+    <div class="status-pill done">完成</div>
+    <div class="card-top"><span class="card-icon">⚡</span><span class="card-name">Make 採購推送</span></div>
+    <div class="card-route">每日 14:55 自動執行</div>
+    <div class="card-real">大麥 Excel → Gmail → Make → /api/procurement/import<br>自動建立叫貨單，無需人工</div>
+  </div>
+  <div class="card" onclick="sendPrompt('自動產生應付帳款的觸發說明')">
+    <div class="status-pill done">完成</div>
+    <div class="card-top"><span class="card-icon">🔄</span><span class="card-name">月底自動帳款</span></div>
+    <div class="card-route">generateMonthlyPayables</div>
+    <div class="card-real">叫貨 received → 自動累加應付<br>點「自動匯總本月帳款」觸發，未來可排程</div>
+  </div>
+  <div class="card" onclick="sendPrompt('派車簽收自動扣庫存的連動說明')">
+    <div class="status-pill done">完成</div>
+    <div class="card-top"><span class="card-icon">📲</span><span class="card-name">簽收自動扣庫存</span></div>
+    <div class="card-route">delivery.updateStatus signed</div>
+    <div class="card-real">派車單 signed → B類庫存 currentQty -<br>→ os_inventory_logs(out) 自動寫入</div>
+  </div>
+  <div class="card">
+    <div class="status-pill pending">待建置</div>
+    <div class="card-top"><span class="card-icon">⏰</span><span class="card-name">月底自動退佣計算</span></div>
+    <div class="card-route">osRebate router（規則已建）</div>
+    <div class="card-real">廣弘÷1.12差額、伯享差價、韓濟抵貨款<br>規則在DB，需建排程自動執行</div>
+  </div>
+  <div class="card">
+    <div class="status-pill pending">待建置</div>
+    <div class="card-top"><span class="card-icon">🏦</span><span class="card-name">銀行自動對帳</span></div>
+    <div class="card-route">accounting.autoMatch</div>
+    <div class="card-real">matchScore≥50自動建議<br>未來：高信心自動確認，低信心才人工</div>
+  </div>
+  <div class="card">
+    <div class="status-pill pending">待建置</div>
+    <div class="card-top"><span class="card-icon">📱</span><span class="card-name">積欠款LINE推播</span></div>
+    <div class="card-route">cron 基礎已建</div>
+    <div class="card-real">加盟主超過付款期限→自動LINE通知<br>cron 框架已在，需實作發送邏輯</div>
+  </div>
+</div>
+</div>
+
+<div class="divider"></div>
+
+<div class="section">
+<div class="sec-hd">大永蛋品 ERP（tenantId=90004）— 獨立運作</div>
+<div class="row">
+  <div class="card" onclick="sendPrompt('大永蛋品ERP的完整功能說明')">
+    <div class="status-pill done">完成</div>
+    <div class="card-top"><span class="card-icon">🥚</span><span class="card-name">大永 ERP</span></div>
+    <div class="card-route">/dayone/*</div>
+    <div class="card-real">訂單/客戶/司機/庫存/採購/配送/報表<br>含 LINE LIFF 點單、客戶 Portal、司機 App</div>
+  </div>
+  <div class="card">
+    <div class="status-pill running">等外部</div>
+    <div class="card-top"><span class="card-icon">💬</span><span class="card-name">正式 LIFF ID</span></div>
+    <div class="card-route">/liff/order（等蛋博）</div>
+    <div class="card-real">目前用測試 LIFF，等蛋博建立正式<br>只需改一行 liffId 即可上線</div>
+  </div>
+</div>
+</div>
+
+<div class="divider"></div>
+
+<div class="section">
+<div class="sec-hd">對外平台 — 官網 + 電商 + 品牌</div>
+<div class="row">
+  <div class="card" onclick="sendPrompt('官網品牌頁面的功能說明')">
+    <div class="status-pill done">完成</div>
+    <div class="card-top"><span class="card-icon">🌐</span><span class="card-name">來點什麼官網</span></div>
+    <div class="card-route">/brand/*</div>
+    <div class="card-real">品牌故事/菜單/門市/消息/加盟/聯絡</div>
+  </div>
+  <div class="card" onclick="sendPrompt('電商購物功能的說明')">
+    <div class="status-pill done">完成</div>
+    <div class="card-top"><span class="card-icon">🛒</span><span class="card-name">電商購物</span></div>
+    <div class="card-route">/shop/*</div>
+    <div class="card-real">綠界金流✅ 超商取貨✅ 訂單追蹤✅<br>B2B封閉式賣場✅</div>
+  </div>
+  <div class="card">
+    <div class="status-pill done">完成</div>
+    <div class="card-top"><span class="card-icon">🏢</span><span class="card-name">宇聯集團官網</span></div>
+    <div class="card-route">/corporate/*</div>
+    <div class="card-real">集團介紹/品牌/文化/新聞/加盟/聯絡</div>
+  </div>
+</div>
+</div>
+
+<div class="ver">系統邏輯地圖 v1.0 — 2026-04-19 | 依 CLAUDE.md v5.57 + 原始碼分析產出 | 點擊任一模組可詢問詳情</div>
+</div>
