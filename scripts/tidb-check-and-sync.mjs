@@ -1,6 +1,6 @@
 import mysql from 'mysql2/promise';
 
-const TIDB_URL = 'mysql://2PEiAB7nB6htiep.root:Y9QkbXSPa0Zgulq0@gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000/ordersome?ssl={"rejectUnauthorized":true}';
+const TIDB_URL = process.env.DATABASE_URL;
 
 const conn = await mysql.createConnection(TIDB_URL);
 console.log('✓ 連線 TiDB Cloud 成功');

@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md，歷史記錄請讀 DEVELOPMENT_LOG.md
 
-> **版本**：v5.71。**最後更新**：2026-04-19。
+> **版本**：v5.72。**最後更新**：2026-04-20。
 > **給 Claude 架構**：大腦（Claude.ai）+ 手腳（Claude Code）
 
 ---
@@ -14,6 +14,16 @@
 git status && git log --oneline -3
 ```
 確認 working tree clean、最新 commit 是今天的，再開始工作。
+
+---
+
+## ⚠️ 安全守則（絕對禁止）
+
+- **絕對不可以把密碼、DATABASE_URL、API Key 硬寫在任何 .ts / .mjs / .bat / .js 檔案裡**
+- 所有憑證一律放 `.env`（本機）或 Railway Variables（production）
+- `.env` 已在 `.gitignore`，不會被 commit，但 `.mjs` / `.bat` 不在保護範圍
+- script 檔案讀資料庫請用 `process.env.DATABASE_URL`
+- 2026-04-20 發生過一次密碼洩漏事件（寫死在 migrate_temp.mjs / tidb-check-and-sync.mjs / start-dev.bat），已重設密碼並清除
 
 ---
 
