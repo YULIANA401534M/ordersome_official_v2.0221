@@ -1,65 +1,121 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <!-- 首頁 -->
   <url>
     <loc>https://ordersome.com.tw/</loc>
-    <lastmod>2026-03-03</lastmod>
+    <lastmod>2026-04-23</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
 
-  <!-- 品牌頁面 -->
   <url>
     <loc>https://ordersome.com.tw/brand</loc>
-    <lastmod>2026-03-03</lastmod>
-    <changefreq>monthly</changefreq>
+    <lastmod>2026-04-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.95</priority>
+  </url>
+  <url>
+    <loc>https://ordersome.com.tw/brand/franchise</loc>
+    <lastmod>2026-04-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.95</priority>
+  </url>
+  <url>
+    <loc>https://ordersome.com.tw/brand/franchise-taichung</loc>
+    <lastmod>2026-04-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.93</priority>
+  </url>
+  <url>
+    <loc>https://ordersome.com.tw/brand/menu</loc>
+    <lastmod>2026-04-23</lastmod>
+    <changefreq>weekly</changefreq>
     <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://ordersome.com.tw/brand/stores</loc>
+    <lastmod>2026-04-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.88</priority>
+  </url>
+  <url>
+    <loc>https://ordersome.com.tw/brand/story</loc>
+    <lastmod>2026-04-23</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://ordersome.com.tw/brand/news</loc>
+    <lastmod>2026-04-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://ordersome.com.tw/brand/contact</loc>
+    <lastmod>2026-04-23</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.78</priority>
   </url>
 
   <url>
-    <loc>https://ordersome.com.tw/brand/menu</loc>
-    <lastmod>2026-03-03</lastmod>
+    <loc>https://ordersome.com.tw/shop</loc>
+    <lastmod>2026-04-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.95</priority>
+  </url>
+  <url>
+    <loc>https://ordersome.com.tw/shop/chili-sauce-guide</loc>
+    <lastmod>2026-04-23</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
 
   <url>
-    <loc>https://ordersome.com.tw/brand/stores</loc>
-    <lastmod>2026-03-03</lastmod>
+    <loc>https://ordersome.com.tw/corporate</loc>
+    <lastmod>2026-04-23</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
-
   <url>
-    <loc>https://ordersome.com.tw/brand/franchise</loc>
-    <lastmod>2026-03-03</lastmod>
+    <loc>https://ordersome.com.tw/corporate/about</loc>
+    <lastmod>2026-04-23</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.76</priority>
   </url>
-
-  <!-- 線上商城首頁 -->
   <url>
-    <loc>https://ordersome.com.tw/shop</loc>
-    <lastmod>2026-03-03</lastmod>
+    <loc>https://ordersome.com.tw/corporate/brands</loc>
+    <lastmod>2026-04-23</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.76</priority>
+  </url>
+  <url>
+    <loc>https://ordersome.com.tw/corporate/culture</loc>
+    <lastmod>2026-04-23</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.74</priority>
+  </url>
+  <url>
+    <loc>https://ordersome.com.tw/corporate/franchise</loc>
+    <lastmod>2026-04-23</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.76</priority>
+  </url>
+  <url>
+    <loc>https://ordersome.com.tw/corporate/news</loc>
+    <lastmod>2026-04-23</lastmod>
     <changefreq>daily</changefreq>
-    <priority>0.9</priority>
+    <priority>0.72</priority>
   </url>
-
-  <!-- 登入頁面 -->
   <url>
-    <loc>https://ordersome.com.tw/login</loc>
-    <lastmod>2026-03-03</lastmod>
-    <changefreq>never</changefreq>
+    <loc>https://ordersome.com.tw/corporate/contact</loc>
+    <lastmod>2026-04-23</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
 
-  <!-- 
-    排除的頁面（noindex, nofollow）：
-    - /dashboard 及所有子路由 (/dashboard/repairs, /dashboard/checklist 等)
-    - /shop/cart
-    - /shop/checkout
-    - /shop/payment/:orderNumber
-    - /shop/order-complete/:orderNumber
-    - /shop/my-orders
-  -->
+  <url>
+    <loc>https://ordersome.com.tw/news</loc>
+    <lastmod>2026-04-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.75</priority>
+  </url>
 </urlset>

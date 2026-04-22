@@ -15,6 +15,7 @@ import BrandMenu from "./pages/brand/BrandMenu";
 import BrandNews from "./pages/brand/BrandNews";
 import BrandContact from "./pages/brand/BrandContact";
 import BrandFranchise from "./pages/brand/BrandFranchise";
+import BrandFranchiseTaichung from "./pages/brand/BrandFranchiseTaichung";
 
 // Corporate Pages - 宇聯國際
 import CorporateHome from "./pages/corporate/CorporateHome";
@@ -37,6 +38,7 @@ import PaymentRedirect from "./pages/shop/PaymentRedirect";
 import OrderComplete from "./pages/shop/OrderComplete";
 import MyOrders from "./pages/shop/MyOrders";
 import ExclusiveProduct from "./pages/ExclusiveProduct";
+import ShopChiliSauceGuide from "./pages/shop/ShopChiliSauceGuide";
 
 // Member Pages
 import MemberProfile from "./pages/member/MemberProfile";
@@ -53,6 +55,7 @@ import ResetPassword from "./pages/ResetPassword";
 import Analytics from "./components/Analytics";
 import { useCanonical } from "./hooks/useCanonical";
 import { useBreadcrumbList } from "./hooks/useBreadcrumbList";
+import { useGeoMeta } from "./hooks/useGeoMeta";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -156,6 +159,7 @@ function Router() {
 
   // 全站動態 BreadcrumbList Schema（哈一上每一个页面）
   useBreadcrumbList();
+  useGeoMeta();
 
   return (
     <>
@@ -174,6 +178,7 @@ function Router() {
       <Route path="/brand/news" component={BrandNews} />
       <Route path="/brand/contact" component={BrandContact} />
       <Route path="/brand/franchise" component={BrandFranchise} />
+      <Route path="/brand/franchise-taichung" component={BrandFranchiseTaichung} />
       
       {/* Corporate Routes - 宇聯國際 */}
       <Route path="/corporate" component={CorporateHome} />
@@ -198,6 +203,7 @@ function Router() {
       <Route path="/shop/payment/:orderNumber" component={PaymentRedirect} />
       <Route path="/shop/order-complete/:orderNumber" component={OrderComplete} />
       <Route path="/shop/my-orders" component={MyOrders} />
+      <Route path="/shop/chili-sauce-guide" component={ShopChiliSauceGuide} />
       
       {/* Authentication Routes */}
       <Route path="/login" component={Login} />

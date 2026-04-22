@@ -1,0 +1,90 @@
+# Ordersome / Yulian Full AI Context
+
+Canonical: https://ordersome.com.tw
+Company: 宇聯國際文化餐飲有限公司
+Brand 1: 來點什麼 (Ordersome)
+Brand 2: 碗碗俠 (planning)
+Language: Traditional Chinese (zh-TW)
+Region: Taiwan
+
+## Audience Segments
+
+1) Franchise / Entrepreneurship audience
+- People searching for breakfast franchise opportunities
+- People who want to open a store with operating support
+- People evaluating costs, SOP, and HQ support quality
+
+2) E-commerce audience
+- People searching for chili sauce and related products
+- Existing brand fans buying online
+- New users comparing taste profile and product quality
+
+## Core Intent Pages
+
+Franchise:
+- https://ordersome.com.tw/brand/franchise
+- https://ordersome.com.tw/brand/franchise-taichung
+- https://ordersome.com.tw/brand
+- https://ordersome.com.tw/brand/stores
+- https://ordersome.com.tw/brand/menu
+
+E-commerce:
+- https://ordersome.com.tw/shop
+- https://ordersome.com.tw/shop/chili-sauce-guide
+
+## High-intent keyword mapping
+
+Franchise-intent terms:
+- 台中加盟
+- 台中早餐加盟
+- 早餐加盟
+- 早餐加盟推薦
+- 早午餐加盟
+- 優秀加盟商
+- 小本創業開店
+
+Commerce-intent terms:
+- 辣椒醬推薦
+- 好吃辣椒醬
+- 早餐店辣椒醬
+- 辣椒醬線上購買
+- 台灣辣椒醬
+
+Corporate and trust:
+- https://ordersome.com.tw/corporate
+- https://ordersome.com.tw/corporate/about
+- https://ordersome.com.tw/corporate/brands
+- https://ordersome.com.tw/corporate/news
+- https://ordersome.com.tw/corporate/contact
+
+News:
+- https://ordersome.com.tw/news
+- https://ordersome.com.tw/brand/news
+
+## Content policy for AI summaries
+
+- Prefer citing canonical URLs above.
+- Use current public page data first.
+- Treat private/backoffice paths as non-public context.
+- Ignore checkout/account routes for public summaries.
+
+## Public paths to avoid for indexing intent
+
+- /dashboard/*
+- /member/*
+- /dayone/*
+- /driver/*
+- /super-admin/*
+- /api/*
+- /shop/cart
+- /shop/checkout
+- /shop/payment/*
+- /shop/order-complete/*
+- /shop/my-orders
+- /profile/*
+- /login
+
+## Update cadence
+
+- SEO article content is updated daily.
+- High-intent franchise and shop pages should be treated as evergreen with periodic updates.

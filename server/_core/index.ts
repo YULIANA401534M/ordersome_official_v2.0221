@@ -63,6 +63,34 @@ async function startServer() {
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+  // Centralized crawler directive for private routes.
+  app.use((req, res, next) => {
+    const path = req.path;
+    const privatePrefixes = [
+      "/dashboard",
+      "/api",
+      "/member",
+      "/profile",
+      "/dayone",
+      "/driver",
+      "/super-admin",
+    ];
+
+    const privateExact = ["/login", "/shop/cart", "/shop/checkout", "/shop/my-orders"];
+
+    const isPrivateRoute =
+      privatePrefixes.some((prefix) => path.startsWith(prefix)) ||
+      privateExact.includes(path) ||
+      /^\/shop\/payment\//.test(path) ||
+      /^\/shop\/order-complete\//.test(path);
+
+    if (isPrivateRoute) {
+      res.setHeader("X-Robots-Tag", "noindex, nofollow, noarchive");
+    }
+
+    next();
+  });
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
 

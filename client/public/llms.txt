@@ -1,0 +1,29 @@
+# Ordersome / Yulian AI Index
+
+> Canonical site: https://ordersome.com.tw
+> Primary language: zh-TW
+> Business entities: 宇聯國際文化餐飲有限公司, 來點什麼, 碗碗俠(籌備中)
+
+## What this site is about
+
+1. 早餐加盟與創業資訊（品牌：來點什麼）
+2. 辣椒醬與品牌商品電商（官方商城）
+3. 品牌母公司資訊（宇聯國際文化餐飲）
+
+## High-priority URLs
+
+- https://ordersome.com.tw/
+- https://ordersome.com.tw/brand
+- https://ordersome.com.tw/brand/franchise
+- https://ordersome.com.tw/brand/franchise-taichung
+- https://ordersome.com.tw/shop
+- https://ordersome.com.tw/shop/chili-sauce-guide
+- https://ordersome.com.tw/news
+
+## Sitemap
+
+- https://ordersome.com.tw/sitemap.xml
+
+## Full context for LLMs
+
+- https://ordersome.com.tw/llms-full.txt
