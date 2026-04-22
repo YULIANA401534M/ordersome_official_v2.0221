@@ -45,6 +45,11 @@ async function startServer() {
         `ALTER TABLE products ADD COLUMN IF NOT EXISTS bannerImageUrl VARCHAR(500) NULL`
       );
       console.log("[Migration] products.bannerImageUrl: OK");
+      // 0028: products.salesCountOffset
+      await client.execute(
+        `ALTER TABLE products ADD COLUMN IF NOT EXISTS salesCountOffset INT NOT NULL DEFAULT 0`
+      );
+      console.log("[Migration] products.salesCountOffset: OK");
     }
   } catch (e) {
     console.warn("[Migration] startup migration failed (non-fatal):", e);

@@ -30,6 +30,7 @@ interface FormState {
   specDetails: string; shippingDetails: string;
   isActive: boolean; isFeatured: boolean; sortOrder: number;
   isHidden: boolean; exclusiveSlug: string; exclusiveImageUrl: string;
+  salesCountOffset: number;
 }
 
 const EMPTY_FORM: FormState = {
@@ -39,6 +40,7 @@ const EMPTY_FORM: FormState = {
   specifications: [], specDetails: "", shippingDetails: "",
   isActive: true, isFeatured: false, sortOrder: 0,
   isHidden: false, exclusiveSlug: "", exclusiveImageUrl: "",
+  salesCountOffset: 0,
 };
 
 function specsToJson(specs: SpecEntry[]): string {
@@ -315,6 +317,7 @@ export default function AdminProducts() {
       isHidden: p.isHidden ?? false,
       exclusiveSlug: p.exclusiveSlug || "",
       exclusiveImageUrl: p.exclusiveImageUrl || "",
+      salesCountOffset: p.salesCountOffset ?? 0,
     };
   };
 
@@ -356,6 +359,7 @@ export default function AdminProducts() {
     isHidden: form.isHidden,
     exclusiveSlug: form.exclusiveSlug || null,
     exclusiveImageUrl: form.exclusiveImageUrl || null,
+    salesCountOffset: form.salesCountOffset,
   });
 
   const handleSubmit = () => {
@@ -591,6 +595,17 @@ export default function AdminProducts() {
                       <Label>庫存數量</Label>
                       <Input type="number" value={form.stock} onChange={(e) => setForm(p => ({ ...p, stock: parseInt(e.target.value) || 0 }))} />
                     </div>
+                  </div>
+                  <div className="mt-4 p-3 rounded-lg border border-orange-200 bg-orange-50/40 space-y-1.5">
+                    <Label className="text-sm font-medium text-orange-800">銷售人數顯示調整（偏移量）</Label>
+                    <p className="text-xs text-orange-600">前台顯示 = 真實訂單銷售件數 + 偏移量。真實數據永遠保留，僅影響前台顯示數字。</p>
+                    <Input
+                      type="number"
+                      value={form.salesCountOffset}
+                      onChange={(e) => setForm(p => ({ ...p, salesCountOffset: parseInt(e.target.value) || 0 }))}
+                      className="w-40 bg-white"
+                      placeholder="0"
+                    />
                   </div>
                 </section>
 

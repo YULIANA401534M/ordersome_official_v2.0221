@@ -12,6 +12,7 @@ export default function ShopCategory() {
   const { slug } = useParams<{ slug: string }>();
   const { data: category } = trpc.category.getBySlug.useQuery({ slug: slug || "" });
   const { data: products, isLoading } = trpc.product.list.useQuery();
+  const { data: salesStats } = trpc.product.salesStats.useQuery();
   const addToCart = useCartStore((state) => state.addItem);
   const cartItems = useCartStore((state) => state.items);
   const totalCartItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -56,6 +57,13 @@ export default function ShopCategory() {
                   </Link>
                   <CardContent className="p-4">
                     <h3 className="font-bold text-gray-900 mb-1">{product.name}</h3>
+                    {(() => {
+                      const realSales = salesStats?.[product.id] ?? 0;
+                      const displayed = realSales + ((product as any).salesCountOffset ?? 0);
+                      return displayed > 0 ? (
+                        <p className="text-xs text-gray-400 mb-2">🔥 已有 <span className="font-semibold text-gray-600">{displayed.toLocaleString()}</span> 人付款</p>
+                      ) : null;
+                    })()}
                     <div className="flex items-center justify-between">
                       <p className="text-lg font-bold text-amber-600">NT$ {product.price}</p>
                       <Button size="sm" onClick={() => handleAddToCart(product)} className="bg-amber-600 hover:bg-amber-700">加入購物車</Button>

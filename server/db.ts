@@ -292,6 +292,20 @@ export async function deleteProduct(id: number) {
   await db.delete(products).where(eq(products.id, id));
 }
 
+// 查詢每個商品的真實銷售件數（sum of order_items.quantity，訂單狀態不限）
+export async function getProductSalesStats(tenantId: number = 1): Promise<Record<number, number>> {
+  const db = await getDb();
+  if (!db) return {};
+  const rows = await db
+    .select({ productId: orderItems.productId, total: sql<number>`COALESCE(SUM(${orderItems.quantity}), 0)` })
+    .from(orderItems)
+    .where(eq(orderItems.tenantId, tenantId))
+    .groupBy(orderItems.productId);
+  const map: Record<number, number> = {};
+  for (const row of rows) map[row.productId] = Number(row.total);
+  return map;
+}
+
 // ============ CART FUNCTIONS ============
 export async function getCartItems(userId: number) {
   const db = await getDb();

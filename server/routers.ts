@@ -263,6 +263,7 @@ export const appRouter = router({
   product: router({
     list: publicProcedure.query(({ ctx }) => db.getActiveProducts(ctx.tenantId)),
     listAll: adminProcedure.query(({ ctx }) => db.getAllProducts(ctx.tenantId)),
+    salesStats: publicProcedure.query(({ ctx }) => db.getProductSalesStats(ctx.tenantId)),
     featured: publicProcedure.query(({ ctx }) => db.getFeaturedProducts(ctx.tenantId)),
     byCategory: publicProcedure
       .input(z.object({ categoryId: z.number() }))
@@ -298,6 +299,7 @@ export const appRouter = router({
         isHidden: z.boolean().optional(),
         exclusiveSlug: z.string().nullable().optional(),
         exclusiveImageUrl: z.string().nullable().optional(),
+        salesCountOffset: z.number().optional(),
       }))
       .mutation(({ input }) => db.createProduct(input)),
     update: adminProcedure
@@ -322,6 +324,7 @@ export const appRouter = router({
         isHidden: z.boolean().optional(),
         exclusiveSlug: z.string().nullable().optional(),
         exclusiveImageUrl: z.string().nullable().optional(),
+        salesCountOffset: z.number().optional(),
       }))
       .mutation(({ input }) => {
         const { id, ...data } = input;

@@ -132,6 +132,7 @@ export const products = mysqlTable("products", {
   sortOrder: int("sortOrder").default(0).notNull(),
   // 商品頁橫幅圖 (migration 0027)
   bannerImageUrl: varchar("bannerImageUrl", { length: 500 }),     // 介紹 Tab 全寬橫幅圖
+  salesCountOffset: int("salesCountOffset").default(0).notNull(), // 管理員可調整的銷售計數偏移量
   // B2B 封閉式賣場欄位
   isHidden: boolean("isHidden").default(false).notNull(),         // 隱藏標記：true 時不顯示於 /shop 前台
   exclusiveSlug: varchar("exclusiveSlug", { length: 200 }),       // 專屬網址後綴（Unique, Nullable）

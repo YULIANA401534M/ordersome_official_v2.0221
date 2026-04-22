@@ -56,6 +56,7 @@ export default function ShopHome() {
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const { data: categories } = trpc.category.list.useQuery();
   const { data: products, isLoading } = trpc.product.list.useQuery();
+  const { data: salesStats } = trpc.product.salesStats.useQuery();
   const addToCart = useCartStore((state) => state.addItem);
   const cartItems = useCartStore((state) => state.items);
 
@@ -157,6 +158,13 @@ export default function ShopHome() {
                       <h3 className="font-bold text-gray-900 mb-1 hover:text-amber-600 transition-colors">{product.name}</h3>
                     </Link>
                     <p className="text-sm text-gray-500 line-clamp-2 mb-2">{product.description}</p>
+                    {(() => {
+                      const realSales = salesStats?.[product.id] ?? 0;
+                      const displayed = realSales + ((product as any).salesCountOffset ?? 0);
+                      return displayed > 0 ? (
+                        <p className="text-xs text-gray-400 mb-2">🔥 已有 <span className="font-semibold text-gray-600">{displayed.toLocaleString()}</span> 人付款</p>
+                      ) : null;
+                    })()}
                     <div className="flex items-center justify-between">
                       <p className="text-lg font-bold text-amber-600">NT$ {product.price}</p>
                       <Button size="sm" onClick={() => handleAddToCart(product)} className="bg-amber-600 hover:bg-amber-700">
