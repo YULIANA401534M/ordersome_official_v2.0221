@@ -537,13 +537,13 @@ export default function AdminProducts() {
             Layout: max-w-2xl, fixed header+footer, scrollable body
         ════════════════════════════════════════════════════════════════════ */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className="w-full max-w-2xl p-0 gap-0 flex flex-col max-h-[92vh]">
+          <DialogContent className="!max-w-2xl p-0 gap-0 flex flex-col max-h-[90vh] overflow-hidden">
             <DialogHeader className="px-6 py-4 border-b shrink-0">
               <DialogTitle>{editingId !== null ? "編輯商品" : "新增商品"}</DialogTitle>
             </DialogHeader>
 
-            <ScrollArea className="flex-1 overflow-y-auto">
-              <div className="px-6 py-5 space-y-8">
+            <ScrollArea className="flex-1 min-h-0 w-full">
+              <div className="px-6 py-5 space-y-8 min-w-0">
 
                 {/* ── 基本資訊 ── */}
                 <section>
