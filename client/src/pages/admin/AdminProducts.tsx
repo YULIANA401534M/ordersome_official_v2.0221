@@ -134,12 +134,12 @@ function SpecEditor({ specs, onChange }: { specs: SpecEntry[]; onChange: (s: Spe
     const next = [...specs]; next[i] = { ...next[i], [field]: val }; onChange(next);
   };
   return (
-    <div className="space-y-2">
+    <div className="w-full overflow-hidden space-y-2">
       {specs.map((s, i) => (
         <div key={i} className="flex gap-2 items-center">
           <GripVertical className="w-4 h-4 text-gray-300 shrink-0" />
           <Input value={s.key} onChange={(e) => update(i, "key", e.target.value)} placeholder="規格名稱（如：口味）" className="w-32 shrink-0" />
-          <Input value={s.values} onChange={(e) => update(i, "values", e.target.value)} placeholder="選項，以「、」分隔（如：鹽水雞、甘蔗雞）" />
+          <Input value={s.values} onChange={(e) => update(i, "values", e.target.value)} placeholder="選項，以「、」分隔（如：鹽水雞、甘蔗雞）" className="min-w-0 flex-1" />
           <button type="button" onClick={() => remove(i)} className="text-red-400 hover:text-red-600 shrink-0"><X className="w-4 h-4" /></button>
         </div>
       ))}
@@ -651,7 +651,7 @@ export default function AdminProducts() {
                 <section>
                   <SectionTitle sub="對應商品頁「規格」Tab 的詳細說明文字。">規格說明（前台 Tab）</SectionTitle>
                   <Textarea value={form.specDetails} onChange={(e) => setForm(p => ({ ...p, specDetails: e.target.value }))}
-                    placeholder="輸入規格說明內容（支援 Markdown 語法）" rows={4} className="font-mono text-sm" />
+                    placeholder="輸入規格說明內容（支援 Markdown 語法）" rows={4} className="w-full font-mono text-sm" />
                 </section>
 
                 <Separator />
@@ -660,7 +660,7 @@ export default function AdminProducts() {
                 <section>
                   <SectionTitle sub="對應商品頁「運送」Tab 的說明文字。">運送方式（前台 Tab）</SectionTitle>
                   <Textarea value={form.shippingDetails} onChange={(e) => setForm(p => ({ ...p, shippingDetails: e.target.value }))}
-                    placeholder="輸入運送方式說明（支援 Markdown 語法）" rows={4} className="font-mono text-sm" />
+                    placeholder="輸入運送方式說明（支援 Markdown 語法）" rows={4} className="w-full font-mono text-sm" />
                 </section>
 
                 <Separator />

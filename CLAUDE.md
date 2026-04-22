@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md，歷史記錄請讀 DEVELOPMENT_LOG.md
 
-> **版本**：v5.77。**最後更新**：2026-04-22。
+> **版本**：v5.78。**最後更新**：2026-04-22。
 > **給 Claude 架構**：大腦（Claude.ai）+ 手腳（Claude Code）
 
 ---
@@ -57,12 +57,12 @@ git status && git log --oneline -3
 
 ## 當前開發狀態（換對話框必讀）
 
-### 最新 Git 狀態（2026-04-22 v5.77）
+### 最新 Git 狀態（2026-04-22 v5.78）
 
 最後三個 commit：
-1. `(v5.77)` — fix: v5.77 scheduledAt查詢條件確認+時區規則統一寫入CLAUDE.md
-2. `(v5.76)` — fix: v5.76 scheduledAt排程發布根本修正：getPublishedPosts加時間過濾+時區修正+清除排程null傳遞
-3. `(v5.75)` — fix: v5.75 scheduledAt排程發布全面修正：前後端狀態邏輯+UX聯動+列表顯示排程時間
+1. `(v5.78)` — fix: v5.78 AdminProducts Modal佈局修正 顯示設定並排+溢出修正
+2. `(v5.77)` — fix: v5.77 scheduledAt查詢條件修正+時區處理統一+CLAUDE.md時區規則
+3. `(v5.76)` — fix: v5.76 scheduledAt排程發布根本修正：getPublishedPosts加時間過濾+時區修正+清除排程null傳遞
 
 working tree: clean
 
