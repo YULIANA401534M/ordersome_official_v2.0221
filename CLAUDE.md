@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md，歷史記錄請讀 DEVELOPMENT_LOG.md
 
-> **版本**：v5.79。**最後更新**：2026-04-22。
+> **版本**：v5.80。**最後更新**：2026-04-22。
 > **給 Claude 架構**：大腦（Claude.ai）+ 手腳（Claude Code）
 
 ---
@@ -60,7 +60,8 @@ git status && git log --oneline -3
 ### 最新 Git 狀態（2026-04-22 v5.79）
 
 最後三個 commit：
-1. `(v5.79)` — fix: v5.79 AdminProducts Modal橫向溢出根本修正：ScrollArea Viewport加overflow-x-hidden+DialogContent加!max-w-2xl
+1. `(v5.80)` — fix: v5.80 AdminProducts Modal移除overflow-hidden恢復捲動功能
+2. `(v5.79)` — fix: v5.79 AdminProducts Modal橫向溢出根本修正：ScrollArea Viewport加overflow-x-hidden+DialogContent加!max-w-2xl
 2. `(v5.77)` — fix: v5.77 scheduledAt查詢條件修正+時區處理統一+CLAUDE.md時區規則
 3. `(v5.76)` — fix: v5.76 scheduledAt排程發布根本修正：getPublishedPosts加時間過濾+時區修正+清除排程null傳遞
 
