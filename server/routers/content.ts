@@ -183,7 +183,13 @@ export const contentRouter = router({
         updates.scheduledAt = scheduledAt ? new Date(scheduledAt) : null;
       }
 
-      if (updates.status === "published") {
+      // 有排程時間 → 強制 status=draft（等 cron 到時自動發布），publishedAt 不動
+      // 無排程時間且 status=published → 設定 publishedAt 為現在
+      // 無排程時間且 status=draft → 正常更新
+      if (updates.scheduledAt) {
+        updates.status = "draft";
+        await database.update(posts).set(updates).where(eq(posts.id, postId));
+      } else if (updates.status === "published") {
         await database
           .update(posts)
           .set({ ...updates, publishedAt: new Date() })

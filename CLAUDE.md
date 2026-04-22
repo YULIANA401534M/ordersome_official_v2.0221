@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md，歷史記錄請讀 DEVELOPMENT_LOG.md
 
-> **版本**：v5.74。**最後更新**：2026-04-22。
+> **版本**：v5.75。**最後更新**：2026-04-22。
 > **給 Claude 架構**：大腦（Claude.ai）+ 手腳（Claude Code）
 
 ---
@@ -60,7 +60,8 @@ git status && git log --oneline -3
 ### 最新 Git 狀態（2026-04-22 v5.73）
 
 最後三個 commit：
-1. `(v5.74)` — feat: v5.74 商品管理重構：bannerImageUrl欄位+多圖Carousel+Modal完整佈局
+1. `(v5.75)` — fix: v5.75 scheduledAt排程發布全面修正：前後端狀態邏輯+UX聯動+列表顯示排程時間
+2. `(v5.74)` — feat: v5.74 商品管理重構：bannerImageUrl欄位+多圖Carousel+Modal完整佈局
 2. `(v5.73)` — fix: v5.73 AdminProducts 四項修正：複製商品/一鍵複製福委連結/Dialog排版/圖片上傳修正
 3. `(v5.71)` — fix: v5.71 加盟主叫貨單只看自己門市+隱藏操作按鈕
 

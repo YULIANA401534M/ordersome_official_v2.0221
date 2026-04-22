@@ -122,12 +122,14 @@ export default function ContentManagement() {
                     )}
 
                     {/* Meta Info */}
-                    <div className="flex items-center gap-4 text-xs text-gray-500 mb-4">
+                    <div className="flex items-center gap-4 text-xs text-gray-500 mb-4 flex-wrap">
                       <div className="flex items-center gap-1">
                         <Calendar className="w-4 h-4" />
-                        {post.publishedAt
+                        {post.status === "published" && post.publishedAt
                           ? new Date(post.publishedAt).toLocaleDateString("zh-TW")
-                          : "未發布"}
+                          : post.scheduledAt
+                          ? `排程：${new Date(post.scheduledAt).toLocaleString("zh-TW", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}`
+                          : "草稿未發布"}
                       </div>
                       <div className="flex items-center gap-1">
                         <User className="w-4 h-4" />

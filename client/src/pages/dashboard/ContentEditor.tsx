@@ -127,6 +127,14 @@ export default function ContentEditor() {
       alert("請填寫標題、Slug 和內容");
       return;
     }
+    if (publishTargets.length === 0) {
+      alert("請至少選擇一個發布目標");
+      return;
+    }
+
+    // 有排程時間 → 強制 status=draft，等 cron 到時間自動發布
+    // 清除排程時間 → 保持用戶選擇的 status（draft / published）
+    const resolvedStatus: "draft" | "published" = scheduledAt ? "draft" : status;
 
     const postData = {
       title,
@@ -134,9 +142,10 @@ export default function ContentEditor() {
       excerpt,
       content,
       coverImage,
-      status: scheduledAt ? "draft" as const : status,
+      status: resolvedStatus,
       publishTargets,
       category: category || undefined,
+      // 傳空字串時送 undefined，讓 router 把 scheduledAt 設為 null
       scheduledAt: scheduledAt || undefined,
     };
 
@@ -373,21 +382,33 @@ export default function ContentEditor() {
                 onChange={(e) => setScheduledAt(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <p className="mt-1 text-xs text-amber-600 font-medium">設定排程後，文章將自動標記為「排程中」，系統於指定時間自動發布</p>
+              {scheduledAt ? (
+                <p className="mt-1 text-xs text-amber-600 font-medium">
+                  ⏰ 已設定排程：文章將於 {new Date(scheduledAt).toLocaleString("zh-TW")} 自動發布（狀態自動設為草稿）
+                </p>
+              ) : (
+                <p className="mt-1 text-xs text-gray-400">選填。設定後系統於指定時間自動將文章由草稿改為已發布。</p>
+              )}
             </div>
           </div>
 
           {/* Status */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">狀態</label>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value as "draft" | "published")}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="draft">草稿</option>
-              <option value="published">已發布</option>
-            </select>
+            {scheduledAt ? (
+              <div className="w-full px-4 py-2 border border-amber-300 bg-amber-50 rounded-lg text-amber-700 text-sm">
+                草稿（排程發布中，到達排程時間後自動改為已發布）
+              </div>
+            ) : (
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value as "draft" | "published")}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="draft">草稿</option>
+                <option value="published">已發布</option>
+              </select>
+            )}
           </div>
 
           {/* Save Button */}
