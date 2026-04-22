@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md，歷史記錄請讀 DEVELOPMENT_LOG.md
 
-> **版本**：v5.76。**最後更新**：2026-04-22。
+> **版本**：v5.77。**最後更新**：2026-04-22。
 > **給 Claude 架構**：大腦（Claude.ai）+ 手腳（Claude Code）
 
 ---
@@ -57,12 +57,12 @@ git status && git log --oneline -3
 
 ## 當前開發狀態（換對話框必讀）
 
-### 最新 Git 狀態（2026-04-22 v5.76）
+### 最新 Git 狀態（2026-04-22 v5.77）
 
 最後三個 commit：
-1. `(v5.76)` — fix: v5.76 scheduledAt排程發布根本修正：getPublishedPosts加時間過濾+時區修正+清除排程null傳遞
-2. `(v5.75)` — fix: v5.75 scheduledAt排程發布全面修正：前後端狀態邏輯+UX聯動+列表顯示排程時間
-3. `(v5.74)` — feat: v5.74 商品管理重構：bannerImageUrl欄位+多圖Carousel+Modal完整佈局
+1. `(v5.77)` — fix: v5.77 scheduledAt查詢條件確認+時區規則統一寫入CLAUDE.md
+2. `(v5.76)` — fix: v5.76 scheduledAt排程發布根本修正：getPublishedPosts加時間過濾+時區修正+清除排程null傳遞
+3. `(v5.75)` — fix: v5.75 scheduledAt排程發布全面修正：前後端狀態邏輯+UX聯動+列表顯示排程時間
 
 working tree: clean
 
@@ -217,6 +217,15 @@ working tree: clean
 ---
 
 ## 給新大腦的重要提醒
+
+**時區規則（全系統適用，v5.77）：**
+- Railway 伺服器和 TiDB 資料庫均為 UTC
+- 所有時間存進資料庫時存 UTC（`new Date()` 在 Node.js UTC 環境即為 UTC）
+- 前端顯示時間：`toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })`
+- 前端 datetime-local 輸入框**讀取**：`new Date(utcString).getTime() + 8*60*60*1000` 加 8 小時，再 `toISOString().slice(0,16)`
+- 前端 datetime-local 輸入框**送出**：字串後加 `:00+08:00`，例如 `"2026-04-22T15:00"` → `"2026-04-22T15:00:00+08:00"`，後端 `new Date()` 自動轉 UTC
+- 排程發布正確做法：`getPublishedPosts` WHERE 包含 `or(isNull(scheduledAt), lte(scheduledAt, now))`，文章時間到自然出現，**不需要任何 cron 或手動觸發**
+- 此規則適用於所有現有和未來涉及時間的功能
 
 **Make 串接：**
 - 每天 14:55 自動執行，送資料到 /api/procurement/import
