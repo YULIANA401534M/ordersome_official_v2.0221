@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useProductSchema } from "@/hooks/useProductSchema";
 import { useParams, useLocation } from "wouter";
-import { Minus, Plus, ShoppingCart, Truck, Package, ChevronRight } from "lucide-react";
+import { Minus, Plus, ShoppingCart, Truck, Package, ChevronRight, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -124,15 +124,38 @@ export default function ProductDetail() {
         {/* ── Top Two-Column Layout ── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
 
-          {/* LEFT: Image Gallery */}
+          {/* LEFT: Image Gallery with carousel for multiple images */}
           <div className="space-y-3">
-            <div className="aspect-square rounded-2xl overflow-hidden bg-gray-100 border border-gray-200">
+            <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 border border-gray-200 group">
               {images.length > 0 ? (
                 <img src={images[activeImageIndex]} alt={product.name} className="w-full h-full object-cover transition-all duration-300" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-gray-400"><Package className="h-16 w-16" /></div>
               )}
+              {/* Carousel arrows */}
+              {images.length > 1 && (
+                <>
+                  <button
+                    onClick={() => setActiveImageIndex((i) => (i - 1 + images.length) % images.length)}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-700 rounded-full w-9 h-9 flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity">
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+                  <button
+                    onClick={() => setActiveImageIndex((i) => (i + 1) % images.length)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-700 rounded-full w-9 h-9 flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity">
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+                  {/* Dot indicators */}
+                  <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5">
+                    {images.map((_, idx) => (
+                      <button key={idx} onClick={() => setActiveImageIndex(idx)}
+                        className={`rounded-full transition-all ${idx === activeImageIndex ? "w-4 h-2 bg-amber-500" : "w-2 h-2 bg-white/70 hover:bg-white"}`} />
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
+            {/* Thumbnail strip */}
             {images.length > 1 && (
               <div className="flex gap-2 overflow-x-auto pb-1">
                 {images.map((img, idx) => (
@@ -254,6 +277,14 @@ export default function ProductDetail() {
           </TabsList>
 
           <TabsContent value="description" className="mt-6">
+            {/* Banner image — shown above description if exists */}
+            {(product as any).bannerImageUrl && (
+              <img
+                src={(product as any).bannerImageUrl}
+                alt={`${product.name} 橫幅`}
+                className="w-full object-cover rounded-lg mb-6"
+              />
+            )}
             {product.description ? (
               <div className="prose prose-sm max-w-none text-gray-700">
                 <ReactMarkdown>{product.description}</ReactMarkdown>

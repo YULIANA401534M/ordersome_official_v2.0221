@@ -25,6 +25,7 @@ interface FormState {
   price: string; originalPrice: string;
   categoryId: number; stock: number;
   imageUrl: string; images: string[];
+  bannerImageUrl: string;
   specifications: SpecEntry[];
   specDetails: string; shippingDetails: string;
   isActive: boolean; isFeatured: boolean; sortOrder: number;
@@ -34,6 +35,7 @@ interface FormState {
 const EMPTY_FORM: FormState = {
   name: "", slug: "", description: "", price: "", originalPrice: "",
   categoryId: 0, stock: 100, imageUrl: "", images: [],
+  bannerImageUrl: "",
   specifications: [], specDetails: "", shippingDetails: "",
   isActive: true, isFeatured: false, sortOrder: 0,
   isHidden: false, exclusiveSlug: "", exclusiveImageUrl: "",
@@ -55,7 +57,7 @@ function jsonToSpecs(json: string | null | undefined): SpecEntry[] {
   } catch { return []; }
 }
 
-// ─── Image Upload Zone ────────────────────────────────────────────────────────
+// ─── Multi-image Upload Zone ──────────────────────────────────────────────────
 function ImageUploadZone({ images, onAdd, onRemove, onSetPrimary, isUploading }:
   { images: string[]; onAdd: (files: FileList) => void; onRemove: (idx: number) => void; onSetPrimary: (idx: number) => void; isUploading: boolean }) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -64,25 +66,62 @@ function ImageUploadZone({ images, onAdd, onRemove, onSetPrimary, isUploading }:
       <div className="flex flex-wrap gap-2">
         {images.map((url, idx) => (
           <div key={idx} className="relative group w-20 h-20 rounded-lg overflow-hidden border-2 border-gray-200 cursor-pointer"
-            onClick={() => onSetPrimary(idx)}
-            title={idx === 0 ? "主圖" : "點擊設為主圖"}>
+            onClick={() => onSetPrimary(idx)} title={idx === 0 ? "主圖" : "點擊設為主圖"}>
             <img src={url} alt="" className="w-full h-full object-cover" />
-            {idx === 0 && <span className="absolute bottom-0 left-0 right-0 bg-amber-600/80 text-white text-[10px] text-center py-0.5">主圖</span>}
+            {idx === 0 && (
+              <span className="absolute bottom-0 left-0 right-0 bg-amber-600/80 text-white text-[10px] text-center py-0.5">主圖</span>
+            )}
             <button type="button" onClick={(e) => { e.stopPropagation(); onRemove(idx); }}
               className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
               <X className="w-2.5 h-2.5" />
             </button>
           </div>
         ))}
-        <button type="button" onClick={() => inputRef.current?.click()}
-          disabled={isUploading}
+        <button type="button" onClick={() => inputRef.current?.click()} disabled={isUploading}
           className="w-20 h-20 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:border-amber-400 hover:text-amber-500 transition-colors disabled:opacity-50">
           {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><ImagePlus className="w-5 h-5" /><span className="text-[10px] mt-1">上傳圖片</span></>}
         </button>
       </div>
       <input ref={inputRef} type="file" accept="image/*" multiple className="hidden"
         onChange={(e) => e.target.files && onAdd(e.target.files)} />
-      <p className="text-xs text-gray-400">支援 JPG / PNG / WebP，第一張為主圖。點擊縮圖可設為主圖。</p>
+      <p className="text-xs text-gray-400">支援 JPG / PNG / WebP，第一張為主圖，點擊縮圖設為主圖。</p>
+    </div>
+  );
+}
+
+// ─── Banner Image Upload ───────────────────────────────────────────────────────
+function BannerUpload({ url, isUploading, onUpload, onClear }: {
+  url: string; isUploading: boolean;
+  onUpload: (file: File) => void; onClear: () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  return (
+    <div className="space-y-2">
+      {url ? (
+        <div className="relative rounded-lg overflow-hidden border bg-gray-50">
+          <img src={url} alt="Banner 預覽" className="w-full h-32 object-cover" />
+          <div className="absolute top-2 right-2 flex gap-1">
+            <button type="button" onClick={() => inputRef.current?.click()}
+              className="bg-white/90 text-gray-700 hover:bg-white px-2 py-1 rounded text-xs border shadow-sm">
+              替換
+            </button>
+            <button type="button" onClick={onClear}
+              className="bg-red-500 text-white hover:bg-red-600 px-2 py-1 rounded text-xs shadow-sm">
+              移除
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button type="button" onClick={() => inputRef.current?.click()} disabled={isUploading}
+          className="w-full h-24 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:border-amber-400 hover:text-amber-500 transition-colors disabled:opacity-50">
+          {isUploading
+            ? <><Loader2 className="w-5 h-5 animate-spin" /><span className="text-xs mt-1">上傳中…</span></>
+            : <><ImagePlus className="w-5 h-5" /><span className="text-xs mt-1">點擊上傳橫幅圖</span></>}
+        </button>
+      )}
+      <input ref={inputRef} type="file" accept="image/*" className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) onUpload(f); e.target.value = ""; }} />
+      <p className="text-xs text-gray-400">建議尺寸 1200×400，支援 JPG / PNG / WebP，最大 10MB。</p>
     </div>
   );
 }
@@ -111,7 +150,7 @@ function SpecEditor({ specs, onChange }: { specs: SpecEntry[]; onChange: (s: Spe
   );
 }
 
-// ─── Copy Button ─────────────────────────────────────────────────────────────
+// ─── Copy Button ──────────────────────────────────────────────────────────────
 function CopyButton({ text, label }: { text: string; label?: string }) {
   const [copied, setCopied] = useState(false);
   const handleCopy = async () => {
@@ -125,10 +164,21 @@ function CopyButton({ text, label }: { text: string; label?: string }) {
     }
   };
   return (
-    <Button variant="ghost" size="sm" onClick={handleCopy} title={label || "複製連結"} className="h-7 px-2 text-purple-600 hover:text-purple-800 hover:bg-purple-50">
+    <Button variant="ghost" size="sm" onClick={handleCopy} title={label || "複製連結"}
+      className="h-7 px-2 text-purple-600 hover:text-purple-800 hover:bg-purple-50">
       {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
       <span className="ml-1 text-xs">{copied ? "已複製" : "複製連結"}</span>
     </Button>
+  );
+}
+
+// ─── Section Header ───────────────────────────────────────────────────────────
+function SectionTitle({ children, sub }: { children: React.ReactNode; sub?: string }) {
+  return (
+    <div className="mb-3">
+      <h3 className="text-sm font-semibold text-gray-700">{children}</h3>
+      {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+    </div>
   );
 }
 
@@ -147,12 +197,12 @@ export default function AdminProducts() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [isUploading, setIsUploading] = useState(false);
+  const [isBannerUploading, setIsBannerUploading] = useState(false);
   const [isB2BUploading, setIsB2BUploading] = useState(false);
 
   const utils = trpc.useUtils();
   const { data: products, isLoading } = trpc.product.listAll.useQuery();
   const { data: categories } = trpc.category.listAll.useQuery();
-
   const uploadImage = trpc.storage.uploadImage.useMutation();
 
   const createMutation = trpc.product.create.useMutation({
@@ -172,7 +222,7 @@ export default function AdminProducts() {
     onError: (e) => toast.error("操作失敗：" + e.message),
   });
 
-  // ── Image upload handler ──
+  // ── Upload helpers ──
   const handleImageUpload = useCallback(async (files: FileList) => {
     setIsUploading(true);
     const newUrls: string[] = [];
@@ -195,8 +245,25 @@ export default function AdminProducts() {
     setIsUploading(false);
   }, [uploadImage]);
 
-  // ── B2B 雲端圖片上傳 handler ──
-  const uploadB2BImage = trpc.storage.uploadImage.useMutation();
+  const handleBannerUpload = useCallback(async (file: File) => {
+    setIsBannerUploading(true);
+    try {
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((res, rej) => {
+        reader.onload = () => res(reader.result as string);
+        reader.onerror = rej;
+        reader.readAsDataURL(file);
+      });
+      const result = await uploadImage.mutateAsync({ fileName: `banner/${file.name}`, fileData: base64, contentType: file.type || "image/jpeg" });
+      setForm(prev => ({ ...prev, bannerImageUrl: result.url }));
+      toast.success("橫幅圖上傳成功");
+    } catch (e: any) {
+      toast.error("橫幅圖上傳失敗：" + (e.message || "未知錯誤"));
+    } finally {
+      setIsBannerUploading(false);
+    }
+  }, [uploadImage]);
+
   const handleB2BImageUpload = useCallback(async (file: File) => {
     setIsB2BUploading(true);
     try {
@@ -206,11 +273,7 @@ export default function AdminProducts() {
         reader.onerror = rej;
         reader.readAsDataURL(file);
       });
-      const result = await uploadB2BImage.mutateAsync({
-        fileName: `b2b/${file.name}`,
-        fileData: base64,
-        contentType: file.type || "image/jpeg",
-      });
+      const result = await uploadImage.mutateAsync({ fileName: `b2b/${file.name}`, fileData: base64, contentType: file.type || "image/jpeg" });
       setForm(prev => ({ ...prev, exclusiveImageUrl: result.url }));
       toast.success("一頁式長圖上傳成功");
     } catch (e: any) {
@@ -218,7 +281,7 @@ export default function AdminProducts() {
     } finally {
       setIsB2BUploading(false);
     }
-  }, [uploadB2BImage]);
+  }, [uploadImage]);
 
   const handleRemoveImage = (idx: number) => {
     setForm(prev => {
@@ -236,52 +299,32 @@ export default function AdminProducts() {
     });
   };
 
-  // ── Open drawer ──
-  const openAdd = () => { setEditingId(null); setForm(EMPTY_FORM); setDialogOpen(true); };
-
-  const openEdit = (p: any) => {
-    setEditingId(p.id);
+  // ── Parse product for form ──
+  const productToForm = (p: any): FormState => {
     const imgs: string[] = (() => { try { return JSON.parse(p.images || "[]"); } catch { return p.imageUrl ? [p.imageUrl] : []; } })();
-    setForm({
+    return {
       name: p.name, slug: p.slug, description: p.description || "",
       price: p.price, originalPrice: p.originalPrice || "",
       categoryId: p.categoryId, stock: p.stock ?? 0,
       imageUrl: p.imageUrl || "", images: imgs,
+      bannerImageUrl: p.bannerImageUrl || "",
       specifications: jsonToSpecs(p.specifications),
-      specDetails: (p as any).specDetails || "",
-      shippingDetails: (p as any).shippingDetails || "",
+      specDetails: p.specDetails || "",
+      shippingDetails: p.shippingDetails || "",
       isActive: p.isActive, isFeatured: p.isFeatured, sortOrder: p.sortOrder ?? 0,
       isHidden: p.isHidden ?? false,
       exclusiveSlug: p.exclusiveSlug || "",
       exclusiveImageUrl: p.exclusiveImageUrl || "",
-    });
-    setDialogOpen(true);
+    };
   };
 
-  // ── Duplicate product (Fix 1) ──
+  const openAdd = () => { setEditingId(null); setForm(EMPTY_FORM); setDialogOpen(true); };
+  const openEdit = (p: any) => { setEditingId(p.id); setForm(productToForm(p)); setDialogOpen(true); };
+
   const openDuplicate = (p: any) => {
-    const imgs: string[] = (() => { try { return JSON.parse(p.images || "[]"); } catch { return p.imageUrl ? [p.imageUrl] : []; } })();
-    setEditingId(null); // null = create new
-    setForm({
-      name: p.name + "（複製）",
-      slug: "", // blank so auto-generate won't conflict
-      description: p.description || "",
-      price: p.price,
-      originalPrice: p.originalPrice || "",
-      categoryId: p.categoryId,
-      stock: p.stock ?? 0,
-      imageUrl: p.imageUrl || "",
-      images: imgs,
-      specifications: jsonToSpecs(p.specifications),
-      specDetails: (p as any).specDetails || "",
-      shippingDetails: (p as any).shippingDetails || "",
-      isActive: false, // default off so admin can review before publishing
-      isFeatured: false,
-      sortOrder: p.sortOrder ?? 0,
-      isHidden: p.isHidden ?? false,
-      exclusiveSlug: "", // must be unique — force admin to fill
-      exclusiveImageUrl: p.exclusiveImageUrl || "",
-    });
+    setEditingId(null);
+    const f = productToForm(p);
+    setForm({ ...f, name: f.name + "（複製）", slug: "", isActive: false, exclusiveSlug: "" });
     setDialogOpen(true);
     toast.info("已複製商品資料，請修改專屬網址後綴再儲存");
   };
@@ -303,6 +346,7 @@ export default function AdminProducts() {
     stock: form.stock,
     imageUrl: form.images[0] || form.imageUrl,
     images: JSON.stringify(form.images),
+    bannerImageUrl: form.bannerImageUrl || null,
     specifications: form.specifications.length ? specsToJson(form.specifications) : undefined,
     specDetails: form.specDetails || undefined,
     shippingDetails: form.shippingDetails || undefined,
@@ -322,7 +366,6 @@ export default function AdminProducts() {
 
   const handleDelete = (id: number) => { if (confirm("確定要刪除此商品？此操作無法復原。")) deleteMutation.mutate({ id }); };
   const handleToggle = (p: any) => toggleMutation.mutate({ id: p.id, isActive: !p.isActive });
-
   const getExclusiveUrl = (slug: string) => `https://ordersome.com.tw/exclusive/${slug}`;
 
   const filtered = products?.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -344,6 +387,7 @@ export default function AdminProducts() {
   return (
     <AdminDashboardLayout>
       <div className="space-y-6">
+        {/* Page header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">商品管理</h1>
@@ -354,16 +398,14 @@ export default function AdminProducts() {
           </Button>
         </div>
 
+        {/* Product table */}
         <div className="bg-white rounded-xl border shadow-sm">
-          {/* Search */}
           <div className="p-4">
             <div className="relative max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input placeholder="搜尋商品名稱…" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
             </div>
           </div>
-
-          {/* Table */}
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -373,13 +415,15 @@ export default function AdminProducts() {
                   <TableHead className="min-w-[100px]">售價</TableHead>
                   <TableHead className="min-w-[60px]">庫存</TableHead>
                   <TableHead className="min-w-[100px]">狀態</TableHead>
-                  <TableHead className="min-w-[200px]">福委專屬連結</TableHead>
+                  <TableHead className="min-w-[190px]">福委專屬連結</TableHead>
                   <TableHead className="text-right min-w-[160px]">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow><TableCell colSpan={7} className="text-center py-12 text-gray-400"><Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />載入中…</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-center py-12 text-gray-400">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />載入中…
+                  </TableCell></TableRow>
                 ) : filtered && filtered.length > 0 ? filtered.map((p) => {
                   const imgs: string[] = (() => { try { return JSON.parse(p.images || "[]"); } catch { return []; } })();
                   const thumb = imgs[0] || p.imageUrl;
@@ -424,21 +468,17 @@ export default function AdminProducts() {
                           {(p as any).isHidden && <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 w-fit"><EyeOff className="w-3 h-3 mr-1" />B2B</Badge>}
                         </div>
                       </TableCell>
-                      {/* Fix 2: 一鍵複製福委專屬連結 */}
                       <TableCell>
                         {exclusiveSlug ? (
                           <div className="flex flex-col gap-1">
-                            <span className="text-xs text-gray-500 font-mono truncate max-w-[160px]">/exclusive/{exclusiveSlug}</span>
+                            <span className="text-xs text-gray-500 font-mono truncate max-w-[150px]">/exclusive/{exclusiveSlug}</span>
                             <CopyButton text={getExclusiveUrl(exclusiveSlug)} label="複製福委專屬連結" />
                           </div>
-                        ) : (
-                          <span className="text-xs text-gray-300">—</span>
-                        )}
+                        ) : <span className="text-xs text-gray-300">—</span>}
                       </TableCell>
                       <TableCell>
                         <div className="flex justify-end gap-1 flex-wrap">
                           <Button variant="ghost" size="sm" onClick={() => openEdit(p)} title="編輯"><Pencil className="h-4 w-4" /></Button>
-                          {/* Fix 1: 複製商品按鈕 */}
                           <Button variant="ghost" size="sm" onClick={() => openDuplicate(p)} title="複製商品" className="text-blue-500 hover:text-blue-700 hover:bg-blue-50">
                             <Copy className="h-4 w-4" />
                           </Button>
@@ -446,7 +486,9 @@ export default function AdminProducts() {
                             className={p.isActive ? "text-orange-500 hover:text-orange-700" : "text-green-500 hover:text-green-700"}>
                             {p.isActive ? "下架" : "上架"}
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDelete(p.id)} title="刪除"><Trash2 className="h-4 w-4 text-red-400 hover:text-red-600" /></Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleDelete(p.id)} title="刪除">
+                            <Trash2 className="h-4 w-4 text-red-400 hover:text-red-600" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -463,7 +505,7 @@ export default function AdminProducts() {
           <p className="text-xs text-gray-400 p-3 text-right">共 {filtered?.length ?? 0} 件商品</p>
         </div>
 
-        {/* ── Store Settings ── */}
+        {/* Store settings */}
         <div className="bg-white rounded-xl border shadow-sm p-6">
           <h2 className="text-lg font-semibold mb-4">商店運費設定</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -472,67 +514,67 @@ export default function AdminProducts() {
               <div className="flex gap-2">
                 <Input type="number" placeholder={storeSettingsData?.baseShippingFee?.toString() ?? "100"}
                   value={shippingFeeInput} onChange={(e) => setShippingFeeInput(e.target.value)} className="w-32" />
-                <Button size="sm" variant="outline" onClick={() => updateStoreSettingsMutation.mutate({ baseShippingFee: Number(shippingFeeInput) })} disabled={!shippingFeeInput || updateStoreSettingsMutation.isPending}>儲存</Button>
+                <Button size="sm" variant="outline" onClick={() => updateStoreSettingsMutation.mutate({ baseShippingFee: Number(shippingFeeInput) })}
+                  disabled={!shippingFeeInput || updateStoreSettingsMutation.isPending}>儲存</Button>
               </div>
-              <p className="text-xs text-gray-400">目前設定：NT$ {storeSettingsData?.baseShippingFee ?? 100}</p>
+              <p className="text-xs text-gray-400">目前：NT$ {storeSettingsData?.baseShippingFee ?? 100}</p>
             </div>
             <div className="space-y-1.5">
               <Label>免運門檻（NT$）</Label>
               <div className="flex gap-2">
                 <Input type="number" placeholder={storeSettingsData?.freeShippingThreshold?.toString() ?? "1000"}
                   value={freeShippingInput} onChange={(e) => setFreeShippingInput(e.target.value)} className="w-32" />
-                <Button size="sm" variant="outline" onClick={() => updateStoreSettingsMutation.mutate({ freeShippingThreshold: Number(freeShippingInput) })} disabled={!freeShippingInput || updateStoreSettingsMutation.isPending}>儲存</Button>
+                <Button size="sm" variant="outline" onClick={() => updateStoreSettingsMutation.mutate({ freeShippingThreshold: Number(freeShippingInput) })}
+                  disabled={!freeShippingInput || updateStoreSettingsMutation.isPending}>儲存</Button>
               </div>
-              <p className="text-xs text-gray-400">目前設定：NT$ {storeSettingsData?.freeShippingThreshold ?? 1000}</p>
+              <p className="text-xs text-gray-400">目前：NT$ {storeSettingsData?.freeShippingThreshold ?? 1000}</p>
             </div>
           </div>
         </div>
 
-        {/* ── Fix 3: Dialog with proper layout — ScrollArea inside, fixed footer ── */}
+        {/* ════════════════════════════════════════════════════════════════════
+            EDIT / CREATE DIALOG
+            Layout: max-w-2xl, fixed header+footer, scrollable body
+        ════════════════════════════════════════════════════════════════════ */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className="w-full max-w-2xl p-0 gap-0 flex flex-col max-h-[90vh]">
+          <DialogContent className="w-full max-w-2xl p-0 gap-0 flex flex-col max-h-[92vh]">
             <DialogHeader className="px-6 py-4 border-b shrink-0">
               <DialogTitle>{editingId !== null ? "編輯商品" : "新增商品"}</DialogTitle>
             </DialogHeader>
 
-            {/* Scrollable body */}
             <ScrollArea className="flex-1 overflow-y-auto">
-              <div className="px-6 py-5 space-y-6">
+              <div className="px-6 py-5 space-y-8">
 
-                {/* 基本資訊 */}
+                {/* ── 基本資訊 ── */}
                 <section>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">基本資訊</h3>
+                  <SectionTitle>基本資訊</SectionTitle>
                   <div className="space-y-4">
                     <div className="space-y-1.5">
                       <Label>商品名稱 <span className="text-red-500">*</span></Label>
                       <Input value={form.name} onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))} placeholder="例：招牌鹽水雞" />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <Label>網址代稱 (slug)</Label>
-                        <Input value={form.slug} onChange={(e) => setForm(p => ({ ...p, slug: e.target.value }))} placeholder="自動產生（建議填英數字）" />
-                        {!form.slug && form.name && (
-                          <p className="text-xs text-amber-600">
-                            預覽：{(() => { const base = form.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''); return base || '將自動使用時間戳'; })()}
-                          </p>
-                        )}
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>分類 <span className="text-red-500">*</span></Label>
-                        <Select value={form.categoryId ? form.categoryId.toString() : ""} onValueChange={(v) => setForm(p => ({ ...p, categoryId: parseInt(v) }))}>
-                          <SelectTrigger><SelectValue placeholder="選擇分類" /></SelectTrigger>
-                          <SelectContent>{categories?.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}</SelectContent>
-                        </Select>
-                      </div>
+                    <div className="space-y-1.5">
+                      <Label>網址代稱 (slug)</Label>
+                      <Input value={form.slug} onChange={(e) => setForm(p => ({ ...p, slug: e.target.value }))} placeholder="自動產生（建議填英數字）" />
+                      {!form.slug && form.name && (
+                        <p className="text-xs text-amber-600">預覽：{(() => { const b = form.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''); return b || '將自動使用時間戳（建議手動填寫英文 slug）'; })()}</p>
+                      )}
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>分類 <span className="text-red-500">*</span></Label>
+                      <Select value={form.categoryId ? form.categoryId.toString() : ""} onValueChange={(v) => setForm(p => ({ ...p, categoryId: parseInt(v) }))}>
+                        <SelectTrigger><SelectValue placeholder="選擇分類" /></SelectTrigger>
+                        <SelectContent>{categories?.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}</SelectContent>
+                      </Select>
                     </div>
                   </div>
                 </section>
 
                 <Separator />
 
-                {/* 價格與庫存 */}
+                {/* ── 價格與庫存 ── */}
                 <section>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">價格與庫存</h3>
+                  <SectionTitle>價格與庫存</SectionTitle>
                   <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-1.5">
                       <Label>建議售價 <span className="text-red-500">*</span></Label>
@@ -551,10 +593,11 @@ export default function AdminProducts() {
 
                 <Separator />
 
-                {/* Fix 4: 商品圖片 — 說明對應前端位置 */}
+                {/* ── 商品主圖 ── */}
                 <section>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1">商品圖片</h3>
-                  <p className="text-xs text-gray-400 mb-3">第一張圖片 = 商城列表縮圖 + 商品頁主圖。可上傳多張，點擊縮圖設為主圖。</p>
+                  <SectionTitle sub="第一張為主圖，用於商城列表與商品頁頂部，可上傳多張，點擊設為主圖。">
+                    商品主圖
+                  </SectionTitle>
                   <ImageUploadZone
                     images={form.images}
                     onAdd={handleImageUpload}
@@ -562,109 +605,116 @@ export default function AdminProducts() {
                     onSetPrimary={handleSetPrimary}
                     isUploading={isUploading}
                   />
-                  {/* Fix 4: 無論是否為B2B都可輸入圖片網址作為備用 */}
+                  {/* Fallback URL input */}
                   <div className="mt-3 space-y-1.5">
-                    <Label className="text-gray-500 text-xs">備用：直接輸入圖片網址（若已上傳圖片則以上傳為主）</Label>
-                    <Input value={form.imageUrl} onChange={(e) => setForm(p => ({ ...p, imageUrl: e.target.value }))} placeholder="https://..." />
+                    <Label className="text-xs text-gray-500">備用：直接輸入圖片網址（若已上傳圖片則以上傳為主）</Label>
+                    <Input value={form.imageUrl} onChange={(e) => setForm(p => ({ ...p, imageUrl: e.target.value }))} placeholder="https://..." className="text-sm" />
                   </div>
                 </section>
 
                 <Separator />
 
-                {/* 商品介紹 */}
+                {/* ── 電商橫幅圖（Banner） ── */}
                 <section>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1">商品介紹</h3>
-                  <p className="text-xs text-gray-400 mb-2">對應商品頁「介紹」Tab 的顯示內容。</p>
-                  <Textarea
-                    value={form.description}
-                    onChange={(e) => setForm(p => ({ ...p, description: e.target.value }))}
-                    placeholder="輸入商品詳細介紹（支援 Markdown 語法）"
-                    rows={5}
-                    className="font-mono text-sm"
+                  <SectionTitle sub="顯示於商品頁介紹 Tab 的全寬橫幅，建議尺寸 1200×400。">
+                    電商橫幅圖（Banner）
+                  </SectionTitle>
+                  <BannerUpload
+                    url={form.bannerImageUrl}
+                    isUploading={isBannerUploading}
+                    onUpload={handleBannerUpload}
+                    onClear={() => setForm(p => ({ ...p, bannerImageUrl: "" }))}
                   />
+                </section>
+
+                <Separator />
+
+                {/* ── 商品介紹 ── */}
+                <section>
+                  <SectionTitle sub="對應商品頁「介紹」Tab 的顯示內容。">商品介紹</SectionTitle>
+                  <Textarea value={form.description} onChange={(e) => setForm(p => ({ ...p, description: e.target.value }))}
+                    placeholder="輸入商品詳細介紹（支援 Markdown 語法）" rows={5} className="font-mono text-sm" />
                   <p className="text-xs text-gray-400 mt-1">支援 Markdown：**粗體**、## 標題、- 清單</p>
                 </section>
 
                 <Separator />
 
-                {/* 商品規格 */}
+                {/* ── 商品規格 ── */}
                 <section>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1">商品規格</h3>
-                  <p className="text-xs text-gray-400 mb-2">對應商品頁規格選擇下拉選單（如口味、容量）。</p>
+                  <SectionTitle sub="對應商品頁規格選擇下拉選單（如口味、容量）。">商品規格</SectionTitle>
                   <SpecEditor specs={form.specifications} onChange={(s) => setForm(p => ({ ...p, specifications: s }))} />
                 </section>
 
                 <Separator />
 
-                {/* 規格說明 */}
+                {/* ── 規格說明 Tab ── */}
                 <section>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1">規格說明（前台 Tab）</h3>
-                  <p className="text-xs text-gray-400 mb-2">對應商品頁「規格」Tab 的詳細說明文字。</p>
+                  <SectionTitle sub="對應商品頁「規格」Tab 的詳細說明文字。">規格說明（前台 Tab）</SectionTitle>
                   <Textarea value={form.specDetails} onChange={(e) => setForm(p => ({ ...p, specDetails: e.target.value }))}
                     placeholder="輸入規格說明內容（支援 Markdown 語法）" rows={4} className="font-mono text-sm" />
                 </section>
 
                 <Separator />
 
-                {/* 運送方式 */}
+                {/* ── 運送方式 Tab ── */}
                 <section>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1">運送方式（前台 Tab）</h3>
-                  <p className="text-xs text-gray-400 mb-2">對應商品頁「運送」Tab 的說明文字。</p>
+                  <SectionTitle sub="對應商品頁「運送」Tab 的說明文字。">運送方式（前台 Tab）</SectionTitle>
                   <Textarea value={form.shippingDetails} onChange={(e) => setForm(p => ({ ...p, shippingDetails: e.target.value }))}
                     placeholder="輸入運送方式說明（支援 Markdown 語法）" rows={4} className="font-mono text-sm" />
                 </section>
 
                 <Separator />
 
-                {/* 顯示設定 */}
+                {/* ── 顯示設定 ── */}
                 <section>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">顯示設定</h3>
-                  <div className="flex flex-col gap-3">
+                  <SectionTitle>顯示設定</SectionTitle>
+                  <div className="grid grid-cols-2 gap-3">
                     <div className="flex items-center justify-between rounded-lg border p-3">
-                      <div><p className="font-medium text-sm">上架狀態</p><p className="text-xs text-gray-400">關閉後商品將從商城隱藏</p></div>
+                      <div><p className="font-medium text-sm">上架狀態</p><p className="text-xs text-gray-400">關閉後從商城隱藏</p></div>
                       <Switch checked={form.isActive} onCheckedChange={(v) => setForm(p => ({ ...p, isActive: v }))} />
                     </div>
                     <div className="flex items-center justify-between rounded-lg border p-3">
                       <div><p className="font-medium text-sm">精選商品</p><p className="text-xs text-gray-400">顯示於首頁精選區塊</p></div>
                       <Switch checked={form.isFeatured} onCheckedChange={(v) => setForm(p => ({ ...p, isFeatured: v }))} />
                     </div>
-                    <div className="space-y-1.5">
-                      <Label>排序權重（數字越大越前面）</Label>
-                      <Input type="number" value={form.sortOrder} onChange={(e) => setForm(p => ({ ...p, sortOrder: parseInt(e.target.value) || 0 }))} className="w-32" />
+                    <div className="flex items-center justify-between rounded-lg border p-3 border-purple-200 bg-purple-50/30">
+                      <div><p className="font-medium text-sm">B2B 隱藏</p><p className="text-xs text-gray-400">僅限專屬連結存取</p></div>
+                      <Switch checked={form.isHidden} onCheckedChange={(v) => setForm(p => ({ ...p, isHidden: v }))} />
+                    </div>
+                    <div className="space-y-1.5 flex flex-col justify-center px-1">
+                      <Label className="text-sm">排序權重（越大越前面）</Label>
+                      <Input type="number" value={form.sortOrder} onChange={(e) => setForm(p => ({ ...p, sortOrder: parseInt(e.target.value) || 0 }))} className="w-full" />
                     </div>
                   </div>
                 </section>
 
-                <Separator />
-
-                {/* B2B 封閉式賣場 */}
-                <section>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1 flex items-center gap-2">
-                    <EyeOff className="w-4 h-4" /> B2B 福委封閉式賣場
-                  </h3>
-                  <p className="text-xs text-gray-400 mb-3">開啟後商品從一般商城 (/shop) 隱藏，僅能透過專屬網址存取。</p>
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-center justify-between rounded-lg border p-3 border-purple-200 bg-purple-50/30">
-                      <div><p className="font-medium text-sm">隱藏商品（B2B 專屬）</p><p className="text-xs text-gray-400">開啟後不顯示於一般商城前台</p></div>
-                      <Switch checked={form.isHidden} onCheckedChange={(v) => setForm(p => ({ ...p, isHidden: v }))} />
-                    </div>
-                    {form.isHidden && (
-                      <>
+                {/* ── B2B 專屬連結（條件顯示） ── */}
+                {form.isHidden && (
+                  <>
+                    <Separator />
+                    <section>
+                      <SectionTitle sub="設定後可一鍵複製完整網址，傳給福委使用。">
+                        <span className="flex items-center gap-1.5"><EyeOff className="w-4 h-4" /> B2B 福委專屬網址</span>
+                      </SectionTitle>
+                      <div className="space-y-3">
                         <div className="space-y-1.5">
                           <Label className="flex items-center gap-1"><Link2 className="w-3.5 h-3.5" /> 專屬網址後綴 (slug)</Label>
-                          <Input value={form.exclusiveSlug} onChange={(e) => setForm(p => ({ ...p, exclusiveSlug: e.target.value }))} placeholder="例：company-welfare-2026（每個商品必須唯一）" />
+                          <Input value={form.exclusiveSlug} onChange={(e) => setForm(p => ({ ...p, exclusiveSlug: e.target.value }))}
+                            placeholder="例：company-welfare-2026（每個商品必須唯一）" />
                           {form.exclusiveSlug ? (
                             <div className="flex items-center gap-2 mt-1">
                               <p className="text-xs text-purple-600 font-mono">/exclusive/{form.exclusiveSlug}</p>
                               <CopyButton text={getExclusiveUrl(form.exclusiveSlug)} label="複製完整連結" />
                             </div>
                           ) : (
-                            <p className="text-xs text-gray-400">填寫後可一鍵複製完整連結</p>
+                            <p className="text-xs text-gray-400">填寫後可一鍵複製完整連結給福委</p>
                           )}
                         </div>
+
+                        {/* B2B 一頁式長圖 */}
                         <div className="space-y-1.5">
-                          <Label className="flex items-center gap-1"><ImagePlus className="w-3.5 h-3.5" /> 一頁式長圖</Label>
-                          <p className="text-xs text-gray-400">對應福委專屬頁面的完整商品長圖（最大 10MB，JPG/PNG/WebP）。</p>
+                          <Label className="flex items-center gap-1"><ImagePlus className="w-3.5 h-3.5" /> 一頁式長圖（福委頁面專用）</Label>
+                          <p className="text-xs text-gray-400">顯示於 /exclusive/xxx 頁面的完整商品長圖。</p>
                           <div className="flex gap-2">
                             <label className="flex-1 cursor-pointer">
                               <div className={`border-2 border-dashed rounded-lg p-3 text-center transition-colors ${
@@ -672,58 +722,44 @@ export default function AdminProducts() {
                               }`}>
                                 {isB2BUploading ? (
                                   <div className="flex items-center justify-center gap-2 text-purple-600">
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                    <span className="text-sm">上傳中...</span>
+                                    <Loader2 className="w-4 h-4 animate-spin" /><span className="text-sm">上傳中...</span>
                                   </div>
                                 ) : (
                                   <div className="flex items-center justify-center gap-2 text-gray-500">
                                     <ImagePlus className="w-4 h-4" />
-                                    <span className="text-sm">{form.exclusiveImageUrl ? "重新選擇圖片" : "點擊選擇圖片檔案"}</span>
+                                    <span className="text-sm">{form.exclusiveImageUrl ? "重新選擇圖片" : "點擊選擇長圖"}</span>
                                   </div>
                                 )}
                               </div>
-                              <input
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                disabled={isB2BUploading}
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) handleB2BImageUpload(file);
-                                  e.target.value = "";
-                                }}
-                              />
+                              <input type="file" accept="image/*" className="hidden" disabled={isB2BUploading}
+                                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleB2BImageUpload(f); e.target.value = ""; }} />
                             </label>
                             {form.exclusiveImageUrl && (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="self-center text-red-500 hover:text-red-600"
-                                onClick={() => setForm(p => ({ ...p, exclusiveImageUrl: "" }))}
-                              >
+                              <Button type="button" variant="outline" size="sm" className="self-center text-red-500 hover:text-red-600"
+                                onClick={() => setForm(p => ({ ...p, exclusiveImageUrl: "" }))}>
                                 <X className="w-4 h-4" />
                               </Button>
                             )}
                           </div>
                           {form.exclusiveImageUrl && (
                             <div className="mt-2 border rounded-lg overflow-hidden max-h-48 bg-gray-50">
-                              <img src={form.exclusiveImageUrl} alt="預覽" className="w-full object-cover object-top" />
+                              <img src={form.exclusiveImageUrl} alt="長圖預覽" className="w-full object-cover object-top" />
                               <p className="text-xs text-gray-400 px-2 py-1 truncate">{form.exclusiveImageUrl}</p>
                             </div>
                           )}
                         </div>
-                      </>
-                    )}
-                  </div>
-                </section>
+                      </div>
+                    </section>
+                  </>
+                )}
 
               </div>
             </ScrollArea>
 
             <DialogFooter className="border-t px-6 py-4 shrink-0">
               <Button variant="outline" onClick={() => setDialogOpen(false)}>取消</Button>
-              <Button onClick={handleSubmit} disabled={isBusy || isUploading || isB2BUploading} className="bg-amber-600 hover:bg-amber-700 min-w-[100px]">
+              <Button onClick={handleSubmit} disabled={isBusy || isUploading || isBannerUploading || isB2BUploading}
+                className="bg-amber-600 hover:bg-amber-700 min-w-[100px]">
                 {isBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : editingId !== null ? "儲存變更" : "新增商品"}
               </Button>
             </DialogFooter>

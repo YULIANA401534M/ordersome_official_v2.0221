@@ -35,6 +35,21 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
+  // ─── DB migrations (idempotent, run at startup) ─────────────────────────
+  try {
+    const database = await db.getDb();
+    if (database) {
+      const client = (database as any).$client;
+      // 0027: products.bannerImageUrl
+      await client.execute(
+        `ALTER TABLE products ADD COLUMN IF NOT EXISTS bannerImageUrl VARCHAR(500) NULL`
+      );
+      console.log("[Migration] products.bannerImageUrl: OK");
+    }
+  } catch (e) {
+    console.warn("[Migration] startup migration failed (non-fatal):", e);
+  }
+
   const app = express();
   const server = createServer(app);
   // Trust reverse proxy (Railway, Cloudflare) so req.protocol reflects HTTPS
