@@ -33,6 +33,17 @@ function todayStr() {
   return `${y}-${m}-${day}`;
 }
 
+function shiftDateStr(dateStr: string, deltaDays: number) {
+  if (!dateStr) return todayStr();
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return todayStr();
+  date.setDate(date.getDate() + deltaDays);
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 interface DailyForm {
   instoreSales: string;
   uberSales: string;
@@ -75,6 +86,7 @@ function DailyInputTab() {
   const [storeName, setStoreName] = useState("");
   const [reportDate, setReportDate] = useState(todayStr());
   const [form, setForm] = useState<DailyForm>(emptyForm());
+  const [isDirty, setIsDirty] = useState(false);
   const utils = trpc.useUtils();
 
   const storesQuery = trpc.dailyReport.getStores.useQuery();
@@ -117,14 +129,17 @@ function DailyInputTab() {
         reviewBad: String(data.reviewBad ?? ""),
         note: data.note ?? "",
       });
+      setIsDirty(false);
     } else if (existingQuery.isFetched) {
       setForm(emptyForm());
+      setIsDirty(false);
     }
   }, [existingQuery.data, existingQuery.isFetched]);
 
   const submitMutation = trpc.dailyReport.submit.useMutation({
     onSuccess: () => {
       toast.success(`${storeName} ${reportDate} 日報已儲存`);
+      setIsDirty(false);
       utils.dailyReport.getByDate.invalidate({ storeName, reportDate });
     },
     onError: (e) => toast.error(e.message),
@@ -132,13 +147,38 @@ function DailyInputTab() {
 
   const totalSales = n(form.instoreSales) + n(form.uberSales) + n(form.pandaSales);
   const guestTotal = n(form.guestInstore) + n(form.guestUber) + n(form.guestPanda);
+  const avgTicket = guestTotal > 0 ? Math.round(totalSales / guestTotal) : 0;
 
   function setField(k: keyof DailyForm) {
     return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-      setForm(prev => ({ ...prev, [k]: e.target.value }));
+      setForm(prev => {
+        setIsDirty(true);
+        return { ...prev, [k]: e.target.value };
+      });
+  }
+
+  function canSwitchContext() {
+    if (!isDirty || submitMutation.isPending) return true;
+    return window.confirm("目前有未儲存內容，確定要切換門市或日期嗎？");
+  }
+
+  function handleStoreChange(nextStoreName: string) {
+    if (!canSwitchContext()) return;
+    setStoreName(nextStoreName);
+  }
+
+  function handleDateChange(nextDate: string) {
+    if (!canSwitchContext()) return;
+    setReportDate(nextDate);
+  }
+
+  function shiftDate(deltaDays: number) {
+    if (!canSwitchContext()) return;
+    setReportDate(prev => shiftDateStr(prev, deltaDays));
   }
 
   function handleSubmit() {
+    if (submitMutation.isPending) return;
     if (!storeName) { toast.error("請選擇門市"); return; }
     if (!reportDate) { toast.error("請選擇日期"); return; }
     submitMutation.mutate({
@@ -180,7 +220,7 @@ function DailyInputTab() {
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1">
               <label className="text-xs text-gray-500 mb-1 block">門市</label>
-              <Select value={storeName} onValueChange={setStoreName}>
+              <Select value={storeName} onValueChange={handleStoreChange}>
                 <SelectTrigger className="h-12 text-base">
                   <SelectValue placeholder="選擇門市..." />
                 </SelectTrigger>
@@ -197,7 +237,7 @@ function DailyInputTab() {
                 <Input
                   type="date"
                   value={reportDate}
-                  onChange={e => setReportDate(e.target.value)}
+                  onChange={e => handleDateChange(e.target.value)}
                   className="h-12 text-base flex-1"
                 />
                 {holidayQuery.isFetched && (
@@ -205,6 +245,17 @@ function DailyInputTab() {
                     {isHoliday ? "假日" : "平日"}
                   </Badge>
                 )}
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => shiftDate(-1)}>
+                  前一天
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => handleDateChange(todayStr())}>
+                  今天
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => shiftDate(1)}>
+                  後一天
+                </Button>
               </div>
             </div>
           </div>
@@ -236,6 +287,12 @@ function DailyInputTab() {
             <span className="text-sm text-blue-700 font-medium">合計</span>
             <span className="text-xl font-bold text-blue-700">{fmtMoney(totalSales)}</span>
           </div>
+          {guestTotal > 0 && (
+            <div className="bg-indigo-50 rounded-lg px-4 py-2 flex justify-between items-center">
+              <span className="text-xs text-indigo-700">平均客單價</span>
+              <span className="font-semibold text-indigo-700">{fmtMoney(avgTicket)}</span>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -353,7 +410,7 @@ function DailyInputTab() {
       <Button
         className="w-full h-14 text-base font-semibold bg-amber-500 hover:bg-amber-600 text-white"
         onClick={handleSubmit}
-        disabled={submitMutation.isPending || !storeName}
+        disabled={submitMutation.isPending || !storeName || !reportDate}
       >
         {submitMutation.isPending ? "儲存中..." : "儲存今日報表"}
       </Button>
@@ -401,7 +458,7 @@ function MonthlyOverviewTab() {
       };
     }
     setMonthlyForms(init);
-  }, [monthlyData.length, year, month]);
+  }, [monthlyData, year, month]);
 
   const submitMonthly = trpc.dailyReport.submitMonthly.useMutation({
     onSuccess: (_, vars) => {
@@ -450,6 +507,10 @@ function MonthlyOverviewTab() {
   const years = Array.from({ length: 3 }, (_, i) => now.getFullYear() - i);
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
   const totalSalesAll = dailyRows.reduce((s, r) => s + Number(r.totalSales ?? 0), 0);
+
+  useEffect(() => {
+    setExpanded({});
+  }, [year, month]);
 
   return (
     <div className="space-y-4">
