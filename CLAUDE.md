@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md，歷史記錄請讀 DEVELOPMENT_LOG.md
 
-> **版本**：v5.72。**最後更新**：2026-04-20。
+> **版本**：v5.73。**最後更新**：2026-04-22。
 > **給 Claude 架構**：大腦（Claude.ai）+ 手腳（Claude Code）
 
 ---
@@ -57,12 +57,12 @@ git status && git log --oneline -3
 
 ## 當前開發狀態（換對話框必讀）
 
-### 最新 Git 狀態（2026-04-19 v5.71）
+### 最新 Git 狀態（2026-04-22 v5.73）
 
 最後三個 commit：
-1. `(v5.71)` — fix: v5.71 加盟主叫貨單只看自己門市+隱藏操作按鈕
-2. `1bf182f` — fix: v5.70 退佣計算修正+損益圖表資料+退佣帳款改查os_rebates+日報月彙整
-3. `cb57eac` — fix: v5.69 補齊v5.68未套用的五項修正：損益圖表+manager擋住+查看明細+庫存分頁+品項分頁
+1. `(v5.73)` — fix: v5.73 AdminProducts 四項修正：複製商品/一鍵複製福委連結/Dialog排版/圖片上傳修正
+2. `(v5.71)` — fix: v5.71 加盟主叫貨單只看自己門市+隱藏操作按鈕
+3. `1bf182f` — fix: v5.70 退佣計算修正+損益圖表資料+退佣帳款改查os_rebates+日報月彙整
 
 working tree: clean
 

@@ -12,7 +12,8 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Pencil, Trash2, Search, Package, ArrowLeft, X, ImagePlus, Loader2, GripVertical, EyeOff, Link2 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Plus, Pencil, Trash2, Search, Package, X, ImagePlus, Loader2, GripVertical, EyeOff, Link2, Copy, Check } from "lucide-react";
 import { Link } from "wouter";
 import { toast } from "sonner";
 import AdminDashboardLayout from "@/components/AdminDashboardLayout";
@@ -27,7 +28,6 @@ interface FormState {
   specifications: SpecEntry[];
   specDetails: string; shippingDetails: string;
   isActive: boolean; isFeatured: boolean; sortOrder: number;
-  // B2B 封閉式賣場欄位
   isHidden: boolean; exclusiveSlug: string; exclusiveImageUrl: string;
 }
 
@@ -111,6 +111,27 @@ function SpecEditor({ specs, onChange }: { specs: SpecEntry[]; onChange: (s: Spe
   );
 }
 
+// ─── Copy Button ─────────────────────────────────────────────────────────────
+function CopyButton({ text, label }: { text: string; label?: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      toast.success("已複製連結");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("複製失敗，請手動複製");
+    }
+  };
+  return (
+    <Button variant="ghost" size="sm" onClick={handleCopy} title={label || "複製連結"} className="h-7 px-2 text-purple-600 hover:text-purple-800 hover:bg-purple-50">
+      {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+      <span className="ml-1 text-xs">{copied ? "已複製" : "複製連結"}</span>
+    </Button>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function AdminProducts() {
   const { user, isAuthenticated } = useAuth();
@@ -174,7 +195,7 @@ export default function AdminProducts() {
     setIsUploading(false);
   }, [uploadImage]);
 
-  // ── B2B S3 雲端圖片上傳 handler ──
+  // ── B2B 雲端圖片上傳 handler ──
   const uploadB2BImage = trpc.storage.uploadImage.useMutation();
   const handleB2BImageUpload = useCallback(async (file: File) => {
     setIsB2BUploading(true);
@@ -191,7 +212,7 @@ export default function AdminProducts() {
         contentType: file.type || "image/jpeg",
       });
       setForm(prev => ({ ...prev, exclusiveImageUrl: result.url }));
-      toast.success("一頁式長圖上傳成功（S3 雲端儲存）");
+      toast.success("一頁式長圖上傳成功");
     } catch (e: any) {
       toast.error("圖片上傳失敗：" + (e.message || "未知錯誤"));
     } finally {
@@ -217,6 +238,7 @@ export default function AdminProducts() {
 
   // ── Open drawer ──
   const openAdd = () => { setEditingId(null); setForm(EMPTY_FORM); setDialogOpen(true); };
+
   const openEdit = (p: any) => {
     setEditingId(p.id);
     const imgs: string[] = (() => { try { return JSON.parse(p.images || "[]"); } catch { return p.imageUrl ? [p.imageUrl] : []; } })();
@@ -236,12 +258,38 @@ export default function AdminProducts() {
     setDialogOpen(true);
   };
 
+  // ── Duplicate product (Fix 1) ──
+  const openDuplicate = (p: any) => {
+    const imgs: string[] = (() => { try { return JSON.parse(p.images || "[]"); } catch { return p.imageUrl ? [p.imageUrl] : []; } })();
+    setEditingId(null); // null = create new
+    setForm({
+      name: p.name + "（複製）",
+      slug: "", // blank so auto-generate won't conflict
+      description: p.description || "",
+      price: p.price,
+      originalPrice: p.originalPrice || "",
+      categoryId: p.categoryId,
+      stock: p.stock ?? 0,
+      imageUrl: p.imageUrl || "",
+      images: imgs,
+      specifications: jsonToSpecs(p.specifications),
+      specDetails: (p as any).specDetails || "",
+      shippingDetails: (p as any).shippingDetails || "",
+      isActive: false, // default off so admin can review before publishing
+      isFeatured: false,
+      sortOrder: p.sortOrder ?? 0,
+      isHidden: p.isHidden ?? false,
+      exclusiveSlug: "", // must be unique — force admin to fill
+      exclusiveImageUrl: p.exclusiveImageUrl || "",
+    });
+    setDialogOpen(true);
+    toast.info("已複製商品資料，請修改專屬網址後綴再儲存");
+  };
+
   // ── Submit ──
   const generateSlug = (name: string, customSlug: string) => {
     if (customSlug.trim()) return customSlug.trim();
-    // 嘗試從名稱生成 slug（僅保留英數字和連字符）
     const base = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-    // 若結果為空（例如純中文名稱），使用時間戳確保唯一性
     return base || `product-${Date.now()}`;
   };
 
@@ -275,6 +323,8 @@ export default function AdminProducts() {
   const handleDelete = (id: number) => { if (confirm("確定要刪除此商品？此操作無法復原。")) deleteMutation.mutate({ id }); };
   const handleToggle = (p: any) => toggleMutation.mutate({ id: p.id, isActive: !p.isActive });
 
+  const getExclusiveUrl = (slug: string) => `https://ordersome.com.tw/exclusive/${slug}`;
+
   const filtered = products?.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
   const isBusy = createMutation.isPending || updateMutation.isPending;
 
@@ -305,341 +355,380 @@ export default function AdminProducts() {
         </div>
 
         <div className="bg-white rounded-xl border shadow-sm">
-        {/* Search */}
-        <div className="p-4">
-        <div className="relative mb-4 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input placeholder="搜尋商品名稱…" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
-        </div>
-        </div>
+          {/* Search */}
+          <div className="p-4">
+            <div className="relative max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input placeholder="搜尋商品名稱…" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+            </div>
+          </div>
 
-        {/* Table */}
-        <div className="overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-gray-50">
-                <TableHead className="w-[280px]">商品</TableHead>
-                <TableHead>分類</TableHead>
-                <TableHead>售價</TableHead>
-                <TableHead>庫存</TableHead>
-                <TableHead>狀態</TableHead>
-                <TableHead className="text-right">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-12 text-gray-400"><Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />載入中…</TableCell></TableRow>
-              ) : filtered && filtered.length > 0 ? filtered.map((p) => {
-                const imgs: string[] = (() => { try { return JSON.parse(p.images || "[]"); } catch { return []; } })();
-                const thumb = imgs[0] || p.imageUrl;
-                const cat = categories?.find(c => c.id === p.categoryId);
-                return (
-                  <TableRow key={p.id} className="hover:bg-gray-50/50">
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        {thumb ? (
-                          <img src={thumb} alt={p.name} className="w-12 h-12 rounded-lg object-cover border" />
-                        ) : (
-                          <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center border">
-                            <Package className="w-5 h-5 text-gray-300" />
+          {/* Table */}
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50">
+                  <TableHead className="min-w-[220px]">商品</TableHead>
+                  <TableHead className="min-w-[80px]">分類</TableHead>
+                  <TableHead className="min-w-[100px]">售價</TableHead>
+                  <TableHead className="min-w-[60px]">庫存</TableHead>
+                  <TableHead className="min-w-[100px]">狀態</TableHead>
+                  <TableHead className="min-w-[200px]">福委專屬連結</TableHead>
+                  <TableHead className="text-right min-w-[160px]">操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow><TableCell colSpan={7} className="text-center py-12 text-gray-400"><Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />載入中…</TableCell></TableRow>
+                ) : filtered && filtered.length > 0 ? filtered.map((p) => {
+                  const imgs: string[] = (() => { try { return JSON.parse(p.images || "[]"); } catch { return []; } })();
+                  const thumb = imgs[0] || p.imageUrl;
+                  const cat = categories?.find(c => c.id === p.categoryId);
+                  const exclusiveSlug = (p as any).exclusiveSlug as string | null | undefined;
+                  return (
+                    <TableRow key={p.id} className="hover:bg-gray-50/50">
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          {thumb ? (
+                            <img src={thumb} alt={p.name} className="w-12 h-12 rounded-lg object-cover border shrink-0" />
+                          ) : (
+                            <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center border shrink-0">
+                              <Package className="w-5 h-5 text-gray-300" />
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm truncate">{p.name}</p>
+                            <p className="text-xs text-gray-400 truncate">{p.slug}</p>
+                            {imgs.length > 1 && <p className="text-xs text-blue-400">{imgs.length} 張圖片</p>}
                           </div>
-                        )}
-                        <div>
-                          <p className="font-medium text-sm">{p.name}</p>
-                          <p className="text-xs text-gray-400">{p.slug}</p>
-                          {imgs.length > 1 && <p className="text-xs text-blue-400">{imgs.length} 張圖片</p>}
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell><span className="text-sm text-gray-600">{cat?.name || "—"}</span></TableCell>
-                    <TableCell>
-                      <p className="font-semibold text-sm">NT$ {Number(p.price).toLocaleString()}</p>
-                      {p.originalPrice && <p className="text-xs text-gray-400 line-through">NT$ {Number(p.originalPrice).toLocaleString()}</p>}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-1">
-                        <span className={`text-sm font-medium ${p.stock === 0 ? "text-red-600" : p.stock <= 10 ? "text-orange-500" : "text-gray-700"}`}>{p.stock}</span>
-                        {p.stock === 0 && <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200 w-fit text-xs">缺貨</Badge>}
-                        {p.stock > 0 && p.stock <= 10 && <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200 w-fit text-xs">庫存偏低</Badge>}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-1">
-                        <Badge variant="outline" className={p.isActive ? "bg-green-50 text-green-700 border-green-200 w-fit" : "bg-gray-50 text-gray-500 w-fit"}>
-                          {p.isActive ? "上架中" : "已下架"}
-                        </Badge>
-                        {p.isFeatured && <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 w-fit">精選</Badge>}
-                        {(p as any).isHidden && <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 w-fit"><EyeOff className="w-3 h-3 mr-1" />B2B 專屬</Badge>}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(p)} title="編輯"><Pencil className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleToggle(p)} title={p.isActive ? "下架" : "上架"}
-                          className={p.isActive ? "text-orange-500 hover:text-orange-700" : "text-green-500 hover:text-green-700"}>
-                          {p.isActive ? "下架" : "上架"}
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(p.id)} title="刪除"><Trash2 className="h-4 w-4 text-red-400 hover:text-red-600" /></Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              }) : (
-                <TableRow><TableCell colSpan={6} className="text-center py-12 text-gray-400">
-                  <Package className="w-10 h-10 mx-auto mb-2 text-gray-200" />
-                  {searchTerm ? "找不到符合的商品" : "尚無商品資料，點擊「新增商品」開始建立"}
-                </TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        <p className="text-xs text-gray-400 mt-2 text-right">共 {filtered?.length ?? 0} 件商品</p>
-      </div>
-
-      {/* ── Store Settings ── */}
-      <div className="bg-white rounded-xl border shadow-sm p-6">
-        <h2 className="text-lg font-semibold mb-4">商店運費設定</h2>
-        <div className="grid grid-cols-2 gap-6">
-          <div className="space-y-1.5">
-            <Label>基本運費（NT$）</Label>
-            <div className="flex gap-2">
-              <Input type="number" placeholder={storeSettingsData?.baseShippingFee?.toString() ?? "100"}
-                value={shippingFeeInput} onChange={(e) => setShippingFeeInput(e.target.value)} className="w-32" />
-              <Button size="sm" variant="outline" onClick={() => updateStoreSettingsMutation.mutate({ baseShippingFee: Number(shippingFeeInput) })} disabled={!shippingFeeInput || updateStoreSettingsMutation.isPending}>儲存</Button>
-            </div>
-            <p className="text-xs text-gray-400">目前設定：NT$ {storeSettingsData?.baseShippingFee ?? 100}</p>
+                      </TableCell>
+                      <TableCell><span className="text-sm text-gray-600">{cat?.name || "—"}</span></TableCell>
+                      <TableCell>
+                        <p className="font-semibold text-sm whitespace-nowrap">NT$ {Number(p.price).toLocaleString()}</p>
+                        {p.originalPrice && <p className="text-xs text-gray-400 line-through whitespace-nowrap">NT$ {Number(p.originalPrice).toLocaleString()}</p>}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          <span className={`text-sm font-medium ${p.stock === 0 ? "text-red-600" : p.stock <= 10 ? "text-orange-500" : "text-gray-700"}`}>{p.stock}</span>
+                          {p.stock === 0 && <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200 w-fit text-xs">缺貨</Badge>}
+                          {p.stock > 0 && p.stock <= 10 && <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200 w-fit text-xs">低庫存</Badge>}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          <Badge variant="outline" className={p.isActive ? "bg-green-50 text-green-700 border-green-200 w-fit" : "bg-gray-50 text-gray-500 w-fit"}>
+                            {p.isActive ? "上架中" : "已下架"}
+                          </Badge>
+                          {p.isFeatured && <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 w-fit">精選</Badge>}
+                          {(p as any).isHidden && <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 w-fit"><EyeOff className="w-3 h-3 mr-1" />B2B</Badge>}
+                        </div>
+                      </TableCell>
+                      {/* Fix 2: 一鍵複製福委專屬連結 */}
+                      <TableCell>
+                        {exclusiveSlug ? (
+                          <div className="flex flex-col gap-1">
+                            <span className="text-xs text-gray-500 font-mono truncate max-w-[160px]">/exclusive/{exclusiveSlug}</span>
+                            <CopyButton text={getExclusiveUrl(exclusiveSlug)} label="複製福委專屬連結" />
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-300">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-end gap-1 flex-wrap">
+                          <Button variant="ghost" size="sm" onClick={() => openEdit(p)} title="編輯"><Pencil className="h-4 w-4" /></Button>
+                          {/* Fix 1: 複製商品按鈕 */}
+                          <Button variant="ghost" size="sm" onClick={() => openDuplicate(p)} title="複製商品" className="text-blue-500 hover:text-blue-700 hover:bg-blue-50">
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleToggle(p)} title={p.isActive ? "下架" : "上架"}
+                            className={p.isActive ? "text-orange-500 hover:text-orange-700" : "text-green-500 hover:text-green-700"}>
+                            {p.isActive ? "下架" : "上架"}
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleDelete(p.id)} title="刪除"><Trash2 className="h-4 w-4 text-red-400 hover:text-red-600" /></Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                }) : (
+                  <TableRow><TableCell colSpan={7} className="text-center py-12 text-gray-400">
+                    <Package className="w-10 h-10 mx-auto mb-2 text-gray-200" />
+                    {searchTerm ? "找不到符合的商品" : "尚無商品資料，點擊「新增商品」開始建立"}
+                  </TableCell></TableRow>
+                )}
+              </TableBody>
+            </Table>
           </div>
-          <div className="space-y-1.5">
-            <Label>免運門檻（NT$）</Label>
-            <div className="flex gap-2">
-              <Input type="number" placeholder={storeSettingsData?.freeShippingThreshold?.toString() ?? "1000"}
-                value={freeShippingInput} onChange={(e) => setFreeShippingInput(e.target.value)} className="w-32" />
-              <Button size="sm" variant="outline" onClick={() => updateStoreSettingsMutation.mutate({ freeShippingThreshold: Number(freeShippingInput) })} disabled={!freeShippingInput || updateStoreSettingsMutation.isPending}>儲存</Button>
+          <p className="text-xs text-gray-400 p-3 text-right">共 {filtered?.length ?? 0} 件商品</p>
+        </div>
+
+        {/* ── Store Settings ── */}
+        <div className="bg-white rounded-xl border shadow-sm p-6">
+          <h2 className="text-lg font-semibold mb-4">商店運費設定</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="space-y-1.5">
+              <Label>基本運費（NT$）</Label>
+              <div className="flex gap-2">
+                <Input type="number" placeholder={storeSettingsData?.baseShippingFee?.toString() ?? "100"}
+                  value={shippingFeeInput} onChange={(e) => setShippingFeeInput(e.target.value)} className="w-32" />
+                <Button size="sm" variant="outline" onClick={() => updateStoreSettingsMutation.mutate({ baseShippingFee: Number(shippingFeeInput) })} disabled={!shippingFeeInput || updateStoreSettingsMutation.isPending}>儲存</Button>
+              </div>
+              <p className="text-xs text-gray-400">目前設定：NT$ {storeSettingsData?.baseShippingFee ?? 100}</p>
             </div>
-            <p className="text-xs text-gray-400">目前設定：NT$ {storeSettingsData?.freeShippingThreshold ?? 1000}</p>
+            <div className="space-y-1.5">
+              <Label>免運門檻（NT$）</Label>
+              <div className="flex gap-2">
+                <Input type="number" placeholder={storeSettingsData?.freeShippingThreshold?.toString() ?? "1000"}
+                  value={freeShippingInput} onChange={(e) => setFreeShippingInput(e.target.value)} className="w-32" />
+                <Button size="sm" variant="outline" onClick={() => updateStoreSettingsMutation.mutate({ freeShippingThreshold: Number(freeShippingInput) })} disabled={!freeShippingInput || updateStoreSettingsMutation.isPending}>儲存</Button>
+              </div>
+              <p className="text-xs text-gray-400">目前設定：NT$ {storeSettingsData?.freeShippingThreshold ?? 1000}</p>
+            </div>
           </div>
         </div>
-      </div>
-      {/* ── Dialog Form ── */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingId !== null ? "編輯商品" : "新增商品"}</DialogTitle>
-          </DialogHeader>
 
-          <div className="p-6 space-y-6">
-            {/* 基本資訊 */}
-            <section>
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">基本資訊</h3>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label>商品名稱 <span className="text-red-500">*</span></Label>
-                    <Input value={form.name} onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))} placeholder="例：招牌鹽水雞" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>網址代稱 (slug)</Label>
-                    <Input value={form.slug} onChange={(e) => setForm(p => ({ ...p, slug: e.target.value }))} placeholder="自動產生（建議填寫英數字）" />
-                    {!form.slug && form.name && (
-                      <p className="text-xs text-amber-600">
-                        預覽：{(() => { const base = form.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''); return base || '將自動使用時間戳（建議手動填寫英文 slug）'; })()}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>分類 <span className="text-red-500">*</span></Label>
-                  <Select value={form.categoryId ? form.categoryId.toString() : ""} onValueChange={(v) => setForm(p => ({ ...p, categoryId: parseInt(v) }))}>
-                    <SelectTrigger><SelectValue placeholder="選擇分類" /></SelectTrigger>
-                    <SelectContent>{categories?.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </section>
+        {/* ── Fix 3: Dialog with proper layout — ScrollArea inside, fixed footer ── */}
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent className="w-full max-w-2xl p-0 gap-0 flex flex-col max-h-[90vh]">
+            <DialogHeader className="px-6 py-4 border-b shrink-0">
+              <DialogTitle>{editingId !== null ? "編輯商品" : "新增商品"}</DialogTitle>
+            </DialogHeader>
 
-            <Separator />
+            {/* Scrollable body */}
+            <ScrollArea className="flex-1 overflow-y-auto">
+              <div className="px-6 py-5 space-y-6">
 
-            {/* 價格與庫存 */}
-            <section>
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">價格與庫存</h3>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-1.5">
-                  <Label>建議售價 <span className="text-red-500">*</span></Label>
-                  <Input type="number" value={form.price} onChange={(e) => setForm(p => ({ ...p, price: e.target.value }))} placeholder="239" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>原價（劃線價）</Label>
-                  <Input type="number" value={form.originalPrice} onChange={(e) => setForm(p => ({ ...p, originalPrice: e.target.value }))} placeholder="選填" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>庫存數量</Label>
-                  <Input type="number" value={form.stock} onChange={(e) => setForm(p => ({ ...p, stock: parseInt(e.target.value) || 0 }))} />
-                </div>
-              </div>
-            </section>
-
-            <Separator />
-
-            {/* 圖片 */}
-            <section>
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">商品圖片</h3>
-              <ImageUploadZone
-                images={form.images}
-                onAdd={handleImageUpload}
-                onRemove={handleRemoveImage}
-                onSetPrimary={handleSetPrimary}
-                isUploading={isUploading}
-              />
-              {form.images.length === 0 && (
-                <div className="mt-3 space-y-1.5">
-                  <Label className="text-gray-500">或直接輸入圖片網址</Label>
-                  <Input value={form.imageUrl} onChange={(e) => setForm(p => ({ ...p, imageUrl: e.target.value }))} placeholder="https://..." />
-                </div>
-              )}
-            </section>
-
-            <Separator />
-
-            {/* 商品介紹 */}
-            <section>
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">商品介紹</h3>
-              <Textarea
-                value={form.description}
-                onChange={(e) => setForm(p => ({ ...p, description: e.target.value }))}
-                placeholder="輸入商品詳細介紹（支援 Markdown 語法）"
-                rows={6}
-                className="font-mono text-sm"
-              />
-              <p className="text-xs text-gray-400 mt-1">支援 Markdown 語法，例如 **粗體**、## 標題</p>
-            </section>
-
-            <Separator />
-
-             {/* 規格 */}
-            <section>
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">商品規格</h3>
-              <SpecEditor specs={form.specifications} onChange={(s) => setForm(p => ({ ...p, specifications: s }))} />
-            </section>
-            <Separator />
-            {/* 規格說明 Tab */}
-            <section>
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">規格說明（前台 Tab 顯示）</h3>
-              <Textarea value={form.specDetails} onChange={(e) => setForm(p => ({ ...p, specDetails: e.target.value }))}
-                placeholder="輸入規格說明內容（支援 Markdown 語法）" rows={4} className="font-mono text-sm" />
-            </section>
-            <Separator />
-            {/* 運送方式 Tab */}
-            <section>
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">運送方式（前台 Tab 顯示）</h3>
-              <Textarea value={form.shippingDetails} onChange={(e) => setForm(p => ({ ...p, shippingDetails: e.target.value }))}
-                placeholder="輸入運送方式說明（支援 Markdown 語法）" rows={4} className="font-mono text-sm" />
-            </section>
-            <Separator />
-
-            {/* 顯示設定 */}
-            <section>
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">顯示設定</h3>
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between rounded-lg border p-3">
-                  <div><p className="font-medium text-sm">上架狀態</p><p className="text-xs text-gray-400">關閉後商品將從商城隱藏</p></div>
-                  <Switch checked={form.isActive} onCheckedChange={(v) => setForm(p => ({ ...p, isActive: v }))} />
-                </div>
-                <div className="flex items-center justify-between rounded-lg border p-3">
-                  <div><p className="font-medium text-sm">精選商品</p><p className="text-xs text-gray-400">顯示於首頁精選區塊</p></div>
-                  <Switch checked={form.isFeatured} onCheckedChange={(v) => setForm(p => ({ ...p, isFeatured: v }))} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>排序權重（數字越大越前面）</Label>
-                  <Input type="number" value={form.sortOrder} onChange={(e) => setForm(p => ({ ...p, sortOrder: parseInt(e.target.value) || 0 }))} className="w-32" />
-                </div>
-              </div>
-            </section>
-
-            <Separator />
-
-            {/* B2B 封閉式賣場設定 */}
-            <section>
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
-                <EyeOff className="w-4 h-4" /> B2B 封閉式賣場
-              </h3>
-              <p className="text-xs text-gray-400 mb-3">開啟後，此商品將從一般商城 (/shop) 隱藏，僅能透過專屬網址存取。</p>
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between rounded-lg border p-3 border-purple-200 bg-purple-50/30">
-                  <div><p className="font-medium text-sm">隱藏商品（B2B 專屬）</p><p className="text-xs text-gray-400">開啟後不顯示於一般商城前台</p></div>
-                  <Switch checked={form.isHidden} onCheckedChange={(v) => setForm(p => ({ ...p, isHidden: v }))} />
-                </div>
-                {form.isHidden && (
-                  <>
+                {/* 基本資訊 */}
+                <section>
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">基本資訊</h3>
+                  <div className="space-y-4">
                     <div className="space-y-1.5">
-                      <Label className="flex items-center gap-1"><Link2 className="w-3.5 h-3.5" /> 專屬網址後綴 (slug)</Label>
-                      <Input value={form.exclusiveSlug} onChange={(e) => setForm(p => ({ ...p, exclusiveSlug: e.target.value }))} placeholder="例：company-welfare-2026" />
-                      <p className="text-xs text-gray-400">存取網址將為：/exclusive/{form.exclusiveSlug || "your-slug"}</p>
+                      <Label>商品名稱 <span className="text-red-500">*</span></Label>
+                      <Input value={form.name} onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))} placeholder="例：招牌鹽水雞" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label>網址代稱 (slug)</Label>
+                        <Input value={form.slug} onChange={(e) => setForm(p => ({ ...p, slug: e.target.value }))} placeholder="自動產生（建議填英數字）" />
+                        {!form.slug && form.name && (
+                          <p className="text-xs text-amber-600">
+                            預覽：{(() => { const base = form.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''); return base || '將自動使用時間戳'; })()}
+                          </p>
+                        )}
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>分類 <span className="text-red-500">*</span></Label>
+                        <Select value={form.categoryId ? form.categoryId.toString() : ""} onValueChange={(v) => setForm(p => ({ ...p, categoryId: parseInt(v) }))}>
+                          <SelectTrigger><SelectValue placeholder="選擇分類" /></SelectTrigger>
+                          <SelectContent>{categories?.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <Separator />
+
+                {/* 價格與庫存 */}
+                <section>
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">價格與庫存</h3>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-1.5">
+                      <Label>建議售價 <span className="text-red-500">*</span></Label>
+                      <Input type="number" value={form.price} onChange={(e) => setForm(p => ({ ...p, price: e.target.value }))} placeholder="189" />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="flex items-center gap-1"><ImagePlus className="w-3.5 h-3.5" /> 一頁式長圖（本機儲存）</Label>
-                      <div className="flex gap-2">
-                        <label className="flex-1 cursor-pointer">
-                          <div className={`border-2 border-dashed rounded-lg p-3 text-center transition-colors ${
-                            isB2BUploading ? "border-purple-300 bg-purple-50" : "border-gray-300 hover:border-purple-400 hover:bg-purple-50/50"
-                          }`}>
-                            {isB2BUploading ? (
-                              <div className="flex items-center justify-center gap-2 text-purple-600">
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                <span className="text-sm">上傳中...</span>
+                      <Label>原價（劃線價）</Label>
+                      <Input type="number" value={form.originalPrice} onChange={(e) => setForm(p => ({ ...p, originalPrice: e.target.value }))} placeholder="選填" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>庫存數量</Label>
+                      <Input type="number" value={form.stock} onChange={(e) => setForm(p => ({ ...p, stock: parseInt(e.target.value) || 0 }))} />
+                    </div>
+                  </div>
+                </section>
+
+                <Separator />
+
+                {/* Fix 4: 商品圖片 — 說明對應前端位置 */}
+                <section>
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1">商品圖片</h3>
+                  <p className="text-xs text-gray-400 mb-3">第一張圖片 = 商城列表縮圖 + 商品頁主圖。可上傳多張，點擊縮圖設為主圖。</p>
+                  <ImageUploadZone
+                    images={form.images}
+                    onAdd={handleImageUpload}
+                    onRemove={handleRemoveImage}
+                    onSetPrimary={handleSetPrimary}
+                    isUploading={isUploading}
+                  />
+                  {/* Fix 4: 無論是否為B2B都可輸入圖片網址作為備用 */}
+                  <div className="mt-3 space-y-1.5">
+                    <Label className="text-gray-500 text-xs">備用：直接輸入圖片網址（若已上傳圖片則以上傳為主）</Label>
+                    <Input value={form.imageUrl} onChange={(e) => setForm(p => ({ ...p, imageUrl: e.target.value }))} placeholder="https://..." />
+                  </div>
+                </section>
+
+                <Separator />
+
+                {/* 商品介紹 */}
+                <section>
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1">商品介紹</h3>
+                  <p className="text-xs text-gray-400 mb-2">對應商品頁「介紹」Tab 的顯示內容。</p>
+                  <Textarea
+                    value={form.description}
+                    onChange={(e) => setForm(p => ({ ...p, description: e.target.value }))}
+                    placeholder="輸入商品詳細介紹（支援 Markdown 語法）"
+                    rows={5}
+                    className="font-mono text-sm"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">支援 Markdown：**粗體**、## 標題、- 清單</p>
+                </section>
+
+                <Separator />
+
+                {/* 商品規格 */}
+                <section>
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1">商品規格</h3>
+                  <p className="text-xs text-gray-400 mb-2">對應商品頁規格選擇下拉選單（如口味、容量）。</p>
+                  <SpecEditor specs={form.specifications} onChange={(s) => setForm(p => ({ ...p, specifications: s }))} />
+                </section>
+
+                <Separator />
+
+                {/* 規格說明 */}
+                <section>
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1">規格說明（前台 Tab）</h3>
+                  <p className="text-xs text-gray-400 mb-2">對應商品頁「規格」Tab 的詳細說明文字。</p>
+                  <Textarea value={form.specDetails} onChange={(e) => setForm(p => ({ ...p, specDetails: e.target.value }))}
+                    placeholder="輸入規格說明內容（支援 Markdown 語法）" rows={4} className="font-mono text-sm" />
+                </section>
+
+                <Separator />
+
+                {/* 運送方式 */}
+                <section>
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1">運送方式（前台 Tab）</h3>
+                  <p className="text-xs text-gray-400 mb-2">對應商品頁「運送」Tab 的說明文字。</p>
+                  <Textarea value={form.shippingDetails} onChange={(e) => setForm(p => ({ ...p, shippingDetails: e.target.value }))}
+                    placeholder="輸入運送方式說明（支援 Markdown 語法）" rows={4} className="font-mono text-sm" />
+                </section>
+
+                <Separator />
+
+                {/* 顯示設定 */}
+                <section>
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">顯示設定</h3>
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center justify-between rounded-lg border p-3">
+                      <div><p className="font-medium text-sm">上架狀態</p><p className="text-xs text-gray-400">關閉後商品將從商城隱藏</p></div>
+                      <Switch checked={form.isActive} onCheckedChange={(v) => setForm(p => ({ ...p, isActive: v }))} />
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg border p-3">
+                      <div><p className="font-medium text-sm">精選商品</p><p className="text-xs text-gray-400">顯示於首頁精選區塊</p></div>
+                      <Switch checked={form.isFeatured} onCheckedChange={(v) => setForm(p => ({ ...p, isFeatured: v }))} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>排序權重（數字越大越前面）</Label>
+                      <Input type="number" value={form.sortOrder} onChange={(e) => setForm(p => ({ ...p, sortOrder: parseInt(e.target.value) || 0 }))} className="w-32" />
+                    </div>
+                  </div>
+                </section>
+
+                <Separator />
+
+                {/* B2B 封閉式賣場 */}
+                <section>
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1 flex items-center gap-2">
+                    <EyeOff className="w-4 h-4" /> B2B 福委封閉式賣場
+                  </h3>
+                  <p className="text-xs text-gray-400 mb-3">開啟後商品從一般商城 (/shop) 隱藏，僅能透過專屬網址存取。</p>
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center justify-between rounded-lg border p-3 border-purple-200 bg-purple-50/30">
+                      <div><p className="font-medium text-sm">隱藏商品（B2B 專屬）</p><p className="text-xs text-gray-400">開啟後不顯示於一般商城前台</p></div>
+                      <Switch checked={form.isHidden} onCheckedChange={(v) => setForm(p => ({ ...p, isHidden: v }))} />
+                    </div>
+                    {form.isHidden && (
+                      <>
+                        <div className="space-y-1.5">
+                          <Label className="flex items-center gap-1"><Link2 className="w-3.5 h-3.5" /> 專屬網址後綴 (slug)</Label>
+                          <Input value={form.exclusiveSlug} onChange={(e) => setForm(p => ({ ...p, exclusiveSlug: e.target.value }))} placeholder="例：company-welfare-2026（每個商品必須唯一）" />
+                          {form.exclusiveSlug ? (
+                            <div className="flex items-center gap-2 mt-1">
+                              <p className="text-xs text-purple-600 font-mono">/exclusive/{form.exclusiveSlug}</p>
+                              <CopyButton text={getExclusiveUrl(form.exclusiveSlug)} label="複製完整連結" />
+                            </div>
+                          ) : (
+                            <p className="text-xs text-gray-400">填寫後可一鍵複製完整連結</p>
+                          )}
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="flex items-center gap-1"><ImagePlus className="w-3.5 h-3.5" /> 一頁式長圖</Label>
+                          <p className="text-xs text-gray-400">對應福委專屬頁面的完整商品長圖（最大 10MB，JPG/PNG/WebP）。</p>
+                          <div className="flex gap-2">
+                            <label className="flex-1 cursor-pointer">
+                              <div className={`border-2 border-dashed rounded-lg p-3 text-center transition-colors ${
+                                isB2BUploading ? "border-purple-300 bg-purple-50" : "border-gray-300 hover:border-purple-400 hover:bg-purple-50/50"
+                              }`}>
+                                {isB2BUploading ? (
+                                  <div className="flex items-center justify-center gap-2 text-purple-600">
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    <span className="text-sm">上傳中...</span>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center justify-center gap-2 text-gray-500">
+                                    <ImagePlus className="w-4 h-4" />
+                                    <span className="text-sm">{form.exclusiveImageUrl ? "重新選擇圖片" : "點擊選擇圖片檔案"}</span>
+                                  </div>
+                                )}
                               </div>
-                            ) : (
-                              <div className="flex items-center justify-center gap-2 text-gray-500">
-                                <ImagePlus className="w-4 h-4" />
-                                <span className="text-sm">{form.exclusiveImageUrl ? "重新選擇圖片" : "點擊選擇圖片檔案"}</span>
-                              </div>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                disabled={isB2BUploading}
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handleB2BImageUpload(file);
+                                  e.target.value = "";
+                                }}
+                              />
+                            </label>
+                            {form.exclusiveImageUrl && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="self-center text-red-500 hover:text-red-600"
+                                onClick={() => setForm(p => ({ ...p, exclusiveImageUrl: "" }))}
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
                             )}
                           </div>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            disabled={isB2BUploading}
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) handleB2BImageUpload(file);
-                              e.target.value = "";
-                            }}
-                          />
-                        </label>
-                        {form.exclusiveImageUrl && (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="self-center text-red-500 hover:text-red-600"
-                            onClick={() => setForm(p => ({ ...p, exclusiveImageUrl: "" }))}
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-400">圖片將儲存於伺服器本機，支援 JPG/PNG/WebP，最大 10MB</p>
-                      {form.exclusiveImageUrl && (
-                        <div className="mt-2 border rounded-lg overflow-hidden max-h-48 bg-gray-50">
-                          <img src={form.exclusiveImageUrl} alt="預覽" className="w-full object-cover object-top" />
-                          <p className="text-xs text-gray-400 px-2 py-1 truncate">{form.exclusiveImageUrl}</p>
+                          {form.exclusiveImageUrl && (
+                            <div className="mt-2 border rounded-lg overflow-hidden max-h-48 bg-gray-50">
+                              <img src={form.exclusiveImageUrl} alt="預覽" className="w-full object-cover object-top" />
+                              <p className="text-xs text-gray-400 px-2 py-1 truncate">{form.exclusiveImageUrl}</p>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-            </section>
-          </div>
+                      </>
+                    )}
+                  </div>
+                </section>
 
-          <DialogFooter className="border-t pt-4">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>取消</Button>
-            <Button onClick={handleSubmit} disabled={isBusy || isUploading || isB2BUploading} className="bg-amber-600 hover:bg-amber-700 min-w-[100px]">
-              {isBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : editingId !== null ? "儲存變更" : "新增商品"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              </div>
+            </ScrollArea>
+
+            <DialogFooter className="border-t px-6 py-4 shrink-0">
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>取消</Button>
+              <Button onClick={handleSubmit} disabled={isBusy || isUploading || isB2BUploading} className="bg-amber-600 hover:bg-amber-700 min-w-[100px]">
+                {isBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : editingId !== null ? "儲存變更" : "新增商品"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminDashboardLayout>
   );
