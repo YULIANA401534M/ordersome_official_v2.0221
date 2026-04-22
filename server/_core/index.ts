@@ -13,7 +13,7 @@ import { notifyOwner } from "./notification";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { posts } from "../../drizzle/schema";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, sql, or, isNull, lte } from "drizzle-orm";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -63,6 +63,127 @@ async function startServer() {
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+  const escapeXml = (value: string) =>
+    value
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&apos;");
+
+  const toYyyyMmDd = (dateLike?: Date | string | null) => {
+    const date = dateLike ? new Date(dateLike) : new Date();
+    if (Number.isNaN(date.getTime())) return new Date().toISOString().slice(0, 10);
+    return date.toISOString().slice(0, 10);
+  };
+
+  app.get("/sitemap.xml", async (_req, res) => {
+    try {
+      const baseUrl = process.env.BASE_URL || "https://ordersome.com.tw";
+      const staticUrls: Array<{ loc: string; changefreq: string; priority: string; lastmod?: string }> = [
+        { loc: `${baseUrl}/`, changefreq: "weekly", priority: "1.0" },
+        { loc: `${baseUrl}/brand`, changefreq: "weekly", priority: "0.95" },
+        { loc: `${baseUrl}/brand/franchise`, changefreq: "weekly", priority: "0.95" },
+        { loc: `${baseUrl}/brand/franchise-taichung`, changefreq: "weekly", priority: "0.93" },
+        { loc: `${baseUrl}/brand/menu`, changefreq: "weekly", priority: "0.9" },
+        { loc: `${baseUrl}/brand/stores`, changefreq: "weekly", priority: "0.88" },
+        { loc: `${baseUrl}/brand/story`, changefreq: "monthly", priority: "0.82" },
+        { loc: `${baseUrl}/brand/news`, changefreq: "daily", priority: "0.82" },
+        { loc: `${baseUrl}/brand/contact`, changefreq: "monthly", priority: "0.78" },
+        { loc: `${baseUrl}/shop`, changefreq: "daily", priority: "0.95" },
+        { loc: `${baseUrl}/shop/chili-sauce-guide`, changefreq: "weekly", priority: "0.9" },
+        { loc: `${baseUrl}/corporate`, changefreq: "monthly", priority: "0.8" },
+        { loc: `${baseUrl}/corporate/about`, changefreq: "monthly", priority: "0.76" },
+        { loc: `${baseUrl}/corporate/brands`, changefreq: "monthly", priority: "0.76" },
+        { loc: `${baseUrl}/corporate/culture`, changefreq: "monthly", priority: "0.74" },
+        { loc: `${baseUrl}/corporate/franchise`, changefreq: "monthly", priority: "0.76" },
+        { loc: `${baseUrl}/corporate/news`, changefreq: "daily", priority: "0.72" },
+        { loc: `${baseUrl}/corporate/contact`, changefreq: "monthly", priority: "0.7" },
+        { loc: `${baseUrl}/news`, changefreq: "daily", priority: "0.75" },
+      ];
+
+      const database = await db.getDb();
+      const dynamicUrls: Array<{ loc: string; changefreq: string; priority: string; lastmod?: string }> = [];
+
+      if (database) {
+        const now = new Date();
+        const publishedPosts = await database
+          .select({
+            slug: posts.slug,
+            publishTargets: posts.publishTargets,
+            publishedAt: posts.publishedAt,
+            updatedAt: posts.updatedAt,
+            createdAt: posts.createdAt,
+          })
+          .from(posts)
+          .where(
+            and(
+              eq(posts.status, "published"),
+              or(isNull(posts.scheduledAt), lte(posts.scheduledAt, now))!,
+            )
+          );
+
+        const seen = new Set<string>();
+        for (const post of publishedPosts) {
+          const slug = post.slug?.trim();
+          if (!slug) continue;
+
+          const targetsRaw = post.publishTargets;
+          const targets = Array.isArray(targetsRaw)
+            ? targetsRaw
+            : typeof targetsRaw === "string"
+              ? (() => {
+                  try {
+                    const parsed = JSON.parse(targetsRaw);
+                    return Array.isArray(parsed) ? parsed : ["brand"];
+                  } catch {
+                    return ["brand"];
+                  }
+                })()
+              : ["brand"];
+
+          const lastmod = toYyyyMmDd(post.publishedAt ?? post.updatedAt ?? post.createdAt);
+
+          if (targets.includes("brand")) {
+            const loc = `${baseUrl}/news/${slug}`;
+            if (!seen.has(loc)) {
+              dynamicUrls.push({ loc, changefreq: "weekly", priority: "0.8", lastmod });
+              seen.add(loc);
+            }
+          }
+
+          if (targets.includes("corporate")) {
+            const loc = `${baseUrl}/corporate/news/${slug}`;
+            if (!seen.has(loc)) {
+              dynamicUrls.push({ loc, changefreq: "weekly", priority: "0.74", lastmod });
+              seen.add(loc);
+            }
+          }
+        }
+      }
+
+      const allUrls = [...staticUrls, ...dynamicUrls].map((item) => {
+        const lastmod = item.lastmod || toYyyyMmDd();
+        return `  <url>
+    <loc>${escapeXml(item.loc)}</loc>
+    <lastmod>${lastmod}</lastmod>
+    <changefreq>${item.changefreq}</changefreq>
+    <priority>${item.priority}</priority>
+  </url>`;
+      });
+
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${allUrls.join("\n")}
+</urlset>`;
+
+      res.status(200).type("application/xml").send(xml);
+    } catch (error) {
+      console.error("[sitemap] failed to generate dynamic sitemap", error);
+      res.status(500).type("text/plain").send("sitemap generation error");
+    }
+  });
 
   // Centralized crawler directive for private routes.
   app.use((req, res, next) => {
