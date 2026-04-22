@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md，歷史記錄請讀 DEVELOPMENT_LOG.md
 
-> **版本**：v5.81。**最後更新**：2026-04-22。
+> **版本**：v5.82。**最後更新**：2026-04-22。
 > **給 Claude 架構**：大腦（Claude.ai）+ 手腳（Claude Code）
 
 ---
@@ -60,7 +60,8 @@ git status && git log --oneline -3
 ### 最新 Git 狀態（2026-04-22 v5.79）
 
 最後三個 commit：
-1. `(v5.81)` — fix: v5.81 AdminProducts Modal Footer固定：DialogContent內加明確flex容器避免grid衝突
+1. `(v5.82)` — fix: v5.82 商品縮圖overflow-hidden修正+CLAUDE.md Dialog三段式佈局規則
+2. `(v5.81)` — fix: v5.81 AdminProducts Modal Footer固定：DialogContent內加明確flex容器避免grid衝突
 2. `(v5.80)` — fix: v5.80 AdminProducts Modal移除overflow-hidden恢復捲動功能
 2. `(v5.79)` — fix: v5.79 AdminProducts Modal橫向溢出根本修正：ScrollArea Viewport加overflow-x-hidden+DialogContent加!max-w-2xl
 2. `(v5.77)` — fix: v5.77 scheduledAt查詢條件修正+時區處理統一+CLAUDE.md時區規則
@@ -228,6 +229,23 @@ working tree: clean
 - 前端 datetime-local 輸入框**送出**：字串後加 `:00+08:00`，例如 `"2026-04-22T15:00"` → `"2026-04-22T15:00:00+08:00"`，後端 `new Date()` 自動轉 UTC
 - 排程發布正確做法：`getPublishedPosts` WHERE 包含 `or(isNull(scheduledAt), lte(scheduledAt, now))`，文章時間到自然出現，**不需要任何 cron 或手動觸發**
 - 此規則適用於所有現有和未來涉及時間的功能
+
+**shadcn Dialog 三段式佈局規則（v5.81 確立）：**
+- shadcn `DialogContent` 基礎 className 有 `grid`，直接傳 `flex flex-col` 雖然 tailwind-merge 能覆蓋 display，但 flex sizing（`flex-1`/`min-h-0`）在 grid→flex 轉換的容器裡行為不穩定
+- **正確做法**：要「固定 Header + 可捲動內容 + 固定 Footer」三段式時，在 `DialogContent` 內加一個明確的 `div` 包住所有內容：
+  ```tsx
+  <DialogContent className="!max-w-2xl p-0 gap-0 max-h-[90vh]">
+    <div className="flex flex-col h-full max-h-[90vh]">
+      <DialogHeader className="... shrink-0">...</DialogHeader>
+      <ScrollArea className="flex-1 min-h-0 w-full">...</ScrollArea>
+      <DialogFooter className="... shrink-0">...</DialogFooter>
+    </div>
+  </DialogContent>
+  ```
+- `DialogContent` 只負責定位和尺寸，flex 行為由內層 div 控制
+- `ScrollArea` 必須加 `min-h-0`，否則在 flex 容器裡不收縮，會把 Footer 擠出去
+- `overflow-hidden` **不可加在 `DialogContent`**，會截斷 ScrollArea 的捲動
+- 圖片縮圖裁切：`rounded-*` 和 `overflow-hidden` 要加在**父層 div**，不是 img 本身；img 加 `w-full h-full object-cover object-center`
 
 **Make 串接：**
 - 每天 14:55 自動執行，送資料到 /api/procurement/import

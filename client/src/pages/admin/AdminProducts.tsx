@@ -434,7 +434,9 @@ export default function AdminProducts() {
                       <TableCell>
                         <div className="flex items-center gap-3">
                           {thumb ? (
-                            <img src={thumb} alt={p.name} className="w-12 h-12 rounded-lg object-cover border shrink-0" />
+                            <div className="w-12 h-12 rounded-lg overflow-hidden border shrink-0">
+                              <img src={thumb} alt={p.name} className="w-full h-full object-cover object-center" />
+                            </div>
                           ) : (
                             <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center border shrink-0">
                               <Package className="w-5 h-5 text-gray-300" />
