@@ -126,9 +126,9 @@ export default function ProductDetail() {
 
           {/* LEFT: Image Gallery with carousel for multiple images */}
           <div className="space-y-3">
-            <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 border border-gray-200 group">
+            <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-gray-50 border border-gray-200 group">
               {images.length > 0 ? (
-                <img src={images[activeImageIndex]} alt={product.name} className="w-full h-full object-cover transition-all duration-300" />
+                <img src={images[activeImageIndex]} alt={product.name} className="w-full h-full object-contain transition-all duration-300" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-gray-400"><Package className="h-16 w-16" /></div>
               )}
@@ -163,7 +163,7 @@ export default function ProductDetail() {
                     className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${
                       idx === activeImageIndex ? "border-amber-500 ring-2 ring-amber-200" : "border-gray-200 hover:border-amber-300"
                     }`}>
-                    <img src={img} alt={`${product.name} ${idx + 1}`} className="w-full h-full object-cover" />
+                    <img src={img} alt={`${product.name} ${idx + 1}`} className="w-full h-full object-contain" />
                   </button>
                 ))}
               </div>

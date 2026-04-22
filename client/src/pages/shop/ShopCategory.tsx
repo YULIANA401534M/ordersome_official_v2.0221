@@ -43,15 +43,15 @@ export default function ShopCategory() {
         <div className="container">
           {isLoading ? (
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[1,2,3,4].map(i => <Card key={i} className="animate-pulse"><div className="aspect-square bg-gray-200" /></Card>)}
+              {[1,2,3,4].map(i => <Card key={i} className="animate-pulse"><div className="aspect-[3/4] bg-gray-200" /></Card>)}
             </div>
           ) : filteredProducts && filteredProducts.length > 0 ? (
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {filteredProducts.map((product) => (
                 <Card key={product.id} className="overflow-hidden border-0 shadow-md hover:shadow-lg transition-shadow group">
                   <Link href={"/shop/product/" + product.id}>
-                    <div className="aspect-square bg-gray-100 overflow-hidden">
-                      {product.imageUrl ? <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" /> : <div className="w-full h-full flex items-center justify-center text-gray-300">No Image</div>}
+                    <div className="aspect-[3/4] bg-gray-50 overflow-hidden">
+                      {product.imageUrl ? <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform" /> : <div className="w-full h-full flex items-center justify-center text-gray-300">No Image</div>}
                     </div>
                   </Link>
                   <CardContent className="p-4">

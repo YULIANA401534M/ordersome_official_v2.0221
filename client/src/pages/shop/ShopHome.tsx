@@ -125,7 +125,7 @@ export default function ShopHome() {
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {[1, 2, 3, 4].map((i) => (
                 <Card key={i} className="border-0 shadow-md animate-pulse">
-                  <div className="aspect-square bg-gray-200" />
+                  <div className="aspect-[3/4] bg-gray-200" />
                   <CardContent className="p-4">
                     <div className="h-5 bg-gray-200 rounded w-3/4 mb-2" />
                     <div className="h-4 bg-gray-200 rounded w-1/2" />
@@ -138,12 +138,12 @@ export default function ShopHome() {
               {filteredProducts.map((product) => (
                 <Card key={product.id} className="overflow-hidden border-0 shadow-md hover:shadow-lg transition-shadow group">
                   <Link href={`/shop/product/${product.id}`}>
-                    <div className="aspect-square bg-gray-100 overflow-hidden">
+                    <div className="aspect-[3/4] bg-gray-50 overflow-hidden">
                       {product.imageUrl ? (
                         <img
                           src={product.imageUrl}
                           alt={product.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          className="w-full h-full object-contain group-hover:scale-105 transition-transform"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
