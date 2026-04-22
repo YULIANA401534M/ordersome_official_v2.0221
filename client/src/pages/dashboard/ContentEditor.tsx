@@ -66,11 +66,14 @@ export default function ContentEditor() {
       setStatus(post.status);
       setPublishTargets((post.publishTargets as ("corporate" | "brand")[]) || ["brand"]);
       setCategory((post as any).category || "");
-      setScheduledAt(
-        (post as any).scheduledAt
-          ? new Date((post as any).scheduledAt).toISOString().slice(0, 16)
-          : ""
-      );
+      // DB 存 UTC，轉台北時間（UTC+8）顯示在 datetime-local
+      if ((post as any).scheduledAt) {
+        const utc = new Date((post as any).scheduledAt);
+        const taipei = new Date(utc.getTime() + 8 * 60 * 60 * 1000);
+        setScheduledAt(taipei.toISOString().slice(0, 16));
+      } else {
+        setScheduledAt("");
+      }
     }
   }, [post]);
 
@@ -132,9 +135,15 @@ export default function ContentEditor() {
       return;
     }
 
-    // 有排程時間 → 強制 status=draft，等 cron 到時間自動發布
+    // 有排程時間 → status 設為 published，前台查詢有時間過濾，未到時間自然不顯示
     // 清除排程時間 → 保持用戶選擇的 status（draft / published）
-    const resolvedStatus: "draft" | "published" = scheduledAt ? "draft" : status;
+    const resolvedStatus: "draft" | "published" = scheduledAt ? "published" : status;
+
+    // datetime-local 值為台北時間，附加 +08:00 讓後端 new Date() 正確解析為 UTC
+    // 清空時送 null 讓後端把 scheduledAt 清為 null
+    const scheduledAtValue = scheduledAt
+      ? new Date(scheduledAt + ":00+08:00").toISOString()
+      : null;
 
     const postData = {
       title,
@@ -145,8 +154,7 @@ export default function ContentEditor() {
       status: resolvedStatus,
       publishTargets,
       category: category || undefined,
-      // 傳空字串時送 undefined，讓 router 把 scheduledAt 設為 null
-      scheduledAt: scheduledAt || undefined,
+      scheduledAt: scheduledAtValue,
     };
 
     if (postId) {
@@ -384,7 +392,7 @@ export default function ContentEditor() {
               />
               {scheduledAt ? (
                 <p className="mt-1 text-xs text-amber-600 font-medium">
-                  ⏰ 已設定排程：文章將於 {new Date(scheduledAt).toLocaleString("zh-TW")} 自動發布（狀態自動設為草稿）
+                  ⏰ 已設定排程：文章將於 {new Date(scheduledAt + ":00+08:00").toLocaleString("zh-TW", { timeZone: "Asia/Taipei" })} 出現在前台（台北時間）
                 </p>
               ) : (
                 <p className="mt-1 text-xs text-gray-400">選填。設定後系統於指定時間自動將文章由草稿改為已發布。</p>
@@ -397,7 +405,7 @@ export default function ContentEditor() {
             <label className="block text-sm font-medium text-gray-700 mb-2">狀態</label>
             {scheduledAt ? (
               <div className="w-full px-4 py-2 border border-amber-300 bg-amber-50 rounded-lg text-amber-700 text-sm">
-                草稿（排程發布中，到達排程時間後自動改為已發布）
+                已發布（排程中）—— 到達排程時間前前台不顯示，到時間自動出現
               </div>
             ) : (
               <select

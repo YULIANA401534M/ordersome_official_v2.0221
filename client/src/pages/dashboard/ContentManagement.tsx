@@ -95,14 +95,18 @@ export default function ContentManagement() {
                     <div className="mb-3 flex items-center gap-2 flex-wrap">
                       <span
                         className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                          post.status === "published"
-                            ? "bg-green-100 text-green-800"
-                            : post.scheduledAt
+                          post.scheduledAt && new Date(post.scheduledAt) > new Date()
                             ? "bg-amber-100 text-amber-800"
+                            : post.status === "published"
+                            ? "bg-green-100 text-green-800"
                             : "bg-gray-100 text-gray-800"
                         }`}
                       >
-                        {post.status === "published" ? "已發布" : post.scheduledAt ? "排程中" : "草稿"}
+                        {post.scheduledAt && new Date(post.scheduledAt) > new Date()
+                          ? "排程中"
+                          : post.status === "published"
+                          ? "已發布"
+                          : "草稿"}
                       </span>
                       {(post as any).category && (
                         <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700">
@@ -126,9 +130,9 @@ export default function ContentManagement() {
                       <div className="flex items-center gap-1">
                         <Calendar className="w-4 h-4" />
                         {post.status === "published" && post.publishedAt
-                          ? new Date(post.publishedAt).toLocaleDateString("zh-TW")
+                          ? new Date(post.publishedAt).toLocaleDateString("zh-TW", { timeZone: "Asia/Taipei" })
                           : post.scheduledAt
-                          ? `排程：${new Date(post.scheduledAt).toLocaleString("zh-TW", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}`
+                          ? `排程：${new Date(post.scheduledAt).toLocaleString("zh-TW", { timeZone: "Asia/Taipei", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}`
                           : "草稿未發布"}
                       </div>
                       <div className="flex items-center gap-1">

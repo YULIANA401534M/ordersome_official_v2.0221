@@ -3,7 +3,7 @@ import { router, protectedProcedure, publicProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import * as db from "../db";
 import { posts } from "../../drizzle/schema";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, and, or, isNull, lte, sql } from "drizzle-orm";
 
 // Content management procedure (super_admin, manager, or users with publish_content permission)
 const contentProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -62,7 +62,11 @@ export const contentRouter = router({
       const database = await db.getDb();
       if (!database) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "資料庫連線失敗" });
 
-      const conditions = [eq(posts.status, "published")];
+      const now = new Date();
+      const conditions = [
+        eq(posts.status, "published"),
+        or(isNull(posts.scheduledAt), lte(posts.scheduledAt, now))!,
+      ];
 
       if (input.publishTarget) {
         conditions.push(
@@ -136,7 +140,7 @@ export const contentRouter = router({
         status: z.enum(["draft", "published"]),
         publishTargets: z.array(z.enum(["corporate", "brand"])).default(["brand"]),
         category: z.string().optional(),
-        scheduledAt: z.string().optional(),
+        scheduledAt: z.string().nullable().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -169,7 +173,7 @@ export const contentRouter = router({
         status: z.enum(["draft", "published"]).optional(),
         publishTargets: z.array(z.enum(["corporate", "brand"])).optional(),
         category: z.string().optional(),
-        scheduledAt: z.string().optional(),
+        scheduledAt: z.string().nullable().optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -179,17 +183,14 @@ export const contentRouter = router({
       const { postId, scheduledAt, ...rest } = input;
       const updates: Record<string, unknown> = { ...rest };
 
+      // scheduledAt=null → 清除排程；scheduledAt=string → 設定排程；undefined → 不動
       if (scheduledAt !== undefined) {
         updates.scheduledAt = scheduledAt ? new Date(scheduledAt) : null;
       }
 
-      // 有排程時間 → 強制 status=draft（等 cron 到時自動發布），publishedAt 不動
+      // 有排程時間 → 前台查詢已有時間過濾，status=published+scheduledAt未到自動不顯示
       // 無排程時間且 status=published → 設定 publishedAt 為現在
-      // 無排程時間且 status=draft → 正常更新
-      if (updates.scheduledAt) {
-        updates.status = "draft";
-        await database.update(posts).set(updates).where(eq(posts.id, postId));
-      } else if (updates.status === "published") {
+      if (updates.status === "published" && !updates.scheduledAt) {
         await database
           .update(posts)
           .set({ ...updates, publishedAt: new Date() })

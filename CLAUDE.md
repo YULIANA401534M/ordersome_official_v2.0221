@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md，歷史記錄請讀 DEVELOPMENT_LOG.md
 
-> **版本**：v5.75。**最後更新**：2026-04-22。
+> **版本**：v5.76。**最後更新**：2026-04-22。
 > **給 Claude 架構**：大腦（Claude.ai）+ 手腳（Claude Code）
 
 ---
@@ -57,13 +57,12 @@ git status && git log --oneline -3
 
 ## 當前開發狀態（換對話框必讀）
 
-### 最新 Git 狀態（2026-04-22 v5.73）
+### 最新 Git 狀態（2026-04-22 v5.76）
 
 最後三個 commit：
-1. `(v5.75)` — fix: v5.75 scheduledAt排程發布全面修正：前後端狀態邏輯+UX聯動+列表顯示排程時間
-2. `(v5.74)` — feat: v5.74 商品管理重構：bannerImageUrl欄位+多圖Carousel+Modal完整佈局
-2. `(v5.73)` — fix: v5.73 AdminProducts 四項修正：複製商品/一鍵複製福委連結/Dialog排版/圖片上傳修正
-3. `(v5.71)` — fix: v5.71 加盟主叫貨單只看自己門市+隱藏操作按鈕
+1. `(v5.76)` — fix: v5.76 scheduledAt排程發布根本修正：getPublishedPosts加時間過濾+時區修正+清除排程null傳遞
+2. `(v5.75)` — fix: v5.75 scheduledAt排程發布全面修正：前後端狀態邏輯+UX聯動+列表顯示排程時間
+3. `(v5.74)` — feat: v5.74 商品管理重構：bannerImageUrl欄位+多圖Carousel+Modal完整佈局
 
 working tree: clean
 
@@ -259,6 +258,7 @@ working tree: clean
 - OSRebate.tsx 加 accounting.listRebates（查 os_rebates）和 accounting.calculateRebates 按鈕（計算本月退佣寫入 os_rebates）
 - OSDailyReport MonthlyOverviewTab 年月 state 改名為 viewYear/viewMonth（Select 已同步更新）
 - OSProfitLoss 使用 recharts：AreaChart 每日趨勢、PieChart 通路分拆、BarChart 費用結構
+- **scheduledAt 排程發布（v5.76 根本修正）**：getPublishedPosts WHERE 條件包含 `or(isNull(scheduledAt), lte(scheduledAt, now))`，status=published 且排程未到自動不顯示前台；不需要 cron/publishScheduled 手動觸發；時區：DB存UTC，前端顯示轉台北（UTC+8），送出時附加+08:00；清除排程送 null（z.string().nullable().optional()）
 - os_inventory.updatedAt 顯示最後修改時間（取代 lastCountDate 欄位）
 - getHistory LIMIT 改為 10，historyDialog 顯示「近 10 筆異動記錄」
 - os_stores 表於 2026-04-19 新建，含 12 間門市，schema 需一併更新
