@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md，歷史記錄請讀 DEVELOPMENT_LOG.md
 
-> **版本**：v5.83。**最後更新**：2026-04-22。
+> **版本**：v5.84。**最後更新**：2026-04-22。
 > **給 Claude 架構**：大腦（Claude.ai）+ 手腳（Claude Code）
 
 ---
@@ -60,7 +60,8 @@ git status && git log --oneline -3
 ### 最新 Git 狀態（2026-04-22 v5.79）
 
 最後三個 commit：
-1. `(v5.83)` — fix: v5.83 商城商品圖比例修正：aspect-square→aspect-[3/4]+object-cover→object-contain（ProductDetail/ShopHome/ShopCategory）
+1. `(v5.84)` — fix: v5.84 ProductDetail免運費門檻聯動：從storeSettings.get讀取，移除寫死NT$1000/NT$100
+2. `(v5.83)` — fix: v5.83 商城商品圖比例修正：aspect-square→aspect-[3/4]+object-cover→object-contain（ProductDetail/ShopHome/ShopCategory）
 2. `(v5.82)` — fix: v5.82 商品縮圖overflow-hidden修正+CLAUDE.md Dialog三段式佈局規則
 2. `(v5.81)` — fix: v5.81 AdminProducts Modal Footer固定：DialogContent內加明確flex容器避免grid衝突
 2. `(v5.80)` — fix: v5.80 AdminProducts Modal移除overflow-hidden恢復捲動功能

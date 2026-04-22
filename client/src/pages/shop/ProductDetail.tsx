@@ -15,6 +15,9 @@ export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const { data: product, isLoading } = trpc.product.getById.useQuery({ id: parseInt(id || "0") });
+  const { data: storeSettings } = trpc.storeSettings.get.useQuery();
+  const freeShippingThreshold = storeSettings?.freeShippingThreshold ?? 1000;
+  const baseShippingFee = storeSettings?.baseShippingFee ?? 100;
 
   const [quantity, setQuantity] = useState(1);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -253,7 +256,7 @@ export default function ProductDetail() {
             <div className="border border-gray-100 rounded-xl p-4 bg-gray-50 text-sm text-gray-600">
               <div className="flex items-center gap-2">
                 <Truck className="h-4 w-4 text-amber-500" />
-                <span>消費滿 NT$1,000 免運費，未滿酌收 NT$100</span>
+                <span>消費滿 NT${freeShippingThreshold.toLocaleString()} 免運費，未滿酌收 NT${baseShippingFee}</span>
               </div>
             </div>
           </div>
@@ -329,7 +332,7 @@ export default function ProductDetail() {
                   <Truck className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="font-semibold text-gray-900 mb-1">宅配到府</p>
-                    <p>消費滿 NT$1,000 免運費，未滿酢收 NT$100 運費。預計 3-5 個工作天到貨。</p>
+                    <p>消費滿 NT${freeShippingThreshold.toLocaleString()} 免運費，未滿酌收 NT${baseShippingFee} 運費。預計 3-5 個工作天到貨。</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
