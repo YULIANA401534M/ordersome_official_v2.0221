@@ -4,42 +4,100 @@ import { TRPCError } from "@trpc/server";
 import { getDb } from "../../db";
 import { storagePut } from "../../storage";
 
-// All procedures require driver or admin role
 const driverProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowed = ['driver', 'manager', 'super_admin'];
-  if (!allowed.includes(ctx.user.role ?? '')) {
-    throw new TRPCError({ code: 'FORBIDDEN', message: '需要司機權限' });
+  const allowed = ["driver", "manager", "super_admin"];
+  if (!allowed.includes(ctx.user.role ?? "")) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Driver access required" });
   }
   return next({ ctx });
 });
 
+function calcDueDate(deliveryDate: string, settlementCycle?: string | null, overdueDays?: number | null) {
+  const date = new Date(deliveryDate);
+  if (settlementCycle === "weekly") {
+    date.setDate(date.getDate() + 7);
+    return date.toISOString().slice(0, 10);
+  }
+  if (settlementCycle === "monthly") {
+    const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+    monthEnd.setDate(monthEnd.getDate() + Number(overdueDays ?? 5));
+    return monthEnd.toISOString().slice(0, 10);
+  }
+  return deliveryDate;
+}
+
+async function getDriverByUser(client: any, userId: number, tenantId: number) {
+  const [rows] = await client.execute(
+    `SELECT id FROM dy_drivers WHERE userId = ? AND tenantId = ? LIMIT 1`,
+    [userId, tenantId]
+  );
+  return (rows as any[])[0];
+}
+
+async function upsertOrderReceivable(
+  client: any,
+  payload: {
+    tenantId: number;
+    orderId: number;
+    customerId: number;
+    deliveryDate: string;
+    settlementCycle?: string | null;
+    overdueDays?: number | null;
+    totalAmount: number;
+    paidAmount: number;
+  }
+) {
+  const dueDate = calcDueDate(payload.deliveryDate, payload.settlementCycle, payload.overdueDays);
+  const status = payload.paidAmount >= payload.totalAmount ? "paid" : payload.paidAmount > 0 ? "partial" : "unpaid";
+  const [existingRows] = await client.execute(
+    `SELECT id FROM dy_ar_records WHERE tenantId=? AND orderId=? LIMIT 1`,
+    [payload.tenantId, payload.orderId]
+  );
+  const existing = (existingRows as any[])[0];
+
+  if (existing) {
+    await client.execute(
+      `UPDATE dy_ar_records
+       SET amount=?, paidAmount=?, status=?, dueDate=?, paymentMethod=IF(? > 0, 'cash', paymentMethod),
+           paidAt=CASE WHEN ? >= ? THEN NOW() ELSE paidAt END, updatedAt=NOW()
+       WHERE id=? AND tenantId=?`,
+      [payload.totalAmount, payload.paidAmount, status, dueDate, payload.paidAmount, payload.paidAmount, payload.totalAmount, existing.id, payload.tenantId]
+    );
+    return existing.id;
+  }
+
+  const [result] = await client.execute(
+    `INSERT INTO dy_ar_records
+     (tenantId, orderId, customerId, amount, paidAmount, status, dueDate, paymentMethod, paidAt, createdAt, updatedAt)
+     VALUES (?,?,?,?,?,?,?,IF(? > 0, 'cash', NULL), CASE WHEN ? >= ? THEN NOW() ELSE NULL END, NOW(), NOW())`,
+    [payload.tenantId, payload.orderId, payload.customerId, payload.totalAmount, payload.paidAmount, status, dueDate, payload.paidAmount, payload.paidAmount, payload.totalAmount]
+  );
+  return (result as any).insertId;
+}
+
 export const dyDriverRouter = router({
-  // 1. Get today's orders for the logged-in driver
   getMyTodayOrders: driverProcedure
-    .input(z.object({
-      tenantId: z.number(),
-      deliveryDate: z.string().optional(), // YYYY-MM-DD, defaults to today
-    }))
+    .input(z.object({ tenantId: z.number(), deliveryDate: z.string().optional() }))
     .query(async ({ ctx, input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
       const date = input.deliveryDate ?? new Date().toISOString().slice(0, 10);
-      // Find driver record linked to this user
-      const [driverRows1] = await (db as any).$client.execute(
-        `SELECT id FROM dy_drivers WHERE userId = ? AND tenantId = ? LIMIT 1`,
-        [ctx.user.id, input.tenantId]
-      ) as any;
-      const driver = (driverRows1 as any[])[0];
-      if (!driver) throw new TRPCError({ code: 'NOT_FOUND', message: '找不到司機資料，請聯絡管理員' });
-      const [rows] = await (db as any).$client.execute(
+      const client = (db as any).$client;
+
+      const driver = await getDriverByUser(client, ctx.user.id, input.tenantId);
+      if (!driver) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Driver account is not linked to Dayone" });
+      }
+
+      const [rows] = await client.execute(
         `SELECT o.*, c.name as customerName, c.address as customerAddress, c.phone as customerPhone,
+                c.settlementCycle, c.overdueDays,
                 dist.name as districtName,
                 (SELECT COALESCE(SUM(uo.totalAmount - uo.paidAmount), 0)
                  FROM dy_orders uo
                  WHERE uo.customerId = o.customerId AND uo.tenantId = o.tenantId
                    AND uo.paymentStatus != 'paid' AND uo.status = 'delivered'
-                   AND uo.id != o.id
-                ) AS customerUnpaidAmount
+                   AND uo.id != o.id) AS customerUnpaidAmount
          FROM dy_orders o
          JOIN dy_customers c ON o.customerId = c.id
          LEFT JOIN dy_districts dist ON o.districtId = dist.id
@@ -50,121 +108,126 @@ export const dyDriverRouter = router({
       return rows as any[];
     }),
 
-  // 2. Update order status (driver updates: picked → delivering → delivered)
   updateOrderStatus: driverProcedure
-    .input(z.object({
-      id: z.number(),
-      tenantId: z.number(),
-      status: z.enum(['picked', 'delivering', 'delivered', 'returned']),
-      driverNote: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        id: z.number(),
+        tenantId: z.number(),
+        status: z.enum(["picked", "delivering", "delivered", "returned"]),
+        driverNote: z.string().optional(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
-      // Verify this order belongs to the driver
-      const [driverRows2] = await (db as any).$client.execute(
-        `SELECT id FROM dy_drivers WHERE userId = ? AND tenantId = ? LIMIT 1`,
-        [ctx.user.id, input.tenantId]
-      ) as any;
-      const driver = (driverRows2 as any[])[0];
-      if (!driver) throw new TRPCError({ code: 'FORBIDDEN', message: '找不到司機資料' });
-      await (db as any).$client.execute(
-        `UPDATE dy_orders SET status=?, driverNote=COALESCE(?, driverNote), updatedAt=NOW()
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      const client = (db as any).$client;
+      const driver = await getDriverByUser(client, ctx.user.id, input.tenantId);
+      if (!driver) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Driver account is not linked to Dayone" });
+      }
+
+      await client.execute(
+        `UPDATE dy_orders
+         SET status=?, driverNote=COALESCE(?, driverNote), updatedAt=NOW()
          WHERE id=? AND tenantId=? AND driverId=?`,
         [input.status, input.driverNote ?? null, input.id, input.tenantId, driver.id]
       );
+
+      if (input.status === "delivered") {
+        const [orderRows] = await client.execute(
+          `SELECT o.id, o.customerId, o.deliveryDate, o.totalAmount, o.paidAmount, c.settlementCycle, c.overdueDays
+           FROM dy_orders o
+           JOIN dy_customers c ON c.id = o.customerId
+           WHERE o.id=? AND o.tenantId=? LIMIT 1`,
+          [input.id, input.tenantId]
+        );
+        const order = (orderRows as any[])[0];
+        if (order) {
+          await upsertOrderReceivable(client, {
+            tenantId: input.tenantId,
+            orderId: order.id,
+            customerId: order.customerId,
+            deliveryDate: order.deliveryDate,
+            settlementCycle: order.settlementCycle,
+            overdueDays: order.overdueDays,
+            totalAmount: Number(order.totalAmount ?? 0),
+            paidAmount: Number(order.paidAmount ?? 0),
+          });
+        }
+      }
+
       return { success: true };
     }),
 
-  // 3. Record cash payment collected by driver
   recordCashPayment: driverProcedure
-    .input(z.object({
-      orderId: z.number(),
-      tenantId: z.number(),
-      cashCollected: z.number().min(0),
-    }))
+    .input(z.object({ orderId: z.number(), tenantId: z.number(), cashCollected: z.number().min(0) }))
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
-      const [driverRows3] = await (db as any).$client.execute(
-        `SELECT id FROM dy_drivers WHERE userId = ? AND tenantId = ? LIMIT 1`,
-        [ctx.user.id, input.tenantId]
-      ) as any;
-      const driver = (driverRows3 as any[])[0];
-      if (!driver) throw new TRPCError({ code: 'FORBIDDEN', message: '找不到司機資料' });
-      await (db as any).$client.execute(
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      const client = (db as any).$client;
+      const driver = await getDriverByUser(client, ctx.user.id, input.tenantId);
+      if (!driver) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Driver account is not linked to Dayone" });
+      }
+
+      await client.execute(
         `UPDATE dy_orders
-         SET cashCollected=?, paidAmount=?, paymentStatus=IF(?>=totalAmount,'paid','partial'), updatedAt=NOW()
+         SET cashCollected=?, paidAmount=?, paymentStatus=IF(? >= totalAmount, 'paid', IF(? > 0, 'partial', 'unpaid')), updatedAt=NOW()
          WHERE id=? AND tenantId=? AND driverId=?`,
-        [input.cashCollected, input.cashCollected, input.cashCollected, input.orderId, input.tenantId, driver.id]
+        [input.cashCollected, input.cashCollected, input.cashCollected, input.cashCollected, input.orderId, input.tenantId, driver.id]
       );
       return { success: true };
     }),
 
-  // 4. Submit work log at end of day
   submitWorkLog: driverProcedure
-    .input(z.object({
-      tenantId: z.number(),
-      workDate: z.string(), // YYYY-MM-DD
-      startTime: z.string().optional(),
-      endTime: z.string().optional(),
-      note: z.string().optional(),
-    }))
+    .input(z.object({ tenantId: z.number(), workDate: z.string(), startTime: z.string().optional(), endTime: z.string().optional(), note: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
-      const [driverRows4] = await (db as any).$client.execute(
-        `SELECT id FROM dy_drivers WHERE userId = ? AND tenantId = ? LIMIT 1`,
-        [ctx.user.id, input.tenantId]
-      ) as any;
-      const driver = (driverRows4 as any[])[0];
-      if (!driver) throw new TRPCError({ code: 'FORBIDDEN', message: '找不到司機資料' });
-      // Calculate totals for the day
-      const [summaryRows] = await (db as any).$client.execute(
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      const client = (db as any).$client;
+      const driver = await getDriverByUser(client, ctx.user.id, input.tenantId);
+      if (!driver) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Driver account is not linked to Dayone" });
+      }
+
+      const [summaryRows] = await client.execute(
         `SELECT COUNT(*) as totalOrders, COALESCE(SUM(cashCollected),0) as totalCollected
          FROM dy_orders WHERE tenantId=? AND driverId=? AND deliveryDate=? AND status='delivered'`,
         [input.tenantId, driver.id, input.workDate]
-      ) as any;
+      );
       const summary = (summaryRows as any[])[0];
-      // Upsert work log
-      await (db as any).$client.execute(
+
+      await client.execute(
         `INSERT INTO dy_work_logs (tenantId, driverId, workDate, startTime, endTime, totalOrders, totalCollected, note, createdAt)
          VALUES (?,?,?,?,?,?,?,?,NOW())
          ON DUPLICATE KEY UPDATE startTime=VALUES(startTime), endTime=VALUES(endTime),
          totalOrders=VALUES(totalOrders), totalCollected=VALUES(totalCollected), note=VALUES(note)`,
-        [input.tenantId, driver.id, input.workDate, input.startTime ?? null, input.endTime ?? null,
-         summary?.totalOrders ?? 0, summary?.totalCollected ?? 0, input.note ?? null]
+        [input.tenantId, driver.id, input.workDate, input.startTime ?? null, input.endTime ?? null, summary?.totalOrders ?? 0, summary?.totalCollected ?? 0, input.note ?? null]
       );
       return { success: true, totalOrders: summary?.totalOrders ?? 0, totalCollected: summary?.totalCollected ?? 0 };
     }),
 
-  // 5. Upload signature image and attach to order
   uploadSignature: driverProcedure
-    .input(z.object({
-      orderId: z.number(),
-      tenantId: z.number(),
-      imageBase64: z.string(), // base64 data URL
-    }))
+    .input(z.object({ orderId: z.number(), tenantId: z.number(), imageBase64: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
-      const [driverRows5] = await (db as any).$client.execute(
-        `SELECT id FROM dy_drivers WHERE userId = ? AND tenantId = ? LIMIT 1`,
-        [ctx.user.id, input.tenantId]
-      ) as any;
-      const driver = (driverRows5 as any[])[0];
-      if (!driver) throw new TRPCError({ code: 'FORBIDDEN', message: '找不到司機資料' });
-      // Convert base64 to buffer
-      const base64Data = input.imageBase64.replace(/^data:image\/\w+;base64,/, '');
-      const buffer = Buffer.from(base64Data, 'base64');
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      const client = (db as any).$client;
+      const driver = await getDriverByUser(client, ctx.user.id, input.tenantId);
+      if (!driver) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Driver account is not linked to Dayone" });
+      }
+
+      const base64Data = input.imageBase64.replace(/^data:image\/\w+;base64,/, "");
+      const buffer = Buffer.from(base64Data, "base64");
       const fileKey = `signatures/${input.tenantId}/${input.orderId}-${Date.now()}.png`;
-      const { url } = await storagePut(fileKey, buffer, 'image/png');
-      // Save signature URL to order and delivery_signatures table
-      await (db as any).$client.execute(
+      const { url } = await storagePut(fileKey, buffer, "image/png");
+
+      await client.execute(
         `UPDATE dy_orders SET signatureUrl=?, updatedAt=NOW() WHERE id=? AND tenantId=? AND driverId=?`,
         [url, input.orderId, input.tenantId, driver.id]
       );
-      await (db as any).$client.execute(
+      await client.execute(
         `INSERT INTO dy_delivery_signatures (tenantId, orderId, driverId, signatureUrl, signedAt)
          VALUES (?,?,?,?,NOW())`,
         [input.tenantId, input.orderId, driver.id, url]
@@ -172,26 +235,19 @@ export const dyDriverRouter = router({
       return { success: true, signatureUrl: url };
     }),
 
-  // Get my work log for a specific date
   getMyWorkLog: driverProcedure
-    .input(z.object({
-      tenantId: z.number(),
-      workDate: z.string(),
-    }))
+    .input(z.object({ tenantId: z.number(), workDate: z.string() }))
     .query(async ({ ctx, input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
-      const [driverRows6] = await (db as any).$client.execute(
-        `SELECT id FROM dy_drivers WHERE userId = ? AND tenantId = ? LIMIT 1`,
-        [ctx.user.id, input.tenantId]
-      ) as any;
-      const driver = (driverRows6 as any[])[0];
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      const client = (db as any).$client;
+      const driver = await getDriverByUser(client, ctx.user.id, input.tenantId);
       if (!driver) return null;
-      const [logRows] = await (db as any).$client.execute(
+
+      const [logRows] = await client.execute(
         `SELECT * FROM dy_work_logs WHERE driverId=? AND workDate=? AND tenantId=? LIMIT 1`,
         [driver.id, input.workDate, input.tenantId]
-      ) as any;
-      const log = (logRows as any[])[0];
-      return log ?? null;
+      );
+      return (logRows as any[])[0] ?? null;
     }),
 });

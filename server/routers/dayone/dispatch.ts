@@ -5,7 +5,7 @@ import { getDb } from "../../db";
 
 const dyAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== "super_admin" && ctx.user.role !== "manager") {
-    throw new TRPCError({ code: "FORBIDDEN", message: "需要管理員權限" });
+    throw new TRPCError({ code: "FORBIDDEN", message: "Dayone admin access required" });
   }
   return next({ ctx });
 });
@@ -13,27 +13,97 @@ const dyAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
 const driverProcedure = protectedProcedure.use(({ ctx, next }) => {
   const role = ctx.user.role;
   if (!["super_admin", "manager", "driver"].includes(role)) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "需要管理員或司機權限" });
+    throw new TRPCError({ code: "FORBIDDEN", message: "Driver access required" });
   }
   return next({ ctx });
 });
 
+function calcDueDate(dispatchDate: string, settlementCycle?: string | null, overdueDays?: number | null) {
+  const date = new Date(dispatchDate);
+  if (settlementCycle === "weekly") {
+    date.setDate(date.getDate() + 7);
+    return date.toISOString().slice(0, 10);
+  }
+  if (settlementCycle === "monthly") {
+    const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+    monthEnd.setDate(monthEnd.getDate() + Number(overdueDays ?? 5));
+    return monthEnd.toISOString().slice(0, 10);
+  }
+  return dispatchDate;
+}
+
+async function upsertReceivable(
+  client: any,
+  payload: {
+    tenantId: number;
+    orderId: number;
+    customerId: number;
+    amount: number;
+    paidAmount: number;
+    paymentStatus: string;
+    dueDate: string;
+  }
+) {
+  const [existingRows] = await client.execute(
+    `SELECT id FROM dy_ar_records WHERE tenantId=? AND orderId=? LIMIT 1`,
+    [payload.tenantId, payload.orderId]
+  );
+  const existing = (existingRows as any[])[0];
+
+  const paidAmount = Number(payload.paidAmount ?? 0);
+  const amount = Number(payload.amount ?? 0);
+  const normalizedStatus =
+    payload.paymentStatus === "paid" || paidAmount >= amount
+      ? "paid"
+      : paidAmount > 0
+        ? "partial"
+        : "unpaid";
+
+  if (existing) {
+    await client.execute(
+      `UPDATE dy_ar_records
+       SET amount=?, paidAmount=?, status=?, dueDate=?, paymentMethod=IF(? > 0, 'cash', paymentMethod),
+           paidAt=CASE WHEN ? = 'paid' OR ? >= ? THEN NOW() ELSE paidAt END,
+           updatedAt=NOW()
+       WHERE id=? AND tenantId=?`,
+      [amount, paidAmount, normalizedStatus, payload.dueDate, paidAmount, payload.paymentStatus, paidAmount, amount, existing.id, payload.tenantId]
+    );
+    return existing.id;
+  }
+
+  const [result] = await client.execute(
+    `INSERT INTO dy_ar_records
+     (tenantId, orderId, customerId, amount, paidAmount, status, dueDate, paymentMethod, paidAt, createdAt, updatedAt)
+     VALUES (?,?,?,?,?,?,?,IF(? > 0, 'cash', NULL), CASE WHEN ? = 'paid' OR ? >= ? THEN NOW() ELSE NULL END, NOW(), NOW())`,
+    [payload.tenantId, payload.orderId, payload.customerId, amount, paidAmount, normalizedStatus, payload.dueDate, paidAmount, payload.paymentStatus, paidAmount, amount]
+  );
+  return (result as any).insertId;
+}
+
+async function resolveDriverScope(client: any, tenantId: number, userId: number, role: string) {
+  if (role === "super_admin" || role === "manager") {
+    return null;
+  }
+
+  const [driverRows] = await client.execute(
+    `SELECT id FROM dy_drivers WHERE tenantId=? AND userId=? AND status='active' LIMIT 1`,
+    [tenantId, userId]
+  );
+  const driver = (driverRows as any[])[0];
+  if (!driver) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Driver account is not linked to Dayone" });
+  }
+  return Number(driver.id);
+}
+
 export const dyDispatchRouter = router({
-  // 1. 產生派車單（管理員）
   generateDispatch: dyAdminProcedure
-    .input(
-      z.object({
-        tenantId: z.number(),
-        dispatchDate: z.string(),
-      })
-    )
+    .input(z.object({ tenantId: z.number(), dispatchDate: z.string() }))
     .mutation(async ({ input }) => {
       const db = await getDb();
-      if (!db)
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
       const client = (db as any).$client;
 
-      // a. 查當日訂單，JOIN 客戶取得 settlementCycle 等資訊
       const [orderRows] = await client.execute(
         `SELECT o.*, c.settlementCycle, c.overdueDays, c.address AS customerAddress,
                 c.name AS customerName, c.customerLevel,
@@ -42,92 +112,60 @@ export const dyDispatchRouter = router({
          JOIN dy_customers c ON o.customerId = c.id
          LEFT JOIN dy_districts dist ON o.districtId = dist.id
          WHERE o.tenantId=? AND o.deliveryDate=? AND o.status != 'cancelled'
-         ORDER BY o.driverId, dist.sortOrder`,
+         ORDER BY o.driverId, dist.sortOrder, o.id`,
         [input.tenantId, input.dispatchDate]
       );
       const orders = orderRows as any[];
 
       if (orders.length === 0) {
-        return { dispatchOrders: [], message: "當日無訂單" };
+        return { dispatchOrders: [], message: "No dispatchable orders for this date" };
       }
 
-      // b. 按 driverId 分組
       const driverMap = new Map<number, any[]>();
-      for (const o of orders) {
-        const driverId = o.driverId ?? o.driverId ?? 0;
+      for (const order of orders) {
+        const driverId = Number(order.driverId ?? 0);
         if (!driverMap.has(driverId)) driverMap.set(driverId, []);
-        driverMap.get(driverId)!.push(o);
+        driverMap.get(driverId)!.push(order);
       }
 
       const dispatchOrders: any[] = [];
 
       for (const [driverId, driverOrders] of Array.from(driverMap.entries())) {
         const routeCode = driverOrders[0]?.routeCode ?? "R00";
-
-        // c. 建立 dispatch_order
-        const [doResult] = await client.execute(
+        const [dispatchResult] = await client.execute(
           `INSERT INTO dy_dispatch_orders
            (tenantId, dispatchDate, driverId, routeCode, status, generatedAt, createdAt, updatedAt)
            VALUES (?,?,?,?,'draft',NOW(),NOW(),NOW())`,
           [input.tenantId, input.dispatchDate, driverId, routeCode]
         );
-        const dispatchOrderId = (doResult as any).insertId;
+        const dispatchOrderId = (dispatchResult as any).insertId;
 
-        let stopSeq = 1;
+        let stopSequence = 1;
         for (const order of driverOrders) {
-          // c. 取 prevBoxes（空箱帳餘額）
           const [boxRows] = await client.execute(
             `SELECT currentBalance FROM dy_box_ledger WHERE tenantId=? AND customerId=?`,
             [input.tenantId, order.customerId]
           );
-          const prevBoxes = (boxRows as any[])[0]?.currentBalance ?? 0;
+          const prevBoxes = Number((boxRows as any[])[0]?.currentBalance ?? 0);
+          const paymentStatus =
+            order.settlementCycle === "monthly"
+              ? "monthly"
+              : order.settlementCycle === "weekly"
+                ? "weekly"
+                : "unpaid";
 
-          // 依 settlementCycle 決定 paymentStatus
-          const settlementCycle = order.settlementCycle ?? "monthly";
-          let paymentStatus = "unpaid";
-          if (settlementCycle === "monthly") paymentStatus = "monthly";
-          else if (settlementCycle === "weekly") paymentStatus = "weekly";
-
-          // d. INSERT dispatch_item
           await client.execute(
             `INSERT INTO dy_dispatch_items
              (dispatchOrderId, tenantId, orderId, customerId, stopSequence,
               prevBoxes, deliverBoxes, returnBoxes, remainBoxes,
               paymentStatus, cashCollected, createdAt)
              VALUES (?,?,?,?,?,?,0,0,?,?,0,NOW())`,
-            [
-              dispatchOrderId,
-              input.tenantId,
-              order.id,
-              order.customerId,
-              stopSeq++,
-              prevBoxes,
-              prevBoxes,
-              paymentStatus,
-            ]
+            [dispatchOrderId, input.tenantId, order.id, order.customerId, stopSequence++, prevBoxes, prevBoxes, paymentStatus]
           );
 
-          // f. 建立 AR 記錄
-          const today = input.dispatchDate;
-          let dueDate = today;
-          if (settlementCycle === "monthly") {
-            // 月底 + overdueDays
-            const d = new Date(today);
-            const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-            const overdueDays = order.overdueDays ?? 5;
-            lastDay.setDate(lastDay.getDate() + overdueDays);
-            dueDate = lastDay.toISOString().slice(0, 10);
-          } else if (settlementCycle === "weekly") {
-            const d = new Date(today);
-            d.setDate(d.getDate() + 7);
-            dueDate = d.toISOString().slice(0, 10);
-          }
-
           await client.execute(
-            `INSERT INTO dy_ar_records
-             (tenantId, orderId, customerId, amount, paidAmount, status, dueDate, createdAt, updatedAt)
-             VALUES (?,?,?,?,0,'unpaid',?,NOW(),NOW())`,
-            [input.tenantId, order.id, order.customerId, order.totalAmount, dueDate]
+            `UPDATE dy_orders SET status='assigned', updatedAt=NOW() WHERE id=? AND tenantId=?`,
+            [order.id, input.tenantId]
           );
         }
 
@@ -137,19 +175,13 @@ export const dyDispatchRouter = router({
       return { dispatchOrders };
     }),
 
-  // 2. 派車單列表（管理員）
-  listDispatch: dyAdminProcedure
-    .input(
-      z.object({
-        tenantId: z.number(),
-        dispatchDate: z.string().optional(),
-        driverId: z.number().optional(),
-      })
-    )
-    .query(async ({ input }) => {
+  listDispatch: driverProcedure
+    .input(z.object({ tenantId: z.number(), dispatchDate: z.string().optional(), driverId: z.number().optional() }))
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
-      if (!db)
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      const client = (db as any).$client;
+      const scopedDriverId = await resolveDriverScope(client, input.tenantId, ctx.user.id, ctx.user.role ?? "");
 
       let sql = `SELECT do2.*, d.name AS driverName
                  FROM dy_dispatch_orders do2
@@ -157,37 +189,49 @@ export const dyDispatchRouter = router({
                  WHERE do2.tenantId = ?`;
       const params: any[] = [input.tenantId];
 
-      if (input.dispatchDate) { sql += " AND do2.dispatchDate = ?"; params.push(input.dispatchDate); }
-      if (input.driverId) { sql += " AND do2.driverId = ?"; params.push(input.driverId); }
+      if (scopedDriverId) {
+        sql += " AND do2.driverId = ?";
+        params.push(scopedDriverId);
+      }
+
+      if (input.dispatchDate) {
+        sql += " AND do2.dispatchDate = ?";
+        params.push(input.dispatchDate);
+      }
+      if (input.driverId && !scopedDriverId) {
+        sql += " AND do2.driverId = ?";
+        params.push(input.driverId);
+      }
       sql += " ORDER BY do2.dispatchDate DESC LIMIT 30";
 
-      const [rows] = await (db as any).$client.execute(sql, params);
+      const [rows] = await client.execute(sql, params);
       return rows as any[];
     }),
 
-  // 3. 取得派車單詳情（管理員 + 司機）
   getDispatchDetail: driverProcedure
     .input(z.object({ id: z.number(), tenantId: z.number() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
-      if (!db)
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
       const client = (db as any).$client;
+      const scopedDriverId = await resolveDriverScope(client, input.tenantId, ctx.user.id, ctx.user.role ?? "");
 
-      const [doRows] = await client.execute(
+      const [dispatchRows] = await client.execute(
         `SELECT do2.*, d.name AS driverName
          FROM dy_dispatch_orders do2
          JOIN dy_drivers d ON do2.driverId = d.id
          WHERE do2.id=? AND do2.tenantId=?`,
         [input.id, input.tenantId]
       );
-      const dispatchOrder = (doRows as any[])[0];
-      if (!dispatchOrder) throw new TRPCError({ code: "NOT_FOUND" });
+      const dispatchOrder = (dispatchRows as any[])[0];
+      if (!dispatchOrder) throw new TRPCError({ code: "NOT_FOUND", message: "Dispatch order not found" });
+      if (scopedDriverId && Number(dispatchOrder.driverId) !== scopedDriverId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Dispatch order belongs to another driver" });
+      }
 
       const [itemRows] = await client.execute(
         `SELECT di.*, c.name AS customerName, c.address AS customerAddress,
-                c.phone AS customerPhone,
-                o.totalAmount AS orderAmount, o.orderNo
+                c.phone AS customerPhone, o.totalAmount AS orderAmount, o.orderNo
          FROM dy_dispatch_items di
          JOIN dy_customers c ON di.customerId = c.id
          LEFT JOIN dy_orders o ON di.orderId = o.id
@@ -196,25 +240,82 @@ export const dyDispatchRouter = router({
         [input.id, input.tenantId]
       );
 
-      return { ...dispatchOrder, items: itemRows as any[] };
+      const [productRows] = await client.execute(
+        `SELECT oi.productId, p.name AS productName, p.unit, SUM(oi.qty) AS shippedQty
+         FROM dy_dispatch_items di
+         JOIN dy_order_items oi ON oi.orderId = di.orderId
+         JOIN dy_products p ON p.id = oi.productId
+         WHERE di.dispatchOrderId=? AND di.tenantId=?
+         GROUP BY oi.productId, p.name, p.unit
+         ORDER BY p.code, p.name`,
+        [input.id, input.tenantId]
+      );
+
+      return { ...dispatchOrder, items: itemRows as any[], products: productRows as any[] };
     }),
 
-  // 4. 標記已列印（管理員）
   markPrinted: dyAdminProcedure
     .input(z.object({ id: z.number(), tenantId: z.number() }))
     .mutation(async ({ input }) => {
       const db = await getDb();
-      if (!db)
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-      await (db as any).$client.execute(
-        `UPDATE dy_dispatch_orders SET status='printed', printedAt=NOW(), updatedAt=NOW()
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      const client = (db as any).$client;
+
+      const [dispatchRows] = await client.execute(
+        `SELECT * FROM dy_dispatch_orders WHERE id=? AND tenantId=? LIMIT 1`,
+        [input.id, input.tenantId]
+      );
+      const dispatchOrder = (dispatchRows as any[])[0];
+      if (!dispatchOrder) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Dispatch order not found" });
+      }
+
+      if (["printed", "completed"].includes(dispatchOrder.status)) {
+        return { success: true, alreadyPrinted: true };
+      }
+
+      const [itemRows] = await client.execute(
+        `SELECT di.orderId, oi.productId, oi.qty
+         FROM dy_dispatch_items di
+         JOIN dy_order_items oi ON di.orderId = oi.orderId
+         WHERE di.dispatchOrderId=? AND di.tenantId=? AND di.orderId IS NOT NULL`,
+        [input.id, input.tenantId]
+      );
+
+      for (const item of itemRows as any[]) {
+        await client.execute(
+          `UPDATE dy_inventory
+           SET currentQty = currentQty - ?, updatedAt=NOW()
+           WHERE tenantId=? AND productId=?`,
+          [item.qty, input.tenantId, item.productId]
+        );
+
+        await client.execute(
+          `INSERT INTO dy_stock_movements
+           (tenantId, productId, type, qty, refId, refType, note, createdAt)
+           VALUES (?,?,'out',?,?,'dispatch_print',?,NOW())`,
+          [input.tenantId, item.productId, item.qty, input.id, `Dispatch print for order ${item.orderId}`]
+        );
+      }
+
+      await client.execute(
+        `UPDATE dy_orders o
+         JOIN dy_dispatch_items di ON di.orderId = o.id
+         SET o.status='picked', o.updatedAt=NOW()
+         WHERE di.dispatchOrderId=? AND o.tenantId=?`,
+        [input.id, input.tenantId]
+      );
+
+      await client.execute(
+        `UPDATE dy_dispatch_orders
+         SET status='printed', printedAt=NOW(), updatedAt=NOW()
          WHERE id=? AND tenantId=?`,
         [input.id, input.tenantId]
       );
+
       return { success: true };
     }),
 
-  // 5. 司機更新配送站點（司機）
   updateDispatchItem: driverProcedure
     .input(
       z.object({
@@ -226,105 +327,189 @@ export const dyDispatchRouter = router({
         driverNote: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
-      if (!db)
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
       const client = (db as any).$client;
+      const scopedDriverId = await resolveDriverScope(client, input.tenantId, ctx.user.id, ctx.user.role ?? "");
 
-      // 取得現有 dispatch_item
-      const [diRows] = await client.execute(
-        `SELECT * FROM dy_dispatch_items WHERE id=? AND tenantId=?`,
+      const [itemRows] = await client.execute(
+        `SELECT di.*, ddo.dispatchDate, ddo.driverId, o.totalAmount, c.settlementCycle, c.overdueDays
+         FROM dy_dispatch_items di
+         LEFT JOIN dy_dispatch_orders ddo ON ddo.id = di.dispatchOrderId
+         LEFT JOIN dy_orders o ON di.orderId = o.id
+         LEFT JOIN dy_customers c ON di.customerId = c.id
+         WHERE di.id=? AND di.tenantId=?`,
         [input.itemId, input.tenantId]
       );
-      const item = (diRows as any[])[0];
-      if (!item) throw new TRPCError({ code: "NOT_FOUND" });
+      const item = (itemRows as any[])[0];
+      if (!item) throw new TRPCError({ code: "NOT_FOUND", message: "Dispatch item not found" });
+      if (scopedDriverId && Number(item.driverId) !== scopedDriverId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Dispatch item belongs to another driver" });
+      }
 
-      const remainBoxes = item.prevBoxes + item.deliverBoxes - input.returnBoxes;
+      const remainBoxes = Number(item.prevBoxes ?? 0) + Number(item.deliverBoxes ?? 0) - Number(input.returnBoxes ?? 0);
 
-      // 更新 dispatch_item
       await client.execute(
         `UPDATE dy_dispatch_items
          SET returnBoxes=?, remainBoxes=?, cashCollected=?, paymentStatus=?, driverNote=?
          WHERE id=? AND tenantId=?`,
-        [
-          input.returnBoxes,
-          remainBoxes,
-          input.cashCollected,
-          input.paymentStatus,
-          input.driverNote ?? null,
-          input.itemId,
-          input.tenantId,
-        ]
+        [input.returnBoxes, remainBoxes, input.cashCollected, input.paymentStatus, input.driverNote ?? null, input.itemId, input.tenantId]
       );
 
-      // 更新 box_ledger
       const [ledgerRows] = await client.execute(
         `SELECT id, currentBalance FROM dy_box_ledger WHERE tenantId=? AND customerId=?`,
         [input.tenantId, item.customerId]
       );
       const ledger = (ledgerRows as any[])[0];
-      const balanceBefore = ledger?.currentBalance ?? 0;
+      const balanceBefore = Number(ledger?.currentBalance ?? 0);
       const balanceAfter = remainBoxes;
 
       if (ledger) {
         await client.execute(
-          `UPDATE dy_box_ledger SET currentBalance=?, updatedAt=NOW()
-           WHERE tenantId=? AND customerId=?`,
+          `UPDATE dy_box_ledger SET currentBalance=?, updatedAt=NOW() WHERE tenantId=? AND customerId=?`,
           [remainBoxes, input.tenantId, item.customerId]
         );
       } else {
         await client.execute(
-          `INSERT INTO dy_box_ledger (tenantId, customerId, currentBalance)
-           VALUES (?,?,?)`,
+          `INSERT INTO dy_box_ledger (tenantId, customerId, currentBalance) VALUES (?,?,?)`,
           [input.tenantId, item.customerId, remainBoxes]
         );
       }
 
-      // 若餘額有變動，記錄交易
       if (balanceBefore !== balanceAfter) {
-        const txType = balanceAfter > balanceBefore ? "delivery" : "return";
-        const quantity = Math.abs(balanceAfter - balanceBefore);
         await client.execute(
           `INSERT INTO dy_box_transactions
            (tenantId, customerId, dispatchItemId, type, quantity, balanceBefore, balanceAfter, createdAt)
            VALUES (?,?,?,?,?,?,?,NOW())`,
-          [input.tenantId, item.customerId, input.itemId, txType, quantity, balanceBefore, balanceAfter]
+          [
+            input.tenantId,
+            item.customerId,
+            input.itemId,
+            balanceAfter > balanceBefore ? "delivery" : "return",
+            Math.abs(balanceAfter - balanceBefore),
+            balanceBefore,
+            balanceAfter,
+          ]
         );
       }
 
-      // 若現付且已付，更新 AR
-      if (input.paymentStatus === "paid" && item.orderId) {
+      if (item.orderId) {
+        await upsertReceivable(client, {
+          tenantId: input.tenantId,
+          orderId: item.orderId,
+          customerId: item.customerId,
+          amount: Number(item.totalAmount ?? 0),
+          paidAmount: Number(input.cashCollected ?? 0),
+          paymentStatus: input.paymentStatus,
+          dueDate: calcDueDate(item.dispatchDate ?? new Date().toISOString().slice(0, 10), item.settlementCycle, item.overdueDays),
+        });
+
         await client.execute(
-          `UPDATE dy_ar_records SET paidAt=NOW(), status='paid', updatedAt=NOW()
-           WHERE tenantId=? AND orderId=?`,
-          [input.tenantId, item.orderId]
+          `UPDATE dy_orders
+           SET paidAmount=?, paymentStatus=?, returnBoxes=?, remainBoxes=?, updatedAt=NOW()
+           WHERE id=? AND tenantId=?`,
+          [
+            input.cashCollected,
+            input.paymentStatus === "paid" ? "paid" : input.cashCollected > 0 ? "partial" : "unpaid",
+            input.returnBoxes,
+            remainBoxes,
+            item.orderId,
+            input.tenantId,
+          ]
         );
       }
 
       return { success: true, remainBoxes };
     }),
 
-  // 6. 司機完成派車（司機）
-  completeDispatch: driverProcedure
+  returnInventory: driverProcedure
     .input(
       z.object({
-        id: z.number(),
+        dispatchOrderId: z.number(),
         tenantId: z.number(),
-        actualAmount: z.number(),
-        driverNote: z.string().optional(),
+        items: z.array(
+          z.object({
+            productId: z.number(),
+            qty: z.number().positive(),
+          })
+        ),
+        note: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
-      if (!db)
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
       const client = (db as any).$client;
+      const scopedDriverId = await resolveDriverScope(client, input.tenantId, ctx.user.id, ctx.user.role ?? "");
 
-      // 計算應收總額
+      const [dispatchRows] = await client.execute(
+        `SELECT * FROM dy_dispatch_orders WHERE id=? AND tenantId=? LIMIT 1`,
+        [input.dispatchOrderId, input.tenantId]
+      );
+      const dispatchOrder = (dispatchRows as any[])[0];
+      if (!dispatchOrder) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Dispatch order not found" });
+      }
+      if (scopedDriverId && Number(dispatchOrder.driverId) !== scopedDriverId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Dispatch order belongs to another driver" });
+      }
+      if (dispatchOrder.status === "draft") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Draft dispatch cannot return stock to inventory" });
+      }
+
+      for (const item of input.items) {
+        await client.execute(
+          `INSERT INTO dy_inventory (tenantId, productId, currentQty, safetyQty, unit, updatedAt)
+           VALUES (?,?,?,0,NULL,NOW())
+           ON DUPLICATE KEY UPDATE currentQty=currentQty + VALUES(currentQty), updatedAt=NOW()`,
+          [input.tenantId, item.productId, item.qty]
+        );
+
+        await client.execute(
+          `INSERT INTO dy_stock_movements
+           (tenantId, productId, type, qty, refId, refType, note, createdAt)
+           VALUES (?,?,'in',?,?,'dispatch_return',?,NOW())`,
+          [
+            input.tenantId,
+            item.productId,
+            item.qty,
+            input.dispatchOrderId,
+            input.note?.trim() || `Truck return for dispatch ${input.dispatchOrderId}`,
+          ]
+        );
+      }
+
+      await client.execute(
+        `UPDATE dy_dispatch_orders
+         SET updatedAt=NOW(), status=CASE WHEN status='printed' THEN 'in_progress' ELSE status END
+         WHERE id=? AND tenantId=?`,
+        [input.dispatchOrderId, input.tenantId]
+      );
+
+      return { success: true, returnedItemCount: input.items.length };
+    }),
+
+  completeDispatch: driverProcedure
+    .input(z.object({ id: z.number(), tenantId: z.number(), actualAmount: z.number(), driverNote: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      const client = (db as any).$client;
+      const scopedDriverId = await resolveDriverScope(client, input.tenantId, ctx.user.id, ctx.user.role ?? "");
+
+      const [dispatchRows] = await client.execute(
+        `SELECT driverId, dispatchDate FROM dy_dispatch_orders WHERE id=? AND tenantId=?`,
+        [input.id, input.tenantId]
+      );
+      const dispatch = (dispatchRows as any[])[0];
+      if (!dispatch) throw new TRPCError({ code: "NOT_FOUND", message: "Dispatch order not found" });
+      if (scopedDriverId && Number(dispatch.driverId) !== scopedDriverId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Dispatch order belongs to another driver" });
+      }
+
       const [sumRows] = await client.execute(
-        `SELECT COALESCE(SUM(cashCollected), 0) AS expectedAmount,
-                MIN(tenantId) AS tenantId, MIN(dispatchOrderId) AS dispatchOrderId
+        `SELECT COALESCE(SUM(cashCollected), 0) AS expectedAmount
          FROM dy_dispatch_items
          WHERE dispatchOrderId=? AND tenantId=?`,
         [input.id, input.tenantId]
@@ -333,14 +518,6 @@ export const dyDispatchRouter = router({
       const diff = input.actualAmount - expectedAmount;
       const status = Math.abs(diff) < 1 ? "normal" : "anomaly";
 
-      // 取得司機 ID
-      const [doRows] = await client.execute(
-        `SELECT driverId FROM dy_dispatch_orders WHERE id=? AND tenantId=?`,
-        [input.id, input.tenantId]
-      );
-      const driverId = (doRows as any[])[0]?.driverId;
-
-      // 更新派車單狀態
       await client.execute(
         `UPDATE dy_dispatch_orders
          SET status='completed', completedAt=NOW(), updatedAt=NOW()
@@ -348,16 +525,14 @@ export const dyDispatchRouter = router({
         [input.id, input.tenantId]
       );
 
-      // 建立司機現金繳款報告
-      const today = new Date().toISOString().slice(0, 10);
       const [reportResult] = await client.execute(
         `INSERT INTO dy_driver_cash_reports
          (tenantId, driverId, reportDate, expectedAmount, actualAmount, diff, status, driverNote, createdAt)
          VALUES (?,?,?,?,?,?,?,?,NOW())`,
         [
           input.tenantId,
-          driverId,
-          today,
+          dispatch.driverId,
+          dispatch.dispatchDate ?? new Date().toISOString().slice(0, 10),
           expectedAmount,
           input.actualAmount,
           diff,
@@ -369,7 +544,6 @@ export const dyDispatchRouter = router({
       return { success: true, expectedAmount, diff, status, reportId: (reportResult as any).insertId };
     }),
 
-  // 7. 臨時加站（管理員 + 司機）
   manualAddStop: driverProcedure
     .input(
       z.object({
@@ -381,57 +555,52 @@ export const dyDispatchRouter = router({
         items: z.any(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
-      if (!db)
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
       const client = (db as any).$client;
+      const scopedDriverId = await resolveDriverScope(client, input.tenantId, ctx.user.id, ctx.user.role ?? "");
 
-      // 取得目前最大 stopSequence
+      const [dispatchRows] = await client.execute(
+        `SELECT driverId FROM dy_dispatch_orders WHERE id=? AND tenantId=? LIMIT 1`,
+        [input.dispatchOrderId, input.tenantId]
+      );
+      const dispatch = (dispatchRows as any[])[0];
+      if (!dispatch) throw new TRPCError({ code: "NOT_FOUND", message: "Dispatch order not found" });
+      if (scopedDriverId && Number(dispatch.driverId) !== scopedDriverId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Dispatch order belongs to another driver" });
+      }
+
       const [seqRows] = await client.execute(
         `SELECT COALESCE(MAX(stopSequence), 0) AS maxSeq
          FROM dy_dispatch_items WHERE dispatchOrderId=? AND tenantId=?`,
         [input.dispatchOrderId, input.tenantId]
       );
-      const nextSeq = ((seqRows as any[])[0]?.maxSeq ?? 0) + 1;
+      const nextSeq = Number((seqRows as any[])[0]?.maxSeq ?? 0) + 1;
 
-      // 取得空箱餘額
       const [boxRows] = await client.execute(
         `SELECT currentBalance FROM dy_box_ledger WHERE tenantId=? AND customerId=?`,
         [input.tenantId, input.customerId]
       );
-      const prevBoxes = (boxRows as any[])[0]?.currentBalance ?? 0;
+      const prevBoxes = Number((boxRows as any[])[0]?.currentBalance ?? 0);
       const remainBoxes = prevBoxes + input.deliverBoxes;
 
-      // INSERT dispatch_item
       const [result] = await client.execute(
         `INSERT INTO dy_dispatch_items
          (dispatchOrderId, tenantId, orderId, customerId, stopSequence,
           prevBoxes, deliverBoxes, returnBoxes, remainBoxes, paymentStatus, cashCollected, createdAt)
          VALUES (?,?,NULL,?,?,?,?,0,?,?,0,NOW())`,
-        [
-          input.dispatchOrderId,
-          input.tenantId,
-          input.customerId,
-          nextSeq,
-          prevBoxes,
-          input.deliverBoxes,
-          remainBoxes,
-          input.paymentStatus,
-        ]
+        [input.dispatchOrderId, input.tenantId, input.customerId, nextSeq, prevBoxes, input.deliverBoxes, remainBoxes, input.paymentStatus]
       );
 
-      // 更新 box_ledger
       if ((boxRows as any[]).length > 0) {
         await client.execute(
-          `UPDATE dy_box_ledger SET currentBalance=?, updatedAt=NOW()
-           WHERE tenantId=? AND customerId=?`,
+          `UPDATE dy_box_ledger SET currentBalance=?, updatedAt=NOW() WHERE tenantId=? AND customerId=?`,
           [remainBoxes, input.tenantId, input.customerId]
         );
       } else {
         await client.execute(
-          `INSERT INTO dy_box_ledger (tenantId, customerId, currentBalance)
-           VALUES (?,?,?)`,
+          `INSERT INTO dy_box_ledger (tenantId, customerId, currentBalance) VALUES (?,?,?)`,
           [input.tenantId, input.customerId, remainBoxes]
         );
       }

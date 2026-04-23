@@ -1,200 +1,251 @@
-import { useState, useRef } from 'react';
-import { useLocation, useParams } from 'wouter';
-import { trpc } from '../../../lib/trpc';
-import DriverLayout from './DriverLayout';
-import SignatureCanvas from 'react-signature-canvas';
-import { MapPin, Phone, Package, DollarSign, PenLine, CheckCircle, ChevronLeft } from 'lucide-react';
+import { useRef, useState } from "react";
+import { useLocation, useParams } from "wouter";
+import { trpc } from "../../../lib/trpc";
+import DriverLayout from "./DriverLayout";
+import SignatureCanvas from "react-signature-canvas";
+import { MapPin, Phone, DollarSign, PenLine, CheckCircle, ChevronLeft, Truck } from "lucide-react";
+import { toast } from "sonner";
 
-const TENANT_ID = 2;
+const TENANT_ID = 90004;
+
+const STATUS_FLOW: Record<string, { next: "picked" | "delivering" | "delivered"; label: string }> = {
+  assigned: { next: "picked", label: "確認已撿貨" },
+  pending: { next: "picked", label: "確認已撿貨" },
+  picked: { next: "delivering", label: "開始配送" },
+  delivering: { next: "delivered", label: "確認送達" },
+};
 
 export default function DriverOrderDetail() {
   const params = useParams<{ id: string }>();
-  const orderId = parseInt(params.id ?? '0');
+  const orderId = Number(params.id ?? "0");
   const [, navigate] = useLocation();
-  const [cashInput, setCashInput] = useState('');
-  const [showSig, setShowSig] = useState(false);
-  const [sigSaved, setSigSaved] = useState(false);
-  const [note, setNote] = useState('');
+  const [cashInput, setCashInput] = useState("");
+  const [showSignature, setShowSignature] = useState(false);
+  const [note, setNote] = useState("");
   const sigRef = useRef<SignatureCanvas>(null);
 
   const today = new Date().toISOString().slice(0, 10);
-  const { data: orders = [], refetch } = trpc.dayone.driver.getMyTodayOrders.useQuery({
+  const utils = trpc.useUtils();
+  const { data: orders = [] } = trpc.dayone.driver.getMyTodayOrders.useQuery({
     tenantId: TENANT_ID,
     deliveryDate: today,
   });
-  const order = (orders as any[]).find((o: any) => o.id === orderId);
+  const order = (orders as any[]).find((item: any) => item.id === orderId);
 
-  const updateStatus = trpc.dayone.driver.updateOrderStatus.useMutation({ onSuccess: () => refetch() });
-  const recordCash = trpc.dayone.driver.recordCashPayment.useMutation({ onSuccess: () => refetch() });
-  const uploadSig = trpc.dayone.driver.uploadSignature.useMutation({
-    onSuccess: () => { setSigSaved(true); refetch(); },
+  const updateStatus = trpc.dayone.driver.updateOrderStatus.useMutation({
+    onSuccess: () => {
+      toast.success("訂單狀態已更新");
+      utils.dayone.driver.getMyTodayOrders.invalidate();
+    },
+    onError: (error) => toast.error(error.message),
   });
+
+  const recordCash = trpc.dayone.driver.recordCashPayment.useMutation({
+    onSuccess: () => {
+      toast.success("收款已更新");
+      setCashInput("");
+      utils.dayone.driver.getMyTodayOrders.invalidate();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const uploadSignature = trpc.dayone.driver.uploadSignature.useMutation({
+    onSuccess: () => {
+      toast.success("簽名已上傳");
+      setShowSignature(false);
+      utils.dayone.driver.getMyTodayOrders.invalidate();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  async function handleSaveSignature() {
+    if (!sigRef.current || sigRef.current.isEmpty()) {
+      toast.error("請先簽名");
+      return;
+    }
+    const dataUrl = sigRef.current.toDataURL("image/png");
+    await uploadSignature.mutateAsync({
+      orderId,
+      tenantId: TENANT_ID,
+      imageBase64: dataUrl,
+    });
+  }
 
   if (!order) {
     return (
-      <DriverLayout title="訂單詳情">
-        <div className="flex flex-col items-center justify-center h-64 text-gray-400">
-          <Package className="w-12 h-12 mb-3 opacity-40" />
-          <p>找不到此訂單</p>
-          <button onClick={() => navigate('/driver/orders')} className="mt-4 text-amber-600 text-sm">返回列表</button>
+      <DriverLayout title="訂單明細">
+        <div className="flex h-64 flex-col items-center justify-center text-stone-400">
+          <Truck className="h-12 w-12 opacity-40" />
+          <p className="mt-4 text-sm">找不到這筆今日訂單。</p>
+          <button type="button" onClick={() => navigate("/driver/orders")} className="mt-4 text-sm font-medium text-amber-600">
+            返回訂單列表
+          </button>
         </div>
       </DriverLayout>
     );
   }
 
-  const statusFlow: Record<string, string> = {
-    assigned: 'picked', picked: 'delivering', delivering: 'delivered',
-  };
-  const nextStatus = statusFlow[order.status];
-  const nextLabel: Record<string, string> = {
-    picked: '確認取貨', delivering: '開始配送', delivered: '確認送達',
-  };
-
-  async function handleSaveSignature() {
-    if (!sigRef.current || sigRef.current.isEmpty()) return;
-    const dataUrl = sigRef.current.toDataURL('image/png');
-    await uploadSig.mutateAsync({ orderId, tenantId: TENANT_ID, imageBase64: dataUrl });
-    setShowSig(false);
-  }
-
+  const flow = STATUS_FLOW[order.status];
   const unpaidAmt = Number(order.customerUnpaidAmount ?? 0);
 
   return (
-    <DriverLayout title="訂單詳情">
-      <div className="p-4 space-y-4">
-        {/* Back */}
-        <button onClick={() => navigate('/driver/orders')} className="flex items-center gap-1 text-sm text-gray-500">
-          <ChevronLeft className="w-4 h-4" /> 返回列表
+    <DriverLayout title="訂單明細">
+      <div className="space-y-4">
+        <button type="button" onClick={() => navigate("/driver/orders")} className="inline-flex items-center gap-1 px-1 text-sm text-stone-500">
+          <ChevronLeft className="h-4 w-4" />
+          返回列表
         </button>
 
-        {/* 逾期帳款警示橫幅 */}
         {unpaidAmt > 0 && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-start gap-2">
-            <span className="text-red-500 text-lg leading-none mt-0.5">⚠️</span>
-            <p className="text-sm text-red-700 font-medium">
-              此客戶有逾期未付帳款 NT$ {unpaidAmt.toLocaleString()}，請提醒客戶
-            </p>
-          </div>
+          <section className="rounded-3xl border border-rose-200 bg-rose-50 px-4 py-4">
+            <p className="text-sm font-semibold text-rose-700">此客戶尚有未收款</p>
+            <p className="mt-1 text-sm text-rose-600">累計待收 NT$ {unpaidAmt.toLocaleString()}</p>
+          </section>
         )}
 
-        {/* Order header */}
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-          <div className="flex justify-between items-start mb-3">
-            <div>
-              <p className="font-bold text-gray-900 text-lg">{order.customerName}</p>
-              <p className="text-xs text-gray-500">#{order.orderNo}</p>
+        <section className="rounded-[28px] border border-stone-200/70 bg-white p-4 shadow-[0_12px_24px_rgba(120,53,15,0.05)]">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-lg font-semibold text-stone-900">{order.customerName}</p>
+              <p className="mt-1 text-xs font-medium tracking-[0.16em] text-stone-400">{order.orderNo}</p>
             </div>
-            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
-              {order.status}
-            </span>
+            <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">{order.status}</span>
           </div>
-          <div className="flex items-center gap-1 text-sm text-gray-600 mb-1">
-            <MapPin className="w-4 h-4 text-gray-400" />
-            {order.customerAddress ?? '地址未設定'}
-          </div>
-          <div className="flex items-center gap-1 text-sm text-gray-600">
-            <Phone className="w-4 h-4 text-gray-400" />
-            {order.customerPhone ?? '—'}
-          </div>
-        </div>
 
-        {/* Amount */}
-        <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
-          <div className="flex justify-between text-sm mb-1">
-            <span className="text-gray-600">應收金額</span>
-            <span className="font-bold text-amber-700">NT$ {Number(order.totalAmount ?? 0).toLocaleString()}</span>
+          <div className="mt-4 space-y-2 text-sm text-stone-500">
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-amber-500" />
+              <span>{order.customerAddress ?? "未提供地址"}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Phone className="h-4 w-4 text-amber-500" />
+              <span>{order.customerPhone ?? "未提供電話"}</span>
+            </div>
           </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-600">已收現金</span>
-            <span className="font-semibold text-green-700">NT$ {Number(order.cashCollected ?? 0).toLocaleString()}</span>
-          </div>
-        </div>
+        </section>
 
-        {/* Cash collection */}
-        {order.status !== 'delivered' && (
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1">
-              <DollarSign className="w-4 h-4" /> 收款記錄
-            </h3>
-            <div className="flex gap-2">
+        <section className="rounded-[28px] border border-amber-100 bg-amber-50 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-amber-600">訂單總額</p>
+              <p className="mt-1 text-2xl font-semibold text-amber-700">NT$ {Number(order.totalAmount ?? 0).toLocaleString()}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-amber-600">已收現金</p>
+              <p className="mt-1 text-lg font-semibold text-stone-900">NT$ {Number(order.cashCollected ?? 0).toLocaleString()}</p>
+            </div>
+          </div>
+        </section>
+
+        {order.status !== "delivered" && (
+          <section className="rounded-[28px] border border-stone-200/70 bg-white p-4 shadow-[0_12px_24px_rgba(120,53,15,0.05)]">
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-amber-600" />
+              <h3 className="text-sm font-semibold text-stone-900">現場收款</h3>
+            </div>
+            <div className="mt-4 flex gap-2">
               <input
                 type="number"
                 value={cashInput}
-                onChange={e => setCashInput(e.target.value)}
-                placeholder="輸入收款金額"
-                className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                onChange={(event) => setCashInput(event.target.value)}
+                placeholder="輸入實收金額"
+                className="flex-1 rounded-2xl border border-stone-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
               />
               <button
-                onClick={() => recordCash.mutate({ orderId, tenantId: TENANT_ID, cashCollected: parseFloat(cashInput) || 0 })}
+                type="button"
+                onClick={() =>
+                  recordCash.mutate({
+                    orderId,
+                    tenantId: TENANT_ID,
+                    cashCollected: Number(cashInput || 0),
+                  })
+                }
                 disabled={!cashInput || recordCash.isPending}
-                className="bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+                className="rounded-2xl bg-amber-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
               >
-                確認
+                登記收款
               </button>
             </div>
-          </div>
+          </section>
         )}
 
-        {/* Signature */}
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-          <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1">
-            <PenLine className="w-4 h-4" /> 客戶簽名
-          </h3>
+        <section className="rounded-[28px] border border-stone-200/70 bg-white p-4 shadow-[0_12px_24px_rgba(120,53,15,0.05)]">
+          <div className="flex items-center gap-2">
+            <PenLine className="h-5 w-5 text-amber-600" />
+            <h3 className="text-sm font-semibold text-stone-900">客戶簽名</h3>
+          </div>
+
           {order.signatureUrl ? (
-            <div>
-              <img src={order.signatureUrl} alt="簽名" className="border rounded-lg w-full max-h-32 object-contain" />
-              <p className="text-xs text-green-600 mt-1 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> 已簽名</p>
+            <div className="mt-4">
+              <img src={order.signatureUrl} alt="簽名" className="max-h-36 w-full rounded-2xl border border-stone-200 bg-stone-50 object-contain" />
+              <p className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-emerald-600">
+                <CheckCircle className="h-3.5 w-3.5" />
+                已完成簽名
+              </p>
             </div>
-          ) : sigSaved ? (
-            <p className="text-xs text-green-600 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> 簽名已儲存</p>
-          ) : showSig ? (
-            <div>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg overflow-hidden">
-                <SignatureCanvas
-                  ref={sigRef}
-                  canvasProps={{ className: 'w-full h-32', style: { background: '#f9fafb' } }}
-                />
+          ) : showSignature ? (
+            <div className="mt-4">
+              <div className="overflow-hidden rounded-2xl border-2 border-dashed border-stone-300 bg-stone-50">
+                <SignatureCanvas ref={sigRef} canvasProps={{ className: "h-36 w-full", style: { background: "#fafaf9" } }} />
               </div>
-              <div className="flex gap-2 mt-2">
-                <button onClick={() => sigRef.current?.clear()} className="flex-1 border border-gray-200 text-gray-600 py-2 rounded-lg text-sm">清除</button>
-                <button onClick={handleSaveSignature} disabled={uploadSig.isPending} className="flex-1 bg-amber-600 text-white py-2 rounded-lg text-sm font-medium disabled:opacity-50">
-                  {uploadSig.isPending ? '上傳中...' : '儲存簽名'}
+              <div className="mt-3 flex gap-2">
+                <button type="button" onClick={() => sigRef.current?.clear()} className="flex-1 rounded-2xl border border-stone-200 px-4 py-3 text-sm font-medium text-stone-600">
+                  清除
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveSignature}
+                  disabled={uploadSignature.isPending}
+                  className="flex-1 rounded-2xl bg-amber-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
+                >
+                  {uploadSignature.isPending ? "上傳中..." : "儲存簽名"}
                 </button>
               </div>
             </div>
           ) : (
-            <button onClick={() => setShowSig(true)} className="w-full border-2 border-dashed border-gray-300 rounded-lg py-4 text-sm text-gray-500 flex items-center justify-center gap-2">
-              <PenLine className="w-4 h-4" /> 點此請客戶簽名
+            <button
+              type="button"
+              onClick={() => setShowSignature(true)}
+              className="mt-4 w-full rounded-2xl border-2 border-dashed border-stone-300 px-4 py-6 text-sm font-medium text-stone-500"
+            >
+              點這裡讓客戶簽名
             </button>
           )}
-        </div>
+        </section>
 
-        {/* Note */}
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-          <h3 className="text-sm font-semibold text-gray-700 mb-2">備註</h3>
+        <section className="rounded-[28px] border border-stone-200/70 bg-white p-4 shadow-[0_12px_24px_rgba(120,53,15,0.05)]">
+          <label className="mb-2 block text-sm font-semibold text-stone-900">配送備註</label>
           <textarea
             value={note}
-            onChange={e => setNote(e.target.value)}
-            placeholder="輸入配送備註..."
-            rows={2}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
+            onChange={(event) => setNote(event.target.value)}
+            placeholder="例如：客戶臨時加量、放置位置、退回空箱等"
+            rows={3}
+            className="w-full rounded-2xl border border-stone-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
           />
-        </div>
+        </section>
 
-        {/* Action button */}
-        {nextStatus && (
+        {flow && (
           <button
-            onClick={() => updateStatus.mutate({ id: orderId, tenantId: TENANT_ID, status: nextStatus as any, driverNote: note || undefined })}
+            type="button"
+            onClick={() =>
+              updateStatus.mutate({
+                id: orderId,
+                tenantId: TENANT_ID,
+                status: flow.next,
+                driverNote: note || undefined,
+              })
+            }
             disabled={updateStatus.isPending}
-            className="w-full bg-amber-600 text-white py-4 rounded-xl font-bold text-base shadow-lg disabled:opacity-50"
+            className="w-full rounded-2xl bg-stone-900 py-4 text-base font-semibold text-white disabled:opacity-50"
           >
-            {updateStatus.isPending ? '更新中...' : nextLabel[nextStatus]}
+            {updateStatus.isPending ? "更新中..." : flow.label}
           </button>
         )}
 
-        {order.status === 'delivered' && (
-          <div className="text-center py-4 text-green-600 font-semibold flex items-center justify-center gap-2">
-            <CheckCircle className="w-5 h-5" /> 此訂單已完成配送
+        {order.status === "delivered" && (
+          <div className="rounded-3xl border border-emerald-100 bg-emerald-50 px-4 py-4 text-center">
+            <p className="text-sm font-semibold text-emerald-700">這筆訂單已完成送達</p>
+            <p className="mt-1 text-xs text-emerald-700/75">接下來可以前往日結處理剩貨回庫。</p>
           </div>
         )}
       </div>

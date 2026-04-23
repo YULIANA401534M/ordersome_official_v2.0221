@@ -1,12 +1,12 @@
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Phone, MapPin, Globe } from "lucide-react";
 import { toast } from "sonner";
 
 const EMPTY_FORM = {
@@ -25,6 +25,12 @@ const EMPTY_FORM = {
   portalNote: "",
 };
 
+const paymentTypeLabel: Record<string, string> = {
+  monthly: "Monthly",
+  weekly: "Weekly",
+  cash: "Cash",
+};
+
 export default function DayoneCustomersContent({ tenantId }: { tenantId: number }) {
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<number | undefined>();
@@ -37,7 +43,7 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
 
   const upsert = trpc.dayone.customers.upsert.useMutation({
     onSuccess: () => {
-      toast.success(editId ? "客戶已更新" : "客戶已新增");
+      toast.success(editId ? "Customer updated" : "Customer created");
       setOpen(false);
       utils.dayone.customers.list.invalidate();
     },
@@ -46,7 +52,7 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
 
   const del = trpc.dayone.customers.delete.useMutation({
     onSuccess: () => {
-      toast.success("客戶已刪除");
+      toast.success("Customer deleted");
       utils.dayone.customers.list.invalidate();
     },
     onError: (e) => toast.error(e.message),
@@ -66,11 +72,11 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
       address: c.address ?? "",
       districtId: c.districtId ?? undefined,
       paymentType: c.paymentType ?? "monthly",
-      creditLimit: c.creditLimit ?? 0,
+      creditLimit: Number(c.creditLimit ?? 0),
       status: c.status ?? "active",
       customerLevel: c.customerLevel ?? "retail",
       settlementCycle: c.settlementCycle ?? "monthly",
-      overdueDays: c.overdueDays ?? 30,
+      overdueDays: Number(c.overdueDays ?? 30),
       loginEmail: c.loginEmail ?? "",
       isPortalActive: !!c.isPortalActive,
       portalNote: c.portalNote ?? "",
@@ -79,7 +85,11 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
   }
 
   function handleSave() {
-    if (!form.name.trim()) { toast.error("請輸入客戶名稱"); return; }
+    if (!form.name.trim()) {
+      toast.error("Please enter customer name");
+      return;
+    }
+
     upsert.mutate({
       id: editId,
       tenantId,
@@ -99,80 +109,81 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
     });
   }
 
-  const filtered = (customers as any[] ?? []).filter((c: any) =>
-    !search || c.name?.includes(search) || c.phone?.includes(search)
-  );
+  const filtered = (customers as any[] ?? []).filter((c: any) => !search || c.name?.includes(search) || c.phone?.includes(search));
 
   return (
-    <div className="p-6 space-y-5">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">客戶管理</h1>
-        <Button className="bg-blue-600 hover:bg-blue-700 gap-2" onClick={openNew}>
-          <Plus className="w-4 h-4" /> 新增客戶
+    <div className="space-y-6">
+      <div className="dayone-page-header">
+        <div className="min-w-0">
+          <h1 className="dayone-page-title">Customer Management</h1>
+          <p className="dayone-page-subtitle">Manage downstream customers, payment behavior, credit limits, and portal access with a mobile card layout.</p>
+        </div>
+        <Button className="dayone-action gap-2 rounded-2xl bg-amber-600 text-white hover:bg-amber-700" onClick={openNew}>
+          <Plus className="w-4 h-4" />
+          Add Customer
         </Button>
       </div>
 
-      <div className="flex gap-3">
-        <Input
-          placeholder="搜尋姓名或電話..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-xs"
-        />
-      </div>
+      <Card className="border-white/70 bg-white/85 shadow-[0_16px_38px_rgba(148,102,47,0.09)]">
+        <CardContent className="p-4 md:p-5">
+          <Input
+            placeholder="Search by name or phone"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="max-w-sm"
+          />
+        </CardContent>
+      </Card>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">客戶列表（共 {filtered.length} 筆）</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="p-6 text-center text-gray-500">載入中...</div>
-          ) : !filtered.length ? (
-            <div className="p-6 text-center text-gray-500">無客戶資料</div>
-          ) : (
-            <div className="overflow-x-auto">
+      <div className="dayone-panel overflow-hidden rounded-[28px]">
+        {isLoading ? (
+          <div className="p-8 text-center text-stone-400">Loading...</div>
+        ) : !filtered.length ? (
+          <div className="p-8 text-center text-stone-400">No customer data.</div>
+        ) : (
+          <>
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b">
+                <thead className="border-b bg-stone-50">
                   <tr>
-                    {["名稱", "電話", "行政區", "付款", "客戶等級", "Portal", "狀態", "操作"].map((h) => (
-                      <th key={h} className="text-left px-4 py-2.5 font-medium text-gray-600 whitespace-nowrap">{h}</th>
+                    {["Name", "Phone", "District", "Payment", "Level", "Portal", "Status", "Actions"].map((h) => (
+                      <th key={h} className="px-4 py-3 text-left font-medium text-stone-500">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map((c: any) => (
-                    <tr key={c.id} className="border-b hover:bg-gray-50">
-                      <td className="px-4 py-2.5 font-medium">{c.name}</td>
-                      <td className="px-4 py-2.5 text-gray-600">{c.phone ?? "-"}</td>
-                      <td className="px-4 py-2.5 text-gray-600">{c.districtName ?? "-"}</td>
-                      <td className="px-4 py-2.5">
-                        <span className="px-1.5 py-0.5 rounded text-xs bg-blue-50 text-blue-700">
-                          {c.paymentType === "monthly" ? "月結" : c.paymentType === "weekly" ? "週結" : "現金"}
+                    <tr key={c.id} className="border-b last:border-b-0 hover:bg-stone-50/70">
+                      <td className="px-4 py-3 font-medium">{c.name}</td>
+                      <td className="px-4 py-3 text-stone-600">{c.phone ?? "-"}</td>
+                      <td className="px-4 py-3 text-stone-600">{c.districtName ?? "-"}</td>
+                      <td className="px-4 py-3 text-stone-600">{paymentTypeLabel[c.paymentType] ?? c.paymentType}</td>
+                      <td className="px-4 py-3 text-stone-600">{c.customerLevel ?? "retail"}</td>
+                      <td className="px-4 py-3">
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${c.isPortalActive ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-500"}`}>
+                          {c.isPortalActive ? "On" : "Off"}
                         </span>
                       </td>
-                      <td className="px-4 py-2.5 text-gray-600">{c.customerLevel ?? "retail"}</td>
-                      <td className="px-4 py-2.5">
-                        <span className={`px-1.5 py-0.5 rounded text-xs ${c.isPortalActive ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                          {c.isPortalActive ? "啟用" : "停用"}
+                      <td className="px-4 py-3">
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${c.status === "active" ? "bg-blue-100 text-blue-700" : "bg-red-100 text-red-700"}`}>
+                          {c.status === "active" ? "Active" : "Suspended"}
                         </span>
                       </td>
-                      <td className="px-4 py-2.5">
-                        <span className={`px-1.5 py-0.5 rounded text-xs ${c.status === "active" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
-                          {c.status === "active" ? "正常" : "停用"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2.5">
+                      <td className="px-4 py-3">
                         <div className="flex gap-1">
-                          <button onClick={() => openEdit(c)} className="p-1 text-gray-400 hover:text-blue-600 transition">
-                            <Pencil className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => { if (confirm(`確定要刪除客戶「${c.name}」？`)) del.mutate({ id: c.id, tenantId }); }}
-                            className="p-1 text-gray-400 hover:text-red-600 transition"
+                          <Button variant="ghost" size="sm" onClick={() => openEdit(c)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-500 hover:bg-red-50 hover:text-red-700"
+                            onClick={() => {
+                              if (confirm(`Delete customer ${c.name}?`)) del.mutate({ id: c.id, tenantId });
+                            }}
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -180,27 +191,78 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
                 </tbody>
               </table>
             </div>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* 新增 / 編輯 Dialog */}
+            <div className="dayone-mobile-list p-4 md:hidden">
+              {filtered.map((c: any) => (
+                <article key={c.id} className="dayone-mobile-card p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h2 className="text-lg font-semibold text-stone-900">{c.name}</h2>
+                      <p className="mt-1 text-sm text-stone-500">{paymentTypeLabel[c.paymentType] ?? c.paymentType} / {c.customerLevel ?? "retail"}</p>
+                    </div>
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${c.status === "active" ? "bg-blue-100 text-blue-700" : "bg-red-100 text-red-700"}`}>
+                      {c.status === "active" ? "Active" : "Suspended"}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 space-y-3 text-sm">
+                    <div className="flex items-start gap-3">
+                      <Phone className="mt-0.5 h-4 w-4 text-stone-400" />
+                      <span className="text-stone-700">{c.phone ?? "-"}</span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <MapPin className="mt-0.5 h-4 w-4 text-stone-400" />
+                      <span className="text-stone-700">{c.districtName ?? "No district"}</span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <Globe className="mt-0.5 h-4 w-4 text-stone-400" />
+                      <span className="text-stone-700">{c.isPortalActive ? `Portal enabled${c.loginEmail ? ` / ${c.loginEmail}` : ""}` : "Portal disabled"}</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <Button variant="outline" className="rounded-2xl" onClick={() => openEdit(c)}>Edit</Button>
+                    <Button
+                      variant="outline"
+                      className="rounded-2xl text-red-600 hover:text-red-700"
+                      onClick={() => {
+                        if (confirm(`Delete customer ${c.name}?`)) del.mutate({ id: c.id, tenantId });
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editId ? "編輯客戶" : "新增客戶"}</DialogTitle>
+            <DialogTitle>{editId ? "Edit Customer" : "Add Customer"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
-            <div><Label>客戶名稱 *</Label><Input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} /></div>
-            <div><Label>電話</Label><Input value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} /></div>
-            <div><Label>地址</Label><Input value={form.address} onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))} /></div>
-
             <div>
-              <Label>行政區</Label>
-              <Select value={form.districtId ? String(form.districtId) : ""} onValueChange={(v) => setForm((p) => ({ ...p, districtId: v ? Number(v) : undefined }))}>
-                <SelectTrigger><SelectValue placeholder="選擇行政區" /></SelectTrigger>
+              <Label>Name *</Label>
+              <Input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
+            </div>
+            <div>
+              <Label>Phone</Label>
+              <Input value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} />
+            </div>
+            <div>
+              <Label>Address</Label>
+              <Input value={form.address} onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))} />
+            </div>
+            <div>
+              <Label>District</Label>
+              <Select value={form.districtId ? String(form.districtId) : "none"} onValueChange={(v) => setForm((p) => ({ ...p, districtId: v === "none" ? undefined : Number(v) }))}>
+                <SelectTrigger><SelectValue placeholder="Select district" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">不指定</SelectItem>
+                  <SelectItem value="none">No district</SelectItem>
                   {(districts as any[] ?? []).map((d: any) => (
                     <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
                   ))}
@@ -210,24 +272,24 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>付款方式</Label>
+                <Label>Payment Type</Label>
                 <Select value={form.paymentType} onValueChange={(v) => setForm((p) => ({ ...p, paymentType: v as any }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="monthly">月結</SelectItem>
-                    <SelectItem value="weekly">週結</SelectItem>
-                    <SelectItem value="cash">現金</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="cash">Cash</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label>結算週期</Label>
+                <Label>Settlement</Label>
                 <Select value={form.settlementCycle} onValueChange={(v) => setForm((p) => ({ ...p, settlementCycle: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="monthly">月結</SelectItem>
-                    <SelectItem value="weekly">週結</SelectItem>
-                    <SelectItem value="daily">日結</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="daily">Daily</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -235,56 +297,66 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>客戶等級</Label>
+                <Label>Customer Level</Label>
                 <Select value={form.customerLevel} onValueChange={(v) => setForm((p) => ({ ...p, customerLevel: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="retail">零售</SelectItem>
-                    <SelectItem value="store">門市</SelectItem>
-                    <SelectItem value="supplier">供應商</SelectItem>
+                    <SelectItem value="retail">Retail</SelectItem>
+                    <SelectItem value="store">Store</SelectItem>
+                    <SelectItem value="supplier">Supplier</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label>逾期天數</Label>
+                <Label>Overdue Days</Label>
                 <Input type="number" value={form.overdueDays} onChange={(e) => setForm((p) => ({ ...p, overdueDays: Number(e.target.value) }))} />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>信用額度</Label>
+                <Label>Credit Limit</Label>
                 <Input type="number" value={form.creditLimit} onChange={(e) => setForm((p) => ({ ...p, creditLimit: Number(e.target.value) }))} />
               </div>
               <div>
-                <Label>狀態</Label>
+                <Label>Status</Label>
                 <Select value={form.status} onValueChange={(v) => setForm((p) => ({ ...p, status: v as any }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">正常</SelectItem>
-                    <SelectItem value="suspended">停用</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="suspended">Suspended</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
-            <div><Label>Portal 登入 Email</Label><Input value={form.loginEmail} onChange={(e) => setForm((p) => ({ ...p, loginEmail: e.target.value }))} placeholder="客戶 Portal 帳號" /></div>
+            <div>
+              <Label>Portal Email</Label>
+              <Input value={form.loginEmail} onChange={(e) => setForm((p) => ({ ...p, loginEmail: e.target.value }))} placeholder="Portal login email" />
+            </div>
 
-            <div className="flex items-center gap-3">
-              <Label>Portal 啟用</Label>
+            <div className="flex items-center justify-between rounded-2xl border border-stone-200 px-4 py-3">
+              <div>
+                <p className="text-sm font-medium text-stone-800">Portal Access</p>
+                <p className="text-xs text-stone-500">Allow this customer to use the portal</p>
+              </div>
               <button
+                type="button"
                 onClick={() => setForm((p) => ({ ...p, isPortalActive: !p.isPortalActive }))}
-                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${form.isPortalActive ? "bg-blue-600" : "bg-gray-300"}`}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${form.isPortalActive ? "bg-amber-600" : "bg-stone-300"}`}
               >
-                <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${form.isPortalActive ? "translate-x-4" : "translate-x-0.5"}`} />
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${form.isPortalActive ? "translate-x-6" : "translate-x-1"}`} />
               </button>
             </div>
 
-            <div><Label>Portal 備註</Label><Input value={form.portalNote} onChange={(e) => setForm((p) => ({ ...p, portalNote: e.target.value }))} /></div>
+            <div>
+              <Label>Portal Note</Label>
+              <Input value={form.portalNote} onChange={(e) => setForm((p) => ({ ...p, portalNote: e.target.value }))} />
+            </div>
           </div>
 
-          <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={handleSave} disabled={upsert.isPending}>
-            {upsert.isPending ? "儲存中..." : editId ? "更新客戶" : "新增客戶"}
+          <Button className="w-full bg-amber-600 hover:bg-amber-700" onClick={handleSave} disabled={upsert.isPending}>
+            {upsert.isPending ? "Saving..." : editId ? "Update Customer" : "Create Customer"}
           </Button>
         </DialogContent>
       </Dialog>
