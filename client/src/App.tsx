@@ -5,134 +5,132 @@ import { Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import AdminDashboardLayout from "./components/AdminDashboardLayout";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import { useEffect } from "react";
-
-// Brand Pages - 來點什麼
-import BrandHome from "./pages/brand/BrandHome";
-import BrandStory from "./pages/brand/BrandStory";
-import BrandStores from "./pages/brand/BrandStores";
-import BrandMenu from "./pages/brand/BrandMenu";
-import BrandNews from "./pages/brand/BrandNews";
-import BrandContact from "./pages/brand/BrandContact";
-import BrandFranchise from "./pages/brand/BrandFranchise";
-import BrandFranchiseTaichung from "./pages/brand/BrandFranchiseTaichung";
-
-// Corporate Pages - 宇聯國際
-import CorporateHome from "./pages/corporate/CorporateHome";
-import CorporateAbout from "./pages/corporate/CorporateAbout";
-import CorporateBrands from "./pages/corporate/CorporateBrands";
-import CorporateCulture from "./pages/corporate/CorporateCulture";
-import CorporateNews from "./pages/corporate/CorporateNews";
-import CorporateNewsArticle from "./pages/corporate/CorporateNewsArticle";
-import CorporateFranchise from "./pages/corporate/CorporateFranchise";
-import CorporateContact from "./pages/corporate/CorporateContact";
-
-// Shop Pages
-import ShopHome from "./pages/shop/ShopHome";
-import ShopCategory from "./pages/shop/ShopCategory";
-import ProductDetail from "./pages/shop/ProductDetail";
-import Cart from "./pages/shop/Cart";
-import Checkout from "./pages/shop/Checkout";
-import OrderDetail from "./pages/shop/OrderDetail";
-import PaymentRedirect from "./pages/shop/PaymentRedirect";
-import OrderComplete from "./pages/shop/OrderComplete";
-import MyOrders from "./pages/shop/MyOrders";
-import ExclusiveProduct from "./pages/ExclusiveProduct";
-import ShopChiliSauceGuide from "./pages/shop/ShopChiliSauceGuide";
-
-// Member Pages
-import MemberProfile from "./pages/member/MemberProfile";
-import MemberOrders from "./pages/member/MemberOrders";
-
-// Auth Pages
-import Login from "./pages/Login";
-import Profile from "./pages/Profile";
-import ProfileComplete from "./pages/ProfileComplete";
-import CompleteProfile from "./pages/CompleteProfile";
+import { lazy, Suspense, useEffect } from "react";
 import { MarketingTrap } from "./components/MarketingTrap";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
 import Analytics from "./components/Analytics";
 import { useCanonical } from "./hooks/useCanonical";
 import { useBreadcrumbList } from "./hooks/useBreadcrumbList";
 import { useGeoMeta } from "./hooks/useGeoMeta";
 
-// Admin Pages
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import FranchiseDashboardPage from "./pages/dashboard/FranchiseDashboard";
-import StaffDashboardPage from "./pages/dashboard/StaffDashboard";
-import AdminProducts from "./pages/admin/AdminProducts";
-import AdminOrders from "./pages/admin/AdminOrders";
-import AdminCategories from "./pages/admin/AdminCategories";
-import AdminUsers from "./pages/dashboard/AdminUsers";
-import AdminPermissions from "./pages/dashboard/AdminPermissions";
-import AdminSopPermissions from "./pages/dashboard/AdminSopPermissions";
-import ContentManagement from "./pages/dashboard/ContentManagement";
-import ContentEditor from "./pages/dashboard/ContentEditor";
-import AIWriter from "./pages/dashboard/AIWriter";
-import FranchiseInquiries from "./pages/dashboard/FranchiseInquiries";
-import OSCustomers from "./pages/dashboard/OSCustomers";
-import News from "./pages/News";
-import NewsArticle from "./pages/NewsArticle";
-import SOPKnowledgeBase from "./pages/dashboard/SOPKnowledgeBase";
-import EquipmentRepairs from "./pages/dashboard/EquipmentRepairs";
-import DailyChecklist from "./pages/dashboard/DailyChecklist";
-import Dashboard from "./pages/Dashboard";
-import AdminTenants from "./pages/dashboard/AdminTenants";
-import OSInventory from "./pages/dashboard/OSInventory";
-import OSScheduling from "./pages/dashboard/OSScheduling";
-import OSDailyReport from "./pages/dashboard/OSDailyReport";
-import OSProducts from "./pages/dashboard/OSProducts";
-import OSPurchasing from "./pages/dashboard/OSPurchasing";
-import OSRebate from "./pages/dashboard/OSRebate";
-import OSProfitLoss from "./pages/dashboard/OSProfitLoss";
-import OSFranchiseePayments from "./pages/dashboard/OSFranchiseePayments";
-import OSCaMenu from "./pages/dashboard/OSCaMenu";
-import OSDelivery from "@/pages/dashboard/OSDelivery";
-import OSAccounting from "./pages/dashboard/OSAccounting";
-import ComingSoon from "./pages/dashboard/ComingSoon";
-
-// Landing Page
+// 首頁保持 static（首屏最重要）
 import Home from "./pages/Home";
 
-// DaYong ERP Pages
-import DayoneLogin from "./pages/dayone/DayoneLogin";
-import DayoneDashboard from "./pages/dayone/DayoneDashboard";
-import DayoneOrders from "./pages/dayone/DayoneOrders";
-import DayoneCustomers from "./pages/dayone/DayoneCustomers";
-import DayoneDrivers from "./pages/dayone/DayoneDrivers";
-import DayoneProducts from "./pages/dayone/DayoneProducts";
-import DayoneInventory from "./pages/dayone/DayoneInventory";
-import DayonePurchase from "./pages/dayone/DayonePurchase";
-import DayoneDistricts from "./pages/dayone/DayoneDistricts";
-import DayoneReports from "./pages/dayone/DayoneReports";
-import DayoneLiffOrders from "./pages/dayone/DayoneLiffOrders";
-import DayoneAR from "./pages/dayone/DayoneAR";
-import DayoneDispatch from "./pages/dayone/DayoneDispatch";
-import DayonePurchaseReceipts from "./pages/dayone/DayonePurchaseReceipts";
-import DayoneUsers from "./pages/dayone/DayoneUsers";
-import SupplierList from "./pages/erp/dayone/SupplierList";
-// DaYone Customer Portal
-import DayonePortalHome from "./pages/dayone/portal/DayonePortalHome";
-import DayonePortalLogin from "./pages/dayone/portal/DayonePortalLogin";
-import DayonePortalRegister from "./pages/dayone/portal/DayonePortalRegister";
-import DayonePortalOrders from "./pages/dayone/portal/DayonePortalOrders";
-import DayonePortalStatement from "./pages/dayone/portal/DayonePortalStatement";
-import DayonePortalAccount from "./pages/dayone/portal/DayonePortalAccount";
-// Driver Mobile Pages
-import DriverHome from "./pages/dayone/driver/DriverHome";
-import DriverOrders from "./pages/dayone/driver/DriverOrders";
-import DriverPickup from "./pages/dayone/driver/DriverPickup";
-import DriverDone from "./pages/dayone/driver/DriverDone";
-import DriverProfile from "./pages/dayone/driver/DriverProfile";
-import DriverToday from "./pages/dayone/driver/DriverToday";
-import DriverOrderDetail from "./pages/dayone/driver/DriverOrderDetail";
-import DriverWorkLog from "./pages/dayone/driver/DriverWorkLog";
-// Super Admin Pages
-import SuperAdminTenants from "./pages/dayone/SuperAdminTenants";
-import SuperAdminModules from "./pages/dayone/SuperAdminModules";
-// LIFF Pages
-import LiffOrder from "./pages/liff/LiffOrder";
+// Brand Pages
+const BrandHome = lazy(() => import("./pages/brand/BrandHome"));
+const BrandStory = lazy(() => import("./pages/brand/BrandStory"));
+const BrandStores = lazy(() => import("./pages/brand/BrandStores"));
+const BrandMenu = lazy(() => import("./pages/brand/BrandMenu"));
+const BrandNews = lazy(() => import("./pages/brand/BrandNews"));
+const BrandContact = lazy(() => import("./pages/brand/BrandContact"));
+const BrandFranchise = lazy(() => import("./pages/brand/BrandFranchise"));
+const BrandFranchiseTaichung = lazy(() => import("./pages/brand/BrandFranchiseTaichung"));
+
+// Corporate Pages
+const CorporateHome = lazy(() => import("./pages/corporate/CorporateHome"));
+const CorporateAbout = lazy(() => import("./pages/corporate/CorporateAbout"));
+const CorporateBrands = lazy(() => import("./pages/corporate/CorporateBrands"));
+const CorporateCulture = lazy(() => import("./pages/corporate/CorporateCulture"));
+const CorporateNews = lazy(() => import("./pages/corporate/CorporateNews"));
+const CorporateNewsArticle = lazy(() => import("./pages/corporate/CorporateNewsArticle"));
+const CorporateFranchise = lazy(() => import("./pages/corporate/CorporateFranchise"));
+const CorporateContact = lazy(() => import("./pages/corporate/CorporateContact"));
+
+// Shop Pages
+const ShopHome = lazy(() => import("./pages/shop/ShopHome"));
+const ShopCategory = lazy(() => import("./pages/shop/ShopCategory"));
+const ProductDetail = lazy(() => import("./pages/shop/ProductDetail"));
+const Cart = lazy(() => import("./pages/shop/Cart"));
+const Checkout = lazy(() => import("./pages/shop/Checkout"));
+const OrderDetail = lazy(() => import("./pages/shop/OrderDetail"));
+const PaymentRedirect = lazy(() => import("./pages/shop/PaymentRedirect"));
+const OrderComplete = lazy(() => import("./pages/shop/OrderComplete"));
+const MyOrders = lazy(() => import("./pages/shop/MyOrders"));
+const ExclusiveProduct = lazy(() => import("./pages/ExclusiveProduct"));
+const ShopChiliSauceGuide = lazy(() => import("./pages/shop/ShopChiliSauceGuide"));
+
+// Member Pages
+const MemberProfile = lazy(() => import("./pages/member/MemberProfile"));
+const MemberOrders = lazy(() => import("./pages/member/MemberOrders"));
+
+// Auth Pages
+const Login = lazy(() => import("./pages/Login"));
+const Profile = lazy(() => import("./pages/Profile"));
+const ProfileComplete = lazy(() => import("./pages/ProfileComplete"));
+const CompleteProfile = lazy(() => import("./pages/CompleteProfile"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+
+// News Pages
+const News = lazy(() => import("./pages/News"));
+const NewsArticle = lazy(() => import("./pages/NewsArticle"));
+
+// Dashboard / Admin Pages
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const FranchiseDashboardPage = lazy(() => import("./pages/dashboard/FranchiseDashboard"));
+const StaffDashboardPage = lazy(() => import("./pages/dashboard/StaffDashboard"));
+const AdminProducts = lazy(() => import("./pages/admin/AdminProducts"));
+const AdminOrders = lazy(() => import("./pages/admin/AdminOrders"));
+const AdminCategories = lazy(() => import("./pages/admin/AdminCategories"));
+const AdminUsers = lazy(() => import("./pages/dashboard/AdminUsers"));
+const AdminPermissions = lazy(() => import("./pages/dashboard/AdminPermissions"));
+const AdminSopPermissions = lazy(() => import("./pages/dashboard/AdminSopPermissions"));
+const ContentManagement = lazy(() => import("./pages/dashboard/ContentManagement"));
+const ContentEditor = lazy(() => import("./pages/dashboard/ContentEditor"));
+const AIWriter = lazy(() => import("./pages/dashboard/AIWriter"));
+const FranchiseInquiries = lazy(() => import("./pages/dashboard/FranchiseInquiries"));
+const OSCustomers = lazy(() => import("./pages/dashboard/OSCustomers"));
+const SOPKnowledgeBase = lazy(() => import("./pages/dashboard/SOPKnowledgeBase"));
+const EquipmentRepairs = lazy(() => import("./pages/dashboard/EquipmentRepairs"));
+const DailyChecklist = lazy(() => import("./pages/dashboard/DailyChecklist"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const AdminTenants = lazy(() => import("./pages/dashboard/AdminTenants"));
+const OSInventory = lazy(() => import("./pages/dashboard/OSInventory"));
+const OSScheduling = lazy(() => import("./pages/dashboard/OSScheduling"));
+const OSDailyReport = lazy(() => import("./pages/dashboard/OSDailyReport"));
+const OSProducts = lazy(() => import("./pages/dashboard/OSProducts"));
+const OSPurchasing = lazy(() => import("./pages/dashboard/OSPurchasing"));
+const OSRebate = lazy(() => import("./pages/dashboard/OSRebate"));
+const OSProfitLoss = lazy(() => import("./pages/dashboard/OSProfitLoss"));
+const OSFranchiseePayments = lazy(() => import("./pages/dashboard/OSFranchiseePayments"));
+const OSCaMenu = lazy(() => import("./pages/dashboard/OSCaMenu"));
+const OSDelivery = lazy(() => import("./pages/dashboard/OSDelivery"));
+const OSAccounting = lazy(() => import("./pages/dashboard/OSAccounting"));
+const ComingSoon = lazy(() => import("./pages/dashboard/ComingSoon"));
+
+// Dayone ERP Pages
+const DayoneLogin = lazy(() => import("./pages/dayone/DayoneLogin"));
+const DayoneDashboard = lazy(() => import("./pages/dayone/DayoneDashboard"));
+const DayoneOrders = lazy(() => import("./pages/dayone/DayoneOrders"));
+const DayoneCustomers = lazy(() => import("./pages/dayone/DayoneCustomers"));
+const DayoneDrivers = lazy(() => import("./pages/dayone/DayoneDrivers"));
+const DayoneProducts = lazy(() => import("./pages/dayone/DayoneProducts"));
+const DayoneInventory = lazy(() => import("./pages/dayone/DayoneInventory"));
+const DayonePurchase = lazy(() => import("./pages/dayone/DayonePurchase"));
+const DayoneDistricts = lazy(() => import("./pages/dayone/DayoneDistricts"));
+const DayoneReports = lazy(() => import("./pages/dayone/DayoneReports"));
+const DayoneLiffOrders = lazy(() => import("./pages/dayone/DayoneLiffOrders"));
+const DayoneAR = lazy(() => import("./pages/dayone/DayoneAR"));
+const DayoneDispatch = lazy(() => import("./pages/dayone/DayoneDispatch"));
+const DayonePurchaseReceipts = lazy(() => import("./pages/dayone/DayonePurchaseReceipts"));
+const DayoneUsers = lazy(() => import("./pages/dayone/DayoneUsers"));
+const SupplierList = lazy(() => import("./pages/erp/dayone/SupplierList"));
+const DayonePortalHome = lazy(() => import("./pages/dayone/portal/DayonePortalHome"));
+const DayonePortalLogin = lazy(() => import("./pages/dayone/portal/DayonePortalLogin"));
+const DayonePortalRegister = lazy(() => import("./pages/dayone/portal/DayonePortalRegister"));
+const DayonePortalOrders = lazy(() => import("./pages/dayone/portal/DayonePortalOrders"));
+const DayonePortalStatement = lazy(() => import("./pages/dayone/portal/DayonePortalStatement"));
+const DayonePortalAccount = lazy(() => import("./pages/dayone/portal/DayonePortalAccount"));
+const DriverHome = lazy(() => import("./pages/dayone/driver/DriverHome"));
+const DriverOrders = lazy(() => import("./pages/dayone/driver/DriverOrders"));
+const DriverPickup = lazy(() => import("./pages/dayone/driver/DriverPickup"));
+const DriverDone = lazy(() => import("./pages/dayone/driver/DriverDone"));
+const DriverProfile = lazy(() => import("./pages/dayone/driver/DriverProfile"));
+const DriverToday = lazy(() => import("./pages/dayone/driver/DriverToday"));
+const DriverOrderDetail = lazy(() => import("./pages/dayone/driver/DriverOrderDetail"));
+const DriverWorkLog = lazy(() => import("./pages/dayone/driver/DriverWorkLog"));
+const SuperAdminTenants = lazy(() => import("./pages/dayone/SuperAdminTenants"));
+const SuperAdminModules = lazy(() => import("./pages/dayone/SuperAdminModules"));
+const LiffOrder = lazy(() => import("./pages/liff/LiffOrder"));
 
 function Router() {
   const [location] = useLocation();
@@ -320,7 +318,9 @@ function App() {
         <TooltipProvider>
           <MarketingTrap>
             <Toaster />
-            <Router />
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" /></div>}>
+              <Router />
+            </Suspense>
           </MarketingTrap>
         </TooltipProvider>
       </ThemeProvider>
