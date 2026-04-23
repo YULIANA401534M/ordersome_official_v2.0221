@@ -88,7 +88,10 @@ export default function ShopHome() {
               <p className="text-gray-300">獨家特製辣椒醬、人氣周邊商品室配到府</p>
             </div>
             <Link href="/shop/cart">
-              <Button variant="outline" className="border-white text-white hover:bg-white/10 gap-2">
+              <Button
+                variant="ghost"
+                className="gap-2 border border-white/30 bg-white/10 text-white backdrop-blur-sm hover:bg-white/20"
+              >
                 <ShoppingCart className="h-5 w-5" />
                 購物車
                 {totalCartItems > 0 && (

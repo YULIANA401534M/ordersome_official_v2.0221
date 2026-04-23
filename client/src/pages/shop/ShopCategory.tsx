@@ -33,9 +33,13 @@ export default function ShopCategory() {
             <p className="text-gray-300">{category?.description}</p>
           </div>
           <Link href="/shop/cart">
-            <Button variant="outline" className="border-white text-white hover:bg-white/10 gap-2">
+            <Button
+              variant="ghost"
+              className="gap-2 border border-white/30 bg-white/10 text-white backdrop-blur-sm hover:bg-white/20"
+            >
               <ShoppingCart className="h-5 w-5" />
-              {totalCartItems > 0 && <Badge className="bg-amber-600">{totalCartItems}</Badge>}
+              購物車
+              {totalCartItems > 0 && <Badge className="bg-amber-600 text-white">{totalCartItems}</Badge>}
             </Button>
           </Link>
         </div>
