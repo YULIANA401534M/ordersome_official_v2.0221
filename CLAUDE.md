@@ -387,7 +387,27 @@ INDEX idx_tenant_name (tenantId, name)
 - `has_procurement_access` 前端 any cast 補型別（`useAuth` User 型別正式擴充）
 - 大永/來點什麼 ERP 的 `dy_`/`os_` 表不在 `schema.ts`，用 raw SQL
 - 本機菜單圖尚未遷移到 R2（`client/public/images/menu/korean-roll/`）
-- chunk size 超標（index.js 6453kB），需 code splitting
+- `has_procurement_access` 前端 any cast 補型別（`useAuth` User 型別正式擴充）
+- chunk size 超標（index.js 6453kB）— **⚠️ 危險操作記錄**：v5.87 曾嘗試用 React.lazy + manualChunks 解決，造成全站白畫面。根本原因：`vite-plugin-manus-runtime` plugin 與 `manualChunks` 衝突導致 chunk 路徑解析失敗。已 revert。**解法前提**：必須先在本機能夠成功跑 `vite build`（目前本機有 estree-walker 缺失問題），確認 build 產出正常再 push。不可直接在 Railway 盲測。
+
+---
+
+## 前台頁面重設計規則（永久有效）
+
+**重設計只換視覺外殼，不動邏輯**，防止金流/購物車崩潰：
+
+| 可以改 | 絕對不動 |
+|--------|---------|
+| JSX 佈局、className | `useCartStore` 所有 state/action |
+| 圖片、文案、色彩 | `Checkout.tsx` 整個檔案 |
+| 新增 section / hero 區 | `PaymentRedirect.tsx` 整個檔案 |
+| CorporateLayout 內容區 | `OrderComplete.tsx` 整個檔案 |
+| 商品卡片視覺 | tRPC query 呼叫邏輯 |
+| Loading skeleton | `handleAddToCart` 函式 |
+
+**AI 圖片使用規則（GPT Image 2 / R2）：**
+- 所有 AI 生成圖片存進 Cloudflare R2，用 R2 公開 URL 引用，不放 `client/public/`
+- 圖片尺寸：hero 1920×1080，商品圖 800×1000（3:4），icon 512×512
 
 ---
 
