@@ -2,7 +2,6 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import AdminDashboardLayout from "@/components/AdminDashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -15,94 +14,80 @@ import { toast } from "sonner";
 import { Calculator, CheckCircle, CreditCard, TrendingDown } from "lucide-react";
 
 const now = new Date();
-const DEFAULT_YEAR = now.getFullYear();
-const DEFAULT_MONTH = now.getMonth() + 1;
+const DEFAULT_MONTH_STR = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
 function formatAmount(n: number | string) {
   return Number(n).toLocaleString("zh-TW", { maximumFractionDigits: 0 });
 }
 
 const REBATE_TYPE_LABEL: Record<string, string> = {
-  percentage: "百分比",
-  fixed: "固定差價",
-  offset: "抵貨款",
+  percentage: "百分比（廣弘）",
+  fixed_diff: "固定差價（伯享）",
+  offset: "抵貨款（韓濟）",
 };
 
 const REBATE_STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  calculated: { label: "待確認", className: "bg-gray-100 text-gray-700" },
-  confirmed: { label: "已確認", className: "bg-blue-100 text-blue-700" },
-  received: { label: "已收款", className: "bg-green-100 text-green-700" },
-  offset: { label: "已抵扣", className: "bg-teal-100 text-teal-700" },
+  pending:    { label: "待計算",  className: "bg-gray-100 text-gray-700" },
+  calculated: { label: "已計算",  className: "bg-blue-100 text-blue-700" },
+  received:   { label: "已收款",  className: "bg-green-100 text-green-700" },
+  offset:     { label: "已抵扣",  className: "bg-teal-100 text-teal-700" },
 };
 
 const PAYABLE_STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  pending: { label: "未付", className: "bg-yellow-100 text-yellow-800" },
-  partial: { label: "部分付", className: "bg-orange-100 text-orange-800" },
-  paid: { label: "已付", className: "bg-green-100 text-green-800" },
-  cancelled: { label: "取消", className: "bg-gray-100 text-gray-700" },
+  pending: { label: "未付",    className: "bg-yellow-100 text-yellow-800" },
+  partial: { label: "部分付",  className: "bg-orange-100 text-orange-800" },
+  paid:    { label: "已付",    className: "bg-green-100 text-green-800" },
 };
 
 export default function OSRebate() {
-  const [year, setYear] = useState(DEFAULT_YEAR);
-  const [month, setMonth] = useState(DEFAULT_MONTH);
+  const [monthStr, setMonthStr] = useState(DEFAULT_MONTH_STR);
 
-  // 確認收款 dialog
-  const [receivedDialog, setReceivedDialog] = useState<{ open: boolean; id: number; supplierName: string } | null>(null);
-  const [receivedDate, setReceivedDate] = useState(new Date().toISOString().slice(0, 10));
-  const [receivedNote, setReceivedNote] = useState("");
+  // 退佣：確認收款 dialog
+  const [receivedDialog, setReceivedDialog] = useState<{
+    open: boolean; id: number; supplierName: string; rebateAmount: number;
+  } | null>(null);
+  const [receivedDate, setReceivedDate] = useState(now.toISOString().slice(0, 10));
+  const [receivedBankRef, setReceivedBankRef] = useState("");
+  const [receivedManualAmt, setReceivedManualAmt] = useState("");
 
-  // 付款 dialog
-  const [paidDialog, setPaidDialog] = useState<{ open: boolean; id: number; supplierName: string; netPayable: number } | null>(null);
-  const [paidDate, setPaidDate] = useState(new Date().toISOString().slice(0, 10));
+  // 應付：標記已付 dialog
+  const [paidDialog, setPaidDialog] = useState<{
+    open: boolean; id: number; supplierName: string; netPayable: number;
+  } | null>(null);
+  const [paidDate, setPaidDate] = useState(now.toISOString().slice(0, 10));
   const [paidAmount, setPaidAmount] = useState("");
-  const [paidNote, setPaidNote] = useState("");
+  const [paidBankRef, setPaidBankRef] = useState("");
 
-  const { data: rebates = [], refetch: refetchRebates, isLoading: loadingRebates } = trpc.osRebate.list.useQuery({ year, month });
-  const { data: payables = [], refetch: refetchPayables, isLoading: loadingPayables } = trpc.osRebate.payableList.useQuery({ year, month });
+  // ── 資料查詢（全部走 accounting 路由）
+  const {
+    data: rebates = [],
+    refetch: refetchRebates,
+    isLoading: loadingRebates,
+  } = trpc.accounting.listRebates.useQuery({ month: monthStr });
 
-  // 查 os_rebates（accounting 路由寫入的正確資料）
-  const { data: rebatesFromAccounting = [], refetch: refetchRebates2 } =
-    trpc.accounting.listRebates.useQuery({ month: `${year}-${String(month).padStart(2, '0')}` });
+  const {
+    data: payables = [],
+    refetch: refetchPayables,
+    isLoading: loadingPayables,
+  } = trpc.accounting.listPayables.useQuery({ month: monthStr });
 
-  const calculateMutation = trpc.osRebate.calculate.useMutation({
-    onSuccess: (data) => {
-      toast.success(`計算完成，共 ${data.count} 筆廠商`);
-      refetchRebates();
-      refetchPayables();
-    },
-    onError: (e) => toast.error(e.message || "計算失敗"),
-  });
+  // ── Mutations
+  const calcRebatesMut = trpc.accounting.calculateRebates.useMutation();
+  const updateRebateMut = trpc.accounting.updateRebate.useMutation();
+  const markPaidMut = trpc.accounting.markPayablePaid.useMutation();
 
-  // 使用 accounting.calculateRebates 計算並寫入 os_rebates
-  const calcRebatesMut = trpc.accounting.calculateRebates.useMutation({
-    onSuccess: (d: any) => { toast.success(d.message || "退佣計算完成"); refetchRebates2(); },
-    onError: (e: any) => toast.error(e.message || "計算失敗"),
-  });
+  // ── 統計
+  const totalRebate = (rebates as any[]).reduce((s, r) => s + Number(r.netRebate || 0), 0);
+  const totalPayable = (payables as any[]).reduce((s, p) => s + Number(p.netPayable || 0), 0);
+  const totalPaid = (payables as any[])
+    .filter((p) => p.status === "paid")
+    .reduce((s, p) => s + Number(p.paidAmount || 0), 0);
 
-  const confirmReceivedMutation = trpc.osRebate.confirmReceived.useMutation({
-    onSuccess: () => {
-      toast.success("已標記收款");
-      setReceivedDialog(null);
-      refetchRebates();
-    },
-    onError: (e) => toast.error(e.message || "操作失敗"),
-  });
-
-  const markPaidMutation = trpc.osRebate.markPaid.useMutation({
-    onSuccess: () => {
-      toast.success("已標記付款");
-      setPaidDialog(null);
-      refetchPayables();
-    },
-    onError: (e) => toast.error(e.message || "操作失敗"),
-  });
-
-  const totalRebate = rebates.reduce((s: number, r: any) => s + Number(r.rebateAmount || 0), 0);
-  const totalPayable = payables.reduce((s: number, p: any) => s + Number(p.netPayable || 0), 0);
-  const totalPaid = payables.filter((p: any) => p.status === "paid").reduce((s: number, p: any) => s + Number(p.paidAmount || 0), 0);
-
-  const yearOptions = [DEFAULT_YEAR - 1, DEFAULT_YEAR, DEFAULT_YEAR + 1];
-  const monthOptions = Array.from({ length: 12 }, (_, i) => i + 1);
+  const monthOptions: string[] = [];
+  for (let i = -3; i <= 3; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    monthOptions.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+  }
 
   return (
     <AdminDashboardLayout>
@@ -112,43 +97,33 @@ export default function OSRebate() {
           <TrendingDown className="h-7 w-7 text-emerald-600" />
           <div>
             <h1 className="text-2xl font-bold text-gray-900">退佣帳款管理</h1>
-            <p className="text-sm text-gray-500">廠商退佣自動計算 · 應付帳款月結</p>
+            <p className="text-sm text-gray-500">廠商退佣計算 · 應付帳款月結</p>
           </div>
         </div>
 
-        {/* 年月選擇 + 計算按鈕 */}
+        {/* 月份選擇 + 計算按鈕 */}
         <div className="flex flex-wrap items-center gap-3 mb-6">
           <select
-            value={year}
-            onChange={(e) => setYear(Number(e.target.value))}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-          >
-            {yearOptions.map((y) => (
-              <option key={y} value={y}>{y} 年</option>
-            ))}
-          </select>
-          <select
-            value={month}
-            onChange={(e) => setMonth(Number(e.target.value))}
+            value={monthStr}
+            onChange={(e) => setMonthStr(e.target.value)}
             className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
           >
             {monthOptions.map((m) => (
-              <option key={m} value={m}>{m} 月</option>
+              <option key={m} value={m}>{m}</option>
             ))}
           </select>
           <Button
-            onClick={() => calculateMutation.mutate({ year, month })}
-            disabled={calculateMutation.isPending}
+            onClick={() => calcRebatesMut.mutate({ month: monthStr }, {
+              onSuccess: (d: any) => { toast.success(d.message || "退佣計算完成"); refetchRebates(); },
+              onError: (e: any) => toast.error(e.message || "計算失敗"),
+            })}
+            disabled={calcRebatesMut.isPending}
             className="bg-emerald-600 hover:bg-emerald-700 text-white"
           >
             <Calculator className="w-4 h-4 mr-2" />
-            {calculateMutation.isPending ? "計算中..." : "重新計算退佣"}
+            {calcRebatesMut.isPending ? "計算中..." : "計算本月退佣"}
           </Button>
-          <Button size="sm" variant="outline" className="h-9 text-xs gap-1"
-            disabled={calcRebatesMut.isPending}
-            onClick={() => calcRebatesMut.mutate({ month: `${year}-${String(month).padStart(2, '0')}` })}>
-            <Calculator className="w-3.5 h-3.5" /> 計算本月退佣(os_rebates)
-          </Button>
+          <p className="text-xs text-gray-400">計算後伯享/韓濟需人工輸入金額</p>
         </div>
 
         <Tabs defaultValue="rebate">
@@ -162,10 +137,10 @@ export default function OSRebate() {
             <div className="bg-white rounded-xl shadow-sm overflow-hidden">
               {loadingRebates ? (
                 <div className="p-8 text-center text-gray-500">載入中...</div>
-              ) : rebates.length === 0 ? (
+              ) : (rebates as any[]).length === 0 ? (
                 <div className="p-8 text-center text-gray-400">
                   <Calculator className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                  <p>尚無退佣記錄，請點「重新計算退佣」</p>
+                  <p>尚無退佣記錄，請先點「計算本月退佣」</p>
                 </div>
               ) : (
                 <table className="w-full text-sm">
@@ -173,41 +148,51 @@ export default function OSRebate() {
                     <tr>
                       <th className="px-4 py-3 text-left font-medium text-gray-600">廠商</th>
                       <th className="px-4 py-3 text-left font-medium text-gray-600">退佣類型</th>
-                      <th className="px-4 py-3 text-right font-medium text-gray-600">本月叫貨</th>
+                      <th className="px-4 py-3 text-right font-medium text-gray-600">本月採購</th>
                       <th className="px-4 py-3 text-right font-medium text-gray-600">退佣金額</th>
+                      <th className="px-4 py-3 text-right font-medium text-gray-600">手續費</th>
+                      <th className="px-4 py-3 text-right font-medium text-gray-600">淨退佣</th>
                       <th className="px-4 py-3 text-center font-medium text-gray-600">狀態</th>
                       <th className="px-4 py-3 text-center font-medium text-gray-600">操作</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {rebates.map((r: any) => {
-                      const statusCfg = REBATE_STATUS_CONFIG[r.status] || REBATE_STATUS_CONFIG.calculated;
+                    {(rebates as any[]).map((r) => {
+                      const statusCfg = REBATE_STATUS_CONFIG[r.status] ?? REBATE_STATUS_CONFIG.calculated;
+                      const needsManual = (r.rebateType === "offset" || r.rebateType === "fixed_diff") && Number(r.rebateAmount) === 0;
                       return (
-                        <tr key={r.id} className="hover:bg-gray-50">
+                        <tr key={r.id} className={`hover:bg-gray-50 ${needsManual ? "bg-amber-50" : ""}`}>
                           <td className="px-4 py-3 font-medium text-gray-900">{r.supplierName}</td>
-                          <td className="px-4 py-3">
-                            <span className="text-gray-600">{REBATE_TYPE_LABEL[r.rebateType] || r.rebateType}</span>
-                            {r.rebateType === "percentage" && (
-                              <span className="ml-1 text-xs text-gray-400">({(Number(r.rebateRate) * 100).toFixed(2)}%)</span>
-                            )}
+                          <td className="px-4 py-3 text-gray-600 text-xs">
+                            {REBATE_TYPE_LABEL[r.rebateType] ?? r.rebateType}
+                            {needsManual && <span className="ml-1 text-amber-600 font-semibold">⚠ 需輸入金額</span>}
                           </td>
-                          <td className="px-4 py-3 text-right text-gray-700">$ {formatAmount(r.totalPurchaseAmount)}</td>
-                          <td className="px-4 py-3 text-right font-semibold text-emerald-700">$ {formatAmount(r.rebateAmount)}</td>
+                          <td className="px-4 py-3 text-right text-gray-700">$ {formatAmount(r.baseAmount)}</td>
+                          <td className="px-4 py-3 text-right text-emerald-700">$ {formatAmount(r.rebateAmount)}</td>
+                          <td className="px-4 py-3 text-right text-gray-500 text-xs">
+                            {Number(r.handlingFee) > 0 ? `- $ ${formatAmount(r.handlingFee)}` : "—"}
+                          </td>
+                          <td className="px-4 py-3 text-right font-semibold text-emerald-700">$ {formatAmount(r.netRebate)}</td>
                           <td className="px-4 py-3 text-center">
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusCfg.className}`}>
                               {statusCfg.label}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-center">
-                            {(r.status === "calculated" || r.status === "confirmed") && r.rebateType !== "offset" && (
+                            {r.status !== "received" && r.status !== "offset" && (
                               <Button
                                 size="sm"
                                 variant="outline"
                                 className="text-xs"
                                 onClick={() => {
-                                  setReceivedDialog({ open: true, id: r.id, supplierName: r.supplierName });
-                                  setReceivedDate(new Date().toISOString().slice(0, 10));
-                                  setReceivedNote("");
+                                  setReceivedDialog({
+                                    open: true, id: r.id,
+                                    supplierName: r.supplierName,
+                                    rebateAmount: Number(r.rebateAmount),
+                                  });
+                                  setReceivedDate(now.toISOString().slice(0, 10));
+                                  setReceivedBankRef("");
+                                  setReceivedManualAmt(String(Math.round(Number(r.rebateAmount))));
                                 }}
                               >
                                 <CheckCircle className="w-3.5 h-3.5 mr-1" />
@@ -221,8 +206,10 @@ export default function OSRebate() {
                   </tbody>
                   <tfoot className="bg-emerald-50 border-t-2 border-emerald-200">
                     <tr>
-                      <td colSpan={3} className="px-4 py-3 font-semibold text-gray-700">本月退佣總計</td>
-                      <td className="px-4 py-3 text-right font-bold text-emerald-700 text-base">$ {formatAmount(totalRebate)}</td>
+                      <td colSpan={5} className="px-4 py-3 font-semibold text-gray-700">本月淨退佣合計</td>
+                      <td className="px-4 py-3 text-right font-bold text-emerald-700 text-base">
+                        $ {formatAmount(totalRebate)}
+                      </td>
                       <td colSpan={2} />
                     </tr>
                   </tfoot>
@@ -236,10 +223,10 @@ export default function OSRebate() {
             <div className="bg-white rounded-xl shadow-sm overflow-hidden">
               {loadingPayables ? (
                 <div className="p-8 text-center text-gray-500">載入中...</div>
-              ) : payables.length === 0 ? (
+              ) : (payables as any[]).length === 0 ? (
                 <div className="p-8 text-center text-gray-400">
                   <CreditCard className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                  <p>尚無應付帳款記錄，請先計算退佣</p>
+                  <p>尚無應付帳款記錄（叫貨單確認收貨後自動產生）</p>
                 </div>
               ) : (
                 <table className="w-full text-sm">
@@ -249,41 +236,45 @@ export default function OSRebate() {
                       <th className="px-4 py-3 text-right font-medium text-gray-600">月結總額</th>
                       <th className="px-4 py-3 text-right font-medium text-gray-600">退佣抵扣</th>
                       <th className="px-4 py-3 text-right font-medium text-gray-600">實際應付</th>
+                      <th className="px-4 py-3 text-right font-medium text-gray-600">已付</th>
                       <th className="px-4 py-3 text-center font-medium text-gray-600">狀態</th>
-                      <th className="px-4 py-3 text-center font-medium text-gray-600">付款日期</th>
                       <th className="px-4 py-3 text-center font-medium text-gray-600">操作</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {payables.map((p: any) => {
-                      const statusCfg = PAYABLE_STATUS_CONFIG[p.status] || PAYABLE_STATUS_CONFIG.pending;
+                    {(payables as any[]).map((p) => {
+                      const statusCfg = PAYABLE_STATUS_CONFIG[p.status] ?? PAYABLE_STATUS_CONFIG.pending;
                       return (
                         <tr key={p.id} className="hover:bg-gray-50">
                           <td className="px-4 py-3 font-medium text-gray-900">{p.supplierName}</td>
                           <td className="px-4 py-3 text-right text-gray-700">$ {formatAmount(p.totalAmount)}</td>
                           <td className="px-4 py-3 text-right text-teal-600">
-                            {Number(p.rebateOffset) > 0 ? `- $ ${formatAmount(p.rebateOffset)}` : "—"}
+                            {Number(p.rebateAmount) > 0 ? `- $ ${formatAmount(p.rebateAmount)}` : "—"}
                           </td>
                           <td className="px-4 py-3 text-right font-semibold text-gray-900">$ {formatAmount(p.netPayable)}</td>
+                          <td className="px-4 py-3 text-right text-gray-500">
+                            {Number(p.paidAmount) > 0 ? `$ ${formatAmount(p.paidAmount)}` : "—"}
+                          </td>
                           <td className="px-4 py-3 text-center">
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusCfg.className}`}>
                               {statusCfg.label}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-center text-gray-500 text-xs">
-                            {p.paidDate ? new Date(p.paidDate).toLocaleDateString("zh-TW") : "—"}
-                          </td>
                           <td className="px-4 py-3 text-center">
-                            {p.status !== "paid" && p.status !== "cancelled" && (
+                            {p.status !== "paid" && (
                               <Button
                                 size="sm"
                                 variant="outline"
                                 className="text-xs"
                                 onClick={() => {
-                                  setPaidDialog({ open: true, id: p.id, supplierName: p.supplierName, netPayable: Number(p.netPayable) });
-                                  setPaidDate(new Date().toISOString().slice(0, 10));
+                                  setPaidDialog({
+                                    open: true, id: p.id,
+                                    supplierName: p.supplierName,
+                                    netPayable: Number(p.netPayable),
+                                  });
+                                  setPaidDate(now.toISOString().slice(0, 10));
                                   setPaidAmount(String(Math.round(Number(p.netPayable))));
-                                  setPaidNote("");
+                                  setPaidBankRef("");
                                 }}
                               >
                                 <CreditCard className="w-3.5 h-3.5 mr-1" />
@@ -299,9 +290,8 @@ export default function OSRebate() {
                     <tr>
                       <td colSpan={3} className="px-4 py-3 font-semibold text-gray-700">本月合計</td>
                       <td className="px-4 py-3 text-right font-bold text-gray-900 text-base">$ {formatAmount(totalPayable)}</td>
-                      <td colSpan={2} className="px-4 py-3 text-right text-sm text-gray-500">
-                        已付 $ {formatAmount(totalPaid)}
-                      </td>
+                      <td className="px-4 py-3 text-right text-sm text-gray-500">已付 $ {formatAmount(totalPaid)}</td>
+                      <td />
                       <td className="px-4 py-3 text-right font-bold text-red-600">
                         未付 $ {formatAmount(totalPayable - totalPaid)}
                       </td>
@@ -313,14 +303,24 @@ export default function OSRebate() {
           </TabsContent>
         </Tabs>
 
-        {/* 確認收款 Dialog */}
+        {/* ── 確認退佣收款 Dialog ── */}
         {receivedDialog?.open && (
           <Dialog open onOpenChange={() => setReceivedDialog(null)}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>確認收款 — {receivedDialog.supplierName}</DialogTitle>
+                <DialogTitle>確認退佣收款 — {receivedDialog.supplierName}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 py-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">退佣金額（可修改）</label>
+                  <input
+                    type="number"
+                    value={receivedManualAmt}
+                    onChange={(e) => setReceivedManualAmt(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">伯享/韓濟若系統為 0，請在此輸入實際金額</p>
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">收款日期</label>
                   <input
@@ -334,9 +334,9 @@ export default function OSRebate() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">銀行備註（選填）</label>
                   <input
                     type="text"
-                    value={receivedNote}
-                    onChange={(e) => setReceivedNote(e.target.value)}
-                    placeholder="例：匯款單號或備忘"
+                    value={receivedBankRef}
+                    onChange={(e) => setReceivedBankRef(e.target.value)}
+                    placeholder="匯款單號或備忘"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                   />
                 </div>
@@ -345,21 +345,31 @@ export default function OSRebate() {
                 <Button variant="outline" onClick={() => setReceivedDialog(null)}>取消</Button>
                 <Button
                   className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                  disabled={confirmReceivedMutation.isPending}
-                  onClick={() => confirmReceivedMutation.mutate({
-                    id: receivedDialog.id,
-                    receivedDate,
-                    bankTxNote: receivedNote || undefined,
-                  })}
+                  disabled={updateRebateMut.isPending}
+                  onClick={() => {
+                    const amt = Number(receivedManualAmt);
+                    updateRebateMut.mutate(
+                      {
+                        id: receivedDialog.id,
+                        status: "received",
+                        ...(amt > 0 && amt !== receivedDialog.rebateAmount ? { rebateAmount: amt } : {}),
+                        ...(receivedBankRef ? { bankRef: receivedBankRef } : {}),
+                      },
+                      {
+                        onSuccess: () => { toast.success("已更新退佣狀態"); setReceivedDialog(null); refetchRebates(); },
+                        onError: (e: any) => toast.error(e.message || "操作失敗"),
+                      }
+                    );
+                  }}
                 >
-                  {confirmReceivedMutation.isPending ? "儲存中..." : "確認收款"}
+                  {updateRebateMut.isPending ? "儲存中..." : "確認收款"}
                 </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
         )}
 
-        {/* 標記已付 Dialog */}
+        {/* ── 標記應付帳款已付 Dialog ── */}
         {paidDialog?.open && (
           <Dialog open onOpenChange={() => setPaidDialog(null)}>
             <DialogContent>
@@ -390,9 +400,9 @@ export default function OSRebate() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">銀行備註（選填）</label>
                   <input
                     type="text"
-                    value={paidNote}
-                    onChange={(e) => setPaidNote(e.target.value)}
-                    placeholder="例：匯款單號或備忘"
+                    value={paidBankRef}
+                    onChange={(e) => setPaidBankRef(e.target.value)}
+                    placeholder="匯款單號或備忘"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                   />
                 </div>
@@ -401,15 +411,16 @@ export default function OSRebate() {
                 <Button variant="outline" onClick={() => setPaidDialog(null)}>取消</Button>
                 <Button
                   className="bg-blue-600 hover:bg-blue-700 text-white"
-                  disabled={markPaidMutation.isPending}
-                  onClick={() => markPaidMutation.mutate({
-                    id: paidDialog.id,
-                    paidDate,
-                    paidAmount: Number(paidAmount),
-                    bankTxNote: paidNote || undefined,
-                  })}
+                  disabled={markPaidMut.isPending || !paidAmount}
+                  onClick={() => markPaidMut.mutate(
+                    { id: paidDialog.id, paidAmount: Number(paidAmount), bankRef: paidBankRef || undefined },
+                    {
+                      onSuccess: () => { toast.success("已標記付款"); setPaidDialog(null); refetchPayables(); },
+                      onError: (e: any) => toast.error(e.message || "操作失敗"),
+                    }
+                  )}
                 >
-                  {markPaidMutation.isPending ? "儲存中..." : "標記已付"}
+                  {markPaidMut.isPending ? "儲存中..." : "標記已付"}
                 </Button>
               </DialogFooter>
             </DialogContent>

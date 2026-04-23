@@ -247,54 +247,98 @@ export const procurementRouter = router({
       }
       if (input.status === 'received') {
         try {
-          // os_procurement_orders has no supplierName column; get it from items
-          const [itemSupRows] = await (db as any).$client.execute(
-            'SELECT DISTINCT supplierName FROM os_procurement_items WHERE procurementOrderId=? LIMIT 1',
+          // 取得此叫貨單的 orderDate（用於決定應付帳款月份）
+          const [orderRow] = await (db as any).$client.execute(
+            'SELECT orderDate FROM os_procurement_orders WHERE id=? LIMIT 1',
             [input.orderId]
           );
-          const supplierName = (itemSupRows as any[])[0]?.supplierName;
-          if (!supplierName) throw new Error('找不到叫貨單品項');
-          const [supRows] = await (db as any).$client.execute(
-            'SELECT deliveryType FROM os_suppliers WHERE name=? AND isActive=1 LIMIT 1',
-            [supplierName]
+          const orderDate: string = (orderRow as any[])[0]?.orderDate ?? '';
+          const payableMonth = orderDate.slice(0, 7); // YYYY-MM
+
+          // 取得品項（含廠商、金額）
+          const [allItems] = await (db as any).$client.execute(
+            'SELECT supplierName, productName, quantity, unit, amount FROM os_procurement_items WHERE procurementOrderId=?',
+            [input.orderId]
           );
-          if ((supRows as any[])[0]?.deliveryType === 'yulian') {
-            const [itemRows] = await (db as any).$client.execute(
-              'SELECT productName, quantity, unit FROM os_procurement_items WHERE procurementOrderId=?',
-              [input.orderId]
-            );
-            for (const item of itemRows as any[]) {
-              const [invRows] = await (db as any).$client.execute(
-                'SELECT id, currentQty FROM os_inventory WHERE tenantId=? AND supplierName=? AND productName=? LIMIT 1',
-                [ctx.tenantId, supplierName, item.productName]
+          if ((allItems as any[]).length === 0) throw new Error('找不到叫貨單品項');
+
+          // ── 1. 應付帳款自動累加（每個廠商 upsert）────────────────
+          if (payableMonth) {
+            // 按廠商彙總本單金額
+            const supplierTotals = new Map<string, number>();
+            for (const item of allItems as any[]) {
+              const prev = supplierTotals.get(item.supplierName) ?? 0;
+              supplierTotals.set(item.supplierName, prev + Number(item.amount));
+            }
+            const tenantId = ctx.tenantId ?? 1;
+            const [year, mon] = payableMonth.split('-').map(Number);
+            const lastDay = new Date(year, mon, 0).getDate();
+            const periodStart = `${payableMonth}-01`;
+            const periodEnd = `${payableMonth}-${String(lastDay).padStart(2, '0')}`;
+
+            for (const [supplierName, addAmount] of Array.from(supplierTotals)) {
+              const [existing] = await (db as any).$client.execute(
+                'SELECT id, totalAmount FROM os_payables WHERE tenantId=? AND supplierName=? AND month=? LIMIT 1',
+                [tenantId, supplierName, payableMonth]
               );
-              if ((invRows as any[]).length > 0) {
-                const inv = (invRows as any[])[0];
-                const qtyBefore = Number(inv.currentQty);
-                const qtyAfter = qtyBefore + Number(item.quantity);
+              if ((existing as any[]).length > 0) {
+                const rec = (existing as any[])[0];
+                const newTotal = Number(rec.totalAmount) + addAmount;
                 await (db as any).$client.execute(
-                  'UPDATE os_inventory SET currentQty=?, updatedAt=NOW() WHERE id=?',
-                  [qtyAfter, inv.id]
-                );
-                await (db as any).$client.execute(
-                  "INSERT INTO os_inventory_logs (tenantId, inventoryId, changeType, qty, qtyBefore, qtyAfter, refType, refId, note, createdAt) VALUES (?,?,'in',?,?,?,'procurement',?,'叫貨收貨自動入庫',NOW())",
-                  [ctx.tenantId, inv.id, Number(item.quantity), qtyBefore, qtyAfter, input.orderId]
+                  'UPDATE os_payables SET totalAmount=?, netPayable=GREATEST(0, ?-COALESCE(rebateAmount,0)), updatedAt=NOW() WHERE id=?',
+                  [newTotal, newTotal, rec.id]
                 );
               } else {
-                const [insertResult] = await (db as any).$client.execute(
-                  'INSERT INTO os_inventory (tenantId, supplierName, productName, unit, currentQty, safetyQty, lastCountDate, createdAt, updatedAt) VALUES (?,?,?,?,?,0,NULL,NOW(),NOW())',
-                  [ctx.tenantId, supplierName, item.productName, item.unit, Number(item.quantity)]
-                );
-                const newId = (insertResult as any).insertId;
                 await (db as any).$client.execute(
-                  "INSERT INTO os_inventory_logs (tenantId, inventoryId, changeType, qty, qtyBefore, qtyAfter, refType, refId, note, createdAt) VALUES (?,?,'in',?,0,?,'procurement',?,'叫貨收貨自動建立品項',NOW())",
-                  [ctx.tenantId, newId, Number(item.quantity), Number(item.quantity), input.orderId]
+                  `INSERT INTO os_payables (tenantId, supplierName, month, periodStart, periodEnd, totalAmount, netPayable, createdAt, updatedAt)
+                   VALUES (?,?,?,?,?,?,?,NOW(),NOW())`,
+                  [tenantId, supplierName, payableMonth, periodStart, periodEnd, addAmount, addAmount]
                 );
               }
             }
           }
+
+          // ── 2. B類廠商庫存自動入庫 ────────────────────────────────
+          const supplierName = (allItems as any[])[0]?.supplierName;
+          if (supplierName) {
+            const [supRows] = await (db as any).$client.execute(
+              'SELECT deliveryType FROM os_suppliers WHERE name=? AND isActive=1 LIMIT 1',
+              [supplierName]
+            );
+            if ((supRows as any[])[0]?.deliveryType === 'yulian') {
+              for (const item of allItems as any[]) {
+                const [invRows] = await (db as any).$client.execute(
+                  'SELECT id, currentQty FROM os_inventory WHERE tenantId=? AND supplierName=? AND productName=? LIMIT 1',
+                  [ctx.tenantId, item.supplierName, item.productName]
+                );
+                if ((invRows as any[]).length > 0) {
+                  const inv = (invRows as any[])[0];
+                  const qtyBefore = Number(inv.currentQty);
+                  const qtyAfter = qtyBefore + Number(item.quantity);
+                  await (db as any).$client.execute(
+                    'UPDATE os_inventory SET currentQty=?, updatedAt=NOW() WHERE id=?',
+                    [qtyAfter, inv.id]
+                  );
+                  await (db as any).$client.execute(
+                    "INSERT INTO os_inventory_logs (tenantId, inventoryId, changeType, qty, qtyBefore, qtyAfter, refType, refId, note, createdAt) VALUES (?,?,'in',?,?,?,'procurement',?,'叫貨收貨自動入庫',NOW())",
+                    [ctx.tenantId, inv.id, Number(item.quantity), qtyBefore, qtyAfter, input.orderId]
+                  );
+                } else {
+                  const [insertResult] = await (db as any).$client.execute(
+                    'INSERT INTO os_inventory (tenantId, supplierName, productName, unit, currentQty, safetyQty, lastCountDate, createdAt, updatedAt) VALUES (?,?,?,?,?,0,NULL,NOW(),NOW())',
+                    [ctx.tenantId, item.supplierName, item.productName, item.unit, Number(item.quantity)]
+                  );
+                  const newId = (insertResult as any).insertId;
+                  await (db as any).$client.execute(
+                    "INSERT INTO os_inventory_logs (tenantId, inventoryId, changeType, qty, qtyBefore, qtyAfter, refType, refId, note, createdAt) VALUES (?,?,'in',?,0,?,'procurement',?,'叫貨收貨自動建立品項',NOW())",
+                    [ctx.tenantId, newId, Number(item.quantity), Number(item.quantity), input.orderId]
+                  );
+                }
+              }
+            }
+          }
         } catch (e) {
-          console.error('[庫存自動入庫失敗]', e);
+          console.error('[received 自動流程失敗]', e);
         }
       }
       return { success: true };

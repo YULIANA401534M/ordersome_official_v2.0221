@@ -2,7 +2,7 @@
 
 業務邏輯請讀 BUSINESS.md，技術參考請讀 CLAUDE_REFERENCE.md，歷史記錄請讀 DEVELOPMENT_LOG.md
 
-> **版本**：v5.85。**最後更新**：2026-04-23。
+> **版本**：v5.86。**最後更新**：2026-04-23。
 > **給 Claude 架構**：大腦（Claude.ai）+ 手腳（Claude Code）
 
 ---
@@ -39,6 +39,7 @@ git status && git log --oneline -3
    - running（橘）= 需資料或連動
    - pending（灰）= 待建置
    同時更新 footer 的版本號（v1.0 → v1.1）與日期。
+6. **前端頁面設計**：所有新頁面、UI 改版、互動原型、流程圖、文件 HTML 必須使用 web-design-engineer skill（位於 `C:\Users\barmy\OneDrive\桌面\VS CODE專案\_skill_install_tmp\web-design-skill-main\.claude\skills\web-design-engineer\SKILL.md`）。呼叫方式：透過 Claude Code Skill tool，skill name = `web-design-engineer`。不適用：純後端 API、CLI 工具、無視覺需求的資料處理。
 
 ---
 
@@ -60,7 +61,8 @@ git status && git log --oneline -3
 ### 最新 Git 狀態（2026-04-23 v5.85）
 
 最後三個 commit：
-1. `(v5.85)` — feat: v5.85 商城銷售人數計數器：聯動真實訂單+管理員可調整偏移量+前台顯示「X人付款」
+1. `(v5.86)` — fix: v5.86 應付帳款自動化：叫貨單received時自動upsert os_payables + 退佣系統統一改用accounting router
+2. `(v5.85)` — feat: v5.85 商城銷售人數計數器：聯動真實訂單+管理員可調整偏移量+前台顯示「X人付款」
 2. `(v5.84)` — fix: v5.84 ProductDetail免運費門檻聯動：從storeSettings.get讀取，移除寫死NT$1000/NT$100
 3. `(v5.83)` — fix: v5.83 商城商品圖比例修正：aspect-square→aspect-[3/4]+object-cover→object-contain
 2. `(v5.81)` — fix: v5.81 AdminProducts Modal Footer固定：DialogContent內加明確flex容器避免grid衝突
@@ -275,6 +277,8 @@ working tree: clean
 - OSPurchasing.tsx 讀 URL ?supplier= 參數自動帶入廠商篩選（useSearch + useEffect）
 - os_products 共 704 筆（v5.57後，含大麥歷史匯入新建137筆 needsReview=1）
 - os_products 的 `temperature` 欄位不存在，溫層存在 `category2`
+- **應付帳款自動化（v5.86）**：procurement.updateStatus received 時自動 upsert os_payables（按廠商+月份累加 totalAmount，netPayable=totalAmount-rebateAmount），不再需要手動點「生成本月應付」；generateMonthlyPayables 保留作為月底手動重算/修正工具
+- **退佣系統統一（v5.86）**：OSRebate.tsx 全面改用 accounting 路由（listRebates/calculateRebates/updateRebate + listPayables/markPayablePaid），osRebate router 保留但前端不再觸發；退佣確認收款 dialog 加入「可修改金額」欄位，供伯享/韓濟人工輸入實際金額
 - os_delivery_orders.toStoreId 已改為允許 NULL
 - os_franchisee_payments.userId 已改為允許 NULL
 - packCost = 大麥進貨價（直接對應），不是 unitQty × unit_cost
@@ -484,3 +488,98 @@ check().catch(console.error);
 3. 聯動 `os_products.unitCost` 計算成本
 
 **優先順序**：P2，下一輪處理。
+---
+
+## 對話交接暫存（2026-04-23，下一個對話先看，看完可刪）
+
+- 老闆要求：未來每個新對話都要先讀 `CLAUDE.md`，並用繁體中文回覆。
+- 本輪已完成並 push：
+  - commit: `135ca5b`
+  - message: `fix: stabilize daily report and shop cart hero buttons`
+- 本輪實際修改檔案：
+  - `client/src/pages/dashboard/OSDailyReport.tsx`
+  - `client/src/pages/shop/ShopHome.tsx`
+  - `client/src/pages/shop/ShopCategory.tsx`
+- 本輪修正內容：
+  - `OSDailyReport.tsx` 已重做成較穩定版本。
+  - 每日日報已加入「結算日期」可選，預設為今天。
+  - 日報頁有「前一天 / 今天 / 後一天」快捷按鈕。
+  - 前一版疑似造成 React 崩潰的高風險 state 同步寫法已移除。
+  - 商城手機版 hero 區的購物車按鈕白底白字問題，已在 `ShopHome.tsx` 與 `ShopCategory.tsx` 修正。
+- 使用者回報過：
+  - 之前 `/dashboard/daily-report` 曾經直接崩潰，使用者已自行回退過版本。
+  - 使用者非常在意「不能崩潰」、「要能直接 commit / push」、「不要只改一半」。
+- 目前需要下一個對話優先接手的事：
+  - 再次人工檢查 `/dashboard/daily-report` 實際頁面是否正常。
+  - 再檢查手機商城上方 header / 購物車在真機或模擬器的顯示。
+  - 若要做更完整驗證，先處理本機 `node_modules` 缺檔 / 權限 / build toolchain 噪音。
+- 本機環境現況：
+  - `npm run build` 曾卡在本地依賴缺檔，不完全是業務程式碼錯誤。
+  - 曾遇到 `vite` 找不到、部分套件 dist 檔缺失、Windows 權限 / PowerShell / npm cache 問題。
+  - 這些是本機工具鏈問題，不等於網站功能本身一定壞掉。
+- 下一個對話看到這段後，可以先跟使用者說：
+  - 「我已先讀過 `CLAUDE.md` 與上一輪交接，會先驗證每日日報與手機商城購物車顯示，再繼續修。」
+
+---
+
+## Dayone 2026-04-23 �ɥR����
+
+- �ϥΪ̭n�D Dayone �汵��T���o�A�t�~�s�W�ɮסA����@�ߪ����g�^ `CLAUDE.md`�C
+- �w���� Dayone ����u���睊����:
+  - `client/src/components/DayoneLayout.tsx`
+  - `client/src/pages/dayone/driver/DriverLayout.tsx`
+  - `client/src/pages/dayone/DayoneDashboard.tsx`
+  - `client/src/pages/dayone/DayoneOrders.tsx`
+  - `client/src/pages/dayone/DayoneDrivers.tsx`
+  - `client/src/components/TenantUserManagement.tsx`
+  - `client/src/pages/dayone/DayoneCustomersContent.tsx`
+  - `client/src/pages/dayone/DayoneLiffOrders.tsx`
+  - `client/src/pages/dayone/DayoneDistricts.tsx`
+- �w�ץ� Dayone �q���� tenant �}��:
+  - �h�� driver ���� `TENANT_ID` �� `2` ��^ `90004`
+- �w�ץ�/���㪺 Dayone �֤��޿�:
+  - `server/routers/dayone/dispatch.ts`
+    - �ج����ɤ��A�����إ� AR
+    - �C�L������ɦP�B����w�s�üg�J `dy_stock_movements`
+    - ��s�������خɦP�B box ledger �P AR
+  - `server/routers/dayone/driver.ts`
+    - �q���N�q��令 delivered �ɷ|�ɻ�/��s AR
+  - `server/routers/dayone/orders.ts`
+    - `confirmDelivery` �|�̹�� `paidAmount` ���T��s `paymentStatus`
+    - �e�F�ɦP�B upsert AR
+- �w�T�{�� Dayone �y�{���I:
+  - �ثe repo ���� `pnpm check` ���]�j�q�J�� tRPC typing ���D�ӥ��ѡA���O Dayone ��@�Ҳճy��
+  - `npm run build` �����d�b���үʤ� `estree-walker`
+- Dayone �U�@�B�̰��u��:
+  - �Τ@ `dayone.driver.getMyTodayOrders` �P `dayone.drivers.myOrders`
+  - �ɤW�q���ѳf�^�w�������y�{�P UI
+  - ��i�fñ����B�����`���B�q�����u��B�Ȥ�ñ�������P���
+
+- 2026-04-23 �ĤG���ɱj:
+  - `server/routers/dayone/dispatch.ts` �w������g�����b ASCII �w�������A�קK�ýX�r��ɭP router �Y��C
+  - `server/routers/dayone/dispatch.ts` �s�W `returnInventory`�A�����ɤW�q���ѳf�^�w�y�{�A�^�w�ɷ|�W�[ `dy_inventory` �üg�J `dy_stock_movements`�A`refType='dispatch_return'`�C
+  - `server/routers/dayone/dispatch.ts` �� `listDispatch` �w�}��q������d�ۤv��������A���A�u���޲z�ݡC
+  - `server/routers/dayone/dispatch.ts` �� `getDispatchDetail` �{�b�|�^�� `products` �E�X��ơA��K�e�ݰ��ѳf�^�w��J�C
+  - `server/routers/dayone/driver.ts`�B`orders.ts`�B`drivers.ts` �w�令���b�i���@�����A���������I�ýX���~�T���C
+  - �q���ݤw�Τ@���Ѹ�ƨӷ��� `dayone.driver.getMyTodayOrders` �D�u�A�קK�P�ɲV�� `dayone.drivers.myOrders` �P�� `dayone.orders.updateStatus` �y���y�{�}���C
+  - �w�����q���ݰ��W����:
+    - `client/src/pages/dayone/driver/DriverLayout.tsx`
+    - `client/src/pages/dayone/driver/DriverHome.tsx`
+    - `client/src/pages/dayone/driver/DriverToday.tsx`
+    - `client/src/pages/dayone/driver/DriverOrders.tsx`
+    - `client/src/pages/dayone/driver/DriverPickup.tsx`
+    - `client/src/pages/dayone/driver/DriverDone.tsx`
+    - `client/src/pages/dayone/driver/DriverOrderDetail.tsx`
+    - `client/src/pages/dayone/driver/DriverWorkLog.tsx`
+  - `DriverWorkLog.tsx` �w���W�ѳf�^�w UI�A�i��������鬣���~���^�ɮw�s�A�A�e�X�鵲�C
+  - `client/src/pages/dayone/DayoneDispatch.tsx` �w�㭶�����A��X:
+    - �إ߬���
+    - ��������
+    - �C�L���w�s
+    - �{�ɥ[��
+    - �ѳf�^�w
+  - �w�� TypeScript `transpileModule` �w�糧�������I Dayone �ɮװ��y�k�����ҡA���G�� `TRANSPILE_OK`�C
+  - ���ݫ���`��:
+    - `dy_ap_records` �ثe�����v��A�|���ɯŦ��̨����Ӥ�/��J�`��b����
+    - �|����Ҧ� Dayone �D���W��������r�t�ΤƲM�~�^���㤤��
+    - repo ���� `pnpm check` / `npm run build` �����J���M�װ��D�v�T�A���ઽ�����ӷ� Dayone ��Ҳէ�������
