@@ -754,3 +754,58 @@ pm run build = success
 - 庫存更完整的三段式狀態: 可用 / 已派車 / 回庫待驗
 - 派車單、撿貨單、簽收單的列印格式優化
 - 低頻 Dayone 頁面殘留舊文案與舊版型持續清理
+
+## Dayone 2026-04-24 第四輪補齊
+
+- 本輪依使用者指定順序執行:
+  - 1. 先清殘留英文與舊樣式頁面
+  - 2. 再補 CLAUDE.md 流程與擴充規則
+  - 3. 最後補上游 AP 彙總邏輯
+- 已重寫並清乾淨的頁面:
+  - `client/src/pages/dayone/DayonePurchaseReceipts.tsx`
+  - `client/src/pages/dayone/DayoneARContent.tsx`
+  - `client/src/pages/dayone/DayoneCustomersContent.tsx`
+  - `client/src/pages/dayone/driver/DriverPickup.tsx`
+- `DayonePurchaseReceipts.tsx` 本輪變更:
+  - 補上手機與桌面一致的進貨簽收工作台
+  - 建立收貨單後仍維持「供應商簽名 -> 入庫 -> 建 AP」原功能
+  - 新增本月供應商應付快照，讓進貨頁可直接看 AP 聚合，不必再靠腦內對帳
+  - 進貨頁畫面全面改成乾淨中文，避免亂碼與英中混雜
+- `DayoneARContent.tsx` 本輪變更:
+  - 應收帳款、司機日報、月結對帳三個 tab 全面改為乾淨中文與一致版型
+  - 保留收款、異常解決、建立司機日報、匯出 Excel、列印月結等既有功能
+  - 把「逾期客戶 / 未收金額 / 司機現金異常」這些管理資訊直接拉到可讀狀態
+- `server/routers/dayone/ap.ts` 本輪變更:
+  - 新增 `dayone.ap.summary`
+  - summary 輸入: `tenantId`, `supplierId?`, `month?`
+  - summary 輸出:
+    - `overview`: 供應商數、應付總額、已付、未付、逾期筆數
+    - `suppliers`: 各供應商於該月的簽收單數、帳款筆數、總額、未付、最近到期日
+  - 目的: 讓上游進貨簽收後的 AP 不再只是逐筆明細，而是先有日/月彙總入口
+
+## Dayone 2026-04-24 擴充節點規則補充
+
+- 後續如果再加節點，例如:
+  - 供應商付款單
+  - 臨時加貨補單
+  - 司機車載庫存
+  - 客戶退貨或回箱
+  - 對帳核銷
+- 一律先寫清楚這五件事再開發:
+  - 節點屬於哪條主線
+  - 觸發時點是建立、列印、簽名、送達還是回庫
+  - 會動到哪些資料表
+  - 是否影響庫存數量
+  - 是否影響 AR / AP
+- Dayone 目前推薦主線拆法:
+  - 訂單主線: `dy_orders`
+  - 派車配送主線: `dy_dispatch_orders`, `dy_dispatch_items`
+  - 進貨主線: `dy_purchase_receipts`
+  - 庫存主線: `dy_inventory`, `dy_stock_movements`
+  - 帳務主線:
+    - 下游應收 `dy_ar_records`
+    - 上游應付 `dy_ap_records`
+- 若未來再做 chunk / lazy route 優化:
+  - 先確認 Railway 部署與瀏覽器 runtime log
+  - 不可直接重上全站 manualChunks
+  - 任何拆包都必須先驗證首頁與 Dayone 主路由 `/dayone/*` 不白畫面

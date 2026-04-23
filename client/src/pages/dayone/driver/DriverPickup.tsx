@@ -1,6 +1,6 @@
 import DriverLayout from "./DriverLayout";
 import { trpc } from "@/lib/trpc";
-import { Package, CheckCircle2, ChevronRight } from "lucide-react";
+import { CheckCircle2, ChevronRight, Package } from "lucide-react";
 import { toast } from "sonner";
 
 const TENANT_ID = 90004;
@@ -18,7 +18,7 @@ export default function DriverPickup() {
 
   const updateStatus = trpc.dayone.driver.updateOrderStatus.useMutation({
     onSuccess: () => {
-      toast.success("已標記為撿貨完成");
+      toast.success("已標記為完成撿貨，準備出車");
       utils.dayone.driver.getMyTodayOrders.invalidate();
     },
     onError: (error) => toast.error(error.message),
@@ -33,10 +33,10 @@ export default function DriverPickup() {
       ) : (
         <div className="space-y-4">
           <section className="rounded-[28px] border border-amber-100 bg-[linear-gradient(135deg,#fff8eb_0%,#fffdf8_100%)] px-5 py-5 shadow-[0_16px_40px_rgba(120,53,15,0.08)]">
-            <p className="text-xs uppercase tracking-[0.22em] text-amber-600">Pickup</p>
-            <h2 className="mt-3 font-brand text-[1.7rem] leading-none text-stone-900">上車前最後確認</h2>
+            <p className="text-xs uppercase tracking-[0.22em] text-amber-600">準備上車</p>
+            <h2 className="mt-3 font-brand text-[1.7rem] leading-none text-stone-900">出車前最後確認</h2>
             <p className="mt-3 text-sm leading-6 text-stone-500">
-              確認貨品上車後，把狀態切成「已撿貨」，系統才會知道這筆單已經進入實際配送。
+              先確認今天待送訂單、車上貨量與配送路線。司機在這一步完成撿貨後，後台才會知道這張單已準備出車。
             </p>
           </section>
 
@@ -74,7 +74,7 @@ export default function DriverPickup() {
                       onClick={() => updateStatus.mutate({ id: order.id, tenantId: TENANT_ID, status: "picked" })}
                       disabled={updateStatus.isPending}
                     >
-                      確認上車
+                      完成撿貨
                       <ChevronRight className="h-4 w-4" />
                     </button>
                   </div>

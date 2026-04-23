@@ -1,153 +1,254 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DayoneLayout, TENANT_ID } from "./DayoneLayout";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
-// ── helpers ────────────────────────────────────────────────────────────────
-
-function fmtDate(v: string | null | undefined) {
-  if (!v) return "-";
-  return new Date(v).toLocaleDateString("zh-TW");
-}
-function fmtMoney(v: number | string | null | undefined) {
-  return `$${Number(v ?? 0).toLocaleString("zh-TW")}`;
-}
-function nowLocalDatetime() {
-  const d = new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-const STATUS_CFG: Record<string, { label: string; cls: string }> = {
-  pending: { label: "待簽名", cls: "bg-orange-100 text-orange-700" },
-  signed:  { label: "已簽名", cls: "bg-green-100 text-green-700" },
-  anomaly: { label: "異常",   cls: "bg-red-100 text-red-700" },
+type ReceiptItem = {
+  name: string;
+  qty: number;
+  unitPrice: number;
 };
 
-// ── ReceiptSummaryDialog ───────────────────────────────────────────────────
+type ReceiptMeta = {
+  supplierName: string;
+  batchNo: string;
+  licensePlate: string;
+  receiptDate: string;
+};
 
-function ReceiptSummaryDialog({ data, onClose }: {
-  data: {
-    supplierName: string;
-    receiptDate: string;
-    licensePlate: string;
-    batchNo: string;
-    items: { name: string; qty: number; unitPrice: number }[];
-    signatureUrl: string;
-  };
+type ReceiptRecord = {
+  id: number;
+  supplierName: string;
+  driverName: string;
+  receiptDate: string;
+  licensePlate?: string | null;
+  batchNo?: string | null;
+  totalQty: number;
+  totalAmount: number;
+  status: string;
+  anomalyNote?: string | null;
+  supplierSignatureUrl?: string | null;
+  signedAt?: string | null;
+  items: string | ReceiptItem[];
+};
+
+function fmtDate(value: string | null | undefined) {
+  if (!value) return "-";
+  return new Date(value).toLocaleDateString("zh-TW");
+}
+
+function fmtDateTime(value: string | null | undefined) {
+  if (!value) return "-";
+  return new Date(value).toLocaleString("zh-TW");
+}
+
+function fmtMoney(value: number | string | null | undefined) {
+  return `NT$ ${Number(value ?? 0).toLocaleString("zh-TW")}`;
+}
+
+function currentMonthValue() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function nowLocalDatetime() {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+}
+
+function parseItems(raw: ReceiptRecord["items"]) {
+  if (Array.isArray(raw)) return raw as ReceiptItem[];
+  try {
+    return JSON.parse(raw ?? "[]") as ReceiptItem[];
+  } catch {
+    return [];
+  }
+}
+
+const receiptStatusTone: Record<string, { label: string; className: string }> = {
+  pending: { label: "待簽收", className: "bg-amber-100 text-amber-700" },
+  signed: { label: "已簽收", className: "bg-emerald-100 text-emerald-700" },
+  anomaly: { label: "異常", className: "bg-red-100 text-red-700" },
+};
+
+function ReceiptSummaryDialog({
+  data,
+  onClose,
+}: {
+  data: ReceiptMeta & { items: ReceiptItem[]; signatureUrl: string };
   onClose: () => void;
 }) {
-  const totalAmount = data.items.reduce((s, i) => s + i.qty * i.unitPrice, 0);
-  const totalQty = data.items.reduce((s, i) => s + i.qty, 0);
+  const totalQty = data.items.reduce((sum, item) => sum + Number(item.qty), 0);
+  const totalAmount = data.items.reduce((sum, item) => sum + Number(item.qty) * Number(item.unitPrice), 0);
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>✅ 收貨明細</DialogTitle></DialogHeader>
-        <div id="receipt-print-area" className="space-y-4 text-sm">
-          <div className="grid grid-cols-2 gap-3">
-            <div><p className="text-xs text-gray-400">供應商</p><p className="font-medium">{data.supplierName}</p></div>
-            <div><p className="text-xs text-gray-400">收貨時間</p><p>{data.receiptDate ? new Date(data.receiptDate).toLocaleString("zh-TW") : "-"}</p></div>
-            <div><p className="text-xs text-gray-400">車牌</p><p>{data.licensePlate || "-"}</p></div>
-            <div><p className="text-xs text-gray-400">批次號</p><p>{data.batchNo || "-"}</p></div>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>進貨簽收完成</DialogTitle>
+        </DialogHeader>
+
+        <div id="purchase-receipt-print-area" className="space-y-5 text-sm">
+          <div className="rounded-3xl border border-amber-100 bg-amber-50 px-4 py-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700">簽收摘要</p>
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
+              <div>
+                <p className="text-xs text-stone-500">供應商</p>
+                <p className="mt-1 font-semibold text-stone-900">{data.supplierName}</p>
+              </div>
+              <div>
+                <p className="text-xs text-stone-500">收貨時間</p>
+                <p className="mt-1 text-stone-700">{fmtDateTime(data.receiptDate)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-stone-500">車牌</p>
+                <p className="mt-1 text-stone-700">{data.licensePlate || "-"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-stone-500">批次號</p>
+                <p className="mt-1 text-stone-700">{data.batchNo || "-"}</p>
+              </div>
+            </div>
           </div>
 
-          <div>
-            <p className="text-xs text-gray-400 mb-2">品項明細</p>
-            <table className="w-full text-xs border rounded overflow-hidden">
-              <thead><tr className="bg-gray-50 border-b">
-                <th className="text-left px-3 py-2">品項</th>
-                <th className="text-right px-3 py-2">數量</th>
-                <th className="text-right px-3 py-2">單價</th>
-                <th className="text-right px-3 py-2">小計</th>
-              </tr></thead>
+          <div className="overflow-hidden rounded-3xl border border-stone-200">
+            <table className="w-full text-sm">
+              <thead className="bg-stone-50 text-stone-500">
+                <tr>
+                  <th className="px-4 py-3 text-left font-medium">品項</th>
+                  <th className="px-4 py-3 text-right font-medium">數量</th>
+                  <th className="px-4 py-3 text-right font-medium">單價</th>
+                  <th className="px-4 py-3 text-right font-medium">小計</th>
+                </tr>
+              </thead>
               <tbody>
-                {data.items.filter(i => i.qty > 0).map((item, i) => (
-                  <tr key={i} className="border-b">
-                    <td className="px-3 py-1.5">{item.name}</td>
-                    <td className="px-3 py-1.5 text-right">{item.qty}</td>
-                    <td className="px-3 py-1.5 text-right">{fmtMoney(item.unitPrice)}</td>
-                    <td className="px-3 py-1.5 text-right">{fmtMoney(item.qty * item.unitPrice)}</td>
-                  </tr>
-                ))}
+                {data.items
+                  .filter((item) => Number(item.qty) > 0)
+                  .map((item, index) => (
+                    <tr key={`${item.name}-${index}`} className="border-t border-stone-200">
+                      <td className="px-4 py-3 text-stone-900">{item.name}</td>
+                      <td className="px-4 py-3 text-right text-stone-700">{item.qty} 箱</td>
+                      <td className="px-4 py-3 text-right text-stone-700">{fmtMoney(item.unitPrice)}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-stone-900">
+                        {fmtMoney(Number(item.qty) * Number(item.unitPrice))}
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
-              <tfoot><tr className="bg-gray-50 font-semibold">
-                <td colSpan={2} className="px-3 py-2">合計</td>
-                <td className="px-3 py-2 text-right">{totalQty} 箱</td>
-                <td className="px-3 py-2 text-right">{fmtMoney(totalAmount)}</td>
-              </tr></tfoot>
+              <tfoot className="bg-stone-50 font-semibold text-stone-900">
+                <tr>
+                  <td className="px-4 py-3">合計</td>
+                  <td className="px-4 py-3 text-right">{totalQty} 箱</td>
+                  <td className="px-4 py-3" />
+                  <td className="px-4 py-3 text-right">{fmtMoney(totalAmount)}</td>
+                </tr>
+              </tfoot>
             </table>
           </div>
 
-          {data.signatureUrl && (
-            <div>
-              <p className="text-xs text-gray-400 mb-2">供應商簽名</p>
-              <img src={data.signatureUrl} alt="簽名" className="border rounded max-h-28 bg-white" />
+          {data.signatureUrl ? (
+            <div className="rounded-3xl border border-stone-200 bg-white px-4 py-4">
+              <p className="text-xs text-stone-500">供應商簽名</p>
+              <img src={data.signatureUrl} alt="供應商簽名" className="mt-3 max-h-32 rounded-2xl border bg-white" />
             </div>
-          )}
+          ) : null}
         </div>
 
         <style>{`
           @media print {
-            body > *:not(#receipt-print-area) { display: none !important; }
-            #receipt-print-area { display: block !important; }
-            .no-print { display: none !important; }
+            body * {
+              visibility: hidden;
+            }
+            #purchase-receipt-print-area,
+            #purchase-receipt-print-area * {
+              visibility: visible;
+            }
+            #purchase-receipt-print-area {
+              position: absolute;
+              left: 0;
+              top: 0;
+              width: 100%;
+            }
+            .purchase-receipt-no-print {
+              display: none !important;
+            }
           }
         `}</style>
 
-        <div className="flex gap-2 pt-2 no-print">
-          <Button variant="outline" className="flex-1" onClick={() => window.print()}>🖨️ 列印</Button>
-          <Button className="flex-1 bg-amber-500 hover:bg-amber-600 text-white" onClick={onClose}>關閉</Button>
+        <div className="purchase-receipt-no-print flex gap-2">
+          <Button variant="outline" className="flex-1 rounded-2xl" onClick={() => window.print()}>
+            列印收貨單
+          </Button>
+          <Button className="flex-1 rounded-2xl bg-amber-600 text-white hover:bg-amber-700" onClick={onClose}>
+            關閉
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
 
-// ── AnomalyDialog ──────────────────────────────────────────────────────────
-
-function AnomalyDialog({ receipt, onClose, onSuccess }: { receipt: any; onClose: () => void; onSuccess: () => void }) {
-  const [note, setNote] = useState("");
-  const mut = trpc.dayone.purchaseReceipt.markAnomaly.useMutation({
-    onSuccess: () => { toast.success("已標記異常"); onSuccess(); onClose(); },
-    onError: (e) => toast.error(e.message),
+function AnomalyDialog({
+  receipt,
+  onClose,
+  onSuccess,
+}: {
+  receipt: ReceiptRecord;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [note, setNote] = useState(receipt.anomalyNote ?? "");
+  const markAnomaly = trpc.dayone.purchaseReceipt.markAnomaly.useMutation({
+    onSuccess: () => {
+      toast.success("已標記進貨異常");
+      onSuccess();
+      onClose();
+    },
+    onError: (error) => toast.error(error.message),
   });
+
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader><DialogTitle>標記異常</DialogTitle></DialogHeader>
-        <div className="space-y-3 pt-1">
-          <Textarea placeholder="請描述異常情況..." value={note}
-            onChange={(e) => setNote(e.target.value)} rows={3} />
-          <div className="flex gap-2 justify-end">
-            <Button variant="outline" size="sm" onClick={onClose}>取消</Button>
-            <Button size="sm" variant="destructive" disabled={!note || mut.isPending}
-              onClick={() => mut.mutate({ id: receipt.id, tenantId: TENANT_ID, anomalyNote: note })}>
-              {mut.isPending ? "送出中..." : "確認異常"}
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>標記異常</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {receipt.supplierName} 這張進貨單會被標記為異常，請寫下原因，方便後續追查與對帳。
+          </div>
+          <Textarea
+            rows={4}
+            placeholder="例如：到貨破損、數量不符、簽名補件中..."
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+          />
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" className="rounded-2xl" onClick={onClose}>
+              取消
+            </Button>
+            <Button
+              variant="destructive"
+              className="rounded-2xl"
+              disabled={!note.trim() || markAnomaly.isPending}
+              onClick={() =>
+                markAnomaly.mutate({
+                  id: receipt.id,
+                  tenantId: TENANT_ID,
+                  anomalyNote: note.trim(),
+                })
+              }
+            >
+              {markAnomaly.isPending ? "送出中..." : "確認標記"}
             </Button>
           </div>
         </div>
@@ -156,76 +257,107 @@ function AnomalyDialog({ receipt, onClose, onSuccess }: { receipt: any; onClose:
   );
 }
 
-// ── DetailDialog ───────────────────────────────────────────────────────────
+function ReceiptDetailDialog({
+  receipt,
+  onClose,
+}: {
+  receipt: ReceiptRecord;
+  onClose: () => void;
+}) {
+  const items = parseItems(receipt.items);
+  const statusTone = receiptStatusTone[receipt.status] ?? receiptStatusTone.pending;
 
-function DetailDialog({ receipt, onClose }: { receipt: any; onClose: () => void }) {
-  const items = typeof receipt.items === "string" ? JSON.parse(receipt.items) : (receipt.items ?? []);
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>進貨單詳情 #{receipt.id}</DialogTitle></DialogHeader>
-        <div className="space-y-4 text-sm">
-          <div className="grid grid-cols-2 gap-3">
-            <div><p className="text-xs text-gray-400">供應商</p><p className="font-medium">{receipt.supplierName}</p></div>
-            <div><p className="text-xs text-gray-400">司機</p><p className="font-medium">{receipt.driverName}</p></div>
-            <div><p className="text-xs text-gray-400">收貨時間</p><p>{fmtDate(receipt.receiptDate)}</p></div>
-            <div><p className="text-xs text-gray-400">車牌</p><p>{receipt.licensePlate ?? "-"}</p></div>
-            <div><p className="text-xs text-gray-400">批次號</p><p>{receipt.batchNo ?? "-"}</p></div>
-            <div><p className="text-xs text-gray-400">狀態</p>
-              <Badge className={`${STATUS_CFG[receipt.status]?.cls ?? ""} border-0 text-xs`}>
-                {STATUS_CFG[receipt.status]?.label ?? receipt.status}
-              </Badge>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>進貨單詳情 #{receipt.id}</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-5 text-sm">
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3">
+              <p className="text-xs text-stone-500">供應商</p>
+              <p className="mt-1 font-semibold text-stone-900">{receipt.supplierName}</p>
+            </div>
+            <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3">
+              <p className="text-xs text-stone-500">司機</p>
+              <p className="mt-1 font-semibold text-stone-900">{receipt.driverName}</p>
+            </div>
+            <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3">
+              <p className="text-xs text-stone-500">收貨時間</p>
+              <p className="mt-1 text-stone-700">{fmtDateTime(receipt.receiptDate)}</p>
+            </div>
+            <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3">
+              <p className="text-xs text-stone-500">狀態</p>
+              <Badge className={`mt-2 border-0 ${statusTone.className}`}>{statusTone.label}</Badge>
+            </div>
+            <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3">
+              <p className="text-xs text-stone-500">車牌</p>
+              <p className="mt-1 text-stone-700">{receipt.licensePlate || "-"}</p>
+            </div>
+            <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3">
+              <p className="text-xs text-stone-500">批次號</p>
+              <p className="mt-1 text-stone-700">{receipt.batchNo || "-"}</p>
             </div>
           </div>
 
-          <div>
-            <p className="text-xs text-gray-400 mb-2">品項明細</p>
-            <table className="w-full text-xs border rounded overflow-hidden">
-              <thead><tr className="bg-gray-50 border-b">
-                <th className="text-left px-3 py-2">品項</th>
-                <th className="text-right px-3 py-2">數量</th>
-                <th className="text-right px-3 py-2">單價</th>
-                <th className="text-right px-3 py-2">小計</th>
-              </tr></thead>
+          <div className="overflow-hidden rounded-3xl border border-stone-200">
+            <table className="w-full text-sm">
+              <thead className="bg-stone-50 text-stone-500">
+                <tr>
+                  <th className="px-4 py-3 text-left font-medium">品項</th>
+                  <th className="px-4 py-3 text-right font-medium">數量</th>
+                  <th className="px-4 py-3 text-right font-medium">單價</th>
+                  <th className="px-4 py-3 text-right font-medium">小計</th>
+                </tr>
+              </thead>
               <tbody>
-                {items.map((item: any, i: number) => (
-                  <tr key={i} className="border-b">
-                    <td className="px-3 py-1.5">{item.name}</td>
-                    <td className="px-3 py-1.5 text-right">{item.qty}</td>
-                    <td className="px-3 py-1.5 text-right">{fmtMoney(item.unitPrice)}</td>
-                    <td className="px-3 py-1.5 text-right">{fmtMoney(item.qty * item.unitPrice)}</td>
+                {items.map((item, index) => (
+                  <tr key={`${item.name}-${index}`} className="border-t border-stone-200">
+                    <td className="px-4 py-3 text-stone-900">{item.name}</td>
+                    <td className="px-4 py-3 text-right text-stone-700">{item.qty} 箱</td>
+                    <td className="px-4 py-3 text-right text-stone-700">{fmtMoney(item.unitPrice)}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-stone-900">
+                      {fmtMoney(Number(item.qty) * Number(item.unitPrice))}
+                    </td>
                   </tr>
                 ))}
               </tbody>
-              <tfoot><tr className="bg-gray-50 font-semibold">
-                <td colSpan={2} className="px-3 py-2">合計</td>
-                <td className="px-3 py-2 text-right">{receipt.totalQty} 箱</td>
-                <td className="px-3 py-2 text-right">{fmtMoney(receipt.totalAmount)}</td>
-              </tr></tfoot>
+              <tfoot className="bg-stone-50 font-semibold text-stone-900">
+                <tr>
+                  <td className="px-4 py-3">合計</td>
+                  <td className="px-4 py-3 text-right">{receipt.totalQty} 箱</td>
+                  <td className="px-4 py-3" />
+                  <td className="px-4 py-3 text-right">{fmtMoney(receipt.totalAmount)}</td>
+                </tr>
+              </tfoot>
             </table>
           </div>
 
-          {receipt.anomalyNote && (
-            <div className="bg-red-50 rounded p-3 text-red-700 text-xs">
-              <p className="font-medium mb-1">異常說明</p>
-              <p>{receipt.anomalyNote}</p>
+          {receipt.anomalyNote ? (
+            <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <p className="font-semibold">異常說明</p>
+              <p className="mt-2 leading-6">{receipt.anomalyNote}</p>
             </div>
-          )}
+          ) : null}
 
-          {receipt.supplierSignatureUrl && (
-            <div>
-              <p className="text-xs text-gray-400 mb-2">供應商簽名</p>
-              <img src={receipt.supplierSignatureUrl} alt="簽名" className="border rounded max-h-32 bg-white" />
-              <p className="text-xs text-gray-400 mt-1">{fmtDate(receipt.signedAt)}</p>
+          {receipt.supplierSignatureUrl ? (
+            <div className="rounded-2xl border border-stone-200 bg-white px-4 py-4">
+              <p className="text-xs text-stone-500">供應商簽名</p>
+              <img
+                src={receipt.supplierSignatureUrl}
+                alt="供應商簽名"
+                className="mt-3 max-h-32 rounded-2xl border bg-white"
+              />
+              <p className="mt-2 text-xs text-stone-400">簽收時間：{fmtDateTime(receipt.signedAt)}</p>
             </div>
-          )}
+          ) : null}
         </div>
       </DialogContent>
     </Dialog>
   );
 }
-
-// ── SignatureSheet ─────────────────────────────────────────────────────────
 
 function SignatureSheet({
   receiptId,
@@ -235,173 +367,198 @@ function SignatureSheet({
   onSuccess,
 }: {
   receiptId: number;
-  receiptMeta?: { supplierName: string; batchNo: string; licensePlate: string; receiptDate: string };
-  items: { name: string; qty: number; unitPrice?: number }[];
+  receiptMeta?: ReceiptMeta;
+  items: ReceiptItem[];
   onClose: () => void;
   onSuccess: (signatureUrl: string) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawing = useRef(false);
-  const lastPos = useRef<{ x: number; y: number } | null>(null);
+  const lastPoint = useRef<{ x: number; y: number } | null>(null);
 
-  const sign = trpc.dayone.purchaseReceipt.sign.useMutation({
+  const signReceipt = trpc.dayone.purchaseReceipt.sign.useMutation({
     onSuccess: (data) => {
-      toast.success("簽收完成，庫存已更新，應付帳款已建立");
+      toast.success("簽收完成，庫存與應付帳款已同步更新");
       onSuccess(data.supplierSignatureUrl ?? "");
       onClose();
     },
-    onError: (e) => toast.error(e.message),
+    onError: (error) => toast.error(error.message),
   });
 
-  // ── 同步 canvas attribute 尺寸到實際渲染尺寸，消除 scaleX/scaleY 偏移 ──
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const syncSize = () => {
+
+    const syncCanvasSize = () => {
       const rect = canvas.getBoundingClientRect();
       if (rect.width > 0 && rect.height > 0) {
         canvas.width = Math.round(rect.width);
         canvas.height = Math.round(rect.height);
       }
     };
-    // Sheet 動畫約 500ms，等動畫完成後再同步
-    const timer = setTimeout(syncSize, 550);
-    const ro = new ResizeObserver(syncSize);
-    ro.observe(canvas);
-    return () => { clearTimeout(timer); ro.disconnect(); };
+
+    const timer = setTimeout(syncCanvasSize, 400);
+    const observer = new ResizeObserver(syncCanvasSize);
+    observer.observe(canvas);
+    return () => {
+      clearTimeout(timer);
+      observer.disconnect();
+    };
   }, []);
 
-  function getPos(e: React.MouseEvent | React.TouchEvent, canvas: HTMLCanvasElement) {
+  const getPoint = useCallback((event: React.MouseEvent | React.TouchEvent, canvas: HTMLCanvasElement) => {
     const rect = canvas.getBoundingClientRect();
-    // canvas attribute 尺寸已同步到渲染尺寸，scale 近似 1
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
-    if ("touches" in e) {
+
+    if ("touches" in event) {
       return {
-        x: (e.touches[0].clientX - rect.left) * scaleX,
-        y: (e.touches[0].clientY - rect.top) * scaleY,
+        x: (event.touches[0].clientX - rect.left) * scaleX,
+        y: (event.touches[0].clientY - rect.top) * scaleY,
       };
     }
-    return {
-      x: ((e as React.MouseEvent).clientX - rect.left) * scaleX,
-      y: ((e as React.MouseEvent).clientY - rect.top) * scaleY,
-    };
-  }
 
-  function startDraw(e: React.MouseEvent | React.TouchEvent) {
-    e.preventDefault();
+    return {
+      x: (event.clientX - rect.left) * scaleX,
+      y: (event.clientY - rect.top) * scaleY,
+    };
+  }, []);
+
+  function startDraw(event: React.MouseEvent | React.TouchEvent) {
+    event.preventDefault();
     const canvas = canvasRef.current;
     if (!canvas) return;
     isDrawing.current = true;
-    lastPos.current = getPos(e, canvas);
+    lastPoint.current = getPoint(event, canvas);
   }
 
-  function draw(e: React.MouseEvent | React.TouchEvent) {
-    e.preventDefault();
+  function draw(event: React.MouseEvent | React.TouchEvent) {
+    event.preventDefault();
     if (!isDrawing.current) return;
+
     const canvas = canvasRef.current;
-    const ctx = canvas?.getContext("2d");
-    if (!canvas || !ctx || !lastPos.current) return;
-    const pos = getPos(e, canvas);
-    ctx.beginPath();
-    ctx.moveTo(lastPos.current.x, lastPos.current.y);
-    ctx.lineTo(pos.x, pos.y);
-    ctx.strokeStyle = "#1a1a1a";
-    ctx.lineWidth = 3;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.stroke();
-    lastPos.current = pos;
+    const context = canvas?.getContext("2d");
+    if (!canvas || !context || !lastPoint.current) return;
+
+    const nextPoint = getPoint(event, canvas);
+    context.beginPath();
+    context.moveTo(lastPoint.current.x, lastPoint.current.y);
+    context.lineTo(nextPoint.x, nextPoint.y);
+    context.strokeStyle = "#1c1917";
+    context.lineWidth = 3;
+    context.lineCap = "round";
+    context.lineJoin = "round";
+    context.stroke();
+    lastPoint.current = nextPoint;
   }
 
-  function endDraw(e: React.MouseEvent | React.TouchEvent) {
-    e.preventDefault();
+  function endDraw(event: React.MouseEvent | React.TouchEvent) {
+    event.preventDefault();
     isDrawing.current = false;
-    lastPos.current = null;
+    lastPoint.current = null;
   }
 
   function clearCanvas() {
     const canvas = canvasRef.current;
-    const ctx = canvas?.getContext("2d");
-    if (!canvas || !ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const context = canvas?.getContext("2d");
+    if (!canvas || !context) return;
+    context.clearRect(0, 0, canvas.width, canvas.height);
   }
 
-  function handleSubmit() {
+  function submitSignature() {
     const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    // Check if canvas is blank
-    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-    const hasContent = data.some((v, i) => i % 4 === 3 && v > 0);
-    if (!hasContent) { toast.error("請先簽名"); return; }
-    const signatureBase64 = canvas.toDataURL("image/png");
-    sign.mutate({ id: receiptId, tenantId: TENANT_ID, signatureBase64 });
+    const context = canvas?.getContext("2d");
+    if (!canvas || !context) return;
+
+    const data = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    const hasInk = data.some((value, index) => index % 4 === 3 && value > 0);
+    if (!hasInk) {
+      toast.error("請先完成簽名");
+      return;
+    }
+
+    signReceipt.mutate({
+      id: receiptId,
+      tenantId: TENANT_ID,
+      signatureBase64: canvas.toDataURL("image/png"),
+    });
   }
 
   return (
     <Sheet open onOpenChange={onClose}>
-      <SheetContent side="bottom" className="h-[90vh] flex flex-col p-0">
-        <SheetHeader className="px-5 pt-4 pb-3 border-b">
+      <SheetContent side="bottom" className="h-[92vh] p-0">
+        <SheetHeader className="border-b border-stone-200 px-5 py-4">
           <SheetTitle>供應商簽名確認</SheetTitle>
         </SheetHeader>
 
-        {/* 品項摘要 */}
-        <div className="px-5 py-3 bg-amber-50 border-b">
-          <p className="text-xs font-medium text-amber-800 mb-1">品項確認</p>
-          <div className="flex flex-wrap gap-2">
-            {items.filter(i => i.qty > 0).map((item, idx) => (
-              <span key={idx} className="text-xs bg-white border border-amber-200 rounded-full px-2 py-0.5 text-amber-900">
-                {item.name} × {item.qty}
-              </span>
-            ))}
+        <div className="flex h-full flex-col">
+          <div className="border-b border-amber-100 bg-amber-50 px-5 py-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700">入庫前簽名</p>
+            <div className="mt-3 grid gap-2 text-sm text-stone-700 md:grid-cols-2">
+              <p>供應商：{receiptMeta?.supplierName || "-"}</p>
+              <p>車牌：{receiptMeta?.licensePlate || "-"}</p>
+              <p>批次號：{receiptMeta?.batchNo || "-"}</p>
+              <p>收貨時間：{fmtDateTime(receiptMeta?.receiptDate)}</p>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {items
+                .filter((item) => Number(item.qty) > 0)
+                .map((item, index) => (
+                  <span
+                    key={`${item.name}-${index}`}
+                    className="rounded-full border border-amber-200 bg-white px-3 py-1 text-xs text-amber-900"
+                  >
+                    {item.name} × {item.qty} 箱
+                  </span>
+                ))}
+            </div>
           </div>
-        </div>
 
-        {/* 簽名板 */}
-        <div className="flex-1 flex flex-col items-center justify-center px-5 py-4 gap-3">
-          <p className="text-sm text-gray-500">請供應商在下方簽名</p>
-          <div className="w-full border-2 border-dashed border-gray-300 rounded-xl bg-white overflow-hidden">
-            <canvas
-              ref={canvasRef}
-              width={600}
-              height={260}
-              className="w-full touch-none"
-              style={{ height: "min(260px, 40vw)", display: "block" }}
-              onMouseDown={startDraw}
-              onMouseMove={draw}
-              onMouseUp={endDraw}
-              onMouseLeave={endDraw}
-              onTouchStart={startDraw}
-              onTouchMove={draw}
-              onTouchEnd={endDraw}
-            />
+          <div className="flex-1 px-5 py-4">
+            <p className="mb-3 text-sm text-stone-500">請由供應商對接人員在下方簽名，送出後才會正式入庫並建立應付帳款。</p>
+            <div className="overflow-hidden rounded-[28px] border-2 border-dashed border-stone-300 bg-white">
+              <canvas
+                ref={canvasRef}
+                width={600}
+                height={280}
+                className="block h-[min(320px,48vh)] w-full touch-none"
+                onMouseDown={startDraw}
+                onMouseMove={draw}
+                onMouseUp={endDraw}
+                onMouseLeave={endDraw}
+                onTouchStart={startDraw}
+                onTouchMove={draw}
+                onTouchEnd={endDraw}
+              />
+            </div>
+            <div className="mt-4 flex justify-end">
+              <Button variant="outline" className="rounded-2xl" onClick={clearCanvas}>
+                清除重簽
+              </Button>
+            </div>
           </div>
-          <Button variant="outline" size="sm" onClick={clearCanvas}>清除重簽</Button>
-        </div>
 
-        {/* 底部按鈕 */}
-        <div className="px-5 pb-6 pt-2 border-t">
-          <Button className="w-full h-12 text-base bg-amber-500 hover:bg-amber-600 text-white font-semibold"
-            disabled={sign.isPending} onClick={handleSubmit}>
-            {sign.isPending ? "提交中..." : "確認簽名並提交"}
-          </Button>
+          <div className="border-t border-stone-200 px-5 pb-6 pt-4">
+            <Button
+              className="h-12 w-full rounded-2xl bg-amber-600 text-base font-semibold text-white hover:bg-amber-700"
+              disabled={signReceipt.isPending}
+              onClick={submitSignature}
+            >
+              {signReceipt.isPending ? "簽收送出中..." : "確認簽收並入庫"}
+            </Button>
+          </div>
         </div>
       </SheetContent>
     </Sheet>
   );
 }
 
-// ── CreateDialog ───────────────────────────────────────────────────────────
-
-function CreateDialog({ onClose, onSignNeeded }: {
+function CreateReceiptDialog({
+  onClose,
+  onSignNeeded,
+}: {
   onClose: () => void;
-  onSignNeeded: (
-    receiptId: number,
-    meta: { supplierName: string; batchNo: string; licensePlate: string; receiptDate: string },
-    items: { name: string; qty: number; unitPrice: number }[]
-  ) => void;
+  onSignNeeded: (receiptId: number, meta: ReceiptMeta, items: ReceiptItem[]) => void;
 }) {
   const [supplierId, setSupplierId] = useState("");
   const [receiptDate, setReceiptDate] = useState(nowLocalDatetime());
@@ -411,58 +568,75 @@ function CreateDialog({ onClose, onSignNeeded }: {
   const [quantities, setQuantities] = useState<Record<number, number>>({});
   const [prices, setPrices] = useState<Record<number, number>>({});
 
-  const { data: suppliers } = trpc.dayone.suppliers.list.useQuery({ tenantId: TENANT_ID });
-  const { data: products } = trpc.dayone.products.list.useQuery({ tenantId: TENANT_ID });
-  const { data: supplierPrices } = trpc.dayone.ap.supplierPriceList.useQuery(
+  const { data: suppliers = [] } = trpc.dayone.suppliers.list.useQuery({ tenantId: TENANT_ID });
+  const { data: products = [] } = trpc.dayone.products.list.useQuery({ tenantId: TENANT_ID });
+  const { data: supplierPrices = [] } = trpc.dayone.ap.supplierPriceList.useQuery(
     { tenantId: TENANT_ID, supplierId: Number(supplierId) },
     { enabled: !!supplierId }
   );
 
-  // Pre-fill prices from supplier prices when supplier changes
   useEffect(() => {
-    if (!products || !supplierPrices) return;
-    const priceMap: Record<number, number> = {};
-    for (const sp of supplierPrices as any[]) {
-      priceMap[sp.productId] = Number(sp.price);
+    if (!products.length) return;
+    const nextPrices: Record<number, number> = {};
+    for (const product of products as any[]) {
+      nextPrices[product.id] = Number(product.price ?? 0);
     }
-    // Fall back to product price
-    for (const p of products as any[]) {
-      if (!priceMap[p.id]) priceMap[p.id] = Number(p.price ?? 0);
+    for (const supplierPrice of supplierPrices as any[]) {
+      nextPrices[supplierPrice.productId] = Number(supplierPrice.price ?? 0);
     }
-    setPrices(priceMap);
-  }, [supplierPrices, products]);
+    setPrices(nextPrices);
+  }, [products, supplierPrices]);
 
-  const create = trpc.dayone.purchaseReceipt.create.useMutation({
+  const createReceipt = trpc.dayone.purchaseReceipt.create.useMutation({
     onSuccess: (data) => {
-      const selectedSupplier = (suppliers as any[] ?? []).find((s: any) => String(s.id) === supplierId);
-      const itemsForSign = (products as any[] ?? [])
-        .filter((p: any) => (quantities[p.id] ?? 0) > 0)
-        .map((p: any) => ({ name: p.name, qty: quantities[p.id], unitPrice: prices[p.id] ?? 0 }));
-      const meta = {
-        supplierName: selectedSupplier?.name ?? "",
+      const supplier = suppliers.find((item: any) => String(item.id) === supplierId);
+      const selectedItems = (products as any[])
+        .filter((product: any) => Number(quantities[product.id] ?? 0) > 0)
+        .map((product: any) => ({
+          name: product.name,
+          qty: Number(quantities[product.id] ?? 0),
+          unitPrice: Number(prices[product.id] ?? 0),
+        }));
+
+      onClose();
+      onSignNeeded(data.id, {
+        supplierName: supplier?.name ?? "",
         batchNo,
         licensePlate,
         receiptDate,
-      };
-      onClose();
-      onSignNeeded(data.id, meta, itemsForSign);
+      }, selectedItems);
     },
-    onError: (e) => toast.error(e.message),
+    onError: (error) => toast.error(error.message),
   });
 
-  function handleSubmit() {
-    if (!supplierId) { toast.error("請選擇供應商"); return; }
-    const items = (products as any[] ?? [])
-      .filter((p: any) => (quantities[p.id] ?? 0) > 0)
-      .map((p: any) => ({
-        productId: p.id,
-        name: p.name,
-        qty: quantities[p.id],
-        unitPrice: prices[p.id] ?? 0,
-      }));
-    if (!items.length) { toast.error("請至少選擇一個品項"); return; }
+  function adjustQty(productId: number, delta: number) {
+    setQuantities((current) => ({
+      ...current,
+      [productId]: Math.max(0, Number(current[productId] ?? 0) + delta),
+    }));
+  }
 
-    create.mutate({
+  function handleSubmit() {
+    if (!supplierId) {
+      toast.error("請先選擇供應商");
+      return;
+    }
+
+    const items = (products as any[])
+      .filter((product: any) => Number(quantities[product.id] ?? 0) > 0)
+      .map((product: any) => ({
+        productId: product.id,
+        name: product.name,
+        qty: Number(quantities[product.id] ?? 0),
+        unitPrice: Number(prices[product.id] ?? 0),
+      }));
+
+    if (!items.length) {
+      toast.error("至少要輸入一個有數量的品項");
+      return;
+    }
+
+    createReceipt.mutate({
       tenantId: TENANT_ID,
       supplierId: Number(supplierId),
       receiptDate,
@@ -473,83 +647,131 @@ function CreateDialog({ onClose, onSignNeeded }: {
     });
   }
 
-  function adjustQty(productId: number, delta: number) {
-    setQuantities(prev => ({ ...prev, [productId]: Math.max(0, (prev[productId] ?? 0) + delta) }));
-  }
-
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>司機收貨登記</DialogTitle></DialogHeader>
-        <div className="space-y-4 pt-1">
-          {/* 供應商 */}
-          <div>
-            <label className="text-sm font-medium mb-1 block">供應商 *</label>
-            <Select value={supplierId} onValueChange={setSupplierId}>
-              <SelectTrigger><SelectValue placeholder="選擇供應商..." /></SelectTrigger>
-              <SelectContent>
-                {(suppliers as any[] ?? []).map((s: any) => (
-                  <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          {/* 收貨時間 */}
-          <div>
-            <label className="text-sm font-medium mb-1 block">收貨時間</label>
-            <Input type="datetime-local" value={receiptDate} onChange={(e) => setReceiptDate(e.target.value)} />
-          </div>
-          {/* 車牌 */}
-          <div>
-            <label className="text-sm font-medium mb-1 block">車牌</label>
-            <Input placeholder="例：ABC-1234" value={licensePlate} onChange={(e) => setLicensePlate(e.target.value)} />
-          </div>
-          {/* 批次號 */}
-          <div>
-            <label className="text-sm font-medium mb-1 block">批次號（選填）</label>
-            <Input placeholder="批次號" value={batchNo} onChange={(e) => setBatchNo(e.target.value)} />
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>建立司機收貨單</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-5">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-stone-700">供應商</label>
+              <Select value={supplierId} onValueChange={setSupplierId}>
+                <SelectTrigger className="rounded-2xl">
+                  <SelectValue placeholder="選擇供應商..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {suppliers.map((supplier: any) => (
+                    <SelectItem key={supplier.id} value={String(supplier.id)}>
+                      {supplier.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-stone-700">收貨時間</label>
+              <Input
+                type="datetime-local"
+                className="rounded-2xl"
+                value={receiptDate}
+                onChange={(event) => setReceiptDate(event.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-stone-700">車牌</label>
+              <Input
+                className="rounded-2xl"
+                placeholder="例如：ABC-1234"
+                value={licensePlate}
+                onChange={(event) => setLicensePlate(event.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-stone-700">批次號</label>
+              <Input
+                className="rounded-2xl"
+                placeholder="可留空"
+                value={batchNo}
+                onChange={(event) => setBatchNo(event.target.value)}
+              />
+            </div>
           </div>
 
-          {/* 品項 Stepper */}
           <div>
-            <label className="text-sm font-medium mb-2 block">品項數量 *</label>
-            <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-              {(products as any[] ?? []).map((p: any) => {
-                const qty = quantities[p.id] ?? 0;
-                const hasQty = qty > 0;
+            <div className="mb-2 flex items-center justify-between">
+              <label className="text-sm font-medium text-stone-700">收貨品項</label>
+              <span className="text-xs text-stone-400">先選數量，再請供應商簽名</span>
+            </div>
+            <div className="space-y-3">
+              {products.map((product: any) => {
+                const qty = Number(quantities[product.id] ?? 0);
+                const active = qty > 0;
                 return (
-                  <div key={p.id}
-                    className={`flex items-center justify-between rounded-xl border p-3 transition-colors ${hasQty ? "border-amber-300 bg-amber-50" : "border-gray-200 bg-gray-50"}`}>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium ${hasQty ? "text-amber-900" : "text-gray-500"}`}>{p.name}</p>
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <span className="text-xs text-gray-400">單價：</span>
+                  <div
+                    key={product.id}
+                    className={`rounded-[24px] border px-4 py-4 transition-colors ${
+                      active ? "border-amber-200 bg-amber-50" : "border-stone-200 bg-stone-50"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        <p className={`text-sm font-semibold ${active ? "text-stone-900" : "text-stone-600"}`}>
+                          {product.name}
+                        </p>
+                        <div className="mt-2 flex items-center gap-2 text-xs text-stone-500">
+                          <span>單價</span>
+                          <input
+                            type="number"
+                            min="0"
+                            className="h-8 w-24 rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-700"
+                            value={prices[product.id] ?? ""}
+                            onChange={(event) =>
+                              setPrices((current) => ({
+                                ...current,
+                                [product.id]: Number(event.target.value || 0),
+                              }))
+                            }
+                            placeholder="0"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          className="flex h-10 w-10 items-center justify-center rounded-2xl border border-stone-300 bg-white text-lg font-semibold text-stone-600"
+                          onClick={() => adjustQty(product.id, -1)}
+                        >
+                          -
+                        </button>
                         <input
                           type="number"
-                          className="text-xs w-16 border rounded px-1 py-0.5 bg-white"
-                          value={prices[p.id] ?? ""}
-                          onChange={(e) => setPrices(prev => ({ ...prev, [p.id]: parseFloat(e.target.value) || 0 }))}
-                          placeholder="0"
+                          min="0"
+                          className={`h-10 w-16 rounded-2xl border bg-white text-center text-sm font-semibold ${
+                            active ? "border-amber-300 text-amber-700" : "border-stone-200 text-stone-500"
+                          }`}
+                          value={qty}
+                          onChange={(event) =>
+                            setQuantities((current) => ({
+                              ...current,
+                              [product.id]: Math.max(0, Number(event.target.value || 0)),
+                            }))
+                          }
                         />
+                        <button
+                          type="button"
+                          className="flex h-10 w-10 items-center justify-center rounded-2xl border border-amber-300 bg-amber-100 text-lg font-semibold text-amber-700"
+                          onClick={() => adjustQty(product.id, 1)}
+                        >
+                          +
+                        </button>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <button type="button"
-                        className="w-9 h-9 rounded-lg border border-gray-300 bg-white text-base font-bold text-gray-600 hover:bg-gray-100 active:bg-gray-200 flex items-center justify-center"
-                        onClick={() => adjustQty(p.id, -1)}>－</button>
-                      <input
-                        type="number"
-                        min={0}
-                        className={`w-14 h-9 text-center text-base font-bold border rounded-lg bg-white ${hasQty ? "border-amber-400 text-amber-700" : "border-gray-200 text-gray-400"}`}
-                        value={qty}
-                        onChange={(e) => {
-                          const v = Math.max(0, parseInt(e.target.value) || 0);
-                          setQuantities(prev => ({ ...prev, [p.id]: v }));
-                        }}
-                      />
-                      <button type="button"
-                        className="w-9 h-9 rounded-lg border border-amber-400 bg-amber-50 text-base font-bold text-amber-700 hover:bg-amber-100 active:bg-amber-200 flex items-center justify-center"
-                        onClick={() => adjustQty(p.id, 1)}>＋</button>
                     </div>
                   </div>
                 );
@@ -557,17 +779,22 @@ function CreateDialog({ onClose, onSignNeeded }: {
             </div>
           </div>
 
-          {/* 異常備註 */}
           <div>
-            <label className="text-sm font-medium mb-1 block">異常備註（選填）</label>
-            <Textarea placeholder="如有異常請說明..." value={anomalyNote}
-              onChange={(e) => setAnomalyNote(e.target.value)} rows={2} />
+            <label className="mb-1.5 block text-sm font-medium text-stone-700">備註</label>
+            <Textarea
+              rows={3}
+              placeholder="例如：現場有破箱、補單、批次補記..."
+              value={anomalyNote}
+              onChange={(event) => setAnomalyNote(event.target.value)}
+            />
           </div>
 
-          {/* 提交 */}
-          <Button className="w-full h-12 bg-amber-500 hover:bg-amber-600 text-white font-semibold"
-            disabled={create.isPending} onClick={handleSubmit}>
-            {create.isPending ? "建立中..." : "確認並進入簽名"}
+          <Button
+            className="h-12 w-full rounded-2xl bg-amber-600 text-base font-semibold text-white hover:bg-amber-700"
+            disabled={createReceipt.isPending}
+            onClick={handleSubmit}
+          >
+            {createReceipt.isPending ? "建立中..." : "下一步：供應商簽名"}
           </Button>
         </div>
       </DialogContent>
@@ -575,28 +802,19 @@ function CreateDialog({ onClose, onSignNeeded }: {
   );
 }
 
-// ── Main Page ──────────────────────────────────────────────────────────────
-
 export default function DayonePurchaseReceipts() {
-  const [supplierId, setSupplierId] = useState<string>("all");
-  const [status, setStatus] = useState<string>("all");
+  const [supplierId, setSupplierId] = useState("all");
+  const [status, setStatus] = useState("all");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [summaryMonth, setSummaryMonth] = useState(currentMonthValue());
   const [showCreate, setShowCreate] = useState(false);
-  const [signTarget, setSignTarget] = useState<{
-    id: number;
-    meta: { supplierName: string; batchNo: string; licensePlate: string; receiptDate: string };
-    items: { name: string; qty: number; unitPrice: number }[];
-  } | null>(null);
-  const [receiptSummary, setReceiptSummary] = useState<{
-    supplierName: string; receiptDate: string; licensePlate: string; batchNo: string;
-    items: { name: string; qty: number; unitPrice: number }[];
-    signatureUrl: string;
-  } | null>(null);
-  const [anomalyTarget, setAnomalyTarget] = useState<any>(null);
-  const [detailTarget, setDetailTarget] = useState<any>(null);
+  const [signTarget, setSignTarget] = useState<{ id: number; meta: ReceiptMeta; items: ReceiptItem[] } | null>(null);
+  const [receiptSummary, setReceiptSummary] = useState<(ReceiptMeta & { items: ReceiptItem[]; signatureUrl: string }) | null>(null);
+  const [anomalyTarget, setAnomalyTarget] = useState<ReceiptRecord | null>(null);
+  const [detailTarget, setDetailTarget] = useState<ReceiptRecord | null>(null);
 
-  const { data: suppliers } = trpc.dayone.suppliers.list.useQuery({ tenantId: TENANT_ID });
+  const { data: suppliers = [] } = trpc.dayone.suppliers.list.useQuery({ tenantId: TENANT_ID });
   const { data: receipts = [], isLoading, refetch } = trpc.dayone.purchaseReceipt.list.useQuery({
     tenantId: TENANT_ID,
     status: status !== "all" ? status : undefined,
@@ -604,144 +822,328 @@ export default function DayonePurchaseReceipts() {
     startDate: startDate || undefined,
     endDate: endDate || undefined,
   });
+  const { data: apSummary } = trpc.dayone.ap.summary.useQuery({
+    tenantId: TENANT_ID,
+    supplierId: supplierId !== "all" ? Number(supplierId) : undefined,
+    month: summaryMonth,
+  });
+
+  const overview = apSummary?.overview;
+  const supplierSummaryRows = apSummary?.suppliers ?? [];
+
+  const topStats = useMemo(() => {
+    const totalQty = receipts.reduce((sum: number, item: any) => sum + Number(item.totalQty ?? 0), 0);
+    const totalAmount = receipts.reduce((sum: number, item: any) => sum + Number(item.totalAmount ?? 0), 0);
+    const pendingCount = receipts.filter((item: any) => item.status === "pending").length;
+    return { totalQty, totalAmount, pendingCount };
+  }, [receipts]);
 
   return (
     <DayoneLayout>
-      <div className="p-4 md:p-6 space-y-5">
-        {/* 標題 */}
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <h1 className="text-xl md:text-2xl font-bold text-gray-900">進貨簽收</h1>
-          <Button className="bg-amber-500 hover:bg-amber-600 text-white font-semibold"
-            onClick={() => setShowCreate(true)}>
-            ＋ 司機收貨登記
+      <div className="space-y-6">
+        <div className="dayone-page-header">
+          <div className="min-w-0">
+            <h1 className="dayone-page-title">進貨簽收</h1>
+            <p className="dayone-page-subtitle">
+              這裡是上游供應商進貨主線：建立收貨單、供應商簽名、入庫、同步產生應付帳款，並彙整本月供應商帳。
+            </p>
+          </div>
+          <Button
+            className="dayone-action rounded-2xl bg-amber-600 text-white hover:bg-amber-700"
+            onClick={() => setShowCreate(true)}
+          >
+            新增收貨單
           </Button>
         </div>
 
-        {/* 篩選 */}
-        <div className="flex flex-wrap gap-3">
-          <Select value={supplierId} onValueChange={setSupplierId}>
-            <SelectTrigger className="w-44"><SelectValue placeholder="所有供應商" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">所有供應商</SelectItem>
-              {(suppliers as any[] ?? []).map((s: any) => (
-                <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="w-36"><SelectValue placeholder="全部狀態" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">全部狀態</SelectItem>
-              <SelectItem value="pending">待簽名</SelectItem>
-              <SelectItem value="signed">已簽名</SelectItem>
-              <SelectItem value="anomaly">異常</SelectItem>
-            </SelectContent>
-          </Select>
-          <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-40" />
-          <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-40" />
-        </div>
+        <section className="grid gap-4 md:grid-cols-4">
+          <Card className="dayone-panel rounded-[28px] border-amber-100">
+            <CardContent className="pt-5">
+              <p className="text-xs text-stone-500">本次查詢進貨數量</p>
+              <p className="mt-2 text-2xl font-semibold text-stone-900">{topStats.totalQty.toLocaleString("zh-TW")} 箱</p>
+            </CardContent>
+          </Card>
+          <Card className="dayone-panel rounded-[28px] border-amber-100">
+            <CardContent className="pt-5">
+              <p className="text-xs text-stone-500">本次查詢進貨金額</p>
+              <p className="mt-2 text-2xl font-semibold text-stone-900">{fmtMoney(topStats.totalAmount)}</p>
+            </CardContent>
+          </Card>
+          <Card className="dayone-panel rounded-[28px] border-amber-100">
+            <CardContent className="pt-5">
+              <p className="text-xs text-stone-500">待簽收進貨單</p>
+              <p className="mt-2 text-2xl font-semibold text-amber-700">{topStats.pendingCount}</p>
+            </CardContent>
+          </Card>
+          <Card className="dayone-panel rounded-[28px] border-amber-100">
+            <CardContent className="pt-5">
+              <p className="text-xs text-stone-500">{summaryMonth} 應付未付</p>
+              <p className="mt-2 text-2xl font-semibold text-red-600">{fmtMoney(overview?.unpaidAmount)}</p>
+            </CardContent>
+          </Card>
+        </section>
 
-        {/* 桌面表格 */}
-        {isLoading ? (
-          <div className="flex justify-center py-12">
-            <div className="animate-spin h-7 w-7 rounded-full border-b-2 border-amber-500" />
+        <section className="dayone-panel rounded-[32px] p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-stone-900">供應商月結快照</p>
+              <p className="mt-1 text-sm text-stone-500">從進貨簽收直接往下看應付帳款，方便追供應商日結與月結。</p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Input
+                type="month"
+                value={summaryMonth}
+                onChange={(event) => setSummaryMonth(event.target.value)}
+                className="w-[180px] rounded-2xl"
+              />
+            </div>
           </div>
-        ) : !(receipts as any[]).length ? (
-          <Card><CardContent className="py-12 text-center text-gray-400">無進貨記錄</CardContent></Card>
-        ) : (
-          <>
-            <div className="hidden md:block rounded-xl border overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-amber-50 text-gray-600 border-b">
-                    <th className="text-left px-4 py-3 font-medium">日期</th>
-                    <th className="text-left px-4 py-3 font-medium">供應商</th>
-                    <th className="text-left px-4 py-3 font-medium">司機</th>
-                    <th className="text-left px-4 py-3 font-medium">車牌</th>
-                    <th className="text-left px-4 py-3 font-medium">批次號</th>
-                    <th className="text-right px-4 py-3 font-medium">總數量</th>
-                    <th className="text-right px-4 py-3 font-medium">總金額</th>
-                    <th className="text-center px-4 py-3 font-medium">狀態</th>
-                    <th className="text-center px-4 py-3 font-medium">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(receipts as any[]).map((r: any) => {
-                    const sc = STATUS_CFG[r.status] ?? STATUS_CFG.pending;
-                    return (
-                      <tr key={r.id} className="border-b hover:bg-gray-50">
-                        <td className="px-4 py-3 text-gray-600">{fmtDate(r.receiptDate)}</td>
-                        <td className="px-4 py-3 font-medium text-gray-900">{r.supplierName}</td>
-                        <td className="px-4 py-3 text-gray-600">{r.driverName}</td>
-                        <td className="px-4 py-3 text-gray-500">{r.licensePlate ?? "-"}</td>
-                        <td className="px-4 py-3 text-gray-500 font-mono text-xs">{r.batchNo ?? "-"}</td>
-                        <td className="px-4 py-3 text-right text-gray-700">{r.totalQty} 箱</td>
-                        <td className="px-4 py-3 text-right text-gray-700">{fmtMoney(r.totalAmount)}</td>
-                        <td className="px-4 py-3 text-center">
-                          <Badge className={`${sc.cls} border-0 text-xs`}>{sc.label}</Badge>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <div className="flex gap-1 justify-center">
-                            <Button size="sm" variant="outline" className="text-xs h-7"
-                              onClick={() => setDetailTarget(r)}>查看</Button>
-                            {r.status === "pending" && (
-                              <Button size="sm" variant="ghost" className="text-xs h-7 text-red-600 hover:text-red-700"
-                                onClick={() => setAnomalyTarget(r)}>異常</Button>
-                            )}
-                          </div>
-                        </td>
+
+          <div className="mt-4 grid gap-4 md:grid-cols-4">
+            <div className="rounded-3xl border border-stone-200 bg-stone-50 px-4 py-4">
+              <p className="text-xs text-stone-500">供應商數</p>
+              <p className="mt-2 text-2xl font-semibold text-stone-900">{Number(overview?.supplierCount ?? 0)}</p>
+            </div>
+            <div className="rounded-3xl border border-stone-200 bg-stone-50 px-4 py-4">
+              <p className="text-xs text-stone-500">本月應付總額</p>
+              <p className="mt-2 text-2xl font-semibold text-stone-900">{fmtMoney(overview?.totalAmount)}</p>
+            </div>
+            <div className="rounded-3xl border border-emerald-100 bg-emerald-50 px-4 py-4">
+              <p className="text-xs text-emerald-600">本月已付</p>
+              <p className="mt-2 text-2xl font-semibold text-emerald-700">{fmtMoney(overview?.paidAmount)}</p>
+            </div>
+            <div className="rounded-3xl border border-red-100 bg-red-50 px-4 py-4">
+              <p className="text-xs text-red-600">逾期未付筆數</p>
+              <p className="mt-2 text-2xl font-semibold text-red-700">{Number(overview?.overdueCount ?? 0)}</p>
+            </div>
+          </div>
+
+          <div className="mt-4 space-y-3">
+            {!supplierSummaryRows.length ? (
+              <div className="rounded-3xl border border-dashed border-stone-200 px-6 py-10 text-center text-stone-400">
+                這個月份目前沒有供應商應付帳資料。
+              </div>
+            ) : (
+              supplierSummaryRows.map((row: any) => (
+                <div
+                  key={row.supplierId}
+                  className="rounded-[28px] border border-stone-200 bg-white px-4 py-4 shadow-[0_12px_24px_rgba(120,53,15,0.05)]"
+                >
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <p className="text-base font-semibold text-stone-900">{row.supplierName}</p>
+                      <p className="mt-1 text-xs text-stone-500">
+                        收貨期間 {fmtDate(row.firstReceiptDate)} 至 {fmtDate(row.lastReceiptDate)}
+                      </p>
+                    </div>
+                    <Badge className="w-fit border-0 bg-amber-100 text-amber-700">
+                      {Number(row.receiptCount ?? 0)} 張簽收單 / {Number(row.payableCount ?? 0)} 筆帳款
+                    </Badge>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 md:grid-cols-4">
+                    <div>
+                      <p className="text-xs text-stone-500">應付總額</p>
+                      <p className="mt-1 font-semibold text-stone-900">{fmtMoney(row.totalAmount)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-stone-500">已付金額</p>
+                      <p className="mt-1 font-semibold text-emerald-700">{fmtMoney(row.paidAmount)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-stone-500">未付金額</p>
+                      <p className="mt-1 font-semibold text-red-600">{fmtMoney(row.unpaidAmount)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-stone-500">最近到期日</p>
+                      <p className="mt-1 font-semibold text-stone-900">{fmtDate(row.latestDueDate)}</p>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+
+        <section className="dayone-panel rounded-[32px] p-5">
+          <div className="flex flex-wrap gap-3">
+            <Select value={supplierId} onValueChange={setSupplierId}>
+              <SelectTrigger className="w-[180px] rounded-2xl">
+                <SelectValue placeholder="所有供應商" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">所有供應商</SelectItem>
+                {suppliers.map((supplier: any) => (
+                  <SelectItem key={supplier.id} value={String(supplier.id)}>
+                    {supplier.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger className="w-[160px] rounded-2xl">
+                <SelectValue placeholder="全部狀態" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部狀態</SelectItem>
+                <SelectItem value="pending">待簽收</SelectItem>
+                <SelectItem value="signed">已簽收</SelectItem>
+                <SelectItem value="anomaly">異常</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Input
+              type="date"
+              className="w-[170px] rounded-2xl"
+              value={startDate}
+              onChange={(event) => setStartDate(event.target.value)}
+            />
+            <Input
+              type="date"
+              className="w-[170px] rounded-2xl"
+              value={endDate}
+              onChange={(event) => setEndDate(event.target.value)}
+            />
+          </div>
+
+          <div className="mt-5">
+            {isLoading ? (
+              <div className="flex justify-center py-16">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-amber-500 border-t-transparent" />
+              </div>
+            ) : !receipts.length ? (
+              <div className="rounded-3xl border border-dashed border-stone-200 px-6 py-16 text-center text-stone-400">
+                目前沒有符合條件的進貨簽收資料。
+              </div>
+            ) : (
+              <>
+                <div className="hidden overflow-hidden rounded-[28px] border border-stone-200 md:block">
+                  <table className="w-full text-sm">
+                    <thead className="bg-stone-50 text-stone-500">
+                      <tr>
+                        <th className="px-4 py-3 text-left font-medium">收貨時間</th>
+                        <th className="px-4 py-3 text-left font-medium">供應商</th>
+                        <th className="px-4 py-3 text-left font-medium">司機</th>
+                        <th className="px-4 py-3 text-left font-medium">車牌 / 批次號</th>
+                        <th className="px-4 py-3 text-right font-medium">總數量</th>
+                        <th className="px-4 py-3 text-right font-medium">總金額</th>
+                        <th className="px-4 py-3 text-center font-medium">狀態</th>
+                        <th className="px-4 py-3 text-center font-medium">操作</th>
                       </tr>
+                    </thead>
+                    <tbody>
+                      {receipts.map((receipt: any) => {
+                        const statusTone = receiptStatusTone[receipt.status] ?? receiptStatusTone.pending;
+                        return (
+                          <tr key={receipt.id} className="border-t border-stone-200">
+                            <td className="px-4 py-4 text-stone-700">{fmtDateTime(receipt.receiptDate)}</td>
+                            <td className="px-4 py-4 font-semibold text-stone-900">{receipt.supplierName}</td>
+                            <td className="px-4 py-4 text-stone-700">{receipt.driverName}</td>
+                            <td className="px-4 py-4 text-stone-500">
+                              <p>{receipt.licensePlate || "-"}</p>
+                              <p className="mt-1 text-xs font-mono text-stone-400">{receipt.batchNo || "-"}</p>
+                            </td>
+                            <td className="px-4 py-4 text-right text-stone-700">{receipt.totalQty} 箱</td>
+                            <td className="px-4 py-4 text-right font-semibold text-stone-900">{fmtMoney(receipt.totalAmount)}</td>
+                            <td className="px-4 py-4 text-center">
+                              <Badge className={`border-0 ${statusTone.className}`}>{statusTone.label}</Badge>
+                            </td>
+                            <td className="px-4 py-4">
+                              <div className="flex items-center justify-center gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="rounded-2xl"
+                                  onClick={() => setDetailTarget(receipt)}
+                                >
+                                  查看
+                                </Button>
+                                {receipt.status === "pending" ? (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="rounded-2xl text-red-600 hover:text-red-700"
+                                    onClick={() => setAnomalyTarget(receipt)}
+                                  >
+                                    異常
+                                  </Button>
+                                ) : null}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="space-y-3 md:hidden">
+                  {receipts.map((receipt: any) => {
+                    const statusTone = receiptStatusTone[receipt.status] ?? receiptStatusTone.pending;
+                    return (
+                      <article key={receipt.id} className="dayone-mobile-card p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <h2 className="text-base font-semibold text-stone-900">{receipt.supplierName}</h2>
+                            <p className="mt-1 text-xs text-stone-400">
+                              {fmtDateTime(receipt.receiptDate)} · {receipt.driverName}
+                            </p>
+                          </div>
+                          <Badge className={`border-0 ${statusTone.className}`}>{statusTone.label}</Badge>
+                        </div>
+
+                        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <p className="text-xs text-stone-500">總數量</p>
+                            <p className="mt-1 font-semibold text-stone-900">{receipt.totalQty} 箱</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-stone-500">總金額</p>
+                            <p className="mt-1 font-semibold text-stone-900">{fmtMoney(receipt.totalAmount)}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-stone-500">車牌</p>
+                            <p className="mt-1 text-stone-700">{receipt.licensePlate || "-"}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-stone-500">批次號</p>
+                            <p className="mt-1 font-mono text-xs text-stone-700">{receipt.batchNo || "-"}</p>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 flex gap-2">
+                          <Button variant="outline" className="flex-1 rounded-2xl" onClick={() => setDetailTarget(receipt)}>
+                            查看詳情
+                          </Button>
+                          {receipt.status === "pending" ? (
+                            <Button
+                              variant="outline"
+                              className="rounded-2xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                              onClick={() => setAnomalyTarget(receipt)}
+                            >
+                              標記異常
+                            </Button>
+                          ) : null}
+                        </div>
+                      </article>
                     );
                   })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* 手機卡片 */}
-            <div className="md:hidden space-y-3">
-              {(receipts as any[]).map((r: any) => {
-                const sc = STATUS_CFG[r.status] ?? STATUS_CFG.pending;
-                return (
-                  <Card key={r.id} className={r.status === "anomaly" ? "border-l-4 border-l-red-500" : ""}>
-                    <CardContent className="pt-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-semibold text-gray-900">{r.supplierName}</p>
-                          <p className="text-xs text-gray-400">{fmtDate(r.receiptDate)} · {r.driverName}</p>
-                        </div>
-                        <Badge className={`${sc.cls} border-0 text-xs`}>{sc.label}</Badge>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div><p className="text-xs text-gray-400">總數量</p><p className="font-medium">{r.totalQty} 箱</p></div>
-                        <div><p className="text-xs text-gray-400">總金額</p><p className="font-medium">{fmtMoney(r.totalAmount)}</p></div>
-                        {r.licensePlate && <div><p className="text-xs text-gray-400">車牌</p><p>{r.licensePlate}</p></div>}
-                        {r.batchNo && <div><p className="text-xs text-gray-400">批次號</p><p className="font-mono text-xs">{r.batchNo}</p></div>}
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" className="flex-1"
-                          onClick={() => setDetailTarget(r)}>查看詳情</Button>
-                        {r.status === "pending" && (
-                          <Button size="sm" variant="ghost" className="text-red-600"
-                            onClick={() => setAnomalyTarget(r)}>標記異常</Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </>
-        )}
+                </div>
+              </>
+            )}
+          </div>
+        </section>
       </div>
 
-      {/* Dialogs / Sheets */}
-      {showCreate && (
-        <CreateDialog
+      {showCreate ? (
+        <CreateReceiptDialog
           onClose={() => setShowCreate(false)}
           onSignNeeded={(id, meta, items) => setSignTarget({ id, meta, items })}
         />
-      )}
-      {signTarget && (
+      ) : null}
+
+      {signTarget ? (
         <SignatureSheet
           receiptId={signTarget.id}
           receiptMeta={signTarget.meta}
@@ -749,33 +1151,17 @@ export default function DayonePurchaseReceipts() {
           onClose={() => setSignTarget(null)}
           onSuccess={(signatureUrl) => {
             refetch();
-            setReceiptSummary({
-              ...signTarget.meta,
-              items: signTarget.items,
-              signatureUrl,
-            });
+            setReceiptSummary({ ...signTarget.meta, items: signTarget.items, signatureUrl });
+            setSignTarget(null);
           }}
         />
-      )}
-      {receiptSummary && (
-        <ReceiptSummaryDialog
-          data={receiptSummary}
-          onClose={() => setReceiptSummary(null)}
-        />
-      )}
-      {anomalyTarget && (
-        <AnomalyDialog
-          receipt={anomalyTarget}
-          onClose={() => setAnomalyTarget(null)}
-          onSuccess={() => refetch()}
-        />
-      )}
-      {detailTarget && (
-        <DetailDialog
-          receipt={detailTarget}
-          onClose={() => setDetailTarget(null)}
-        />
-      )}
+      ) : null}
+
+      {receiptSummary ? <ReceiptSummaryDialog data={receiptSummary} onClose={() => setReceiptSummary(null)} /> : null}
+      {anomalyTarget ? (
+        <AnomalyDialog receipt={anomalyTarget} onClose={() => setAnomalyTarget(null)} onSuccess={() => refetch()} />
+      ) : null}
+      {detailTarget ? <ReceiptDetailDialog receipt={detailTarget} onClose={() => setDetailTarget(null)} /> : null}
     </DayoneLayout>
   );
 }
