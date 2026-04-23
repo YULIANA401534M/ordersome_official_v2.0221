@@ -605,3 +605,21 @@ pm run build 再次成功，代表目前 Dayone 這批前後端改動至少通過正式 production bui
   - 先把 Dayone 低頻頁面殘留舊樣式繼續清完
   - 再往上游進貨簽收、AP 彙總、供應商月結邏輯補齊
   - 最後才進細節視覺微調與列印單優化
+
+## Dayone 2026-04-24 首頁白畫面事故紀錄
+
+- 使用者回報 ordersome.com.tw 出現整站白畫面，優先級提升為 production incident。
+- 已先停止往下追加新功能，改為事故排查。
+- 排查方向改為全站首頁與 App 啟動鏈，而不是只看 Dayone，因為白畫面發生在 /。
+- 已發現 client/src/pages/Home.tsx 存在嚴重內容污染風險，為避免首頁 runtime render 失敗，已整頁重寫為乾淨穩定版本。
+- 2026-04-24 事故修復後再次驗證:
+  - client/src/pages/Home.tsx TypeScript 	ranspileModule = HOME_TRANSPILE_OK
+  - 
+pm run build = success
+- 後續文件要求補強:
+  - Dayone 各頁面跳轉邏輯、資料流、未來新增節點掛接方式，要持續記錄在 CLAUDE.md 或既有相關文件
+  - 不只記錄 UI 改動，也要記錄流程節點、資料來源、狀態變化與下游影響
+- 下一步主軸:
+  - 先確認首頁白畫面 hotfix 已上線
+  - 接著補 Dayone 頁面地圖、頁面跳轉邏輯、真實作業流程對照
+  - 再繼續補上游進貨/AP 彙總與低頻頁面清理
