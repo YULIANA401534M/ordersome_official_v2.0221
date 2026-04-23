@@ -623,3 +623,13 @@ pm run build = success
   - 先確認首頁白畫面 hotfix 已上線
   - 接著補 Dayone 頁面地圖、頁面跳轉邏輯、真實作業流程對照
   - 再繼續補上游進貨/AP 彙總與低頻頁面清理
+
+## 2026-04-24 Chunk 熱修復
+
+- 使用者回報 /dashboard/admin/products 等多個 lazy route 全白。
+- 排查後確認 repo 近期確實有 manualChunks + 大量 React.lazy 調整歷史，且 commit 歷史存在反覆 reapply / revert，屬高風險部署項。
+- 為優先恢復線上穩定性，已先將 ite.config.ts 內自訂 ollupOptions.output.manualChunks 全數移除，回退到保守單一 chunk 策略，避免 Railway / CDN / 快取 / chunk 對不上造成白畫面。
+- 本次處置原則:
+  - 先恢復可用
+  - 再重新規劃 chunk 策略
+  - 未取得 Railway log 與瀏覽器 console 前，不再冒進做進一步拆包
