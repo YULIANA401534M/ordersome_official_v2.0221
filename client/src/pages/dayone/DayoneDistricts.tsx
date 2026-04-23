@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Plus, Pencil, Trash2, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const WEEKDAYS = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
 const emptyForm = { name: "", deliveryDays: [] as number[], sortOrder: 0 };
 
 export default function DayoneDistricts() {
@@ -22,7 +22,7 @@ export default function DayoneDistricts() {
 
   const upsert = trpc.dayone.districts.upsert.useMutation({
     onSuccess: () => {
-      toast.success(editing ? "District updated" : "District created");
+      toast.success(editing ? "區域已更新" : "區域已建立");
       setOpen(false);
       utils.dayone.districts.list.invalidate();
     },
@@ -31,7 +31,7 @@ export default function DayoneDistricts() {
 
   const deleteDistrict = trpc.dayone.districts.delete.useMutation({
     onSuccess: () => {
-      toast.success("District deleted");
+      toast.success("區域已刪除");
       setDeleteTarget(null);
       utils.dayone.districts.list.invalidate();
     },
@@ -75,27 +75,27 @@ export default function DayoneDistricts() {
       <div className="space-y-6">
         <div className="dayone-page-header">
           <div className="min-w-0">
-            <h1 className="dayone-page-title">District Management</h1>
-            <p className="dayone-page-subtitle">Manage route districts, delivery weekdays, and order priority for dispatch planning.</p>
+            <h1 className="dayone-page-title">區域管理</h1>
+            <p className="dayone-page-subtitle">管理配送區域、送貨星期與排序優先權，讓派車規劃更清楚。</p>
           </div>
           <Button className="dayone-action gap-2 rounded-2xl bg-amber-600 text-white hover:bg-amber-700" onClick={openCreate}>
             <Plus className="w-4 h-4" />
-            Add District
+            新增區域
           </Button>
         </div>
 
         <div className="dayone-panel overflow-hidden rounded-[28px]">
           {isLoading ? (
-            <div className="p-8 text-center text-stone-400">Loading...</div>
+            <div className="p-8 text-center text-stone-400">載入中...</div>
           ) : !(districts as any[])?.length ? (
-            <div className="p-8 text-center text-stone-400">No districts yet.</div>
+            <div className="p-8 text-center text-stone-400">目前還沒有區域資料。</div>
           ) : (
             <>
               <div className="hidden overflow-x-auto md:block">
                 <table className="w-full text-sm">
                   <thead className="border-b bg-stone-50">
                     <tr>
-                      {["Name", "Delivery Days", "Sort", "Actions"].map((h) => (
+                      {["區域名稱", "配送星期", "排序", "操作"].map((h) => (
                         <th key={h} className="px-4 py-3 text-left font-medium text-stone-500">{h}</th>
                       ))}
                     </tr>
@@ -133,12 +133,12 @@ export default function DayoneDistricts() {
                           <span>{formatDays(d.deliveryDays)}</span>
                         </div>
                       </div>
-                      <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-700">Sort {d.sortOrder ?? 0}</span>
+                      <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-700">排序 {d.sortOrder ?? 0}</span>
                     </div>
 
                     <div className="mt-4 grid grid-cols-2 gap-2">
-                      <Button variant="outline" className="rounded-2xl" onClick={() => openEdit(d)}>Edit</Button>
-                      <Button variant="outline" className="rounded-2xl text-red-600 hover:text-red-700" onClick={() => setDeleteTarget(d)}>Delete</Button>
+                      <Button variant="outline" className="rounded-2xl" onClick={() => openEdit(d)}>編輯</Button>
+                      <Button variant="outline" className="rounded-2xl text-red-600 hover:text-red-700" onClick={() => setDeleteTarget(d)}>刪除</Button>
                     </div>
                   </article>
                 ))}
@@ -150,15 +150,15 @@ export default function DayoneDistricts() {
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>{editing ? "Edit District" : "Add District"}</DialogTitle>
+              <DialogTitle>{editing ? "編輯區域" : "新增區域"}</DialogTitle>
             </DialogHeader>
             <div className="space-y-3">
               <div>
-                <Label>Name *</Label>
+                <Label>區域名稱 *</Label>
                 <Input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
               </div>
               <div>
-                <Label>Delivery Days</Label>
+                <Label>配送星期</Label>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {WEEKDAYS.map((day, idx) => (
                     <button
@@ -167,13 +167,13 @@ export default function DayoneDistricts() {
                       onClick={() => toggleDay(idx)}
                       className={`h-10 w-10 rounded-full border text-xs font-medium transition-colors ${form.deliveryDays.includes(idx) ? "border-amber-600 bg-amber-600 text-white" : "border-stone-300 bg-white text-stone-700 hover:border-amber-400"}`}
                     >
-                      {day.slice(0, 1)}
+                      {day.replace("週", "")}
                     </button>
                   ))}
                 </div>
               </div>
               <div>
-                <Label>Sort Order</Label>
+                <Label>排序順序</Label>
                 <Input type="number" value={form.sortOrder} onChange={(e) => setForm((p) => ({ ...p, sortOrder: Number(e.target.value) }))} />
               </div>
             </div>
@@ -181,14 +181,14 @@ export default function DayoneDistricts() {
               className="mt-2 w-full bg-amber-600 hover:bg-amber-700"
               onClick={() => {
                 if (!form.name) {
-                  toast.error("Please enter district name");
+                  toast.error("請輸入區域名稱");
                   return;
                 }
                 upsert.mutate({ tenantId: TENANT_ID, id: editing?.id, name: form.name, deliveryDays: form.deliveryDays, sortOrder: form.sortOrder });
               }}
               disabled={upsert.isPending}
             >
-              {upsert.isPending ? "Saving..." : "Save"}
+              {upsert.isPending ? "儲存中..." : "儲存"}
             </Button>
           </DialogContent>
         </Dialog>
@@ -197,13 +197,13 @@ export default function DayoneDistricts() {
       <Dialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Delete district</DialogTitle>
+            <DialogTitle>刪除區域</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-stone-600">Delete <strong>{deleteTarget?.name}</strong>? This action cannot be undone.</p>
+          <p className="text-sm text-stone-600">確定要刪除 <strong>{deleteTarget?.name}</strong> 嗎？此操作無法復原。</p>
           <div className="mt-2 flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>取消</Button>
             <Button className="bg-red-600 text-white hover:bg-red-700" disabled={deleteDistrict.isPending} onClick={() => deleteDistrict.mutate({ id: deleteTarget.id, tenantId: TENANT_ID })}>
-              {deleteDistrict.isPending ? "Deleting..." : "Confirm Delete"}
+              {deleteDistrict.isPending ? "刪除中..." : "確認刪除"}
             </Button>
           </div>
         </DialogContent>
