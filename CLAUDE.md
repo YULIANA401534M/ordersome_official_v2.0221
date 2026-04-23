@@ -886,3 +886,32 @@ pm run build = success
 - 注意:
   - 這輪主體是視覺系統與版型提升，不涉及 Dayone 主流程邏輯改寫
   - 若後續新增宇聯或來點什麼後台頁面，優先引用 docs/backoffice-visual-system-v1.md 與既有 token/class
+## OrderSome 2026-04-24 首頁入口與品牌首頁第一輪重構
+
+- 本輪依使用者最新要求，修改範圍包含:
+  - 最外層首頁入口流程 `client/src/pages/Home.tsx`
+  - 開場過場動畫 `client/src/components/LogoIntro.tsx`
+  - 來點什麼前台首頁 `client/src/pages/brand/BrandHome.tsx`
+  - 來點什麼共用外框 `client/src/components/layout/BrandLayout.tsx`
+  - 來點什麼共用導覽與頁尾 `client/src/components/layout/BrandHeader.tsx` `client/src/components/layout/BrandFooter.tsx`
+- 本輪明確不動的範圍:
+  - 宇聯官網內頁內容先不修改，只保留首頁入口卡片與導流存在
+- 本輪設計方向:
+  - 來點什麼走黃 / 米白 / 石墨灰主軸，不走俗亮黃，也不走難閱讀的過度裝飾
+  - 參考更有節奏與動感的品牌首頁語法，但不直接照抄外部網站
+  - 重點是先把版型張力、留白、卡片層次、標題節奏與品牌情緒拉起來
+- 本輪已落地的重點:
+  - 首頁入口改成更清楚的雙品牌分流，並把來點什麼作為主要視覺焦點
+  - 原本較醜的開場動畫改成較短、較乾淨、低風險的品牌卡片式過場
+  - 來點什麼首頁改成可延伸的品牌型 landing page，並預留多個圖片區塊給後續素材進場
+  - Header / Footer / 背景畫布同步拉到一致語言，避免入口與內頁像不同站
+- 圖片與動畫策略:
+  - 本輪先預留圖片 slot，不硬塞假圖
+  - 後續若使用者提供實拍、餐點或門市素材，可在既有 slot 上補 hover、漂浮貼紙、局部 glow、進場動畫
+- 驗證狀態:
+  - `npm run build` 已通過
+  - 這輪尚未做完整人工逐頁視覺 smoke test
+- 下一輪建議優先順序:
+  1. 先人工檢查 `/`, `/brand`, `/brand/menu`, `/brand/stores`, `/brand/franchise`
+  2. 依實際圖片素材補首頁 hero、餐點區、footer 圖像模組
+  3. 再把 BrandMenu / BrandStores / BrandFranchise 視覺語言往同一套系統收斂
