@@ -63,6 +63,8 @@
   --color-dayone-accent: #a16207;
   --color-dayone-accent-soft: #fef3c7;
   --shadow-dayone-card: 0 14px 40px rgba(146, 64, 14, 0.08);
+  --shadow-dayone-panel: 0 24px 70px rgba(120, 53, 15, 0.10);
+  --shadow-dayone-soft: 0 14px 30px rgba(120, 53, 15, 0.06);
 }
 
 @theme inline {
@@ -371,19 +373,21 @@
 
 .dayone-shell {
   background:
-    radial-gradient(circle at top right, rgba(245, 158, 11, 0.16), transparent 32%),
-    linear-gradient(180deg, #fcfaf5 0%, var(--color-dayone-shell) 100%);
+    radial-gradient(circle at top right, rgba(245, 158, 11, 0.18), transparent 28%),
+    radial-gradient(circle at 18% 12%, rgba(251, 191, 36, 0.10), transparent 26%),
+    linear-gradient(180deg, #fffdf7 0%, #f7f2e8 54%, #f3ede2 100%);
 }
 
 .dayone-panel {
-  background: rgba(255, 253, 248, 0.9);
-  backdrop-filter: blur(14px);
-  border: 1px solid rgba(217, 119, 6, 0.12);
-  box-shadow: var(--shadow-dayone-card);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 250, 242, 0.92));
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(217, 119, 6, 0.10);
+  box-shadow: var(--shadow-dayone-panel);
 }
 
 .dayone-page {
-  width: min(100%, 1180px);
+  width: min(100%, 1220px);
   margin-inline: auto;
 }
 
@@ -391,42 +395,46 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 1.25rem;
   flex-wrap: wrap;
 }
 
 .dayone-page-title {
-  font-family: var(--font-brand);
-  font-size: clamp(1.9rem, 4vw, 2.7rem);
-  line-height: 0.95;
-  letter-spacing: -0.03em;
-  color: #111827;
+  font-family: var(--font-ui);
+  font-size: clamp(2rem, 4vw, 3.05rem);
+  font-weight: 800;
+  line-height: 0.92;
+  letter-spacing: -0.055em;
+  color: #18181b;
+  text-wrap: balance;
 }
 
 .dayone-page-subtitle {
-  margin-top: 0.55rem;
-  font-size: 0.97rem;
-  line-height: 1.65;
+  margin-top: 0.8rem;
+  font-size: 1rem;
+  line-height: 1.8;
   color: #6b7280;
-  max-width: 42rem;
+  max-width: 46rem;
+  text-wrap: pretty;
 }
 
 .dayone-action {
   min-height: 44px;
-  border-radius: 16px;
-  box-shadow: 0 10px 25px rgba(180, 83, 9, 0.16);
+  border-radius: 18px;
+  border: 1px solid rgba(180, 83, 9, 0.12);
+  box-shadow: 0 12px 24px rgba(180, 83, 9, 0.14);
 }
 
 .dayone-mobile-list {
   display: grid;
-  gap: 0.9rem;
+  gap: 1rem;
 }
 
 .dayone-mobile-card {
-  border-radius: 22px;
-  border: 1px solid rgba(217, 119, 6, 0.12);
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: var(--shadow-dayone-card);
+  border-radius: 26px;
+  border: 1px solid rgba(217, 119, 6, 0.10);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 250, 243, 0.92));
+  box-shadow: var(--shadow-dayone-soft);
 }
 
 .dayone-mobile-card-grid {
@@ -448,6 +456,170 @@
   font-size: 0.96rem;
   line-height: 1.45;
   color: #1f2937;
+}
+
+.dayone-surface-card {
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 250, 244, 0.90));
+  box-shadow: var(--shadow-dayone-soft);
+  backdrop-filter: blur(14px);
+}
+
+.dayone-soft-card {
+  border: 1px solid rgba(217, 119, 6, 0.10);
+  background: rgba(255, 252, 247, 0.9);
+  box-shadow: 0 10px 24px rgba(120, 53, 15, 0.05);
+}
+
+.dayone-hero-panel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 34px;
+  padding: 1.5rem;
+}
+
+.dayone-hero-panel::after {
+  content: "";
+  position: absolute;
+  inset: auto -6% -28% auto;
+  width: 280px;
+  height: 280px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.16), transparent 68%);
+  pointer-events: none;
+}
+
+.dayone-hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border-radius: 999px;
+  border: 1px solid rgba(217, 119, 6, 0.16);
+  background: rgba(255, 255, 255, 0.72);
+  padding: 0.45rem 0.8rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: #b45309;
+}
+
+.dayone-stat-card {
+  border-radius: 26px;
+  border: 1px solid rgba(255, 255, 255, 0.74);
+  background: rgba(255, 255, 255, 0.84);
+  padding: 1rem 1.05rem;
+  box-shadow: 0 14px 28px rgba(120, 53, 15, 0.06);
+}
+
+.dayone-stat-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #a8a29e;
+}
+
+.dayone-stat-value {
+  margin-top: 0.7rem;
+  font-size: clamp(1.55rem, 3vw, 2.2rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  color: #111827;
+}
+
+.dayone-stat-note {
+  margin-top: 0.3rem;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: #78716c;
+}
+
+.dayone-toolbar {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.dayone-table-shell {
+  overflow: hidden;
+  border-radius: 30px;
+  border: 1px solid rgba(217, 119, 6, 0.10);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(255, 250, 244, 0.92));
+  box-shadow: var(--shadow-dayone-soft);
+}
+
+.dayone-table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid rgba(231, 229, 228, 0.9);
+  background: linear-gradient(180deg, rgba(255, 250, 240, 0.94), rgba(255, 255, 255, 0.98));
+  padding: 1.15rem 1.4rem;
+}
+
+.dayone-table-title {
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.dayone-table-note {
+  margin-top: 0.2rem;
+  font-size: 0.84rem;
+  line-height: 1.6;
+  color: #78716c;
+}
+
+.dayone-table thead {
+  background: rgba(245, 245, 244, 0.85);
+  color: #78716c;
+}
+
+.dayone-table th {
+  padding: 1rem 1.25rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.dayone-table td {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid rgba(245, 245, 244, 0.95);
+  vertical-align: top;
+}
+
+.dayone-table tbody tr {
+  transition: background-color 160ms ease, transform 160ms ease;
+}
+
+.dayone-table tbody tr:hover {
+  background: rgba(255, 251, 235, 0.42);
+}
+
+.dayone-empty-state {
+  display: flex;
+  min-height: 220px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 30px;
+  border: 1px dashed rgba(214, 211, 209, 0.95);
+  background: rgba(255, 255, 255, 0.72);
+  padding: 1.5rem;
+  text-align: center;
+  color: #a8a29e;
+}
+
+.dayone-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  background: rgba(245, 245, 244, 0.95);
+  padding: 0.38rem 0.8rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #57534e;
 }
 
 /* ── 按鈕立體動效 ───────────────────────────────────────────────────────── */

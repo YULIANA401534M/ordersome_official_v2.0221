@@ -70,35 +70,42 @@ export default function DayoneDrivers() {
           </Button>
         </div>
 
-        <div className="dayone-panel overflow-hidden rounded-[28px]">
+        <div className="dayone-table-shell">
           {isLoading ? (
-            <div className="p-8 text-center text-stone-400">載入中...</div>
+            <div className="dayone-empty-state min-h-[260px]">載入中...</div>
           ) : !(drivers as any[])?.length ? (
-            <div className="p-8 text-center text-stone-400">目前沒有司機資料。</div>
+            <div className="dayone-empty-state min-h-[260px]">目前沒有司機資料。</div>
           ) : (
             <>
+              <div className="dayone-table-header">
+                <div>
+                  <h2 className="dayone-table-title">司機清單</h2>
+                  <p className="dayone-table-note">聯絡方式、車牌與在職狀態統一管理，手機版改為卡片避免擁擠。</p>
+                </div>
+                <span className="dayone-chip">共 {(drivers as any[]).length} 位</span>
+              </div>
               <div className="hidden overflow-x-auto md:block">
-                <table className="w-full text-sm">
-                  <thead className="border-b bg-stone-50">
+                <table className="dayone-table w-full text-sm">
+                  <thead>
                     <tr>
                       {["姓名", "電話", "LINE ID", "車牌", "狀態", "操作"].map((h) => (
-                        <th key={h} className="px-5 py-4 text-left font-medium text-stone-500">{h}</th>
+                        <th key={h}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {(drivers as any[]).map((driver: any) => (
-                      <tr key={driver.id} className="border-b last:border-b-0">
-                        <td className="px-5 py-4 font-medium">{driver.name}</td>
-                        <td className="px-5 py-4 text-stone-600">{driver.phone ?? "-"}</td>
-                        <td className="px-5 py-4 text-stone-600">{driver.lineId ?? "-"}</td>
-                        <td className="px-5 py-4 text-stone-700">{driver.vehicleNo ?? "-"}</td>
-                        <td className="px-5 py-4">
+                      <tr key={driver.id}>
+                        <td className="font-medium">{driver.name}</td>
+                        <td className="text-stone-600">{driver.phone ?? "-"}</td>
+                        <td className="text-stone-600">{driver.lineId ?? "-"}</td>
+                        <td className="text-stone-700">{driver.vehicleNo ?? "-"}</td>
+                        <td>
                           <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${driver.status === "active" ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-500"}`}>
                             {driver.status === "active" ? "在職" : "停用"}
                           </span>
                         </td>
-                        <td className="px-5 py-4">
+                        <td>
                           <div className="flex gap-1">
                             <Button variant="ghost" size="sm" onClick={() => openEdit(driver)}>
                               <Pencil className="w-4 h-4" />

@@ -124,7 +124,7 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
         </Button>
       </div>
 
-      <Card className="border-white/70 bg-white/85 shadow-[0_16px_38px_rgba(148,102,47,0.09)]">
+      <Card className="dayone-surface-card rounded-[30px]">
         <CardContent className="p-4 md:p-5">
           <Input
             placeholder="用名稱或電話搜尋"
@@ -135,41 +135,48 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
         </CardContent>
       </Card>
 
-      <div className="dayone-panel overflow-hidden rounded-[28px]">
+      <div className="dayone-table-shell">
         {isLoading ? (
-          <div className="p-8 text-center text-stone-400">載入中...</div>
+          <div className="dayone-empty-state min-h-[260px]">載入中...</div>
         ) : !filtered.length ? (
-          <div className="p-8 text-center text-stone-400">目前沒有客戶資料。</div>
+          <div className="dayone-empty-state min-h-[260px]">目前沒有客戶資料。</div>
         ) : (
           <>
+            <div className="dayone-table-header">
+              <div>
+                <h2 className="dayone-table-title">客戶清單</h2>
+                <p className="dayone-table-note">下游商家、付款條件與 Portal 權限集中管理，保持清楚可讀的桌面與手機視圖。</p>
+              </div>
+              <span className="dayone-chip">共 {filtered.length} 位</span>
+            </div>
             <div className="hidden overflow-x-auto md:block">
-              <table className="w-full text-sm">
-                <thead className="border-b bg-stone-50">
+              <table className="dayone-table w-full text-sm">
+                <thead>
                   <tr>
                     {["名稱", "電話", "區域", "付款", "等級", "Portal", "狀態", "操作"].map((h) => (
-                      <th key={h} className="px-4 py-3 text-left font-medium text-stone-500">{h}</th>
+                      <th key={h}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map((c: any) => (
-                    <tr key={c.id} className="border-b last:border-b-0 hover:bg-stone-50/70">
-                      <td className="px-4 py-3 font-medium">{c.name}</td>
-                      <td className="px-4 py-3 text-stone-600">{c.phone ?? "-"}</td>
-                      <td className="px-4 py-3 text-stone-600">{c.districtName ?? "-"}</td>
-                      <td className="px-4 py-3 text-stone-600">{paymentTypeLabel[c.paymentType] ?? c.paymentType}</td>
-                      <td className="px-4 py-3 text-stone-600">{c.customerLevel === "store" ? "門市" : c.customerLevel === "supplier" ? "供應商" : "零售"}</td>
-                      <td className="px-4 py-3">
+                    <tr key={c.id}>
+                      <td className="font-medium">{c.name}</td>
+                      <td className="text-stone-600">{c.phone ?? "-"}</td>
+                      <td className="text-stone-600">{c.districtName ?? "-"}</td>
+                      <td className="text-stone-600">{paymentTypeLabel[c.paymentType] ?? c.paymentType}</td>
+                      <td className="text-stone-600">{c.customerLevel === "store" ? "門市" : c.customerLevel === "supplier" ? "供應商" : "零售"}</td>
+                      <td>
                         <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${c.isPortalActive ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-500"}`}>
                           {c.isPortalActive ? "已啟用" : "未啟用"}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td>
                         <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${c.status === "active" ? "bg-blue-100 text-blue-700" : "bg-red-100 text-red-700"}`}>
                           {c.status === "active" ? "啟用中" : "停用"}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td>
                         <div className="flex gap-1">
                           <Button variant="ghost" size="sm" onClick={() => openEdit(c)}>
                             <Pencil className="h-4 w-4" />

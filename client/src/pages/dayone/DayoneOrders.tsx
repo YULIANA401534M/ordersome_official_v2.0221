@@ -81,7 +81,7 @@ export default function DayoneOrders() {
         <div className="dayone-page-header">
           <div className="min-w-0">
             <h1 className="dayone-page-title">訂單管理</h1>
-            <p className="dayone-page-subtitle">訂單資料保留原邏輯，手機版改成卡片清單，桌面版維持表格式處理效率。</p>
+            <p className="dayone-page-subtitle">訂單資料保留原邏輯，視覺上改成更清楚的篩選節奏與表格層次，手機版維持卡片閱讀效率。</p>
           </div>
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
@@ -193,9 +193,9 @@ export default function DayoneOrders() {
           </Dialog>
         </div>
 
-        <Card className="border-white/70 bg-white/85 shadow-[0_16px_38px_rgba(148,102,47,0.09)]">
+        <Card className="dayone-surface-card rounded-[30px]">
           <CardContent className="p-4 md:p-5">
-            <div className="grid gap-3 md:grid-cols-[160px_160px_minmax(220px,1fr)]">
+            <div className="dayone-toolbar md:grid-cols-[170px_180px_minmax(260px,1fr)]">
               <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -214,20 +214,27 @@ export default function DayoneOrders() {
           </CardContent>
         </Card>
 
-        <Card className="border-white/70 bg-white/85 shadow-[0_16px_38px_rgba(148,102,47,0.09)]">
+        <Card className="dayone-table-shell">
           <CardContent className="p-0">
             {isLoading ? (
-              <div className="p-8 text-center text-gray-500">載入中...</div>
+              <div className="dayone-empty-state min-h-[260px]">載入中...</div>
             ) : filtered.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">查無符合條件的訂單。</div>
+              <div className="dayone-empty-state min-h-[260px]">查無符合條件的訂單。</div>
             ) : (
               <>
+                <div className="dayone-table-header">
+                  <div>
+                    <h2 className="dayone-table-title">訂單清單</h2>
+                    <p className="dayone-table-note">依日期、狀態與關鍵字快速篩選，桌面維持清楚的管理視圖。</p>
+                  </div>
+                  <span className="dayone-chip">共 {filtered.length} 筆</span>
+                </div>
                 <div className="hidden overflow-x-auto md:block">
-                  <table className="w-full text-sm">
-                    <thead className="border-b bg-stone-50">
+                  <table className="dayone-table w-full text-sm">
+                    <thead>
                       <tr>
                         {["訂單編號", "客戶", "司機", "送貨日期", "金額", "狀態", "操作"].map((h) => (
-                          <th key={h} className="px-4 py-3 text-left font-medium text-gray-600">{h}</th>
+                          <th key={h}>{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -235,16 +242,16 @@ export default function DayoneOrders() {
                       {filtered.map((o: any) => {
                         const st = STATUS_MAP[o.status] ?? { label: o.status, color: "bg-gray-100 text-gray-700" };
                         return (
-                          <tr key={o.id} className="border-b hover:bg-gray-50">
-                            <td className="px-4 py-3 font-mono text-xs">{o.orderNo}</td>
-                            <td className="px-4 py-3 font-medium">{o.customerName}</td>
-                            <td className="px-4 py-3 text-gray-600">{o.driverName ?? "未指派"}</td>
-                            <td className="px-4 py-3">{o.deliveryDate}</td>
-                            <td className="px-4 py-3">${Number(o.totalAmount).toLocaleString()}</td>
-                            <td className="px-4 py-3">
+                          <tr key={o.id}>
+                            <td className="font-mono text-xs">{o.orderNo}</td>
+                            <td className="font-medium">{o.customerName}</td>
+                            <td className="text-stone-600">{o.driverName ?? "未指派"}</td>
+                            <td>{o.deliveryDate}</td>
+                            <td className="font-medium">${Number(o.totalAmount).toLocaleString()}</td>
+                            <td>
                               <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${st.color}`}>{st.label}</span>
                             </td>
-                            <td className="px-4 py-3">
+                            <td>
                               <div className="flex items-center gap-1">
                                 <Select value={o.status} onValueChange={(v) => updateStatus.mutate({ id: o.id, tenantId: TENANT_ID, status: v as any })}>
                                   <SelectTrigger className="h-8 w-28 text-xs"><SelectValue /></SelectTrigger>

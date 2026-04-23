@@ -1,37 +1,88 @@
 import { DayoneLayout } from "./DayoneLayout";
 import { trpc } from "@/lib/trpc";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { UserRound, Phone, CalendarClock } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  CalendarClock,
+  Phone,
+  ReceiptText,
+  Smartphone,
+  TimerReset,
+  UserRound,
+} from "lucide-react";
 
-const STATUS_MAP: Record<string, { label: string; color: string }> = {
-  pending: { label: "Pending", color: "bg-gray-100 text-gray-700" },
-  assigned: { label: "Assigned", color: "bg-blue-100 text-blue-700" },
-  picked: { label: "Picked", color: "bg-purple-100 text-purple-700" },
-  delivering: { label: "Delivering", color: "bg-amber-100 text-amber-700" },
-  delivered: { label: "Delivered", color: "bg-green-100 text-green-700" },
-  returned: { label: "Returned", color: "bg-red-100 text-red-700" },
-  cancelled: { label: "Cancelled", color: "bg-stone-100 text-stone-500" },
+const STATUS_MAP: Record<string, { label: string; className: string }> = {
+  pending: { label: "待確認", className: "bg-stone-100 text-stone-700" },
+  assigned: { label: "已指派", className: "bg-sky-100 text-sky-700" },
+  picked: { label: "已撿貨", className: "bg-violet-100 text-violet-700" },
+  delivering: { label: "配送中", className: "bg-amber-100 text-amber-700" },
+  delivered: { label: "已送達", className: "bg-emerald-100 text-emerald-700" },
+  returned: { label: "已回庫", className: "bg-rose-100 text-rose-700" },
+  cancelled: { label: "已取消", className: "bg-stone-200 text-stone-600" },
 };
 
-function formatDate(val: string | null) {
-  if (!val) return "-";
-  const d = new Date(val);
-  return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+function formatDate(value: string | null) {
+  if (!value) return "-";
+  return new Date(value).toLocaleString("zh-TW", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatMoney(value: number | string | null | undefined) {
+  const amount = Number(value ?? 0);
+  return amount > 0 ? `NT$ ${amount.toLocaleString("zh-TW")}` : "待補金額";
 }
 
 export default function DayoneLiffOrders() {
   const { data: orders, isLoading } = trpc.dayone.orders.getLiffOrders.useQuery();
 
+  const orderList = Array.isArray(orders) ? orders : [];
+  const totalOrders = orderList.length;
+  const pendingOrders = orderList.filter((item: any) => item.status === "pending").length;
+  const payableOrders = orderList.filter((item: any) => Number(item.totalAmount) > 0).length;
+  const latestOrderAt = orderList[0]?.createdAt ? formatDate(orderList[0].createdAt) : "目前尚無訂單";
+
   return (
     <DayoneLayout>
-      <div className="space-y-6">
-        <div className="dayone-page-header">
-          <div className="min-w-0">
-            <h1 className="dayone-page-title">LIFF Orders</h1>
-            <p className="dayone-page-subtitle">Review all LINE LIFF orders in a mobile-friendly card layout without losing the desktop table view.</p>
+      <div className="space-y-6 md:space-y-7">
+        <section className="dayone-panel dayone-hero-panel md:p-8">
+          <div className="grid gap-6 px-5 py-6 md:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.9fr)] md:px-8 md:py-8">
+            <div className="min-w-0">
+              <div className="dayone-hero-eyebrow">
+                <Smartphone className="h-3.5 w-3.5" />
+                LINE LIFF
+              </div>
+              <h1 className="mt-4 text-[clamp(2rem,4vw,3.4rem)] font-ui font-extrabold leading-[0.94] tracking-[-0.055em] text-stone-950">
+                LIFF 訂單總覽
+              </h1>
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-stone-600 md:text-[15px]">
+                集中查看 LINE LIFF 進來的訂單狀態、客戶資訊與金額，手機維持卡片閱讀，桌面保留清楚的表格節奏。
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3 md:grid-cols-1">
+              <div className="dayone-stat-card">
+                <p className="dayone-stat-label">目前訂單數</p>
+                <p className="dayone-stat-value">{totalOrders}</p>
+                <p className="dayone-stat-note">LIFF 入口累積單量</p>
+              </div>
+              <div className="dayone-stat-card">
+                <p className="dayone-stat-label">待確認</p>
+                <p className="dayone-stat-value text-amber-700">{pendingOrders}</p>
+                <p className="dayone-stat-note">需要補價或後續派單</p>
+              </div>
+              <div className="dayone-stat-card">
+                <p className="dayone-stat-label">最近一筆</p>
+                <p className="mt-3 text-sm font-semibold leading-6 text-stone-900">{latestOrderAt}</p>
+                <p className="mt-2 text-xs text-stone-500">已補金額 {payableOrders} 筆</p>
+              </div>
+            </div>
           </div>
-        </div>
+        </section>
 
         {isLoading && (
           <div className="flex justify-center py-12">
@@ -39,40 +90,80 @@ export default function DayoneLiffOrders() {
           </div>
         )}
 
-        {!isLoading && (!orders || orders.length === 0) && (
-          <Card className="border-white/70 bg-white/85 shadow-[0_16px_38px_rgba(148,102,47,0.09)]">
-            <CardContent className="py-12 text-center text-stone-500">No LIFF orders yet.</CardContent>
-          </Card>
+        {!isLoading && totalOrders === 0 && (
+          <section className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_320px]">
+            <Card className="dayone-surface-card rounded-[30px]">
+              <CardContent className="px-6 py-8 md:px-8 md:py-9">
+                <div className="flex max-w-xl items-start gap-4">
+                  <div className="rounded-2xl bg-amber-50 p-3 text-amber-700">
+                    <ReceiptText className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-stone-950">目前還沒有 LIFF 訂單</h2>
+                    <p className="mt-3 text-sm leading-7 text-stone-600">
+                      頁面本身已可正常承接資料，等 LINE LIFF 建單進來後，這裡會先顯示卡片列表，桌面再同步出現完整表格，不會再只剩一大片空白盒子。
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="dayone-surface-card rounded-[30px]">
+              <CardContent className="space-y-4 px-5 py-6">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-2xl bg-stone-100 p-2.5 text-stone-600">
+                    <TimerReset className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-stone-900">頁面準備狀態</p>
+                    <p className="text-xs text-stone-500">適合先確認 LIFF 串接與建單流程</p>
+                  </div>
+                </div>
+                <div className="space-y-3 text-sm text-stone-600">
+                  <div className="rounded-2xl bg-stone-50 px-4 py-3">手機端會優先使用卡片版型顯示客戶與狀態。</div>
+                  <div className="rounded-2xl bg-stone-50 px-4 py-3">桌面端保留表格，方便管理端快速對單。</div>
+                  <div className="rounded-2xl bg-stone-50 px-4 py-3">待有真實訂單後，再一起驗證狀態色與金額欄位。</div>
+                </div>
+              </CardContent>
+            </Card>
+          </section>
         )}
 
-        {!isLoading && orders && orders.length > 0 && (
+        {!isLoading && totalOrders > 0 && (
           <>
             <div className="dayone-mobile-list md:hidden">
-              {orders.map((o: any) => {
-                const status = STATUS_MAP[o.status] ?? { label: o.status, color: "bg-gray-100 text-gray-700" };
+              {orderList.map((order: any) => {
+                const status = STATUS_MAP[order.status] ?? { label: order.status, className: "bg-stone-100 text-stone-700" };
                 return (
-                  <article key={o.orderId} className="dayone-mobile-card p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="font-mono text-[11px] text-stone-400">{o.orderNo}</div>
-                        <h2 className="mt-1 text-lg font-semibold text-stone-900">{o.customerName}</h2>
-                      </div>
-                      <Badge className={`${status.color} border-0 text-xs`}>{status.label}</Badge>
-                    </div>
-                    <div className="mt-4 space-y-3 text-sm">
-                      <div className="flex items-start gap-3">
-                        <Phone className="mt-0.5 h-4 w-4 text-stone-400" />
-                        <span className="text-stone-700">{o.customerPhone ?? "-"}</span>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <CalendarClock className="mt-0.5 h-4 w-4 text-stone-400" />
-                        <span className="text-stone-700">{formatDate(o.createdAt)}</span>
+                  <article key={order.orderId} className="dayone-mobile-card overflow-hidden p-0">
+                    <div className="border-b border-stone-100/80 bg-[linear-gradient(180deg,rgba(255,250,240,0.92),rgba(255,255,255,0.96))] px-4 py-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-stone-400">{order.orderNo}</p>
+                          <h2 className="mt-2 text-lg font-semibold text-stone-950">{order.customerName || "未填客戶名稱"}</h2>
+                        </div>
+                        <Badge className={`${status.className} border-0 text-xs`}>{status.label}</Badge>
                       </div>
                     </div>
-                    <div className="mt-4 flex items-center justify-between">
-                      <span className="text-xs uppercase tracking-[0.18em] text-stone-400">LIFF</span>
-                      <span className="font-semibold text-stone-900">
-                        {Number(o.totalAmount) === 0 ? "Pending price" : `$${Number(o.totalAmount).toLocaleString()}`}
+
+                    <div className="space-y-3 px-4 py-4 text-sm">
+                      <div className="flex items-start gap-3 text-stone-600">
+                        <Phone className="mt-0.5 h-4 w-4 shrink-0 text-stone-400" />
+                        <span>{order.customerPhone || "未提供電話"}</span>
+                      </div>
+                      <div className="flex items-start gap-3 text-stone-600">
+                        <CalendarClock className="mt-0.5 h-4 w-4 shrink-0 text-stone-400" />
+                        <span>{formatDate(order.createdAt)}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-end justify-between border-t border-stone-100/80 px-4 py-4">
+                      <div>
+                        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-stone-400">訂單金額</p>
+                        <p className="mt-2 text-lg font-semibold text-stone-950">{formatMoney(order.totalAmount)}</p>
+                      </div>
+                      <span className="rounded-full bg-stone-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
+                        LIFF
                       </span>
                     </div>
                   </article>
@@ -80,42 +171,47 @@ export default function DayoneLiffOrders() {
               })}
             </div>
 
-            <Card className="hidden border-white/70 bg-white/85 shadow-[0_16px_38px_rgba(148,102,47,0.09)] md:block">
-              <CardHeader>
-                <CardTitle className="text-base">{orders.length} LIFF orders</CardTitle>
-              </CardHeader>
+            <Card className="dayone-table-shell hidden md:block">
               <CardContent className="p-0">
+                <div className="dayone-table-header">
+                  <div>
+                    <h2 className="dayone-table-title">LIFF 訂單清單</h2>
+                    <p className="dayone-table-note">共 {totalOrders} 筆，桌面保留快速查閱的表格視圖。</p>
+                  </div>
+                  <span className="dayone-chip">LIFF</span>
+                </div>
+
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="dayone-table w-full min-w-[760px] text-sm">
                     <thead>
-                      <tr className="border-b bg-stone-50 text-stone-600">
-                        <th className="px-4 py-3 text-left font-medium">Order No</th>
-                        <th className="px-4 py-3 text-left font-medium">Customer</th>
-                        <th className="px-4 py-3 text-left font-medium">Phone</th>
-                        <th className="px-4 py-3 text-left font-medium">Created At</th>
-                        <th className="px-4 py-3 text-right font-medium">Amount</th>
-                        <th className="px-4 py-3 text-center font-medium">Status</th>
+                      <tr>
+                        <th>訂單編號</th>
+                        <th>客戶</th>
+                        <th>聯絡電話</th>
+                        <th>建立時間</th>
+                        <th className="text-right">金額</th>
+                        <th className="text-center">狀態</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {orders.map((o: any) => {
-                        const status = STATUS_MAP[o.status] ?? { label: o.status, color: "bg-gray-100 text-gray-700" };
+                      {orderList.map((order: any) => {
+                        const status = STATUS_MAP[order.status] ?? { label: order.status, className: "bg-stone-100 text-stone-700" };
                         return (
-                          <tr key={o.orderId} className="border-b transition-colors hover:bg-stone-50">
-                            <td className="px-4 py-3 font-mono text-xs text-stone-700">{o.orderNo}</td>
-                            <td className="px-4 py-3 text-stone-800">
-                              <div className="flex items-center gap-2">
-                                <UserRound className="h-4 w-4 text-stone-400" />
-                                {o.customerName}
+                          <tr key={order.orderId}>
+                            <td className="font-mono text-xs text-stone-600">{order.orderNo}</td>
+                            <td className="text-stone-900">
+                              <div className="flex items-center gap-2.5">
+                                <div className="rounded-full bg-stone-100 p-2 text-stone-500">
+                                  <UserRound className="h-4 w-4" />
+                                </div>
+                                <span className="font-medium">{order.customerName || "未填客戶名稱"}</span>
                               </div>
                             </td>
-                            <td className="px-4 py-3 text-stone-600">{o.customerPhone}</td>
-                            <td className="px-4 py-3 whitespace-nowrap text-stone-500">{formatDate(o.createdAt)}</td>
-                            <td className="px-4 py-3 text-right font-medium text-stone-800">
-                              {Number(o.totalAmount) === 0 ? <span className="text-amber-600">Pending price</span> : `$${Number(o.totalAmount).toLocaleString()}`}
-                            </td>
-                            <td className="px-4 py-3 text-center">
-                              <Badge className={`${status.color} border-0`}>{status.label}</Badge>
+                            <td className="text-stone-600">{order.customerPhone || "-"}</td>
+                            <td className="whitespace-nowrap text-stone-500">{formatDate(order.createdAt)}</td>
+                            <td className="text-right font-semibold text-stone-900">{formatMoney(order.totalAmount)}</td>
+                            <td className="text-center">
+                              <Badge className={`${status.className} border-0`}>{status.label}</Badge>
                             </td>
                           </tr>
                         );

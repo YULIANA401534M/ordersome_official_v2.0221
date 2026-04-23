@@ -24,7 +24,7 @@ function KpiCard({
   valueClassName?: string;
 }) {
   return (
-    <Card className="border-white/70 bg-white/85 shadow-[0_16px_38px_rgba(148,102,47,0.09)] backdrop-blur-sm">
+    <Card className="dayone-surface-card rounded-[28px]">
       <CardContent className="pt-5">
         <div className="flex items-center gap-3">
           <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${iconWrap}`}>
@@ -67,23 +67,25 @@ export default function DayoneDashboard() {
   return (
     <DayoneLayout>
       <div className="space-y-6">
-        <section className="dayone-panel rounded-[32px] p-5 md:p-7">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <section className="dayone-panel dayone-hero-panel md:p-8">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0">
-              <p className="text-xs uppercase tracking-[0.28em] text-amber-700">Dayone Operations</p>
-              <h1 className="mt-3 text-3xl font-bold tracking-tight text-stone-900 md:text-4xl">大永蛋品總覽</h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-600">
+              <p className="dayone-hero-eyebrow">Dayone Operations</p>
+              <h1 className="mt-4 text-[clamp(2.2rem,4vw,3.6rem)] font-ui font-extrabold tracking-[-0.055em] text-stone-950">大永蛋品總覽</h1>
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-stone-600 md:text-[15px]">
                 {today} 的配送、進貨、應收與庫存提醒會集中顯示在這裡，手機版改成單欄資訊流，不再出現標題被擠出畫面的問題。
               </p>
             </div>
             <div className="grid grid-cols-2 gap-3 sm:max-w-sm">
-              <div className="rounded-2xl border border-amber-100 bg-amber-50/80 px-4 py-3">
-                <div className="text-xs text-amber-700">今日訂單</div>
-                <div className="mt-1 text-2xl font-bold text-stone-900">{(summary as any)?.summary?.totalOrders ?? 0}</div>
+              <div className="dayone-stat-card">
+                <div className="dayone-stat-label">今日訂單</div>
+                <div className="dayone-stat-value">{(summary as any)?.summary?.totalOrders ?? 0}</div>
+                <div className="dayone-stat-note">目前已進入配送池的單量</div>
               </div>
-              <div className="rounded-2xl border border-emerald-100 bg-emerald-50/80 px-4 py-3">
-                <div className="text-xs text-emerald-700">已送達</div>
-                <div className="mt-1 text-2xl font-bold text-stone-900">{(summary as any)?.summary?.deliveredCount ?? 0}</div>
+              <div className="dayone-stat-card">
+                <div className="dayone-stat-label">已送達</div>
+                <div className="dayone-stat-value">{(summary as any)?.summary?.deliveredCount ?? 0}</div>
+                <div className="dayone-stat-note">今日已完成簽收配送</div>
               </div>
             </div>
           </div>
@@ -104,7 +106,7 @@ export default function DayoneDashboard() {
         </section>
 
         <div className="grid gap-6 xl:grid-cols-2">
-          <Card className="border-white/70 bg-white/85 shadow-[0_16px_38px_rgba(148,102,47,0.09)]">
+          <Card className="dayone-surface-card rounded-[30px]">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <AlertTriangle className="h-4 w-4 text-orange-500" />
@@ -117,7 +119,7 @@ export default function DayoneDashboard() {
               ) : (
                 <div className="space-y-2">
                   {(alerts as any[]).map((item: any) => (
-                    <div key={item.id} className="flex items-center justify-between gap-3 rounded-2xl border border-stone-100 px-4 py-3 text-sm">
+                    <div key={item.id} className="flex items-center justify-between gap-3 rounded-[22px] border border-stone-100/80 bg-white/70 px-4 py-3 text-sm">
                       <span className="font-medium text-stone-800">{item.productName}</span>
                       <span className="font-bold text-orange-600">剩 {item.currentQty} {item.unit}</span>
                     </div>
@@ -127,7 +129,7 @@ export default function DayoneDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="border-white/70 bg-white/85 shadow-[0_16px_38px_rgba(148,102,47,0.09)]">
+          <Card className="dayone-surface-card rounded-[30px]">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Users className="h-4 w-4 text-blue-500" />
@@ -140,7 +142,7 @@ export default function DayoneDashboard() {
               ) : (
                 <div className="space-y-2">
                   {(topCustomers as any[]).map((c: any, i: number) => (
-                    <div key={i} className="flex items-center justify-between gap-3 rounded-2xl border border-stone-100 px-4 py-3 text-sm">
+                    <div key={i} className="flex items-center justify-between gap-3 rounded-[22px] border border-stone-100/80 bg-white/70 px-4 py-3 text-sm">
                       <div className="flex items-center gap-2">
                         <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-100 text-xs font-bold text-amber-800">{i + 1}</span>
                         <span className="font-medium text-stone-800">{c.name}</span>
@@ -153,7 +155,7 @@ export default function DayoneDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="border-white/70 bg-white/85 shadow-[0_16px_38px_rgba(148,102,47,0.09)] xl:col-span-2">
+          <Card className="dayone-surface-card rounded-[30px] xl:col-span-2">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Truck className="h-4 w-4 text-green-500" />
@@ -166,20 +168,20 @@ export default function DayoneDashboard() {
               ) : (
                 <>
                   <div className="hidden overflow-x-auto md:block">
-                    <table className="w-full text-sm">
+                    <table className="dayone-table w-full text-sm">
                       <thead>
-                        <tr className="border-b text-stone-500">
-                          <th className="py-2 text-left font-medium">司機</th>
-                          <th className="py-2 text-right font-medium">訂單數</th>
-                          <th className="py-2 text-right font-medium">金額</th>
+                        <tr>
+                          <th>司機</th>
+                          <th className="text-right">訂單數</th>
+                          <th className="text-right">金額</th>
                         </tr>
                       </thead>
                       <tbody>
                         {(summary as any).byDriver.map((d: any, i: number) => (
-                          <tr key={i} className="border-b last:border-0">
-                            <td className="py-3">{d.driverName ?? "未指派"}</td>
-                            <td className="py-3 text-right">{d.orderCount}</td>
-                            <td className="py-3 text-right">${Number(d.totalAmount).toLocaleString()}</td>
+                          <tr key={i}>
+                            <td>{d.driverName ?? "未指派"}</td>
+                            <td className="text-right">{d.orderCount}</td>
+                            <td className="text-right">${Number(d.totalAmount).toLocaleString()}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -188,7 +190,7 @@ export default function DayoneDashboard() {
 
                   <div className="space-y-3 md:hidden">
                     {(summary as any).byDriver.map((d: any, i: number) => (
-                      <div key={i} className="rounded-2xl border border-stone-100 px-4 py-3">
+                      <div key={i} className="rounded-[24px] border border-stone-100/80 bg-white/70 px-4 py-3">
                         <div className="font-medium text-stone-900">{d.driverName ?? "未指派"}</div>
                         <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
                           <div>

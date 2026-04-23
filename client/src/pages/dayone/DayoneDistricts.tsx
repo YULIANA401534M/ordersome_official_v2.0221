@@ -84,29 +84,36 @@ export default function DayoneDistricts() {
           </Button>
         </div>
 
-        <div className="dayone-panel overflow-hidden rounded-[28px]">
+        <div className="dayone-table-shell">
           {isLoading ? (
-            <div className="p-8 text-center text-stone-400">載入中...</div>
+            <div className="dayone-empty-state min-h-[260px]">載入中...</div>
           ) : !(districts as any[])?.length ? (
-            <div className="p-8 text-center text-stone-400">目前還沒有區域資料。</div>
+            <div className="dayone-empty-state min-h-[260px]">目前還沒有區域資料。</div>
           ) : (
             <>
+              <div className="dayone-table-header">
+                <div>
+                  <h2 className="dayone-table-title">區域清單</h2>
+                  <p className="dayone-table-note">配送星期與排序優先權集中整理，方便後續派車規劃。</p>
+                </div>
+                <span className="dayone-chip">共 {(districts as any[]).length} 區</span>
+              </div>
               <div className="hidden overflow-x-auto md:block">
-                <table className="w-full text-sm">
-                  <thead className="border-b bg-stone-50">
+                <table className="dayone-table w-full text-sm">
+                  <thead>
                     <tr>
                       {["區域名稱", "配送星期", "排序", "操作"].map((h) => (
-                        <th key={h} className="px-4 py-3 text-left font-medium text-stone-500">{h}</th>
+                        <th key={h}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {(districts as any[]).map((d: any) => (
-                      <tr key={d.id} className="border-b last:border-b-0 hover:bg-stone-50/70">
-                        <td className="px-4 py-3 font-medium">{d.name}</td>
-                        <td className="px-4 py-3 text-stone-600">{formatDays(d.deliveryDays)}</td>
-                        <td className="px-4 py-3 text-stone-700">{d.sortOrder ?? 0}</td>
-                        <td className="px-4 py-3">
+                      <tr key={d.id}>
+                        <td className="font-medium">{d.name}</td>
+                        <td className="text-stone-600">{formatDays(d.deliveryDays)}</td>
+                        <td className="text-stone-700">{d.sortOrder ?? 0}</td>
+                        <td>
                           <div className="flex gap-1">
                             <Button variant="ghost" size="sm" onClick={() => openEdit(d)}>
                               <Pencil className="w-4 h-4" />
