@@ -388,7 +388,11 @@ INDEX idx_tenant_name (tenantId, name)
 - 大永/來點什麼 ERP 的 `dy_`/`os_` 表不在 `schema.ts`，用 raw SQL
 - 本機菜單圖尚未遷移到 R2（`client/public/images/menu/korean-roll/`）
 - `has_procurement_access` 前端 any cast 補型別（`useAuth` User 型別正式擴充）
-- chunk size 超標（index.js 6453kB）— **⚠️ 危險操作記錄**：v5.87 曾嘗試用 React.lazy + manualChunks 解決，造成全站白畫面。根本原因：`vite-plugin-manus-runtime` plugin 與 `manualChunks` 衝突導致 chunk 路徑解析失敗。已 revert。**解法前提**：必須先在本機能夠成功跑 `vite build`（目前本機有 estree-walker 缺失問題），確認 build 產出正常再 push。不可直接在 Railway 盲測。
+- chunk size 超標（index.js ~6500kB）— **⚠️ 高風險，暫停處理**
+  - 已嘗試兩次（v5.87 × 2），兩次都造成全站白畫面，兩次都 revert
+  - 本機 `vite build` 成功不代表 Railway 環境成功，兩者行為不一致
+  - **解法前提**：必須先取得 Railway deploy log 的具體錯誤訊息，找到根本原因才能再試
+  - **禁止再在沒有 Railway log 的情況下嘗試任何 React.lazy 或 manualChunks 改動**
 
 ---
 
