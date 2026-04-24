@@ -1,7 +1,7 @@
 ﻿# CLAUDE.md ??摰??擗ㄡ OrderSome ?銝餅?
 
 
-### 前端官網改版進度快照（2026-04-24 v5.95）
+### 前端官網改版進度快照（2026-04-24 v5.96）
 
 **設計規範（品牌系列）**
 - 色彩全用 OKLCH：暖黃 oklch(0.75 0.18 70)，奶白背景 oklch(0.97 0.02 85)，深色文字 oklch(0.18 0.02 60)
@@ -23,19 +23,30 @@
 | BrandNews.tsx | done | 視差 Hero，分類 tab，非同步文章格子（直接 animate），空狀態大字 |
 | BrandContact.tsx | done | 深色 Hero，雙欄（聯絡資訊橫線 / 表單），hover 暖黃按鈕 |
 
-**企業子頁面（待做）— 深碳灰色系**
-色彩：背景 oklch(0.14 0.01 250)，文字 oklch(0.95 0.01 250)，強調色 oklch(0.65 0.15 250)
+**企業子頁面 — 深暖碳黑 + 品牌金銅色系**
+色彩 token（正確版，勿用 hue 250 冷藍灰）：
+- 背景：oklch(0.12 0.01 60)，淺色段：oklch(0.97 0.02 85)
+- 文字：oklch(0.95 0.01 80)，次要：oklch(0.60 0.025 75)
+- 強調金銅：oklch(0.72 0.14 78)，強調暗：oklch(0.26 0.06 78)
+- 分隔線：oklch(0.22 0.02 70)
+
+Hero 圖片規則：
+- 一律用 /images/logo-intro-dark.png（深色背景金黃筆刷∞，天生融入）
+- position:absolute 右半滿版，object-fit:cover object-left
+- 左側漸層 linear-gradient(to right, bg 0%, transparent 40%)
+- 底部漸層 linear-gradient(to top, bg 0%, transparent 35%)
+- 絕對不用 corporate-logo.png（白底 PNG 放深色背景會破圖）
 
 | 頁面 | 狀態 | 備註 |
 |------|------|------|
-| CorporateAbout.tsx | pending | 企業介紹，品牌矩陣，核心數字，願景 |
+| CorporateAbout.tsx | done | 深暖碳黑+金銅，Hero logo-intro-dark 滿版，橫線數字帶，願景使命橫線，五大價值觀 |
 | CorporateBrands.tsx | pending | 旗下品牌展示（來點什麼 + 其他） |
 | CorporateCulture.tsx | pending | 企業文化，團隊精神，職場環境 |
 | CorporateFranchise.tsx | pending | 企業加盟（與品牌版稍有不同） |
 | CorporateNews.tsx | pending | 集團消息（publishTarget = corporate） |
 | CorporateContact.tsx | pending | 企業聯絡，B2B 合作詢問 |
 
-使用設計 skill：/impeccable craft CorporateAbout 等指令觸發。
+使用設計 skill：/impeccable craft CorporateBrands 等指令觸發。
 # CLAUDE.md ??摰??擗ㄡ OrderSome ?銝餅?
 
 璆剖??摩隢? BUSINESS.md嚗?銵???霈 CLAUDE_REFERENCE.md嚗風?脰???霈 DEVELOPMENT_LOG.md
