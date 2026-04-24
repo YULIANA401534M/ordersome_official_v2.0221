@@ -58,9 +58,10 @@ git status && git log --oneline -3
 
 ## ?嗅???????閰望?敹?嚗?
 
-### ???Git ???2026-04-24 v5.92嚗?
+### ???Git ???2026-04-24 v5.93嚗?
 
 ?敺???commit嚗?
+1. `(v5.93)` 最新 feat: v5.93 BrandStory 品牌故事頁改版 OKLCH暖黃色系 + 視差Hero + 時間軸故事 + 三大理念 + 願景暖黃浸染帶
 1. `(v5.92)` ??fix: v5.92 ??撣單狡?芸????怨疏?崁eceived??psert os_payables + ?雿?頂蝯梁絞銝?寧accounting router
 2. `(v5.92)` ??feat: v5.92 ???瑕鈭箸閮?剁??臬??祕閮+蝞∠??∪隤踵?宏???憿舐內?鈭箔?甈整?
 2. `(v5.92)` ??fix: v5.92 ProductDetail??鞎駁?瑼餉??敺toreSettings.get霈??蝘駁撖急香NT$1000/NT$100
@@ -628,7 +629,8 @@ pm run build = success
 
 - 使用者回報 /dashboard/admin/products 等多個 lazy route 全白。
 - 排查後確認 repo 近期確實有 manualChunks + 大量 React.lazy 調整歷史，且 commit 歷史存在反覆 reapply / revert，屬高風險部署項。
-- 為優先恢復線上穩定性，已先將 ite.config.ts 內自訂 ollupOptions.output.manualChunks 全數移除，回退到保守單一 chunk 策略，避免 Railway / CDN / 快取 / chunk 對不上造成白畫面。
+- 為優先恢復線上穩定性，已先將 ite.config.ts 內自訂 
+ollupOptions.output.manualChunks 全數移除，回退到保守單一 chunk 策略，避免 Railway / CDN / 快取 / chunk 對不上造成白畫面。
 - 本次處置原則:
   - 先恢復可用
   - 再重新規劃 chunk 策略
@@ -732,7 +734,8 @@ pm run build = success
 5. 司機剩貨回庫
 - 若車上有剩貨，回倉後需回補庫存
 - 系統應同步: 庫存增加、寫庫存異動、保留日結痕跡
-- 目前已補上 eturnInventory
+- 目前已補上 
+eturnInventory
 
 ### 四、後續新增節點的原則
 - 新節點一律先判斷它屬於哪一條主線:
