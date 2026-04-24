@@ -77,7 +77,7 @@ export default function BrandHome() {
                   </Button>
                 </Link>
                 <Link href="/brand/stores">
-                  <Button size="lg" variant="outline" className="border-2 border-white text-white hover:bg-white hover:text-gray-900 font-bold text-lg px-8 py-6 rounded-full gap-2">
+                  <Button size="lg" className="bg-white/15 border border-white/40 text-white hover:bg-white hover:text-gray-900 font-bold text-lg px-8 py-6 rounded-full gap-2 backdrop-blur-sm">
                     <MapPin className="h-5 w-5" /> 門市據點
                   </Button>
                 </Link>
