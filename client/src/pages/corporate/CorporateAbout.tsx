@@ -7,18 +7,18 @@ const EASE_OUT_EXPO = [0.16, 1, 0.3, 1] as const;
 
 // ── Tokens ────────────────────────────────────────────────────────────────────
 const C = {
-  bg: "oklch(0.14 0.01 250)",
-  bgAlt: "oklch(0.97 0.01 250)",
-  bgMid: "oklch(0.18 0.01 250)",
-  text: "oklch(0.95 0.01 250)",
-  textMuted: "oklch(0.62 0.02 250)",
-  textDim: "oklch(0.42 0.02 250)",
-  accent: "oklch(0.65 0.15 250)",
-  accentDim: "oklch(0.28 0.06 250)",
-  divide: "oklch(0.22 0.02 250)",
-  divideLight: "oklch(0.88 0.01 250)",
-  textOnAlt: "oklch(0.18 0.02 250)",
-  textMutedOnAlt: "oklch(0.42 0.02 250)",
+  bg: "oklch(0.12 0.01 60)",
+  bgAlt: "oklch(0.97 0.02 85)",
+  bgMid: "oklch(0.17 0.015 65)",
+  text: "oklch(0.95 0.01 80)",
+  textMuted: "oklch(0.60 0.025 75)",
+  textDim: "oklch(0.40 0.02 70)",
+  accent: "oklch(0.72 0.14 78)",
+  accentDim: "oklch(0.26 0.06 78)",
+  divide: "oklch(0.22 0.02 70)",
+  divideLight: "oklch(0.88 0.015 85)",
+  textOnAlt: "oklch(0.16 0.02 60)",
+  textMutedOnAlt: "oklch(0.40 0.02 65)",
 };
 
 // ── Reveal helpers ─────────────────────────────────────────────────────────────
@@ -170,48 +170,32 @@ export default function CorporateAbout() {
         className="relative min-h-[92vh] overflow-hidden flex items-end"
         style={{ background: C.bg }}
       >
-        {/* 背景大字視差 */}
+        {/* 右側滿版圖片：logo-intro-dark 已是深色背景，直接裁切右半融入 */}
         <motion.div
           style={{ y: bgY }}
-          className="absolute inset-0 flex items-center justify-end pr-8 pointer-events-none select-none"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1.4, ease: EASE_OUT_EXPO, delay: 0.1 }}
+          className="absolute inset-y-0 right-0 w-[58vw] pointer-events-none select-none"
           aria-hidden="true"
         >
-          <span
-            className="font-black leading-none whitespace-nowrap"
-            style={{
-              fontFamily: "var(--font-brand)",
-              fontSize: "clamp(120px, 24vw, 380px)",
-              color: C.accentDim,
-              letterSpacing: "-0.04em",
-              opacity: 0.7,
-            }}
-          >
-            YULIAN
-          </span>
-        </motion.div>
-
-        {/* 右側 logo */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.88, x: 60 }}
-          animate={{ opacity: 1, scale: 1, x: 0 }}
-          transition={{ duration: 1.1, ease: EASE_OUT_EXPO, delay: 0.25 }}
-          className="absolute top-16 right-0 w-[38vw] max-w-[460px] aspect-square overflow-hidden flex items-center justify-center"
-          style={{ borderRadius: "0 0 0 40%" }}
-        >
-          <div
-            className="absolute inset-0"
-            style={{ background: C.bgMid }}
-          />
           <img
-            src="/images/corporate-logo.png"
-            alt="宇聯國際 YULIAN"
-            className="relative z-10 w-2/3 h-auto"
-            style={{ filter: "brightness(0.95)" }}
+            src="/images/logo-intro-dark.png"
+            alt=""
+            className="w-full h-full object-cover object-left"
           />
+          {/* 左側漸層遮罩讓圖片自然融入背景 */}
           <div
             className="absolute inset-0"
             style={{
-              background: `linear-gradient(to bottom left, transparent 50%, ${C.bg} 100%)`,
+              background: `linear-gradient(to right, ${C.bg} 0%, transparent 40%)`,
+            }}
+          />
+          {/* 底部遮罩 */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `linear-gradient(to top, ${C.bg} 0%, transparent 35%)`,
             }}
           />
         </motion.div>
@@ -384,16 +368,19 @@ export default function CorporateAbout() {
             {/* 圖片 */}
             <RevealRight delay={0.12}>
               <div
-                className="aspect-square overflow-hidden flex items-center justify-center"
-                style={{
-                  background: C.bg,
-                  borderRadius: "32px 0 32px 0",
-                }}
+                className="aspect-[4/3] overflow-hidden relative"
+                style={{ borderRadius: "32px 0 32px 0" }}
               >
                 <img
-                  src="/images/corporate-logo.png"
+                  src="/images/logo-intro-dark.png"
                   alt="宇聯國際 YULIAN"
-                  className="w-3/5 h-auto"
+                  className="w-full h-full object-cover object-center"
+                />
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background: `linear-gradient(135deg, transparent 55%, oklch(0.97 0.02 85) 100%)`,
+                  }}
                 />
               </div>
             </RevealRight>
@@ -647,9 +634,9 @@ export default function CorporateAbout() {
             style={{
               fontFamily: "var(--font-brand)",
               fontSize: "clamp(120px, 26vw, 360px)",
-              color: "oklch(0.60 0.18 250)",
+              color: "oklch(0.62 0.18 78)",
               letterSpacing: "-0.04em",
-              opacity: 0.35,
+              opacity: 0.28,
             }}
           >
             VISION
@@ -659,7 +646,7 @@ export default function CorporateAbout() {
         <Reveal className="relative z-10 max-w-3xl mx-auto text-center">
           <p
             className="text-xs font-bold tracking-[0.28em] uppercase mb-8"
-            style={{ color: "oklch(0.30 0.08 250)" }}
+            style={{ color: "oklch(0.30 0.08 75)" }}
           >
             我們的承諾
           </p>
@@ -668,7 +655,7 @@ export default function CorporateAbout() {
             style={{
               fontFamily: "var(--font-brand)",
               fontSize: "clamp(28px, 4.5vw, 58px)",
-              color: "oklch(0.97 0.01 250)",
+              color: "oklch(0.12 0.01 60)",
               letterSpacing: "-0.02em",
             }}
           >
@@ -680,7 +667,7 @@ export default function CorporateAbout() {
           </h2>
           <p
             className="text-base md:text-lg leading-relaxed max-w-xl mx-auto"
-            style={{ color: "oklch(0.32 0.08 250)" }}
+            style={{ color: "oklch(0.30 0.06 70)" }}
           >
             一間店，就是一個人的未來。一份餐，就是一次改變的起點。
           </p>
@@ -715,16 +702,16 @@ export default function CorporateAbout() {
                 className="px-8 py-4 rounded-full font-bold text-base transition-all duration-200"
                 style={{
                   background: C.accent,
-                  color: "oklch(0.97 0.01 250)",
-                  boxShadow: `0 8px 32px oklch(0.65 0.15 250 / 0.35)`,
+                  color: "oklch(0.12 0.01 60)",
+                  boxShadow: `0 8px 32px oklch(0.72 0.14 78 / 0.35)`,
                 }}
                 onMouseEnter={(e) => {
                   (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)";
-                  (e.currentTarget as HTMLButtonElement).style.boxShadow = `0 12px 40px oklch(0.65 0.15 250 / 0.5)`;
+                  (e.currentTarget as HTMLButtonElement).style.boxShadow = `0 12px 40px oklch(0.72 0.14 78 / 0.55)`;
                 }}
                 onMouseLeave={(e) => {
                   (e.currentTarget as HTMLButtonElement).style.transform = "";
-                  (e.currentTarget as HTMLButtonElement).style.boxShadow = `0 8px 32px oklch(0.65 0.15 250 / 0.35)`;
+                  (e.currentTarget as HTMLButtonElement).style.boxShadow = `0 8px 32px oklch(0.72 0.14 78 / 0.35)`;
                 }}
               >
                 了解旗下品牌
