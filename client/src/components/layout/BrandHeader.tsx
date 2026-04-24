@@ -1,19 +1,20 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Menu, ShoppingCart, X } from "lucide-react";
+import { Menu, X, ShoppingCart, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import UserMenu from "@/components/UserMenu";
 
 const navItems = [
   { href: "/brand", label: "首頁" },
   { href: "/brand/story", label: "品牌故事" },
-  { href: "/brand/menu", label: "菜單" },
-  { href: "/brand/stores", label: "門市" },
-  { href: "/brand/news", label: "消息" },
-  { href: "/brand/contact", label: "聯絡" },
-  { href: "/brand/franchise", label: "加盟" },
+  { href: "/brand/menu", label: "菜單介紹" },
+  { href: "/brand/stores", label: "門市據點" },
+  { href: "/brand/news", label: "最新消息" },
+  { href: "/brand/contact", label: "聯絡我們" },
+  { href: "/brand/franchise", label: "加盟諮詢" },
 ];
 
 export default function BrandHeader() {
@@ -28,109 +29,128 @@ export default function BrandHeader() {
 
   const getDashboardUrl = () => {
     if (!user) return null;
-    if (user.role === "super_admin" || user.role === "manager") return "/dashboard/admin/users";
-    if (user.role === "franchisee") return "/dashboard/franchise";
-    if (user.role === "staff") return "/dashboard/staff";
+    if (user.role === "super_admin" || user.role === "manager") {
+      return "/dashboard/admin/users";
+    } else if (user.role === "franchisee") {
+      return "/dashboard/franchise";
+    } else if (user.role === "staff") {
+      return "/dashboard/staff";
+    }
     return null;
   };
 
   const dashboardUrl = getDashboardUrl();
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 px-4 pt-4">
-      <div className="mx-auto flex w-full max-w-[1360px] items-center justify-between rounded-[1.75rem] border border-[#efe4c6] bg-white/88 px-4 py-3 shadow-[0_20px_60px_-40px_rgba(91,66,18,0.35)] backdrop-blur md:px-6">
-        <Link href="/brand" className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-[1.2rem] bg-[#fff4ca]">
-            <img src="/logos/brand-logo-yellow.png" alt="來點什麼" className="h-8 w-auto" />
-          </div>
-          <div className="hidden sm:block">
-            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.32em] text-[#a17800]">ORDER SOME</p>
-            <p className="text-sm text-[#655c4d]">台韓兩味，混搭就對</p>
-          </div>
-        </Link>
+    <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm shadow-sm">
+      <div className="container">
+        <div className="flex items-center justify-between h-16 md:h-20">
+          <Link href="/brand" className="flex items-center">
+            <img
+              src="/logos/brand-logo-yellow.png"
+              alt="來點什麼"
+              className="h-12 md:h-14 w-auto"
+            />
+          </Link>
 
-        <nav className="hidden xl:flex items-center gap-1 rounded-full bg-[#fff8e8] px-2 py-2">
-          {navItems.map((item) => {
-            const isActive = location === item.href;
-            return (
+          <nav className="hidden lg:flex items-center gap-8">
+            {navItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
-                  isActive ? "bg-[#1c1813] text-white" : "text-[#655c4d] hover:bg-white"
+                className={`text-sm font-medium transition-colors hover:text-primary ${
+                  location === item.href
+                    ? "text-primary"
+                    : "text-gray-600"
                 }`}
               >
                 {item.label}
               </Link>
-            );
-          })}
-        </nav>
+            ))}
+          </nav>
 
-        <div className="flex items-center gap-2">
-          {dashboardUrl && (
-            <Link href={dashboardUrl}>
-              <Button size="sm" variant="outline" className="hidden lg:flex rounded-full border-[#ddc87f] bg-white">
-                <LayoutDashboard className="mr-2 h-4 w-4" />
-                後台
+          <div className="flex items-center gap-3">
+            {dashboardUrl && (
+              <Link href={dashboardUrl}>
+                <Button size="sm" variant="outline" className="hidden sm:flex gap-2">
+                  <LayoutDashboard className="h-4 w-4" />
+                  後台
+                </Button>
+              </Link>
+            )}
+            <Link href="/shop">
+              <Button variant="outline" size="sm" className="hidden sm:flex">
+                線上商城
               </Button>
             </Link>
-          )}
-          <Link href="/shop">
-            <Button size="sm" variant="outline" className="hidden md:flex rounded-full border-[#ddc87f] bg-[#fff7dd] text-[#5c4d26] hover:bg-[#ffefb4]">
-              商店
-            </Button>
-          </Link>
-          <Link href="/shop/cart" className="relative">
-            <Button variant="ghost" size="icon" className="rounded-full bg-[#fff4cf] text-[#5c4d26] hover:bg-[#ffe497]">
-              <ShoppingCart className="h-5 w-5" />
-              {cartCount > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#1c1813] text-[0.65rem] text-white">
-                  {cartCount}
-                </span>
-              )}
-            </Button>
-          </Link>
-          {isAuthenticated ? (
-            <UserMenu />
-          ) : (
-            <Link href="/login">
-              <Button variant="ghost" size="sm" className="rounded-full text-[#655c4d]">
-                登入
+            <Link href="/shop/cart" className="relative">
+              <Button variant="ghost" size="icon">
+                <ShoppingCart className="h-5 w-5" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                    {cartCount}
+                  </span>
+                )}
               </Button>
             </Link>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="xl:hidden rounded-full bg-[#fff4cf] text-[#5c4d26] hover:bg-[#ffe497]"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-          >
-            {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </Button>
+            {isAuthenticated ? (
+              <UserMenu />
+            ) : (
+              <Link href="/login">
+                <Button variant="ghost" size="sm">
+                  登入
+                </Button>
+              </Link>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+            >
+              {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
+          </div>
         </div>
-      </div>
 
-      {isMenuOpen && (
-        <div className="mx-auto mt-3 w-full max-w-[1360px] rounded-[1.5rem] border border-[#efe4c6] bg-white/96 p-3 shadow-[0_18px_50px_-40px_rgba(91,66,18,0.35)] backdrop-blur xl:hidden">
-          <nav className="grid gap-2">
-            {navItems.map((item) => {
-              const isActive = location === item.href;
-              return (
+        {isMenuOpen && (
+          <nav className="lg:hidden py-4 border-t">
+            <div className="flex flex-col gap-2">
+              {navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`rounded-[1rem] px-4 py-3 text-sm font-semibold ${
-                    isActive ? "bg-[#1c1813] text-white" : "bg-[#fff9eb] text-[#655c4d]"
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    location === item.href
+                      ? "bg-primary/10 text-primary"
+                      : "text-gray-600 hover:bg-gray-100"
                   }`}
                   onClick={() => setIsMenuOpen(false)}
                 >
                   {item.label}
                 </Link>
-              );
-            })}
+              ))}
+              <Link
+                href="/shop"
+                className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                線上商城
+              </Link>
+              {dashboardUrl && (
+                <Link
+                  href={dashboardUrl}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg flex items-center gap-2"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <LayoutDashboard className="h-4 w-4" />
+                  後台
+                </Link>
+              )}
+            </div>
           </nav>
-        </div>
-      )}
+        )}
+      </div>
     </header>
   );
 }

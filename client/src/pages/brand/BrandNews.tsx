@@ -4,7 +4,7 @@ import BrandLayout from "@/components/layout/BrandLayout";
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 
-const CATEGORY_OPTIONS = ["品牌活動", "加盟消息", "新品資訊", "媒體報導"];
+const CATEGORY_OPTIONS = ["餐飲新聞", "加盟快報", "品牌動態", "集團公告"];
 const PAGE_SIZE = 9;
 
 export default function BrandNews() {
@@ -29,31 +29,28 @@ export default function BrandNews() {
 
   return (
     <BrandLayout>
-      <section className="px-6 pb-10 pt-6 md:pb-12 md:pt-10">
+      {/* Hero */}
+      <section className="relative py-20 bg-gradient-to-br from-amber-50 to-white">
         <div className="container">
-          <div className="max-w-3xl">
-            <p className="inline-flex rounded-full bg-[#fff1bf] px-4 py-2 text-xs font-semibold tracking-[0.2em] text-[#9d7400]">
-              NEWS
-            </p>
-            <h1 className="mt-5 text-[clamp(2.7rem,6vw,5rem)] font-black tracking-[-0.06em] text-[#181512]">
-              有新消息，
-              <span className="block">就放這裡</span>
+          <div className="max-w-3xl mx-auto text-center">
+            <h1 className="text-4xl md:text-5xl font-black text-gray-900 mb-6">
+              最新消息
             </h1>
-            <p className="mt-4 max-w-2xl text-base leading-8 text-[#675e50] md:text-lg">
-              活動、新品、加盟資訊，整理乾淨就好，不需要太多裝飾。
+            <p className="text-lg text-gray-600">
+              掌握來點什麼的最新動態與優惠活動
             </p>
           </div>
         </div>
       </section>
 
-      <section className="px-6 pb-20 md:pb-24">
+      {/* News List */}
+      <section className="py-12">
         <div className="container">
-          <div className="mb-8 flex flex-wrap gap-2">
+          {/* 分類篩選 */}
+          <div className="flex items-center gap-2 flex-wrap mb-8">
             <button
               onClick={() => handleCategoryChange(undefined)}
-              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                !categoryFilter ? "bg-[#181512] text-white" : "border border-[#d8ccb6] bg-white text-[#675e50]"
-              }`}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition ${!categoryFilter ? "bg-primary text-white" : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"}`}
             >
               全部
             </button>
@@ -61,71 +58,85 @@ export default function BrandNews() {
               <button
                 key={cat}
                 onClick={() => handleCategoryChange(cat)}
-                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                  categoryFilter === cat ? "bg-[#181512] text-white" : "border border-[#d8ccb6] bg-white text-[#675e50]"
-                }`}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition ${categoryFilter === cat ? "bg-primary text-white" : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"}`}
               >
                 {cat}
               </button>
             ))}
           </div>
 
-          {isLoading && <div className="py-16 text-center text-[#8b826f]">消息整理中...</div>}
+          {isLoading && (
+            <div className="text-center py-12 text-gray-500">載入中...</div>
+          )}
 
           {posts.length > 0 && (
             <>
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {posts.map((news) => (
                   <Card
                     key={news.id}
-                    className="cursor-pointer overflow-hidden rounded-[28px] border border-[#ece1c7] bg-white shadow-[0_18px_50px_-44px_rgba(91,66,18,0.25)] transition-transform hover:-translate-y-1"
+                    className="overflow-hidden border-0 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
                     onClick={() => setLocation(`/news/${news.slug}`)}
                   >
-                    <div className="relative w-full pt-[56.25%]">
-                      <div className="absolute inset-0 bg-[#fff8e8]">
+                    {/* 16:9 圖片 */}
+                    <div className="relative w-full" style={{ paddingTop: "56.25%" }}>
+                      <div className="absolute inset-0 bg-gray-100">
                         {news.coverImage ? (
-                          <img src={news.coverImage} alt={news.title} className="h-full w-full object-cover" />
+                          <img
+                            src={news.coverImage}
+                            alt={news.title}
+                            className="w-full h-full object-cover"
+                          />
                         ) : (
-                          <div className="flex h-full w-full items-center justify-center">
-                            <img src="/logos/brand-logo-yellow.png" alt="來點什麼" className="h-14 w-auto opacity-30" />
+                          <div className="w-full h-full flex items-center justify-center">
+                            <img
+                              src="/images/brand-icon.png"
+                              alt="來點什麼"
+                              className="w-16 h-16 opacity-20"
+                            />
                           </div>
                         )}
                       </div>
                     </div>
                     <CardContent className="p-6">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded-full bg-[#fff1bf] px-2.5 py-1 text-xs text-[#8c6a00]">
-                          {(news as any).category || "最新消息"}
-                        </span>
-                        <span className="text-xs text-[#8b826f]">
+                      <div className="flex items-center gap-2 mb-3 flex-wrap">
+                        {(news as any).category ? (
+                          <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
+                            {(news as any).category}
+                          </span>
+                        ) : (
+                          <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
+                            最新消息
+                          </span>
+                        )}
+                        <span className="text-xs text-gray-500">
                           {news.publishedAt ? new Date(news.publishedAt).toLocaleDateString("zh-TW") : ""}
                         </span>
                       </div>
-                      <h2 className="mt-4 text-xl font-black tracking-[-0.04em] text-[#181512] line-clamp-2">
-                        {news.title}
-                      </h2>
-                      <p className="mt-3 text-sm leading-7 text-[#675e50] line-clamp-3">{news.excerpt}</p>
+                      <h3 className="font-bold text-lg text-gray-900 mb-2 line-clamp-2">{news.title}</h3>
+                      <p className="text-sm text-gray-600 line-clamp-3">{news.excerpt}</p>
                     </CardContent>
                   </Card>
                 ))}
               </div>
 
+              {/* 分頁 */}
               {totalPages > 1 && (
-                <div className="mt-10 flex items-center justify-center gap-4">
+                <div className="flex items-center justify-center gap-4 mt-10">
                   <button
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page === 1}
-                    className="rounded-full border border-[#d8ccb6] bg-white px-5 py-2 text-sm text-[#675e50] disabled:opacity-40"
+                    className="px-5 py-2 rounded-lg border border-gray-300 text-sm font-medium disabled:opacity-40 hover:bg-gray-50 transition"
                   >
                     上一頁
                   </button>
-                  <span className="text-sm text-[#8b826f]">
-                    第 {page} / {totalPages} 頁
+                  <span className="text-sm text-gray-600">
+                    第 {page} 頁 / 共 {totalPages} 頁
                   </span>
                   <button
                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                     disabled={page === totalPages}
-                    className="rounded-full border border-[#d8ccb6] bg-white px-5 py-2 text-sm text-[#675e50] disabled:opacity-40"
+                    className="px-5 py-2 rounded-lg border border-gray-300 text-sm font-medium disabled:opacity-40 hover:bg-gray-50 transition"
                   >
                     下一頁
                   </button>
@@ -135,10 +146,14 @@ export default function BrandNews() {
           )}
 
           {posts.length === 0 && !isLoading && (
-            <div className="rounded-[32px] border border-[#ece1c7] bg-white px-6 py-16 text-center shadow-[0_18px_50px_-44px_rgba(91,66,18,0.25)]">
-              <img src="/logos/brand-logo-yellow.png" alt="來點什麼" className="mx-auto h-16 w-auto opacity-35" />
-              <p className="mt-6 text-lg font-semibold text-[#181512]">目前還沒有新消息</p>
-              <p className="mt-2 text-sm text-[#8b826f]">之後活動和新品更新會整理在這裡。</p>
+            <div className="text-center py-20">
+              <img
+                src="/images/brand-icon.png"
+                alt="來點什麼"
+                className="w-24 h-24 mx-auto mb-6 opacity-30"
+              />
+              <p className="text-gray-500 text-lg">最新消息即將發布</p>
+              <p className="text-gray-400 mt-2">敬請期待我們的最新動態</p>
             </div>
           )}
         </div>

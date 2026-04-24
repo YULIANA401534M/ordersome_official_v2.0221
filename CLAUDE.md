@@ -945,3 +945,24 @@ pm run build = success
   1. 真實餐點 / 門市 / 人物圖
   2. 更細的 hover / sticker / 進場動態
   3. 品牌首頁單一主視覺敘事，而不是再加更多說明文字
+## OrderSome 2026-04-24 前台回退紀錄
+
+- 使用者明確要求將首頁入口與來點什麼前台回退到未修改前的樣子，並指定 Dayone 不要動。
+- 本次回退範圍:
+  - `client/src/pages/Home.tsx`
+  - `client/src/components/LogoIntro.tsx`
+  - `client/src/components/layout/BrandLayout.tsx`
+  - `client/src/components/layout/BrandHeader.tsx`
+  - `client/src/components/layout/BrandFooter.tsx`
+  - `client/src/pages/brand/BrandHome.tsx`
+  - `client/src/pages/brand/BrandMenu.tsx`
+  - `client/src/pages/brand/BrandStores.tsx`
+  - `client/src/pages/brand/BrandFranchise.tsx`
+  - `client/src/pages/brand/BrandStory.tsx`
+  - `client/src/pages/brand/BrandNews.tsx`
+- 回退基準:
+  - 使用 `5c6a57b` 這個尚未開始改 OrderSome 前台的穩定點做 restore
+- 驗證:
+  - `npm run build` 已通過
+- 注意:
+  - 本次是前台視覺整包回退，不涉及 Dayone 後台視覺系統的回退

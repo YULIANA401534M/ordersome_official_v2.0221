@@ -1,177 +1,522 @@
 import { Link } from "wouter";
-import { ArrowRight, MapPin, Sparkles, Star } from "lucide-react";
+import { ArrowRight, MapPin, Clock, Star, Sparkles, Award, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import BrandLayout from "@/components/layout/BrandLayout";
 import { trpc } from "@/lib/trpc";
 import { motion } from "framer-motion";
 
-const heroNotes = [
-  "早上是早餐",
-  "中午像早午餐",
-  "晚上還想再來點",
-];
-
-const highlights = [
-  {
-    title: "台味打底",
-    description: "蛋餅、吐司、鐵板麵這些熟悉的東西要先站穩，吃起來才有親切感。",
-  },
-  {
-    title: "韓味加分",
-    description: "不是整間變韓式，而是在醬、配料和氣氛裡多一點新鮮感。",
-  },
-  {
-    title: "好吃也好拍",
-    description: "門店、包裝和主視覺都該有記憶點，年輕人看了才會想分享。",
-  },
+// 餐點照片數據
+const foodImages = [
+  { src: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663285169742/VjlyUhcBYLeXUEcB.jpg", name: "慶尚道辣炒豬", description: "韓式風味，香辣過爆" },
+  { src: "/images/food/tuna-onigiri.jpg", name: "手作鮪魚三角飯糰", description: "新鮮手作，滿滿鮪魚" },
+  { src: "/images/food/korean-tuna-bento.jpg", name: "韓式鮪魚搖搖便當", description: "搖一搖，美味更均勻" },
+  { src: "/images/food/seaweed-roll.jpg", name: "海苔肉鬆飯捲", description: "經典台式風味" },
+  { src: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663285169742/CApeTRjJBNflTLdV.jpg", name: "混醬厚片", description: "厚實口感，雙重享受" },
+  { src: "/images/food/peanut-bacon-toast.jpg", name: "溶岩花生培根吐司", description: "香濃花生醬配脆培根" },
 ];
 
 export default function BrandHome() {
   const { data: stores } = trpc.store.list.useQuery();
-  const storeCount = stores?.length ?? 0;
+  const { data: newsItems } = trpc.news.list.useQuery({ category: "brand" });
 
   return (
     <BrandLayout>
-      <section className="relative overflow-hidden px-6 pb-16 pt-6 md:pb-20 md:pt-10">
-        <div className="container">
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)] lg:items-center">
+      {/* Hero Section - 大面積色塊設計 */}
+      <section className="relative min-h-screen flex items-center bg-gradient-to-br from-gray-900 via-gray-800 to-amber-900 overflow-hidden">
+        {/* 背景裝飾 */}
+        <div className="absolute inset-0">
+          <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-amber-500/20 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-yellow-500/10 rounded-full blur-3xl" />
+        </div>
+
+        {/* 大字背景 */}
+        <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none overflow-hidden">
+          <div className="text-[20rem] font-black text-white whitespace-nowrap" aria-hidden="true">
+            ORDER
+          </div>
+        </div>
+        
+        <div className="container relative z-10 py-20">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            {/* 左側文字區 - 使用 JF Kamabit 大字 */}
             <motion.div
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.55 }}
-              className="max-w-3xl"
+              initial={{ opacity: 0, x: -50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8 }}
+              className="space-y-8"
             >
-              <p className="inline-flex items-center gap-2 rounded-full bg-[#fff1bf] px-4 py-2 text-xs font-semibold tracking-[0.2em] text-[#9d7400]">
-                <Sparkles className="h-3.5 w-3.5" />
-                ORDER SOME
-              </p>
-              <h1 className="mt-6 text-[clamp(3rem,7vw,6rem)] font-black leading-[0.92] tracking-[-0.07em] text-[#181512]">
-                台韓兩味，
-                <span className="block">混搭就對</span>
-              </h1>
-              <p className="mt-5 max-w-xl text-base leading-8 text-[#675e50] md:text-lg">
-                熟悉的早餐底子，混進一點韓味和年輕感。看起來要有記憶點，吃起來也不能失手。
-              </p>
-
-              <div className="mt-7 flex flex-wrap gap-3">
-                {heroNotes.map((item) => (
-                  <span key={item} className="rounded-full border border-[#ead9a6] bg-white px-4 py-2 text-sm text-[#5f5748] shadow-sm">
-                    {item}
-                  </span>
-                ))}
+              <div className="inline-flex items-center gap-2 bg-amber-500/20 backdrop-blur-sm text-amber-300 px-6 py-3 rounded-full text-sm font-medium border border-amber-500/30">
+                <Star className="h-4 w-4" />
+                台灣優質連鎖餐飲品牌
               </div>
-
-              <div className="mt-8 flex flex-wrap gap-3">
-                <Button asChild size="lg" className="rounded-full bg-[#181512] px-8 text-white hover:bg-[#2a241d]">
-                  <Link href="/brand/menu">
-                    先看菜單
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-                <Button asChild size="lg" variant="outline" className="rounded-full border-[#dcc98d] bg-[#fff8de] px-8 text-[#5c4d26] hover:bg-[#ffefb4]">
-                  <Link href="/brand/stores">
-                    <MapPin className="mr-2 h-4 w-4" />
-                    看門市
-                  </Link>
-                </Button>
+              
+              {/* 超大標題 - JF Kamabit 字體 */}
+              <div>
+                <h1 className="text-5xl md:text-6xl lg:text-7xl font-black leading-tight text-white mb-4">
+                  來點什麼 (Ordersome) - 
+                  <span className="block text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 mt-2" style={{fontSize: '64px'}}>
+                    台中早午餐加盟首選
+                  </span>
+                </h1>
+                <p className="text-2xl md:text-3xl font-bold text-amber-300 tracking-wide">
+                  台韓混血．雙時段營收．深夜食堂
+                </p>
+              </div>
+              
+              <p className="text-xl text-gray-300 max-w-lg leading-relaxed" style={{fontSize: '18px'}}>
+                不僅是早餐店，更是您的全時段獲利夥伴。
+                <br />
+                從韓式吐司到鐵板麵，06:00 - 02:00 全天候滿足台灣人的胃。
+              </p>
+              
+              <div className="flex flex-wrap gap-4 pt-4">
+                <Link href="/brand/franchise">
+                  <Button size="lg" className="bg-amber-500 hover:bg-amber-600 text-gray-900 font-bold text-lg px-8 py-6 rounded-full gap-2 shadow-2xl shadow-amber-500/50">
+                    查看加盟方案 (免權利金) <ArrowRight className="h-5 w-5" />
+                  </Button>
+                </Link>
+                <Link href="/brand/stores">
+                  <Button size="lg" variant="outline" className="border-2 border-white text-white hover:bg-white hover:text-gray-900 font-bold text-lg px-8 py-6 rounded-full gap-2">
+                    <MapPin className="h-5 w-5" /> 門市據點
+                  </Button>
+                </Link>
               </div>
             </motion.div>
-
+            
+            {/* 右側圖片區 */}
             <motion.div
-              initial={{ opacity: 0, y: 18, rotate: -1.5 }}
-              animate={{ opacity: 1, y: 0, rotate: 0 }}
-              transition={{ duration: 0.6, delay: 0.08 }}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
               className="relative"
             >
-              <div className="absolute -top-4 right-10 rounded-full bg-[#181512] px-4 py-2 text-xs font-semibold tracking-[0.18em] text-[#ffe18b]">
-                PHOTO SLOT
+              <div className="relative z-10">
+                <img
+                  src="/logos/brand-logo-yellow.png"
+                  alt="來點什麼"
+                  className="w-full max-w-lg mx-auto drop-shadow-2xl animate-float"
+                />
               </div>
-              <div className="rounded-[38px] border border-[#ead9a6] bg-[linear-gradient(140deg,#fff9ea_0%,#fff2c7_100%)] p-5 shadow-[0_30px_90px_-40px_rgba(131,88,10,0.42)]">
-                <div className="rounded-[30px] border border-dashed border-[#d8c07d] bg-white/55 p-6">
-                  <div className="flex items-center justify-between">
-                    <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold tracking-[0.16em] text-[#8c6a00]">
-                      主視覺圖片預留區
-                    </span>
-                    <Star className="h-4 w-4 text-[#d9aa18]" />
+              {/* 光暈效果 */}
+              <div className="absolute inset-0 bg-amber-500/30 blur-3xl rounded-full scale-75" />
+            </motion.div>
+          </div>
+        </div>
+
+        {/* 底部波浪分隔 */}
+        <div className="absolute bottom-0 left-0 right-0">
+          <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto">
+            <path d="M0 120L60 105C120 90 240 60 360 45C480 30 600 30 720 37.5C840 45 960 60 1080 67.5C1200 75 1320 75 1380 75L1440 75V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0Z" fill="white"/>
+          </svg>
+        </div>
+      </section>
+
+      {/* 特色區塊 - 大色塊設計 */}
+      <section className="py-24 bg-white">
+        <div className="container">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-5xl md:text-6xl font-black text-gray-900 mb-6">
+              加盟優勢
+              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-yellow-400">
+                三大核心競爭力
+              </span>
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              打造全時段獲利模式，讓您的投資回報最大化
+            </p>
+          </motion.div>
+          
+          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            {/* 特色卡片 1 */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+            >
+              <Card className="border-0 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:-translate-y-2 overflow-hidden group">
+                <div className="h-2 bg-gradient-to-r from-amber-400 to-yellow-500" />
+                <CardContent className="p-8">
+                  <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-pink-500 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg">
+                    <Sparkles className="h-8 w-8 text-white" />
                   </div>
-                  <div className="mt-6 flex aspect-[4/5] items-center justify-center rounded-[26px] bg-[radial-gradient(circle_at_top,#fff3bf_0%,#fffaf0_56%)] px-8 text-center">
-                    <div>
-                      <img src="/logos/brand-logo-yellow.png" alt="來點什麼" className="mx-auto h-24 w-auto md:h-28" />
-                      <p className="mt-5 text-base font-semibold text-[#181512]">
-                        這裡等你放真正的餐點或門市主圖
-                      </p>
-                      <p className="mt-3 text-sm leading-7 text-[#746a59]">
-                        素材到位後，我再補你要的浮動貼紙、光暈邊緣或比較有趣的進場效果。
-                      </p>
-                    </div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                    台韓混血 (Fusion Flavor)
+                  </h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    獨家結合韓式辣醬與台式蛋餅，打造 Isaac 與傳統早餐店之外的第三選擇。
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* 特色卡片 2 */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+            >
+              <Card className="border-0 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:-translate-y-2 overflow-hidden group">
+                <div className="h-2 bg-gradient-to-r from-amber-400 to-yellow-500" />
+                <CardContent className="p-8">
+                  <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg">
+                    <Award className="h-8 w-8 text-white" />
                   </div>
-                </div>
-              </div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                    雙時段獲利 (Dual Revenue)
+                  </h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    午餐賣韓式飯捲、搖搖便當，宵夜賣粉漿蛋餅、台式炸物。打破早餐店坪效天花板。
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* 特色卡片 3 */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+            >
+              <Card className="border-0 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:-translate-y-2 overflow-hidden group">
+                <div className="h-2 bg-gradient-to-r from-amber-400 to-yellow-500" />
+                <CardContent className="p-8">
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg">
+                    <Heart className="h-8 w-8 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                    智能 SOP (Smart Operations)
+                  </h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    免大廚、免經驗。標準化出餐流程，夫妻創業也能輕鬆上手。
+                  </p>
+                </CardContent>
+              </Card>
             </motion.div>
           </div>
         </div>
       </section>
 
-      <section className="px-6 py-16 md:py-20">
-        <div className="container">
-          <div className="grid gap-5 md:grid-cols-3">
-            {highlights.map((item, index) => (
-              <motion.article
-                key={item.title}
-                initial={{ opacity: 0, y: 18 }}
+      {/* 菜單預覽區 - 深色大色塊 + 真實餐點照片 */}
+      <section className="py-24 bg-gradient-to-br from-gray-900 to-gray-800 relative overflow-hidden">
+        {/* 背景裝飾 */}
+        <div className="absolute inset-0">
+          <div className="absolute top-1/2 left-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-yellow-500/10 rounded-full blur-3xl" />
+        </div>
+
+        <div className="container relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-5xl md:text-6xl font-black text-white mb-6">
+              精選
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-300">
+                美味
+              </span>
+              菜單
+            </h2>
+            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+              台韓風味完美融合，每一口都是驚喜
+            </p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+            {foodImages.map((item, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.45, delay: index * 0.08 }}
-                className="rounded-[30px] border border-[#ece1c7] bg-white/92 p-7 shadow-[0_20px_60px_-44px_rgba(91,66,18,0.28)]"
+                transition={{ duration: 0.6, delay: index * 0.1 }}
               >
-                <h2 className="text-2xl font-black tracking-[-0.04em] text-[#181512]">{item.title}</h2>
-                <p className="mt-4 text-sm leading-7 text-[#675e50]">{item.description}</p>
-              </motion.article>
+                <Card className="border-0 bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-all duration-500 hover:-translate-y-2 overflow-hidden group">
+                  <div className="aspect-[4/3] overflow-hidden">
+                    <img
+                      src={item.src}
+                      alt={item.name}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    />
+                  </div>
+                  <CardContent className="p-6">
+                    <h3 className="text-xl font-bold text-white mb-2">
+                      {item.name}
+                    </h3>
+                    <p className="text-gray-300 text-sm">
+                      {item.description}
+                    </p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center"
+          >
+            <Link href="/brand/menu">
+              <Button size="lg" className="bg-amber-500 hover:bg-amber-600 text-gray-900 font-bold text-lg px-10 py-6 rounded-full gap-2 shadow-2xl shadow-amber-500/50">
+                查看完整菜單 <ArrowRight className="h-5 w-5" />
+              </Button>
+            </Link>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* 門市環境展示區 - 新增區塊 */}
+      <section className="py-24 bg-white">
+        <div className="container">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-5xl md:text-6xl font-black text-gray-900 mb-6">
+              舒適
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-yellow-400">
+                用餐
+              </span>
+              環境
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              溫馨明亮的空間，讓您享受美好的用餐時光
+            </p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-3 gap-6 mb-12">
+            {[1, 2, 3, 4, 5, 6].map((num, index) => (
+              <motion.div
+                key={num}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
+                className="relative overflow-hidden rounded-3xl shadow-2xl group cursor-pointer"
+              >
+                <div className="aspect-[4/3] overflow-hidden">
+                  <img
+                    src={`/images/stores/store-${num}.jpg`}
+                    alt={`門市環境 ${num}`}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  />
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="px-6 pb-20 md:pb-24">
+      {/* 門市據點區 */}
+      <section className="py-24 bg-amber-50">
         <div className="container">
-          <div className="rounded-[40px] bg-[linear-gradient(140deg,#251f19_0%,#5d472e_38%,#f0c845_100%)] px-6 py-8 text-white shadow-[0_30px_80px_-40px_rgba(91,66,18,0.5)] md:px-10 md:py-10">
-            <div className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(260px,0.95fr)] lg:items-center">
-              <div>
-                <p className="text-xs font-semibold tracking-[0.2em] text-[#fff2bf]">STORE & FRANCHISE</p>
-                <h2 className="mt-4 text-[clamp(2.1rem,4vw,4rem)] font-black leading-[0.94] tracking-[-0.06em]">
-                  門市要好找，
-                  <span className="block">加盟也要看起來有吸引力</span>
-                </h2>
-                <p className="mt-5 max-w-2xl text-sm leading-8 text-[#fff6da] md:text-base">
-                  現在先把首頁的語氣拉正。下一步很適合直接收菜單、門市、加盟頁，讓整個品牌站不再像拼起來的。
-                </p>
-              </div>
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-5xl md:text-6xl font-black text-gray-900 mb-6">
+              全台
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-yellow-400">
+                門市
+              </span>
+              據點
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              {stores?.length || 0} 間門市為您服務
+            </p>
+          </motion.div>
 
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-                <div className="rounded-[24px] bg-white/12 px-5 py-5 backdrop-blur-sm">
-                  <p className="text-xs tracking-[0.16em] text-[#fff2bf]">門市數量</p>
-                  <p className="mt-3 text-3xl font-black">{storeCount}</p>
-                  <p className="mt-2 text-sm text-[#fff6da]">可直接往門市頁接著修視覺</p>
-                </div>
-                <div className="rounded-[24px] bg-white/12 px-5 py-5 backdrop-blur-sm">
-                  <p className="text-xs tracking-[0.16em] text-[#fff2bf]">下一步</p>
-                  <p className="mt-3 text-xl font-black">補真實圖片</p>
-                  <p className="mt-2 text-sm text-[#fff6da]">圖一進來，質感就能再往上拉一段。</p>
-                </div>
-              </div>
+          {stores && stores.length > 0 ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+              {stores.slice(0, 6).map((store, index) => (
+                <motion.div
+                  key={store.id}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6, delay: index * 0.1 }}
+                >
+                  <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2">
+                    <CardContent className="p-6">
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                          <MapPin className="h-6 w-6 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-lg font-bold text-gray-900 mb-2">
+                            {store.name}
+                          </h3>
+                          <p className="text-sm text-gray-600 mb-3">
+                            {store.address}
+                          </p>
+                          {store.phone && (
+                            <p className="text-sm text-gray-500">
+                              {store.phone}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
             </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-600 text-lg">門市資訊即將更新</p>
+            </div>
+          )}
 
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Button asChild size="lg" className="rounded-full bg-white px-8 text-[#181512] hover:bg-[#fff7db]">
-                <Link href="/brand/stores">看門市</Link>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center"
+          >
+            <Link href="/brand/stores">
+              <Button size="lg" variant="outline" className="border-2 border-amber-500 text-amber-600 hover:bg-amber-500 hover:text-white font-bold text-lg px-10 py-6 rounded-full gap-2">
+                查看所有門市 <ArrowRight className="h-5 w-5" />
               </Button>
-              <Button asChild size="lg" variant="outline" className="rounded-full border-white/40 bg-white/10 px-8 text-white hover:bg-white hover:text-[#181512]">
-                <Link href="/brand/franchise">看加盟</Link>
-              </Button>
-            </div>
-          </div>
+            </Link>
+          </motion.div>
         </div>
       </section>
+
+      {/* CTA 區塊 - 大色塊 */}
+      <section className="py-32 bg-gradient-to-br from-amber-500 via-yellow-400 to-amber-600 relative overflow-hidden">
+        {/* 背景圖案 */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 left-0 w-full h-full" style={{
+            backgroundImage: 'radial-gradient(circle, #000 1px, transparent 1px)',
+            backgroundSize: '50px 50px'
+          }} />
+        </div>
+
+        <div className="container relative z-10">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center max-w-4xl mx-auto"
+          >
+            <h2 className="text-6xl md:text-7xl font-black text-gray-900 mb-8 leading-tight">
+              準備好
+              <span className="block">開始您的美食之旅了嗎？</span>
+            </h2>
+            <p className="text-2xl text-gray-800 mb-12 font-medium">
+              立即前往最近的門市，體驗來點什麼的美味
+            </p>
+            <div className="flex flex-wrap justify-center gap-6">
+              <Link href="/brand/stores">
+                <Button size="lg" className="bg-gray-900 hover:bg-gray-800 text-white font-bold text-xl px-12 py-8 rounded-full gap-3 shadow-2xl">
+                  <MapPin className="h-6 w-6" />
+                  尋找門市
+                </Button>
+              </Link>
+              <Link href="/brand/franchise">
+                <Button size="lg" variant="outline" className="border-4 border-gray-900 text-gray-900 hover:bg-gray-900 hover:text-white font-bold text-xl px-12 py-8 rounded-full gap-3">
+                  加盟諮詢 <ArrowRight className="h-6 w-6" />
+                </Button>
+              </Link>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* 最新消息區 */}
+      {newsItems && newsItems.length > 0 && (
+        <section className="py-24 bg-white">
+          <div className="container">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="text-center mb-16"
+            >
+              <h2 className="text-5xl md:text-6xl font-black text-gray-900 mb-6">
+                最新
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-yellow-400">
+                  消息
+                </span>
+              </h2>
+            </motion.div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {newsItems.slice(0, 3).map((news, index) => (
+                <motion.div
+                  key={news.id}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6, delay: index * 0.1 }}
+                >
+                  <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 overflow-hidden">
+                    {news.imageUrl && (
+                      <div className="aspect-[16/9] overflow-hidden">
+                        <img
+                          src={news.imageUrl}
+                          alt={news.title}
+                          className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
+                        />
+                      </div>
+                    )}
+                    <CardContent className="p-6">
+                      <div className="text-sm text-amber-600 font-medium mb-2">
+                        {news.publishedAt ? new Date(news.publishedAt).toLocaleDateString('zh-TW') : ''}
+                      </div>
+                      <h3 className="text-xl font-bold text-gray-900 mb-3 line-clamp-2">
+                        {news.title}
+                      </h3>
+                      <p className="text-gray-600 line-clamp-3">
+                        {news.content}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="text-center mt-12"
+            >
+              <Link href="/brand/news">
+                <Button size="lg" variant="outline" className="border-2 border-amber-500 text-amber-600 hover:bg-amber-500 hover:text-white font-bold text-lg px-10 py-6 rounded-full gap-2">
+                  查看更多消息 <ArrowRight className="h-5 w-5" />
+                </Button>
+              </Link>
+            </motion.div>
+          </div>
+        </section>
+      )}
     </BrandLayout>
   );
 }
