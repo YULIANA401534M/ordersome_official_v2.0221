@@ -97,7 +97,8 @@ const payableStatusTone: Record<string, { label: string; className: string }> = 
 
 const receiptStatusTone: Record<string, { label: string; className: string }> = {
   pending: { label: "待簽收", className: "bg-amber-100 text-amber-700" },
-  signed: { label: "已簽收", className: "bg-emerald-100 text-emerald-700" },
+  signed: { label: "待入倉", className: "bg-sky-100 text-sky-700" },
+  warehoused: { label: "已入倉", className: "bg-emerald-100 text-emerald-700" },
   anomaly: { label: "異常", className: "bg-red-100 text-red-700" },
 };
 
@@ -440,6 +441,79 @@ function ReconcileAnomalyDialog({
               }}
             >
               {reconcile.isPending ? "回寫中..." : "確認對帳"}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ReceiveWarehouseDialog({
+  receipt,
+  onClose,
+  onSuccess,
+}: {
+  receipt: ReceiptRecord;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [note, setNote] = useState("");
+
+  const receiveToWarehouse = trpc.dayone.purchaseReceipt.receiveToWarehouse.useMutation({
+    onSuccess: () => {
+      toast.success("已確認入倉，可賣庫存已更新");
+      onSuccess();
+      onClose();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>確認入倉</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-sky-800">
+            這筆進貨已完成供應商簽名，確認入倉後才會正式加進大永可賣庫存。
+          </div>
+
+          <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-700">
+            <p className="font-semibold text-stone-900">{receipt.supplierName}</p>
+            <p className="mt-1">進貨時間：{fmtDateTime(receipt.receiptDate)}</p>
+            <p className="mt-1">總數量：{receipt.totalQty} 箱</p>
+            <p className="mt-1">總金額：{fmtMoney(receipt.totalAmount)}</p>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-stone-700">入倉備註</label>
+            <Textarea
+              rows={3}
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+              placeholder="例如：已回倉點收完成、無短少"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" className="rounded-2xl" onClick={onClose}>
+              取消
+            </Button>
+            <Button
+              className="rounded-2xl bg-amber-600 text-white hover:bg-amber-700"
+              disabled={receiveToWarehouse.isPending}
+              onClick={() =>
+                receiveToWarehouse.mutate({
+                  id: receipt.id,
+                  tenantId: TENANT_ID,
+                  note: note.trim() || undefined,
+                })
+              }
+            >
+              {receiveToWarehouse.isPending ? "入倉中..." : "確認入倉"}
             </Button>
           </div>
         </div>
@@ -1108,6 +1182,7 @@ export default function DayonePurchaseReceipts() {
   const [receiptSummary, setReceiptSummary] = useState<(ReceiptMeta & { items: ReceiptItem[]; signatureUrl: string }) | null>(null);
   const [anomalyTarget, setAnomalyTarget] = useState<ReceiptRecord | null>(null);
   const [reconcileTarget, setReconcileTarget] = useState<ReceiptRecord | null>(null);
+  const [warehouseTarget, setWarehouseTarget] = useState<ReceiptRecord | null>(null);
   const [detailTarget, setDetailTarget] = useState<ReceiptRecord | null>(null);
   const [payableTarget, setPayableTarget] = useState<PayableRecord | null>(null);
 
@@ -1463,7 +1538,8 @@ export default function DayonePurchaseReceipts() {
               <SelectContent>
                 <SelectItem value="all">全部狀態</SelectItem>
                 <SelectItem value="pending">待簽收</SelectItem>
-                <SelectItem value="signed">已簽收</SelectItem>
+                <SelectItem value="signed">待入倉</SelectItem>
+                <SelectItem value="warehoused">已入倉</SelectItem>
                 <SelectItem value="anomaly">異常</SelectItem>
               </SelectContent>
             </Select>
@@ -1553,6 +1629,15 @@ export default function DayonePurchaseReceipts() {
                                     對帳
                                   </Button>
                                 ) : null}
+                                {receipt.status === "signed" ? (
+                                  <Button
+                                    size="sm"
+                                    className="rounded-2xl bg-sky-600 text-white hover:bg-sky-700"
+                                    onClick={() => setWarehouseTarget(receipt)}
+                                  >
+                                    入倉
+                                  </Button>
+                                ) : null}
                               </div>
                             </td>
                           </tr>
@@ -1617,6 +1702,14 @@ export default function DayonePurchaseReceipts() {
                               對帳
                             </Button>
                           ) : null}
+                          {receipt.status === "signed" ? (
+                            <Button
+                              className="rounded-2xl bg-sky-600 text-white hover:bg-sky-700"
+                              onClick={() => setWarehouseTarget(receipt)}
+                            >
+                              確認入倉
+                            </Button>
+                          ) : null}
                         </div>
                       </article>
                     );
@@ -1657,6 +1750,13 @@ export default function DayonePurchaseReceipts() {
         <ReconcileAnomalyDialog
           receipt={reconcileTarget}
           onClose={() => setReconcileTarget(null)}
+          onSuccess={() => refetch()}
+        />
+      ) : null}
+      {warehouseTarget ? (
+        <ReceiveWarehouseDialog
+          receipt={warehouseTarget}
+          onClose={() => setWarehouseTarget(null)}
           onSuccess={() => refetch()}
         />
       ) : null}

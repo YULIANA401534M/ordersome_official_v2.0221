@@ -172,36 +172,7 @@ export const dyPurchaseReceiptRouter = router({
       );
 
       // 連動 a: 更新庫存
-      const items = typeof pr.items === "string" ? JSON.parse(pr.items) : pr.items;
-      for (const item of items) {
-        const [invRows] = await client.execute(
-          `SELECT id, currentQty FROM dy_inventory WHERE tenantId=? AND productId=?`,
-          [input.tenantId, item.productId]
-        );
-        if ((invRows as any[]).length > 0) {
-          await client.execute(
-            `UPDATE dy_inventory SET currentQty = currentQty + ?, updatedAt=NOW()
-             WHERE tenantId=? AND productId=?`,
-            [item.qty, input.tenantId, item.productId]
-          );
-        } else {
-          await client.execute(
-            `INSERT INTO dy_inventory (tenantId, productId, currentQty, updatedAt)
-             VALUES (?,?,?,NOW())`,
-            [input.tenantId, item.productId, item.qty]
-          );
-        }
-
-        // 連動 b: 庫存異動記錄
-        await client.execute(
-          `INSERT INTO dy_stock_movements
-           (tenantId, productId, type, qty, refId, refType, note, createdAt)
-           VALUES (?,?,'in',?,?,'purchase_receipt',NULL,NOW())`,
-          [input.tenantId, item.productId, item.qty, input.id]
-        );
-      }
-
-      // 連動 c: 建立 AP 應付帳款（到期日 = 今天 + 30 天）
+      // ????????????????????????
       const [apRows] = await client.execute(
         `SELECT id FROM dy_ap_records WHERE tenantId=? AND purchaseReceiptId=? LIMIT 1`,
         [input.tenantId, input.id]
@@ -227,6 +198,71 @@ export const dyPurchaseReceiptRouter = router({
     }),
 
   // 5. 標記異常（管理員）
+
+
+  receiveToWarehouse: dyAdminProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        tenantId: z.number(),
+        note: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      }
+      const client = (db as any).$client;
+
+      const [rows] = await client.execute(
+        `SELECT * FROM dy_purchase_receipts WHERE id=? AND tenantId=? LIMIT 1`,
+        [input.id, input.tenantId]
+      );
+      const receipt = (rows as any[])[0];
+      if (!receipt) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Purchase receipt not found" });
+      }
+      if (receipt.status !== "signed") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Only signed purchase receipts can be received into warehouse" });
+      }
+
+      const items = typeof receipt.items === "string" ? JSON.parse(receipt.items) : receipt.items;
+      for (const item of items as any[]) {
+        const qty = Number(item.qty ?? 0);
+        if (qty <= 0) continue;
+
+        await client.execute(
+          `INSERT INTO dy_inventory (tenantId, productId, currentQty, updatedAt)
+           VALUES (?,?,?,NOW())
+           ON DUPLICATE KEY UPDATE currentQty = currentQty + VALUES(currentQty), updatedAt=NOW()`,
+          [input.tenantId, item.productId, qty]
+        );
+
+        await client.execute(
+          `INSERT INTO dy_stock_movements
+           (tenantId, productId, type, qty, refId, refType, operatorId, note, createdAt)
+           VALUES (?,?,'in',?,?,'purchase_receipt_warehouse',?,?,NOW())`,
+          [
+            input.tenantId,
+            item.productId,
+            qty,
+            input.id,
+            ctx.user.id,
+            input.note?.trim() || `Purchase receipt ${input.id} received into warehouse`,
+          ]
+        );
+      }
+
+      await client.execute(
+        `UPDATE dy_purchase_receipts
+         SET status='warehoused'
+         WHERE id=? AND tenantId=?`,
+        [input.id, input.tenantId]
+      );
+
+      return { success: true };
+    }),
   markAnomaly: dyAdminProcedure
     .input(
       z.object({

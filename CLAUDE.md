@@ -605,3 +605,22 @@ Dayone 主線 Table 對照：
 - No full browser click-through across all Dayone and /driver routes yet.
 - No live DB scenario replay was run for supplement order after printed dispatch.
 - Existing mojibake/text-encoding issues still exist in some Dayone UI copy and were not cleaned in this logic round.
+
+## Dayone 2026-04-25 stock and AP logic note
+- User-confirmed Dayone purchase rule:
+  - Supplier signature means purchase is confirmed and AP should be created.
+  - Supplier signature does NOT mean salable warehouse inventory should increase yet.
+  - Salable inventory should increase only after goods return to Dayone warehouse and admin confirms warehouse receipt.
+- New doc:
+  - `docs/dayone-stock-accounting-logic-2026-04-25.md`
+- This round's implementation:
+  - `purchaseReceipt.sign` keeps supplier-sign + AP creation, but no longer writes into `dy_inventory`.
+  - Added `purchaseReceipt.receiveToWarehouse` for manager/admin warehouse confirmation.
+  - Warehouse confirmation writes inventory-in movement with refType `purchase_receipt_warehouse`.
+  - Dayone purchase receipt UI now shows `signed => 待入倉`, adds `warehoused => 已入倉`, and exposes a manager-side warehouse-confirm action.
+- Verified this round:
+  - Code-path review completed for `purchaseReceipt.sign` and `purchaseReceipt.receiveToWarehouse`.
+  - `npm run build` passed after the warehouse-receipt changes.
+- Not yet implemented:
+  - Driver leftover return still needs the separate `回庫待驗 -> 管理確認 -> 可賣庫存` flow.
+  - Full Dayone route-by-route browser review and manual testing are still pending.
