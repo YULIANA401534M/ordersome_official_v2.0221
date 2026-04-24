@@ -248,7 +248,7 @@ flowchart TD
 
 ### 6-1. 已確認但尚未完成
 
-1. `purchase.receive` 舊入庫邏輯要重新定義
+1. `purchase.receive` 舊入庫邏輯已先封鎖，避免再直接寫入庫存
 2. `dispatch.returnInventory` 要改成回庫待驗
 3. `/dayone/inventory` 要補三段式摘要
 4. AR 建立入口要再收斂，避免多入口造成認知混亂

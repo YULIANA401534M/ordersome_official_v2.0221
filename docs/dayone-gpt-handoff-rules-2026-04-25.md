@@ -73,8 +73,8 @@
 ### 尚未完成
 
 - `server/routers/dayone/purchase.ts`
-  - 仍有 `receive` 直接加 `dy_inventory`
-  - 這條和新規則衝突，後續一定要處理
+  - 舊的 `receive` 直接入庫路已先封鎖
+  - 後續若要恢復，必須改成符合「簽名建 AP、入倉才加可賣庫存」的新規則
 - `server/routers/dayone/dispatch.ts`
   - `returnInventory` 仍直接回寫庫存
   - 還沒改成回庫待驗
@@ -121,8 +121,8 @@
 ## 5. 目前已抓到的邏輯風險
 
 1. Dayone 現在存在兩條入庫規則
-   - `purchaseReceipt.sign/receiveToWarehouse`
-   - `purchase.receive`
+   - 已先封住 `purchase.receive`
+   - 但資料模型與頁面語意仍要進一步統一到 `purchaseReceipt.sign/receiveToWarehouse`
 
 2. AR 建立入口不只一個
    - `orders.confirmDelivery`

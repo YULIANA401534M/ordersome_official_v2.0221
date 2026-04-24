@@ -68,34 +68,27 @@ export const dyPurchaseRouter = router({
         actualQty: z.number(),
       })),
     }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const client = (db as any).$client;
-      for (const item of input.items) {
-        await client.execute(
-          `UPDATE dy_purchase_order_items SET actualQty=? WHERE id=? AND purchaseOrderId=?`,
-          [item.actualQty, item.itemId, input.id]
-        );
-        // Update inventory
-        await client.execute(
-          `INSERT INTO dy_inventory (tenantId, productId, currentQty, safetyQty, unit, updatedAt)
-           SELECT ?, ?, 0, 0, p.unit, NOW() FROM dy_products p WHERE p.id=? AND p.tenantId=?
-           ON DUPLICATE KEY UPDATE currentQty = currentQty + ?, updatedAt=NOW()`,
-          [input.tenantId, item.productId, item.productId, input.tenantId, item.actualQty]
-        );
-        // Log movement
-        await client.execute(
-          `INSERT INTO dy_stock_movements (tenantId, type, productId, qty, refId, refType, operatorId, createdAt)
-           VALUES (?,?,?,?,?,'purchase_order',?,NOW())`,
-          [input.tenantId, 'in', item.productId, item.actualQty, input.id, ctx.user.id]
-        );
-      }
-      await client.execute(
-        `UPDATE dy_purchase_orders SET status='received', receivedBy=?, updatedAt=NOW() WHERE id=? AND tenantId=?`,
-        [ctx.user.id, input.id, input.tenantId]
+
+      const [rows] = await client.execute(
+        `SELECT id, status FROM dy_purchase_orders WHERE id=? AND tenantId=? LIMIT 1`,
+        [input.id, input.tenantId]
       );
-      return { success: true };
+      const order = (rows as any[])[0];
+      if (!order) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Purchase order not found' });
+      }
+
+      // Dayone now uses purchase receipts as the only inventory-entry path.
+      // Leaving the old receive mutation active would create a second direct write
+      // into dy_inventory and break the confirmed sign -> warehouse-confirm rule.
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Purchase order receive is disabled. Use Dayone purchase receipts and warehouse confirmation instead.',
+      });
     }),
 
   suppliers: dyAdminProcedure

@@ -636,3 +636,7 @@ Dayone 主線 Table 對照：
     - AR creation / update still has multiple entry points and should be further unified.
     - Dayone permissions are still coarse-grained and not yet a full production-grade role x module x page x API matrix.
   - This round focused on logic completeness and handoff continuity, not UI redesign.
+- Dayone 2026-04-25 purchase receive guard
+  - `server/routers/dayone/purchase.ts -> receive` had no active Dayone UI entry but still contained the old direct-inventory write path.
+  - To avoid a second conflicting inventory-entry rule, `purchase.receive` is now blocked with an explicit error directing usage back to purchase receipts + warehouse confirmation.
+  - This is a guard step, not the final data-model cleanup.
