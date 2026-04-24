@@ -582,3 +582,26 @@ Dayone 主線 Table 對照：
 - DayoneDashboard.tsx 修正 anomaly KPI 用 status === 'anomaly'
 - npm run build 通過
 
+
+
+## Dayone 2026-04-25 logic re-check note
+- Re-checked last round's Dayone supplement / receipt flow instead of assuming build == fully verified.
+- Confirmed and fixed one real supplement-order risk:
+  - If a dispatch was already printed or in_progress, manualAddStop with supplement items could create dy_orders / dy_order_items without consuming inventory.
+  - dispatch.ts now consumes inventory immediately for supplement items on printed/in_progress dispatches and blocks adding stops on completed dispatches.
+  - Supplement orders created after dispatch print now use picked status instead of assigned.
+- Confirmed and fixed purchase receipt state-safety gaps:
+  - purchaseReceipt.sign now only allows pending receipts.
+  - purchaseReceipt.markAnomaly now only allows pending receipts.
+  - purchaseReceipt.reconcileAnomaly now only allows anomaly receipts.
+  - sign now checks existing AP by purchaseReceiptId before insert to avoid duplicate AP records on repeated signing.
+- DayoneDispatch.tsx now disables add-stop action when dispatch status is completed so UI matches backend guard.
+
+### Verified this round
+- End-to-end code-path review was re-done for supplement dispatch and purchase receipt state flow.
+- npm run build passed after the logic fixes above.
+
+### Still not fully verified
+- No full browser click-through across all Dayone and /driver routes yet.
+- No live DB scenario replay was run for supplement order after printed dispatch.
+- Existing mojibake/text-encoding issues still exist in some Dayone UI copy and were not cleaned in this logic round.

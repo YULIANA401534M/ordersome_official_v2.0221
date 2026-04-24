@@ -153,6 +153,9 @@ export const dyPurchaseReceiptRouter = router({
       );
       const pr = (prRows as any[])[0];
       if (!pr) throw new TRPCError({ code: "NOT_FOUND" });
+      if (pr.status !== "pending") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Only pending purchase receipts can be signed" });
+      }
 
       // 上傳簽名圖片到 R2
       const base64Data = input.signatureBase64.replace(/^data:image\/\w+;base64,/, "");
@@ -199,12 +202,26 @@ export const dyPurchaseReceiptRouter = router({
       }
 
       // 連動 c: 建立 AP 應付帳款（到期日 = 今天 + 30 天）
-      await client.execute(
-        `INSERT INTO dy_ap_records
-         (tenantId, supplierId, purchaseReceiptId, amount, paidAmount, status, dueDate, createdAt, updatedAt)
-         VALUES (?,?,?,?,0,'unpaid', DATE_ADD(CURDATE(), INTERVAL 30 DAY), NOW(), NOW())`,
-        [input.tenantId, pr.supplierId, input.id, pr.totalAmount]
+      const [apRows] = await client.execute(
+        `SELECT id FROM dy_ap_records WHERE tenantId=? AND purchaseReceiptId=? LIMIT 1`,
+        [input.tenantId, input.id]
       );
+      const apRecord = (apRows as any[])[0];
+      if (apRecord) {
+        await client.execute(
+          `UPDATE dy_ap_records
+           SET supplierId=?, amount=?, updatedAt=NOW()
+           WHERE id=? AND tenantId=?`,
+          [pr.supplierId, pr.totalAmount, apRecord.id, input.tenantId]
+        );
+      } else {
+        await client.execute(
+          `INSERT INTO dy_ap_records
+           (tenantId, supplierId, purchaseReceiptId, amount, paidAmount, status, dueDate, createdAt, updatedAt)
+           VALUES (?,?,?,?,0,'unpaid', DATE_ADD(CURDATE(), INTERVAL 30 DAY), NOW(), NOW())`,
+          [input.tenantId, pr.supplierId, input.id, pr.totalAmount]
+        );
+      }
 
       return { success: true, supplierSignatureUrl };
     }),
@@ -222,7 +239,20 @@ export const dyPurchaseReceiptRouter = router({
       const db = await getDb();
       if (!db)
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-      await (db as any).$client.execute(
+      const client = (db as any).$client;
+      const [rows] = await client.execute(
+        `SELECT status FROM dy_purchase_receipts WHERE id=? AND tenantId=? LIMIT 1`,
+        [input.id, input.tenantId]
+      );
+      const receipt = (rows as any[])[0];
+      if (!receipt) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Purchase receipt not found" });
+      }
+      if (receipt.status !== "pending") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Only pending purchase receipts can be marked anomaly" });
+      }
+
+      await client.execute(
         `UPDATE dy_purchase_receipts SET status='anomaly', anomalyNote=?
          WHERE id=? AND tenantId=?`,
         [input.anomalyNote, input.id, input.tenantId]
@@ -260,6 +290,9 @@ export const dyPurchaseReceiptRouter = router({
       const receipt = (rows as any[])[0];
       if (!receipt) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Purchase receipt not found" });
+      }
+      if (receipt.status !== "anomaly") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Only anomaly purchase receipts can be reconciled" });
       }
 
       const totalQty = input.items.reduce((sum, item) => sum + Number(item.qty), 0);

@@ -425,7 +425,7 @@ function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onCl
                     <p className="text-sm font-semibold text-stone-900">配送站點</p>
                     <p className="mt-1 text-xs text-stone-500">兼顧派車、撿貨、簽收與收款回傳。</p>
                   </div>
-                  <Button variant="outline" onClick={() => setShowAddStop(true)}>
+                  <Button variant="outline" onClick={() => setShowAddStop(true)} disabled={detail.status === "completed"}>
                     <Plus className="mr-2 h-4 w-4" />
                     新增加站
                   </Button>

@@ -569,13 +569,16 @@ export const dyDispatchRouter = router({
       const scopedDriverId = await resolveDriverScope(client, input.tenantId, ctx.user.id, ctx.user.role ?? "");
 
       const [dispatchRows] = await client.execute(
-        `SELECT id, driverId, dispatchDate FROM dy_dispatch_orders WHERE id=? AND tenantId=? LIMIT 1`,
+        `SELECT id, driverId, dispatchDate, status FROM dy_dispatch_orders WHERE id=? AND tenantId=? LIMIT 1`,
         [input.dispatchOrderId, input.tenantId]
       );
       const dispatch = (dispatchRows as any[])[0];
       if (!dispatch) throw new TRPCError({ code: "NOT_FOUND", message: "Dispatch order not found" });
       if (scopedDriverId && Number(dispatch.driverId) !== scopedDriverId) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Dispatch order belongs to another driver" });
+      }
+      if (dispatch.status === "completed") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Completed dispatch cannot add stop" });
       }
 
       const [customerRows] = await client.execute(
@@ -605,6 +608,9 @@ export const dyDispatchRouter = router({
         (sum, item) => sum + Number(item.qty) * Number(item.unitPrice ?? 0),
         0
       );
+      const shouldConsumeInventoryImmediately =
+        normalizedItems.length > 0 && ["printed", "in_progress"].includes(String(dispatch.status ?? ""));
+      const createdOrderStatus = dispatch.status === "draft" ? "assigned" : "picked";
       let orderId: number | null = null;
 
       if (normalizedItems.length > 0) {
@@ -613,7 +619,7 @@ export const dyDispatchRouter = router({
           `INSERT INTO dy_orders
            (tenantId, orderNo, customerId, driverId, deliveryDate, districtId, status, totalAmount,
             paidAmount, paymentStatus, prevBoxes, inBoxes, returnBoxes, remainBoxes, note, orderSource, createdAt, updatedAt)
-           VALUES (?,?,?,?,?,?,'assigned',?,0,'unpaid',?,?,0,?,?,'dispatch_supplement',NOW(),NOW())`,
+           VALUES (?,?,?,?,?,?,?, ?,0,'unpaid',?,?,0,?,?,'dispatch_supplement',NOW(),NOW())`,
           [
             input.tenantId,
             orderNo,
@@ -621,6 +627,7 @@ export const dyDispatchRouter = router({
             dispatch.driverId,
             dispatch.dispatchDate,
             customer.districtId ?? null,
+            createdOrderStatus,
             totalAmount,
             prevBoxes,
             input.deliverBoxes,
@@ -644,6 +651,30 @@ export const dyDispatchRouter = router({
               Number(item.qty) * Number(item.unitPrice ?? 0),
             ]
           );
+        }
+
+        if (shouldConsumeInventoryImmediately) {
+          for (const item of normalizedItems) {
+            await client.execute(
+              `UPDATE dy_inventory
+               SET currentQty = currentQty - ?, updatedAt=NOW()
+               WHERE tenantId=? AND productId=?`,
+              [item.qty, input.tenantId, item.productId]
+            );
+
+            await client.execute(
+              `INSERT INTO dy_stock_movements
+               (tenantId, productId, type, qty, refId, refType, note, createdAt)
+               VALUES (?,?,'out',?,?,'dispatch_supplement',?,NOW())`,
+              [
+                input.tenantId,
+                item.productId,
+                item.qty,
+                orderId,
+                input.note?.trim() || `Dispatch supplement order ${orderId}`,
+              ]
+            );
+          }
         }
       }
 
