@@ -112,7 +112,8 @@ export default function CorporateHome() {
           style={{ opacity: heroOpacity }}
           className="container relative z-10 px-6 py-24 md:py-32"
         >
-          <div className="max-w-3xl">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div>
             <motion.p
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
@@ -198,6 +199,31 @@ export default function CorporateHome() {
                 </button>
               </Link>
             </motion.div>
+          </div>
+
+          {/* 右欄 Logo */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.92 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 1, ease: EASE, delay: 0.15 }}
+            className="hidden lg:flex items-center justify-center"
+          >
+            <div className="relative flex items-center justify-center w-full max-w-sm">
+              <div
+                className="absolute inset-0 rounded-full blur-[80px]"
+                style={{ background: "oklch(0.65 0.12 65 / 0.12)" }}
+              />
+              <img
+                src="/logos/yulian-logo-full.png"
+                alt="宇聯國際 YULIAN"
+                className="relative z-10 w-full h-auto"
+                style={{
+                  filter:
+                    "drop-shadow(0 0 40px oklch(0.65 0.12 65 / 0.3)) drop-shadow(0 20px 60px oklch(0 0 0 / 0.4))",
+                }}
+              />
+            </div>
+          </motion.div>
           </div>
         </motion.div>
 
