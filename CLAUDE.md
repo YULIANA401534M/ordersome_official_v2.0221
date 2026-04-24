@@ -965,4 +965,23 @@ pm run build = success
 - 驗證:
   - `npm run build` 已通過
 - 注意:
-  - 本次是前台視覺整包回退，不涉及 Dayone 後台視覺系統的回退
+  - 本次是前台視覺整包回退，不涉及 Dayone 後台視覺系統的回退`r`n## Dayone 2026-04-24 第六輪邏輯補強
+
+- 本輪先不擴大新頁面，而是補 Dayone 已有主線的真實邏輯缺口。
+- 已新增文件:
+  - docs/system-boundary-matrix-v1.md
+  - 用來明確區分宇聯 / 來點什麼 / 大永哪些共用、哪些必須分開，後續開發先以 Dayone 獨立產品線處理。
+- 已補 Dayone AP 付款工作台:
+  - client/src/pages/dayone/DayonePurchaseReceipts.tsx
+  - 在進貨簽收頁直接新增 AP 付款核銷區，可查看供應商應付、已付、未付、到期日，並直接進行付款。
+- 已修正 Dayone 收付款分次核銷邏輯:
+  - server/routers/dayone/ap.ts
+  - server/routers/dayone/ar.ts
+  - 原本 markPaid 會直接覆蓋 paidAmount，現在改為累加式更新，分次付款不會再把前一次已付金額洗掉。
+- 驗證:
+  - 
+pm run build 已通過
+- 目前 Dayone 主線狀態:
+  - AP 已從只有 summary 進展到可直接付款核銷
+  - AR / AP 的部分付款邏輯已較符合真實作業
+  - 尚未完成的下一步仍是: 臨時加貨補單、差異對帳、庫存三段式、逐頁 smoke test

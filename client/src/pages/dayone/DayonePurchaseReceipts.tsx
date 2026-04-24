@@ -40,6 +40,20 @@ type ReceiptRecord = {
   items: string | ReceiptItem[];
 };
 
+type PayableRecord = {
+  id: number;
+  supplierId: number;
+  supplierName: string;
+  purchaseReceiptId?: number | null;
+  amount: number;
+  paidAmount: number;
+  dueDate?: string | null;
+  paidAt?: string | null;
+  paymentMethod?: string | null;
+  status: string;
+  adminNote?: string | null;
+};
+
 function fmtDate(value: string | null | undefined) {
   if (!value) return "-";
   return new Date(value).toLocaleDateString("zh-TW");
@@ -73,6 +87,12 @@ function parseItems(raw: ReceiptRecord["items"]) {
     return [];
   }
 }
+
+const payableStatusTone: Record<string, { label: string; className: string }> = {
+  unpaid: { label: "未付款", className: "bg-stone-100 text-stone-700" },
+  partial: { label: "部分付款", className: "bg-amber-100 text-amber-700" },
+  paid: { label: "已付款", className: "bg-emerald-100 text-emerald-700" },
+};
 
 const receiptStatusTone: Record<string, { label: string; className: string }> = {
   pending: { label: "待簽收", className: "bg-amber-100 text-amber-700" },
@@ -354,6 +374,108 @@ function ReceiptDetailDialog({
             </div>
           ) : null}
         </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CollectPayableDialog({
+  record,
+  onClose,
+  onSuccess,
+}: {
+  record: PayableRecord;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const remaining = Math.max(0, Number(record.amount ?? 0) - Number(record.paidAmount ?? 0));
+  const [amount, setAmount] = useState(remaining > 0 ? String(remaining) : "");
+  const [method, setMethod] = useState<"cash" | "transfer">("transfer");
+  const [note, setNote] = useState(record.adminNote ?? "");
+
+  const markPaid = trpc.dayone.ap.markPaid.useMutation({
+    onSuccess: () => {
+      toast.success("AP 付款已更新");
+      onSuccess();
+      onClose();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  function submit(event: React.FormEvent) {
+    event.preventDefault();
+    const paidAmount = Number(amount);
+    if (!paidAmount || paidAmount <= 0) {
+      toast.error("請輸入本次付款金額");
+      return;
+    }
+
+    markPaid.mutate({
+      id: record.id,
+      tenantId: TENANT_ID,
+      paymentMethod: method,
+      paidAmount,
+      adminNote: note.trim() || undefined,
+    });
+  }
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>供應商付款核銷</DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={submit} className="space-y-4">
+          <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm">
+            <p className="font-semibold text-stone-900">{record.supplierName}</p>
+            <p className="mt-1 text-stone-500">
+              應付 {fmtMoney(record.amount)} / 已付 {fmtMoney(record.paidAmount)} / 未付 {fmtMoney(remaining)}
+            </p>
+            <p className="mt-1 text-xs text-stone-400">
+              到期日 {fmtDate(record.dueDate)}
+              {record.purchaseReceiptId ? ` · 簽收單 #${record.purchaseReceiptId}` : ""}
+            </p>
+          </div>
+
+          <div className="flex gap-4 text-sm text-stone-700">
+            {(["cash", "transfer"] as const).map((item) => (
+              <label key={item} className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  className="accent-amber-600"
+                  checked={method === item}
+                  onChange={() => setMethod(item)}
+                />
+                {item === "cash" ? "現金" : "匯款"}
+              </label>
+            ))}
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-stone-700">本次付款金額</label>
+            <Input type="number" min="0.01" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-stone-700">備註</label>
+            <Textarea
+              rows={3}
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+              placeholder="付款帳號、對帳說明、手動核銷原因"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" className="rounded-2xl" onClick={onClose}>
+              取消
+            </Button>
+            <Button type="submit" className="rounded-2xl bg-amber-600 text-white hover:bg-amber-700" disabled={markPaid.isPending}>
+              {markPaid.isPending ? "更新中..." : "確認付款"}
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );
@@ -803,8 +925,10 @@ function CreateReceiptDialog({
 }
 
 export default function DayonePurchaseReceipts() {
+  const utils = trpc.useUtils();
   const [supplierId, setSupplierId] = useState("all");
   const [status, setStatus] = useState("all");
+  const [payableStatus, setPayableStatus] = useState("open");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [summaryMonth, setSummaryMonth] = useState(currentMonthValue());
@@ -813,6 +937,7 @@ export default function DayonePurchaseReceipts() {
   const [receiptSummary, setReceiptSummary] = useState<(ReceiptMeta & { items: ReceiptItem[]; signatureUrl: string }) | null>(null);
   const [anomalyTarget, setAnomalyTarget] = useState<ReceiptRecord | null>(null);
   const [detailTarget, setDetailTarget] = useState<ReceiptRecord | null>(null);
+  const [payableTarget, setPayableTarget] = useState<PayableRecord | null>(null);
 
   const { data: suppliers = [] } = trpc.dayone.suppliers.list.useQuery({ tenantId: TENANT_ID });
   const { data: receipts = [], isLoading, refetch } = trpc.dayone.purchaseReceipt.list.useQuery({
@@ -827,9 +952,19 @@ export default function DayonePurchaseReceipts() {
     supplierId: supplierId !== "all" ? Number(supplierId) : undefined,
     month: summaryMonth,
   });
+  const { data: payables = [], isLoading: payablesLoading } = trpc.dayone.ap.listPayables.useQuery({
+    tenantId: TENANT_ID,
+    supplierId: supplierId !== "all" ? Number(supplierId) : undefined,
+    status: payableStatus !== "all" && payableStatus !== "open" ? payableStatus : undefined,
+    page: 1,
+  });
 
   const overview = apSummary?.overview;
   const supplierSummaryRows = apSummary?.suppliers ?? [];
+  const payableRows = useMemo(() => {
+    const rows = payables as PayableRecord[];
+    return payableStatus === "open" ? rows.filter((item) => item.status !== "paid") : rows;
+  }, [payables, payableStatus]);
 
   const topStats = useMemo(() => {
     const totalQty = receipts.reduce((sum: number, item: any) => sum + Number(item.totalQty ?? 0), 0);
@@ -837,6 +972,18 @@ export default function DayonePurchaseReceipts() {
     const pendingCount = receipts.filter((item: any) => item.status === "pending").length;
     return { totalQty, totalAmount, pendingCount };
   }, [receipts]);
+  const payableStats = useMemo(() => {
+    return payableRows.reduce(
+      (acc, item) => {
+        const unpaidAmount = Math.max(0, Number(item.amount ?? 0) - Number(item.paidAmount ?? 0));
+        acc.total += Number(item.amount ?? 0);
+        acc.unpaid += unpaidAmount;
+        if (item.status !== "paid") acc.openCount += 1;
+        return acc;
+      },
+      { total: 0, unpaid: 0, openCount: 0 }
+    );
+  }, [payableRows]);
 
   return (
     <DayoneLayout>
@@ -961,6 +1108,162 @@ export default function DayonePurchaseReceipts() {
                   </div>
                 </div>
               ))
+            )}
+          </div>
+        </section>
+
+        <section className="dayone-panel rounded-[32px] p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-stone-900">AP 付款工作台</p>
+              <p className="mt-1 text-sm text-stone-500">
+                進貨簽收後產生的應付款可以直接在這裡做付款與核銷，避免只看彙總卻沒有實際動作。
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Select value={payableStatus} onValueChange={setPayableStatus}>
+                <SelectTrigger className="w-[180px] rounded-2xl">
+                  <SelectValue placeholder="付款狀態" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="open">只看未結清</SelectItem>
+                  <SelectItem value="all">全部</SelectItem>
+                  <SelectItem value="unpaid">未付款</SelectItem>
+                  <SelectItem value="partial">部分付款</SelectItem>
+                  <SelectItem value="paid">已付款</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-4 md:grid-cols-3">
+            <div className="rounded-3xl border border-stone-200 bg-stone-50 px-4 py-4">
+              <p className="text-xs text-stone-500">目前筆數</p>
+              <p className="mt-2 text-2xl font-semibold text-stone-900">{payableRows.length}</p>
+            </div>
+            <div className="rounded-3xl border border-stone-200 bg-stone-50 px-4 py-4">
+              <p className="text-xs text-stone-500">本批應付總額</p>
+              <p className="mt-2 text-2xl font-semibold text-stone-900">{fmtMoney(payableStats.total)}</p>
+            </div>
+            <div className="rounded-3xl border border-red-100 bg-red-50 px-4 py-4">
+              <p className="text-xs text-red-600">尚未結清</p>
+              <p className="mt-2 text-2xl font-semibold text-red-700">{fmtMoney(payableStats.unpaid)}</p>
+            </div>
+          </div>
+
+          <div className="mt-5">
+            {payablesLoading ? (
+              <div className="flex justify-center py-16">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-amber-500 border-t-transparent" />
+              </div>
+            ) : !payableRows.length ? (
+              <div className="rounded-3xl border border-dashed border-stone-200 px-6 py-10 text-center text-stone-400">
+                目前沒有符合條件的 AP 付款資料。
+              </div>
+            ) : (
+              <>
+                <div className="hidden overflow-hidden rounded-[28px] border border-stone-200 md:block">
+                  <table className="w-full text-sm">
+                    <thead className="bg-stone-50 text-stone-500">
+                      <tr>
+                        <th className="px-4 py-3 text-left font-medium">供應商</th>
+                        <th className="px-4 py-3 text-left font-medium">來源</th>
+                        <th className="px-4 py-3 text-right font-medium">應付</th>
+                        <th className="px-4 py-3 text-right font-medium">已付</th>
+                        <th className="px-4 py-3 text-right font-medium">未付</th>
+                        <th className="px-4 py-3 text-center font-medium">到期日</th>
+                        <th className="px-4 py-3 text-center font-medium">狀態</th>
+                        <th className="px-4 py-3 text-center font-medium">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {payableRows.map((record) => {
+                        const statusTone = payableStatusTone[record.status] ?? payableStatusTone.unpaid;
+                        const unpaidAmount = Math.max(0, Number(record.amount ?? 0) - Number(record.paidAmount ?? 0));
+                        return (
+                          <tr key={record.id} className="border-t border-stone-200">
+                            <td className="px-4 py-4">
+                              <p className="font-semibold text-stone-900">{record.supplierName}</p>
+                              {record.adminNote ? <p className="mt-1 text-xs text-stone-400">{record.adminNote}</p> : null}
+                            </td>
+                            <td className="px-4 py-4 text-stone-500">
+                              {record.purchaseReceiptId ? `簽收單 #${record.purchaseReceiptId}` : "手動 AP"}
+                            </td>
+                            <td className="px-4 py-4 text-right text-stone-900">{fmtMoney(record.amount)}</td>
+                            <td className="px-4 py-4 text-right text-emerald-700">{fmtMoney(record.paidAmount)}</td>
+                            <td className="px-4 py-4 text-right font-semibold text-red-600">{fmtMoney(unpaidAmount)}</td>
+                            <td className="px-4 py-4 text-center text-stone-700">{fmtDate(record.dueDate)}</td>
+                            <td className="px-4 py-4 text-center">
+                              <Badge className={`border-0 ${statusTone.className}`}>{statusTone.label}</Badge>
+                            </td>
+                            <td className="px-4 py-4 text-center">
+                              {unpaidAmount > 0 ? (
+                                <Button
+                                  size="sm"
+                                  className="rounded-2xl bg-amber-600 text-white hover:bg-amber-700"
+                                  onClick={() => setPayableTarget(record)}
+                                >
+                                  付款
+                                </Button>
+                              ) : (
+                                <span className="text-xs text-stone-400">{fmtDate(record.paidAt)}</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="space-y-3 md:hidden">
+                  {payableRows.map((record) => {
+                    const statusTone = payableStatusTone[record.status] ?? payableStatusTone.unpaid;
+                    const unpaidAmount = Math.max(0, Number(record.amount ?? 0) - Number(record.paidAmount ?? 0));
+                    return (
+                      <article key={record.id} className="dayone-mobile-card p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <h2 className="text-base font-semibold text-stone-900">{record.supplierName}</h2>
+                            <p className="mt-1 text-xs text-stone-400">
+                              {record.purchaseReceiptId ? `簽收單 #${record.purchaseReceiptId}` : "手動 AP"} · 到期 {fmtDate(record.dueDate)}
+                            </p>
+                          </div>
+                          <Badge className={`border-0 ${statusTone.className}`}>{statusTone.label}</Badge>
+                        </div>
+
+                        <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
+                          <div>
+                            <p className="text-xs text-stone-500">應付</p>
+                            <p className="mt-1 font-semibold text-stone-900">{fmtMoney(record.amount)}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-stone-500">已付</p>
+                            <p className="mt-1 font-semibold text-emerald-700">{fmtMoney(record.paidAmount)}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-stone-500">未付</p>
+                            <p className="mt-1 font-semibold text-red-600">{fmtMoney(unpaidAmount)}</p>
+                          </div>
+                        </div>
+
+                        {record.adminNote ? (
+                          <div className="mt-3 rounded-2xl bg-stone-50 px-3 py-2 text-xs text-stone-500">{record.adminNote}</div>
+                        ) : null}
+
+                        {unpaidAmount > 0 ? (
+                          <Button
+                            className="mt-4 w-full rounded-2xl bg-amber-600 text-white hover:bg-amber-700"
+                            onClick={() => setPayableTarget(record)}
+                          >
+                            付款核銷
+                          </Button>
+                        ) : null}
+                      </article>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </div>
         </section>
@@ -1162,6 +1465,16 @@ export default function DayonePurchaseReceipts() {
         <AnomalyDialog receipt={anomalyTarget} onClose={() => setAnomalyTarget(null)} onSuccess={() => refetch()} />
       ) : null}
       {detailTarget ? <ReceiptDetailDialog receipt={detailTarget} onClose={() => setDetailTarget(null)} /> : null}
+      {payableTarget ? (
+        <CollectPayableDialog
+          record={payableTarget}
+          onClose={() => setPayableTarget(null)}
+          onSuccess={() => {
+            utils.dayone.ap.listPayables.invalidate();
+            utils.dayone.ap.summary.invalidate();
+          }}
+        />
+      ) : null}
     </DayoneLayout>
   );
 }

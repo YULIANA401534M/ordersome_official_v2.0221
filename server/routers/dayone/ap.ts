@@ -149,7 +149,7 @@ export const dyApRouter = router({
       }
       const client = (db as any).$client;
 
-      const [rows] = await client.execute(`SELECT amount FROM dy_ap_records WHERE id=? AND tenantId=?`, [
+      const [rows] = await client.execute(`SELECT amount, paidAmount FROM dy_ap_records WHERE id=? AND tenantId=?`, [
         input.id,
         input.tenantId,
       ]);
@@ -158,14 +158,17 @@ export const dyApRouter = router({
         throw new TRPCError({ code: "NOT_FOUND" });
       }
 
-      const newStatus = input.paidAmount >= parseFloat(record.amount) ? "paid" : "partial";
+      const totalAmount = parseFloat(record.amount);
+      const currentPaid = parseFloat(record.paidAmount ?? 0);
+      const nextPaidAmount = Math.min(totalAmount, currentPaid + input.paidAmount);
+      const newStatus = nextPaidAmount >= totalAmount ? "paid" : "partial";
 
       await client.execute(
         `UPDATE dy_ap_records
          SET paidAmount=?, paymentMethod=?, paidAt=NOW(), status=?, adminNote=?, updatedAt=NOW()
          WHERE id=? AND tenantId=?`,
         [
-          input.paidAmount,
+          nextPaidAmount,
           input.paymentMethod,
           newStatus,
           input.adminNote ?? null,
@@ -173,7 +176,7 @@ export const dyApRouter = router({
           input.tenantId,
         ]
       );
-      return { success: true, status: newStatus };
+      return { success: true, status: newStatus, paidAmount: nextPaidAmount };
     }),
 
   supplierPriceList: dyAdminProcedure
