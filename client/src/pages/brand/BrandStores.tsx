@@ -3,8 +3,13 @@ import { MapPin, Phone, Clock, Navigation } from "lucide-react";
 import BrandLayout from "@/components/layout/BrandLayout";
 import { trpc } from "@/lib/trpc";
 import { MapView } from "@/components/Map";
-import { motion } from "framer-motion";
+import { motion, useInView } from "framer-motion";
 import { useRestaurantSchema } from "@/hooks/useRestaurantSchema";
+
+const EASE_OUT_EXPO = [0.16, 1, 0.3, 1] as const;
+
+// OKLCH 暖黃 oklch(0.75 0.18 70) ≈ #F59E0B → Google Maps marker 仍用 hex
+const MARKER_COLOR = "#D97706";
 
 export default function BrandStores() {
   const { data: stores, isLoading } = trpc.store.list.useQuery();
@@ -13,6 +18,9 @@ export default function BrandStores() {
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
   const storeCardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+
+  const heroRef = useRef(null);
+  const listInView = useInView(heroRef, { once: true });
 
   useEffect(() => {
     document.title = "來點什麼 門市據點｜全台 15 間分店為您服務";
@@ -35,7 +43,7 @@ export default function BrandStores() {
         icon: {
           path: google.maps.SymbolPath.CIRCLE,
           scale: 10,
-          fillColor: "#F59E0B",
+          fillColor: MARKER_COLOR,
           fillOpacity: 1,
           strokeColor: "#ffffff",
           strokeWeight: 2,
@@ -85,112 +93,256 @@ export default function BrandStores() {
 
   return (
     <BrandLayout>
-      <section className="relative py-20 bg-gradient-to-br from-gray-900 via-gray-800 to-amber-900 overflow-hidden">
-        <div className="absolute inset-0">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/20 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-80 h-80 bg-yellow-500/10 rounded-full blur-3xl" />
+      {/* ── HERO ──────────────────────────────────────────────── */}
+      <section
+        ref={heroRef}
+        className="relative overflow-hidden"
+        style={{
+          background: "oklch(0.97 0.02 85)",
+          paddingTop: "clamp(80px, 12vw, 140px)",
+          paddingBottom: "clamp(64px, 10vw, 120px)",
+        }}
+      >
+        {/* 背景大字 */}
+        <div
+          className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden"
+          aria-hidden="true"
+        >
+          <span
+            className="font-black leading-none whitespace-nowrap"
+            style={{
+              fontFamily: "var(--font-brand)",
+              fontSize: "clamp(80px, 20vw, 280px)",
+              color: "oklch(0.92 0.06 85)",
+              letterSpacing: "-0.04em",
+            }}
+          >
+            STORES
+          </span>
         </div>
-        <div className="container relative z-10 text-center">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-            <div className="inline-flex items-center gap-2 bg-amber-500/20 text-amber-300 px-5 py-2 rounded-full text-sm font-medium border border-amber-500/30 mb-6">
-              <MapPin className="h-4 w-4" />
+
+        <div className="relative z-10 px-6 md:px-12 lg:px-20 max-w-3xl">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.1 }}
+            className="inline-flex items-center gap-2 mb-6"
+          >
+            <span
+              className="text-xs font-bold tracking-[0.2em] uppercase px-3 py-1.5 rounded-full flex items-center gap-1.5"
+              style={{
+                background: "oklch(0.75 0.18 70)",
+                color: "oklch(0.98 0.01 85)",
+              }}
+            >
+              <MapPin className="w-3 h-3" />
               全台門市據點
-            </div>
-            <h1 className="text-5xl md:text-6xl font-black text-white mb-4">
-              找到最近的
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-300"> 來點什麼</span>
-            </h1>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              全台 {stores?.length || 12} 間門市，台中、南投全面覆蓋，隨時享用美味餐點
-            </p>
+            </span>
           </motion.div>
-        </div>
-        <div className="absolute bottom-0 left-0 right-0">
-          <svg viewBox="0 0 1440 60" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full">
-            <path d="M0 60L1440 60L1440 0C1200 40 960 60 720 60C480 60 240 40 0 0L0 60Z" fill="white"/>
-          </svg>
+
+          <motion.h1
+            initial={{ opacity: 0, y: 36 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.9, ease: EASE_OUT_EXPO, delay: 0.15 }}
+            className="whitespace-nowrap"
+            style={{
+              fontFamily: "var(--font-brand)",
+              fontSize: "clamp(40px, 7vw, 88px)",
+              lineHeight: 0.95,
+              letterSpacing: "-0.03em",
+              color: "oklch(0.18 0.02 60)",
+            }}
+          >
+            找到最近的
+            <br />
+            <span style={{ color: "oklch(0.75 0.18 70)" }}>來點什麼</span>
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, ease: EASE_OUT_EXPO, delay: 0.35 }}
+            className="mt-5 text-base leading-relaxed"
+            style={{ color: "oklch(0.42 0.03 60)", maxWidth: 400 }}
+          >
+            全台 {stores?.length || 12} 間門市，台中、南投全面覆蓋，
+            隨時享用台韓混血美味早午餐。
+          </motion.p>
         </div>
       </section>
 
-      <section className="py-12 bg-white">
-        <div className="container">
+      {/* ── 地圖 + 列表 ───────────────────────────────────────── */}
+      <section
+        className="py-16"
+        style={{ background: "oklch(0.97 0.02 85)" }}
+      >
+        <div className="px-6 md:px-12 lg:px-20">
           {isLoading ? (
-            <div className="flex items-center justify-center h-96">
-              <div className="text-gray-500 text-lg">載入門市資料中...</div>
+            <div
+              className="flex items-center justify-center h-96 rounded-2xl animate-pulse"
+              style={{ background: "oklch(0.92 0.04 85)" }}
+            >
+              <p style={{ color: "oklch(0.55 0.05 70)", fontFamily: "var(--font-brand)" }}>
+                載入門市資料中...
+              </p>
             </div>
           ) : (
             <div className="grid lg:grid-cols-2 gap-8 items-start">
+              {/* 地圖 */}
               <div className="lg:sticky lg:top-24">
-                <div className="h-[600px] rounded-2xl overflow-hidden shadow-xl border border-gray-100">
+                <div
+                  className="h-[560px] rounded-2xl overflow-hidden"
+                  style={{
+                    boxShadow: "0 8px 40px oklch(0.18 0.02 60 / 0.12)",
+                    border: "1px solid oklch(0.88 0.04 85)",
+                  }}
+                >
                   <MapView onMapReady={handleMapReady} />
                 </div>
-                <p className="text-center text-sm text-gray-400 mt-3">點擊地圖標記或右側門市卡片可互動定位</p>
+                <p
+                  className="text-center text-sm mt-3"
+                  style={{ color: "oklch(0.62 0.04 70)" }}
+                >
+                  點擊地圖標記或右側門市卡片可互動定位
+                </p>
               </div>
-              <div className="space-y-4 max-h-[650px] overflow-y-auto pr-2">
-                <div className="sticky top-0 bg-white py-2 z-10 border-b border-gray-100 mb-2">
-                  <p className="text-sm font-medium text-gray-500">
-                    共 {stores?.length || 0} 間門市
-                    {selectedStoreId && (
-                      <button
-                        onClick={() => {
-                          setSelectedStoreId(null);
-                          mapRef.current?.setCenter(TAICHUNG_CENTER);
-                          mapRef.current?.setZoom(12);
-                        }}
-                        className="ml-3 text-amber-600 hover:underline"
-                      >
-                        清除選取
-                      </button>
-                    )}
-                  </p>
-                </div>
-                {stores?.map((store, index) => (
-                  <motion.div
-                    key={store.id}
-                    ref={(el) => { if (el) storeCardRefs.current.set(store.id, el); }}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.4, delay: index * 0.04 }}
-                    onClick={() => handleStoreClick(store)}
-                    className={`bg-white rounded-2xl p-5 shadow-md cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl border-2 ${
-                      selectedStoreId === store.id
-                        ? "border-amber-500 shadow-amber-100 bg-amber-50/30"
-                        : "border-transparent hover:border-amber-200"
-                    }`}
+
+              {/* 門市列表 */}
+              <div className="space-y-3 max-h-[620px] overflow-y-auto pr-1">
+                {/* 列表頭 */}
+                <div
+                  className="sticky top-0 py-3 z-10 flex items-center justify-between"
+                  style={{
+                    background: "oklch(0.97 0.02 85)",
+                    borderBottom: "1px solid oklch(0.90 0.04 85)",
+                    marginBottom: 4,
+                  }}
+                >
+                  <p
+                    className="text-sm font-bold"
+                    style={{ color: "oklch(0.35 0.03 60)" }}
                   >
-                    <div className="flex items-start justify-between mb-3">
-                      <h3 className="text-base font-bold text-gray-900">{store.name}</h3>
-                      {selectedStoreId === store.id && (
-                        <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium flex-shrink-0 ml-2">已選中</span>
-                      )}
-                    </div>
-                    <div className="space-y-1.5 text-gray-600 text-sm mb-4">
-                      <div className="flex items-start gap-2">
-                        <MapPin className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                        <span>{store.address}</span>
-                      </div>
-                      {store.phone && (
-                        <div className="flex items-center gap-2">
-                          <Phone className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                          <a href={`tel:${store.phone}`} onClick={(e) => e.stopPropagation()} className="hover:text-amber-600 transition-colors">{store.phone}</a>
-                        </div>
-                      )}
-                      {store.openingHours && (
-                        <div className="flex items-start gap-2">
-                          <Clock className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                          <span>{store.openingHours}</span>
-                        </div>
-                      )}
-                    </div>
+                    共 {stores?.length || 0} 間門市
+                  </p>
+                  {selectedStoreId && (
                     <button
-                      onClick={(e) => openNavigation(e, store)}
-                      className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white py-2.5 px-4 rounded-xl font-semibold text-sm transition-all duration-200 hover:shadow-lg hover:shadow-amber-200 active:scale-95"
+                      onClick={() => {
+                        setSelectedStoreId(null);
+                        mapRef.current?.setCenter(TAICHUNG_CENTER);
+                        mapRef.current?.setZoom(12);
+                      }}
+                      className="text-sm font-bold transition-opacity hover:opacity-70"
+                      style={{ color: "oklch(0.75 0.18 70)" }}
                     >
-                      <Navigation className="w-4 h-4" />
-                      開始導航
+                      清除選取
                     </button>
-                  </motion.div>
-                ))}
+                  )}
+                </div>
+
+                {stores?.map((store, index) => {
+                  const isSelected = selectedStoreId === store.id;
+                  return (
+                    <motion.div
+                      key={store.id}
+                      ref={(el) => { if (el) storeCardRefs.current.set(store.id, el); }}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.4, ease: EASE_OUT_EXPO, delay: index * 0.04 }}
+                      onClick={() => handleStoreClick(store)}
+                      className="rounded-2xl p-5 cursor-pointer transition-all duration-300"
+                      style={{
+                        background: isSelected
+                          ? "oklch(0.93 0.06 85)"
+                          : "oklch(0.99 0.01 85)",
+                        border: `2px solid ${isSelected
+                          ? "oklch(0.75 0.18 70)"
+                          : "oklch(0.90 0.03 85)"}`,
+                        boxShadow: isSelected
+                          ? "0 4px 20px oklch(0.75 0.18 70 / 0.2)"
+                          : "0 2px 8px oklch(0.18 0.02 60 / 0.06)",
+                        transform: isSelected ? "translateY(-2px)" : "",
+                      }}
+                      onMouseEnter={e => {
+                        if (!isSelected) {
+                          (e.currentTarget as HTMLElement).style.borderColor = "oklch(0.80 0.12 75)";
+                          (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)";
+                        }
+                      }}
+                      onMouseLeave={e => {
+                        if (!isSelected) {
+                          (e.currentTarget as HTMLElement).style.borderColor = "oklch(0.90 0.03 85)";
+                          (e.currentTarget as HTMLElement).style.transform = "";
+                        }
+                      }}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <h3
+                          className="text-base font-bold"
+                          style={{ color: "oklch(0.18 0.02 60)" }}
+                        >
+                          {store.name}
+                        </h3>
+                        {isSelected && (
+                          <span
+                            className="text-xs px-2 py-0.5 rounded-full font-bold flex-shrink-0 ml-2"
+                            style={{
+                              background: "oklch(0.75 0.18 70)",
+                              color: "oklch(0.98 0.01 85)",
+                            }}
+                          >
+                            已選中
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="space-y-1.5 mb-4 text-sm" style={{ color: "oklch(0.45 0.03 60)" }}>
+                        <div className="flex items-start gap-2">
+                          <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: "oklch(0.75 0.18 70)" }} />
+                          <span>{store.address}</span>
+                        </div>
+                        {store.phone && (
+                          <div className="flex items-center gap-2">
+                            <Phone className="w-4 h-4 flex-shrink-0" style={{ color: "oklch(0.75 0.18 70)" }} />
+                            <a
+                              href={`tel:${store.phone}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="transition-opacity hover:opacity-70"
+                            >
+                              {store.phone}
+                            </a>
+                          </div>
+                        )}
+                        {store.openingHours && (
+                          <div className="flex items-start gap-2">
+                            <Clock className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: "oklch(0.75 0.18 70)" }} />
+                            <span>{store.openingHours}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={(e) => openNavigation(e, store)}
+                        className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-bold text-sm transition-all duration-200 active:scale-95"
+                        style={{
+                          background: "oklch(0.75 0.18 70)",
+                          color: "oklch(0.98 0.01 85)",
+                          boxShadow: "0 4px 16px oklch(0.75 0.18 70 / 0.3)",
+                        }}
+                        onMouseEnter={e => {
+                          (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 6px 24px oklch(0.75 0.18 70 / 0.45)";
+                          (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)";
+                        }}
+                        onMouseLeave={e => {
+                          (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 4px 16px oklch(0.75 0.18 70 / 0.3)";
+                          (e.currentTarget as HTMLButtonElement).style.transform = "";
+                        }}
+                      >
+                        <Navigation className="w-4 h-4" />
+                        開始導航
+                      </button>
+                    </motion.div>
+                  );
+                })}
               </div>
             </div>
           )}
