@@ -1,192 +1,142 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { useEffect, useState } from "react";
 import BrandLayout from "@/components/layout/BrandLayout";
 import { trpc } from "@/lib/trpc";
-import { useState, useEffect } from "react";
 import { injectSchema } from "@/hooks/schemaUtils";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { ArrowRight, X } from "lucide-react";
+import { Link } from "wouter";
 
 export default function BrandMenu() {
   const { data: menuItems, isLoading } = trpc.menu.list.useQuery();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   useEffect(() => {
-    document.title = "來點什麼 完整菜單｜必吃韓式飯捲、台式蛋餅與特色鐵板麵";
+    document.title = "來點什麼菜單 | 台韓兩味，混搭就對";
     document.querySelector('meta[name="description"]')?.setAttribute(
       "content",
-      "查看來點什麼最新菜單！獨家韓式飯捲、酥脆台式蛋餅、經典鐵板麵，滿足您對台韓式早午餐的所有渴望。"
-    );
-    document.querySelector('meta[name="keywords"]')?.setAttribute(
-      "content",
-      "來點什麼菜單, 台中早餐菜單, 韓式飯捲, 台式蛋餅, 鐵板麵"
+      "來點什麼菜單頁，先看整體風格，再慢慢選你今天想吃哪一味。",
     );
 
-    // Menu Schema
     const schema = {
       "@context": "https://schema.org",
       "@type": "Menu",
-      "name": "來點什麼完整菜單",
-      "description": "台韓式早午餐菜單",
-      "url": "https://ordersome.com.tw/brand/menu",
-      "hasMenuSection": [
-        {
-          "@type": "MenuSection",
-          "name": "韓式飯捲",
-          "description": "獨家韓式飯捲系列"
-        },
-        {
-          "@type": "MenuSection",
-          "name": "台式蛋餅",
-          "description": "酥脆台式蛋餅系列"
-        },
-        {
-          "@type": "MenuSection",
-          "name": "鐵板麵",
-          "description": "經典鐵板麵系列"
-        }
-      ]
+      name: "來點什麼菜單",
+      description: "台韓混搭早午餐菜單",
+      url: "https://ordersome.com.tw/brand/menu",
     };
     const cleanup = injectSchema("menu", schema);
     return cleanup;
   }, []);
 
-
-  // Group menu items by category
   const groupedItems = menuItems?.reduce((acc, item) => {
-    if (!acc[item.categoryName]) {
-      acc[item.categoryName] = [];
-    }
+    if (!acc[item.categoryName]) acc[item.categoryName] = [];
     acc[item.categoryName].push(item);
     return acc;
   }, {} as Record<string, typeof menuItems>);
 
   return (
     <BrandLayout>
-      {/* Hero */}
-      <section className="relative py-20 bg-gradient-to-br from-amber-50 to-white">
+      <section className="px-6 pb-10 pt-6 md:pb-12 md:pt-10">
         <div className="container">
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-4xl md:text-5xl font-black text-gray-900 mb-6">
-              菜單介紹
+          <div className="max-w-3xl">
+            <p className="inline-flex rounded-full bg-[#fff1bf] px-4 py-2 text-xs font-semibold tracking-[0.2em] text-[#9d7400]">
+              MENU
+            </p>
+            <h1 className="mt-5 text-[clamp(2.7rem,6vw,5rem)] font-black tracking-[-0.06em] text-[#181512]">
+              先看菜單，
+              <span className="block">再決定今天想混哪一味</span>
             </h1>
-            <p className="text-lg text-gray-600">
-              精心製作的美味餐點，滿足您的每一個味蕾
+            <p className="mt-4 max-w-2xl text-base leading-8 text-[#675e50] md:text-lg">
+              這頁先讓你抓到來點什麼的整體樣子。正式價格和下單邏輯還是以現場或商城為主。
             </p>
           </div>
         </div>
       </section>
 
-      {/* Menu Images */}
-      <section className="py-12 bg-gray-50">
+      <section className="px-6 pb-14">
         <div className="container">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-8 text-center">
-            完整菜單
-          </h2>
-          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-            <div
-              className="cursor-pointer hover:shadow-xl transition-shadow rounded-xl overflow-hidden"
-              onClick={() => setSelectedImage("/menu/2026菜單-01_0.jpg")}
-            >
-              <img
-                src="/menu/2026菜單-01_0.jpg"
-                alt="來點什麼菜單 - 黑黑大大堡、鐵板炒麵、厚醬厚片"
-                className="w-full h-auto"
-              />
-            </div>
-            <div
-              className="cursor-pointer hover:shadow-xl transition-shadow rounded-xl overflow-hidden"
-              onClick={() => setSelectedImage("/menu/2026菜單-02_0.jpg")}
-            >
-              <img
-                src="/menu/2026菜單-02_0.jpg"
-                alt="來點什麼菜單 - 韓式飯捲、減醣輕食、米台韓混合"
-                className="w-full h-auto"
-              />
-            </div>
+          <div className="grid gap-6 md:grid-cols-2">
+            {["/menu/2026菜單-01_0.jpg", "/menu/2026菜單-02_0.jpg"].map((src, index) => (
+              <button
+                key={src}
+                type="button"
+                onClick={() => setSelectedImage(src)}
+                className="overflow-hidden rounded-[30px] border border-[#ece1c7] bg-white shadow-[0_20px_60px_-44px_rgba(91,66,18,0.28)] transition-transform hover:-translate-y-1"
+              >
+                <img
+                  src={src}
+                  alt={`來點什麼菜單圖 ${index + 1}`}
+                  className="w-full h-auto"
+                />
+              </button>
+            ))}
           </div>
-          <p className="text-center text-gray-500 mt-6 text-sm">
-            點擊圖片可放大查看
-          </p>
+          <p className="mt-4 text-center text-sm text-[#8b826f]">點圖片可以放大看。</p>
         </div>
       </section>
 
-      {/* Menu Content - No prices */}
-      <section className="py-12">
+      <section className="px-6 pb-20 md:pb-24">
         <div className="container">
-          {isLoading && (
-            <div className="text-center py-12 text-gray-500">
-              載入中...
-            </div>
-          )}
+          {isLoading && <div className="py-16 text-center text-[#8b826f]">菜單整理中...</div>}
 
-          {groupedItems && Object.entries(groupedItems).map(([category, items]) => (
-            <div key={category} className="mb-16">
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-8 pb-4 border-b-2 border-primary">
-                {category}
-              </h2>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {(items as any[])?.map((item: any) => (
-                  <Card key={item.id} className="overflow-hidden border-0 shadow-md hover:shadow-lg transition-shadow">
-                    <div className="aspect-square bg-gray-100 relative">
-                      {item.imageUrl ? (
-                        <img
-                          src={item.imageUrl}
-                          alt={item.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <img
-                            src="/logos/brand-icon.png"
-                            alt="來點什麼"
-                            className="w-20 h-20 opacity-20"
-                          />
-                        </div>
-                      )}
-                    </div>
-                    <CardContent className="p-4">
-                      <h3 className="font-bold text-gray-900 mb-1">{item.name}</h3>
-                      {item.description && (
-                        <p className="text-sm text-gray-500 line-clamp-2">{item.description}</p>
-                      )}
-                      {/* Price is intentionally not displayed on brand website */}
-                    </CardContent>
-                  </Card>
-                ))}
+          {groupedItems &&
+            Object.entries(groupedItems).map(([category, items]) => (
+              <div key={category} className="mb-14">
+                <div className="mb-6 flex items-end justify-between gap-4 border-b border-[#ece1c7] pb-4">
+                  <h2 className="text-3xl font-black tracking-[-0.04em] text-[#181512]">{category}</h2>
+                </div>
+                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {(items as any[])?.map((item: any) => (
+                    <Card key={item.id} className="overflow-hidden rounded-[28px] border border-[#ece1c7] bg-white shadow-[0_18px_50px_-44px_rgba(91,66,18,0.25)]">
+                      <div className="aspect-square bg-[#fff8e8]">
+                        {item.imageUrl ? (
+                          <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full items-center justify-center">
+                            <img src="/logos/brand-logo-yellow.png" alt="來點什麼" className="h-16 w-auto opacity-30" />
+                          </div>
+                        )}
+                      </div>
+                      <CardContent className="p-5">
+                        <h3 className="text-lg font-bold text-[#181512]">{item.name}</h3>
+                        {item.description && <p className="mt-2 text-sm leading-7 text-[#675e50]">{item.description}</p>}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
 
           {(!menuItems || menuItems.length === 0) && !isLoading && (
-            <div className="text-center py-20">
-              <img
-                src="/logos/brand-icon.png"
-                alt="來點什麼"
-                className="w-24 h-24 mx-auto mb-6 opacity-30"
-              />
-              <p className="text-gray-500 text-lg">更多餐點資訊請參考上方完整菜單</p>
-              <p className="text-gray-400 mt-2">歡迎蒞臨門市享用美食</p>
+            <div className="rounded-[32px] border border-[#ece1c7] bg-white px-6 py-16 text-center shadow-[0_18px_50px_-44px_rgba(91,66,18,0.25)]">
+              <img src="/logos/brand-logo-yellow.png" alt="來點什麼" className="mx-auto h-16 w-auto opacity-35" />
+              <p className="mt-6 text-lg font-semibold text-[#181512]">菜單內容還在整理</p>
+              <p className="mt-2 text-sm text-[#8b826f]">之後會補上更完整的品項與圖片。</p>
             </div>
           )}
+
+          <div className="mt-12 flex flex-wrap gap-3">
+            <Button asChild size="lg" className="rounded-full bg-[#181512] px-8 text-white hover:bg-[#2a241d]">
+              <Link href="/shop">
+                直接逛商店
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
         </div>
       </section>
 
-      {/* Image Modal */}
       <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
-        <DialogContent className="max-w-4xl p-0 bg-transparent border-0">
+        <DialogContent className="max-w-4xl border-0 bg-transparent p-0 shadow-none">
           <button
             onClick={() => setSelectedImage(null)}
-            className="absolute top-4 right-4 z-10 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-colors"
+            className="absolute right-4 top-4 z-10 rounded-full bg-black/45 p-2 text-white"
           >
-            <X className="h-6 w-6" />
+            <X className="h-5 w-5" />
           </button>
-          {selectedImage && (
-            <img
-              src={selectedImage}
-              alt="菜單"
-              className="w-full h-auto rounded-lg"
-            />
-          )}
+          {selectedImage && <img src={selectedImage} alt="菜單大圖" className="w-full rounded-[24px]" />}
         </DialogContent>
       </Dialog>
     </BrandLayout>

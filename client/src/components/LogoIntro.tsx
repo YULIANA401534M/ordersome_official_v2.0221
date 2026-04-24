@@ -12,7 +12,7 @@ export default function LogoIntro({ onComplete }: LogoIntroProps) {
     const timer = setTimeout(() => {
       setShow(false);
       onComplete?.();
-    }, 1800);
+    }, 1600);
 
     return () => clearTimeout(timer);
   }, [onComplete]);
@@ -24,51 +24,42 @@ export default function LogoIntro({ onComplete }: LogoIntroProps) {
       <motion.div
         initial={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.45, ease: "easeOut" }}
-        className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden bg-[linear-gradient(135deg,#fff9e8_0%,#ffe38a_45%,#f6f2ea_100%)]"
+        transition={{ duration: 0.35, ease: "easeOut" }}
+        className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_top,#fff0a6_0%,#ffe28a_28%,#fff8e5_72%,#fffdf7_100%)]"
       >
         <motion.div
-          initial={{ opacity: 0, scale: 0.96, y: 12 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-          className="relative flex w-[min(88vw,520px)] flex-col items-center gap-5 rounded-[2rem] border border-white/70 bg-white/72 px-8 py-10 text-center shadow-[0_28px_90px_rgba(78,58,8,0.16)] backdrop-blur-xl"
+          initial={{ opacity: 0, y: 10, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.45 }}
+          className="flex flex-col items-center gap-5 px-8 text-center"
         >
-          <div className="absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent" />
-          <motion.div
-            initial={{ scale: 0.92, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.15, duration: 0.5 }}
-            className="inline-flex items-center rounded-full border border-[#f1d675] bg-[#fff4c8] px-4 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.34em] text-[#8a6500]"
-          >
-            Order Some
-          </motion.div>
           <motion.img
             src="/logos/brand-logo-yellow.png"
             alt="來點什麼"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25, duration: 0.5 }}
+            initial={{ opacity: 0, scale: 0.94 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.45, delay: 0.08 }}
             className="h-20 w-auto md:h-24"
           />
           <motion.p
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.32, duration: 0.45 }}
-            className="max-w-sm text-sm leading-7 text-[#5f5a4f] md:text-[0.95rem]"
+            transition={{ duration: 0.4, delay: 0.16 }}
+            className="text-[clamp(1.5rem,3vw,2.4rem)] font-black tracking-[-0.06em] text-[#1b1712]"
           >
-            台式早餐的熟悉感，配上韓系節奏與更明亮的品牌情緒。
+            台韓兩味，混搭就對
           </motion.p>
           <motion.div
             initial={{ opacity: 0, scaleX: 0.6 }}
             animate={{ opacity: 1, scaleX: 1 }}
-            transition={{ delay: 0.45, duration: 0.45 }}
-            className="h-1.5 w-32 overflow-hidden rounded-full bg-[#f6ebc8]"
+            transition={{ duration: 0.45, delay: 0.24 }}
+            className="h-1.5 w-28 overflow-hidden rounded-full bg-[#f4e7b7]"
           >
             <motion.div
               initial={{ x: "-100%" }}
               animate={{ x: "0%" }}
-              transition={{ delay: 0.5, duration: 0.8, ease: "easeOut" }}
-              className="h-full rounded-full bg-gradient-to-r from-[#f4b400] via-[#ffd84d] to-[#f7c948]"
+              transition={{ duration: 0.7, delay: 0.32, ease: "easeOut" }}
+              className="h-full rounded-full bg-gradient-to-r from-[#f4b400] via-[#ffd84d] to-[#f4b400]"
             />
           </motion.div>
         </motion.div>
