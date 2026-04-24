@@ -624,3 +624,15 @@ Dayone 主線 Table 對照：
 - Not yet implemented:
   - Driver leftover return still needs the separate `回庫待驗 -> 管理確認 -> 可賣庫存` flow.
   - Full Dayone route-by-route browser review and manual testing are still pending.
+- Dayone 2026-04-25 commercial logic review note
+  - Re-reviewed Dayone from a commercial-use angle instead of only closing the current code loop.
+  - Rebuilt the Dayone logic docs into business-operable rules, page jump matrix, role matrix, and next-step risk list.
+  - Rewritten / added docs:
+    - `docs/dayone-stock-accounting-logic-2026-04-25.md`
+    - `docs/dayone-gpt-handoff-rules-2026-04-25.md`
+  - Newly confirmed logic risks:
+    - `server/routers/dayone/purchase.ts -> receive` still directly increases `dy_inventory` and conflicts with the newer supplier-sign -> warehouse-confirm rule.
+    - `server/routers/dayone/dispatch.ts -> returnInventory` still directly writes back into `dy_inventory` and conflicts with the agreed pending-return rule.
+    - AR creation / update still has multiple entry points and should be further unified.
+    - Dayone permissions are still coarse-grained and not yet a full production-grade role x module x page x API matrix.
+  - This round focused on logic completeness and handoff continuity, not UI redesign.
