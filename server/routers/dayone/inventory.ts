@@ -122,50 +122,58 @@ export const dyInventoryRouter = router({
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const client = (db as any).$client;
       await ensureDyPendingReturnsTable(client);
+      await client.execute('START TRANSACTION');
+      try {
+        const [rows] = await client.execute(
+          `SELECT pr.*, p.unit
+           FROM dy_pending_returns pr
+           JOIN dy_products p ON pr.productId = p.id
+           WHERE pr.id=? AND pr.tenantId=?
+           LIMIT 1
+           FOR UPDATE`,
+          [input.pendingReturnId, input.tenantId]
+        );
+        const pendingReturn = (rows as any[])[0];
+        if (!pendingReturn) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Pending return not found' });
+        }
+        if (pendingReturn.status !== 'pending') {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Pending return already confirmed' });
+        }
 
-      const [rows] = await client.execute(
-        `SELECT pr.*, p.unit
-         FROM dy_pending_returns pr
-         JOIN dy_products p ON pr.productId = p.id
-         WHERE pr.id=? AND pr.tenantId=? LIMIT 1`,
-        [input.pendingReturnId, input.tenantId]
-      );
-      const pendingReturn = (rows as any[])[0];
-      if (!pendingReturn) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Pending return not found' });
+        await client.execute(
+          `UPDATE dy_pending_returns
+           SET status='received', receivedBy=?, receivedAt=NOW(), receiveNote=?, updatedAt=NOW()
+           WHERE id=? AND tenantId=? AND status='pending'`,
+          [ctx.user.id, input.note?.trim() || null, input.pendingReturnId, input.tenantId]
+        );
+
+        await client.execute(
+          `INSERT INTO dy_inventory (tenantId, productId, currentQty, safetyQty, unit, updatedAt)
+           VALUES (?,?,?,0,?,NOW())
+           ON DUPLICATE KEY UPDATE currentQty=currentQty + VALUES(currentQty), unit=COALESCE(unit, VALUES(unit)), updatedAt=NOW()`,
+          [input.tenantId, pendingReturn.productId, pendingReturn.qty, pendingReturn.unit ?? null]
+        );
+
+        await client.execute(
+          `INSERT INTO dy_stock_movements
+           (tenantId, productId, type, qty, refId, refType, note, operatorId, createdAt)
+           VALUES (?,?,'in',?,?,'dispatch_return_receive',?,?,NOW())`,
+          [
+            input.tenantId,
+            pendingReturn.productId,
+            pendingReturn.qty,
+            pendingReturn.dispatchOrderId,
+            input.note?.trim() || pendingReturn.note || `Confirmed truck return for dispatch ${pendingReturn.dispatchOrderId}`,
+            ctx.user.id,
+          ]
+        );
+
+        await client.execute('COMMIT');
+        return { success: true };
+      } catch (error) {
+        await client.execute('ROLLBACK');
+        throw error;
       }
-      if (pendingReturn.status !== 'pending') {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Pending return already confirmed' });
-      }
-
-      await client.execute(
-        `INSERT INTO dy_inventory (tenantId, productId, currentQty, safetyQty, unit, updatedAt)
-         VALUES (?,?,?,0,?,NOW())
-         ON DUPLICATE KEY UPDATE currentQty=currentQty + VALUES(currentQty), unit=COALESCE(unit, VALUES(unit)), updatedAt=NOW()`,
-        [input.tenantId, pendingReturn.productId, pendingReturn.qty, pendingReturn.unit ?? null]
-      );
-
-      await client.execute(
-        `INSERT INTO dy_stock_movements
-         (tenantId, productId, type, qty, refId, refType, note, operatorId, createdAt)
-         VALUES (?,?,'in',?,?,'dispatch_return_receive',?,?,NOW())`,
-        [
-          input.tenantId,
-          pendingReturn.productId,
-          pendingReturn.qty,
-          pendingReturn.dispatchOrderId,
-          input.note?.trim() || pendingReturn.note || `Confirmed truck return for dispatch ${pendingReturn.dispatchOrderId}`,
-          ctx.user.id,
-        ]
-      );
-
-      await client.execute(
-        `UPDATE dy_pending_returns
-         SET status='received', receivedBy=?, receivedAt=NOW(), receiveNote=?, updatedAt=NOW()
-         WHERE id=? AND tenantId=?`,
-        [ctx.user.id, input.note?.trim() || null, input.pendingReturnId, input.tenantId]
-      );
-
-      return { success: true };
     }),
 });

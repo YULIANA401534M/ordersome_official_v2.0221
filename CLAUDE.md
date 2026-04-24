@@ -649,3 +649,14 @@ Dayone 主線 Table 對照：
   - New doc: `docs/dayone-return-pending-phase1-2026-04-25.md`
   - Verified: `npm run build`
   - Not yet verified: full route-by-route browser click-through and live data replay for pending-return flow.
+- Dayone 2026-04-25 pending-return logic re-check
+  - Re-reviewed whether the new return-review flow had hard-coded or fragile logic.
+  - Fixed one real placement mistake:
+    - `ensureDyPendingReturnsTable` had been added on the wrong path and is now called in `dispatch.returnInventory`.
+  - Fixed one real safety gap:
+    - `inventory.confirmPendingReturn` now runs in a transaction with row lock (`FOR UPDATE`) so status change, inventory write, and stock movement stay in one commit.
+  - Static route review finding:
+    - `client/src/pages/dayone/driver/DriverSign.tsx` still exists but is not mounted in `App.tsx`.
+    - Current live signature path is `DriverOrderDetail.tsx -> dayone.driver.uploadSignature`.
+    - This old page is currently treated as legacy/unmounted and was not exposed again in this round.
+  - Verified: `npm run build`

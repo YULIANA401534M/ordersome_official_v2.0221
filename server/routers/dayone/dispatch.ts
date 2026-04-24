@@ -332,7 +332,6 @@ export const dyDispatchRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
       const client = (db as any).$client;
-      await ensureDyPendingReturnsTable(client);
       const scopedDriverId = await resolveDriverScope(client, input.tenantId, ctx.user.id, ctx.user.role ?? "");
 
       const [itemRows] = await client.execute(
@@ -443,6 +442,7 @@ export const dyDispatchRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
       const client = (db as any).$client;
+      await ensureDyPendingReturnsTable(client);
       const scopedDriverId = await resolveDriverScope(client, input.tenantId, ctx.user.id, ctx.user.role ?? "");
 
       const [dispatchRows] = await client.execute(

@@ -197,6 +197,9 @@ Dayone 目前已確認的正式規則：
 
 - `dispatch.returnInventory` 已改成先寫 `dy_pending_returns`
 - `inventory.confirmPendingReturn` 已可由管理端正式確認入庫
+- 補充修正：
+  - `ensureDyPendingReturnsTable` 必須在 `dispatch.returnInventory` 呼叫，不能放錯到其他 mutation
+  - `inventory.confirmPendingReturn` 已補成交易內確認，避免狀態先改、庫存沒加或重複確認
 - 新文件：
   - `docs/dayone-return-pending-phase1-2026-04-25.md`
 - 下一輪優先：
