@@ -193,3 +193,13 @@ Dayone 目前已確認的正式規則：
 
 回答使用者時不要過度自信。
 如果某段還沒人工測過，就明講還沒測。
+## 2026-04-25 回庫待驗第一階段補充
+
+- `dispatch.returnInventory` 已改成先寫 `dy_pending_returns`
+- `inventory.confirmPendingReturn` 已可由管理端正式確認入庫
+- 新文件：
+  - `docs/dayone-return-pending-phase1-2026-04-25.md`
+- 下一輪優先：
+  - 補車上庫存統計
+  - 跑 `/dayone/*`、`/driver/*` 逐頁審查
+  - 接人工測試

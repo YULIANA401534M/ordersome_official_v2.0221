@@ -313,10 +313,11 @@ function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onCl
 
   const returnInventory = trpc.dayone.dispatch.returnInventory.useMutation({
     onSuccess: () => {
-      toast.success("剩貨已回庫");
+      toast.success("剩貨已送出待驗");
       setReturnQtyByProduct({});
       utils.dayone.dispatch.getDispatchDetail.invalidate();
       utils.dayone.dispatch.listDispatch.invalidate();
+      utils.dayone.inventory.pendingReturns.invalidate();
     },
     onError: (error) => toast.error(error.message),
   });
@@ -542,7 +543,7 @@ function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onCl
                     })
                   }
                 >
-                  {returnInventory.isPending ? "回庫中..." : "確認剩貨回庫"}
+                  {returnInventory.isPending ? "送出中..." : "送出回庫待驗"}
                 </Button>
               </section>
             </div>

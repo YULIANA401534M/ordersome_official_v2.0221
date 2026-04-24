@@ -638,5 +638,14 @@ Dayone 主線 Table 對照：
   - This round focused on logic completeness and handoff continuity, not UI redesign.
 - Dayone 2026-04-25 purchase receive guard
   - `server/routers/dayone/purchase.ts -> receive` had no active Dayone UI entry but still contained the old direct-inventory write path.
-  - To avoid a second conflicting inventory-entry rule, `purchase.receive` is now blocked with an explicit error directing usage back to purchase receipts + warehouse confirmation.
-  - This is a guard step, not the final data-model cleanup.
+- To avoid a second conflicting inventory-entry rule, `purchase.receive` is now blocked with an explicit error directing usage back to purchase receipts + warehouse confirmation.
+- This is a guard step, not the final data-model cleanup.
+- Dayone 2026-04-25 pending-return phase 1
+  - `server/routers/dayone/dispatch.ts -> returnInventory` no longer writes directly into `dy_inventory`.
+  - Added `server/routers/dayone/pendingReturns.ts` to provision `dy_pending_returns`.
+  - Added `server/routers/dayone/inventory.ts -> pendingReturns` and `confirmPendingReturn`.
+  - `/dayone/inventory` now shows pending returns and manager-side confirm-in actions.
+  - Driver / dispatch UI copy now says submit to pending return review instead of immediate inventory return.
+  - New doc: `docs/dayone-return-pending-phase1-2026-04-25.md`
+  - Verified: `npm run build`
+  - Not yet verified: full route-by-route browser click-through and live data replay for pending-return flow.

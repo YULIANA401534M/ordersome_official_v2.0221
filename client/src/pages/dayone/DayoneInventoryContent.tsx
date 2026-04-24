@@ -1,5 +1,5 @@
 import { trpc } from "@/lib/trpc";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,17 @@ export default function DayoneInventoryContent({ tenantId }: { tenantId: number 
   const { data: alerts = [] } = trpc.dayone.reports.inventoryAlerts.useQuery({ tenantId });
   const { data: products = [] } = trpc.dayone.products.list.useQuery({ tenantId });
   const { data: movements = [] } = trpc.dayone.inventory.movements.useQuery({ tenantId, limit: 20 });
+  const { data: pendingReturns = [] } = trpc.dayone.inventory.pendingReturns.useQuery({ tenantId });
+
+  const inventorySummary = useMemo(() => {
+    const availableQty = inventory.reduce((sum: number, item: any) => sum + Number(item.currentQty ?? 0), 0);
+    const pendingQty = pendingReturns.reduce((sum: number, item: any) => sum + Number(item.qty ?? 0), 0);
+    return {
+      availableQty,
+      pendingQty,
+      lowStockCount: alerts.length,
+    };
+  }, [alerts.length, inventory, pendingReturns]);
 
   const setSafety = trpc.dayone.inventory.setSafety.useMutation({
     onSuccess: () => {
@@ -42,6 +53,17 @@ export default function DayoneInventoryContent({ tenantId }: { tenantId: number 
       toast.success("庫存異動已登記");
       setAdjustOpen(false);
       utils.dayone.inventory.list.invalidate();
+      utils.dayone.inventory.movements.invalidate();
+      utils.dayone.reports.inventoryAlerts.invalidate();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const confirmPendingReturn = trpc.dayone.inventory.confirmPendingReturn.useMutation({
+    onSuccess: () => {
+      toast.success("已確認回庫並轉入可賣庫存");
+      utils.dayone.inventory.list.invalidate();
+      utils.dayone.inventory.pendingReturns.invalidate();
       utils.dayone.inventory.movements.invalidate();
       utils.dayone.reports.inventoryAlerts.invalidate();
     },
@@ -86,6 +108,97 @@ export default function DayoneInventoryContent({ tenantId }: { tenantId: number 
           </CardContent>
         </Card>
       )}
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="rounded-[24px] border-stone-200/70">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-stone-500">可賣庫存總量</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-semibold text-stone-900">{inventorySummary.availableQty}</p>
+            <p className="mt-2 text-xs text-stone-500">目前已正式入倉、可再派車的總數量。</p>
+          </CardContent>
+        </Card>
+        <Card className="rounded-[24px] border-amber-200 bg-amber-50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-amber-700">回庫待驗</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-semibold text-amber-800">{inventorySummary.pendingQty}</p>
+            <p className="mt-2 text-xs text-amber-700/80">司機已回報，但管理端尚未正式加回可賣庫存。</p>
+          </CardContent>
+        </Card>
+        <Card className="rounded-[24px] border-orange-200 bg-orange-50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-orange-700">低於安全庫存</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-semibold text-orange-800">{inventorySummary.lowStockCount}</p>
+            <p className="mt-2 text-xs text-orange-700/80">需要優先補貨或檢查派車扣庫是否異常的品項。</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="rounded-[28px] border-amber-200/80 bg-white">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">回庫待驗清單</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {pendingReturns.length === 0 ? (
+            <div className="p-8 text-center text-sm text-stone-400">目前沒有待確認的司機回庫資料。</div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="border-b bg-stone-50">
+                <tr>
+                  {["品項", "數量", "司機 / 路線", "回報時間", "操作"].map((heading) => (
+                    <th key={heading} className="px-4 py-3 text-left font-medium text-stone-500">{heading}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {pendingReturns.map((item: any) => (
+                  <tr key={item.id} className="border-b transition-colors hover:bg-stone-50/80">
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-stone-900">{item.productName}</p>
+                      <p className="mt-1 text-xs text-stone-500">{item.note || `派車單 #${item.dispatchOrderId}`}</p>
+                    </td>
+                    <td className="px-4 py-3 font-semibold text-amber-700">
+                      {Number(item.qty)} {item.unit || ""}
+                    </td>
+                    <td className="px-4 py-3 text-stone-500">
+                      <p>{item.driverName || "-"}</p>
+                      <p className="mt-1 text-xs">路線 {item.routeCode || "-"}</p>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-stone-500">
+                      {new Date(item.reportedAt).toLocaleString("zh-TW", {
+                        month: "2-digit",
+                        day: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Button
+                        size="sm"
+                        className="rounded-xl bg-amber-600 text-white hover:bg-amber-700"
+                        disabled={confirmPendingReturn.isPending}
+                        onClick={() =>
+                          confirmPendingReturn.mutate({
+                            tenantId,
+                            pendingReturnId: Number(item.id),
+                          })
+                        }
+                      >
+                        確認入庫
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-5 md:grid-cols-2">
         <Card className="rounded-[28px] border-stone-200/70">

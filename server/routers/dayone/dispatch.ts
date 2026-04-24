@@ -2,6 +2,7 @@ import { z } from "zod";
 import { router, protectedProcedure } from "../../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../../db";
+import { ensureDyPendingReturnsTable } from "./pendingReturns";
 
 const dyAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== "super_admin" && ctx.user.role !== "manager") {
@@ -331,6 +332,7 @@ export const dyDispatchRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
       const client = (db as any).$client;
+      await ensureDyPendingReturnsTable(client);
       const scopedDriverId = await resolveDriverScope(client, input.tenantId, ctx.user.id, ctx.user.role ?? "");
 
       const [itemRows] = await client.execute(
@@ -458,24 +460,59 @@ export const dyDispatchRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST", message: "Draft dispatch cannot return stock to inventory" });
       }
 
+      const [shippedRows] = await client.execute(
+        `SELECT oi.productId, SUM(oi.qty) AS shippedQty
+         FROM dy_dispatch_items di
+         JOIN dy_order_items oi ON di.orderId = oi.orderId
+         WHERE di.dispatchOrderId=? AND di.tenantId=?
+         GROUP BY oi.productId`,
+        [input.dispatchOrderId, input.tenantId]
+      );
+      const shippedQtyByProduct = new Map<number, number>(
+        (shippedRows as any[]).map((row) => [Number(row.productId), Number(row.shippedQty ?? 0)])
+      );
+
+      const [reportedRows] = await client.execute(
+        `SELECT productId, COALESCE(SUM(qty), 0) AS reportedQty
+         FROM dy_pending_returns
+         WHERE tenantId=? AND dispatchOrderId=?
+         GROUP BY productId`,
+        [input.tenantId, input.dispatchOrderId]
+      );
+      const reportedQtyByProduct = new Map<number, number>(
+        (reportedRows as any[]).map((row) => [Number(row.productId), Number(row.reportedQty ?? 0)])
+      );
+
       for (const item of input.items) {
-        await client.execute(
-          `INSERT INTO dy_inventory (tenantId, productId, currentQty, safetyQty, unit, updatedAt)
-           VALUES (?,?,?,0,NULL,NOW())
-           ON DUPLICATE KEY UPDATE currentQty=currentQty + VALUES(currentQty), updatedAt=NOW()`,
-          [input.tenantId, item.productId, item.qty]
-        );
+        const shippedQty = Number(shippedQtyByProduct.get(Number(item.productId)) ?? 0);
+        if (shippedQty <= 0) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Product ${item.productId} was not part of this dispatch`,
+          });
+        }
+
+        const alreadyReportedQty = Number(reportedQtyByProduct.get(Number(item.productId)) ?? 0);
+        const requestedQty = Number(item.qty ?? 0);
+        if (alreadyReportedQty + requestedQty > shippedQty) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Returned qty for product ${item.productId} exceeds shipped qty`,
+          });
+        }
 
         await client.execute(
-          `INSERT INTO dy_stock_movements
-           (tenantId, productId, type, qty, refId, refType, note, createdAt)
-           VALUES (?,?,'in',?,?,'dispatch_return',?,NOW())`,
+          `INSERT INTO dy_pending_returns
+           (tenantId, dispatchOrderId, productId, qty, status, source, note, reportedBy, reportedAt, createdAt, updatedAt)
+           VALUES (?,?,?,?, 'pending', ?, ?, ?, NOW(), NOW(), NOW())`,
           [
             input.tenantId,
-            item.productId,
-            item.qty,
             input.dispatchOrderId,
-            input.note?.trim() || `Truck return for dispatch ${input.dispatchOrderId}`,
+            item.productId,
+            requestedQty,
+            ctx.user.role === "driver" ? "driver_worklog" : "dispatch_console",
+            input.note?.trim() || `Pending truck return for dispatch ${input.dispatchOrderId}`,
+            ctx.user.id,
           ]
         );
       }
@@ -487,7 +524,7 @@ export const dyDispatchRouter = router({
         [input.dispatchOrderId, input.tenantId]
       );
 
-      return { success: true, returnedItemCount: input.items.length };
+      return { success: true, returnedItemCount: input.items.length, pendingReview: true };
     }),
 
   completeDispatch: driverProcedure
