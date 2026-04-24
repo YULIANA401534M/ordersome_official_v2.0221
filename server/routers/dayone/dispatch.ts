@@ -552,7 +552,14 @@ export const dyDispatchRouter = router({
         customerId: z.number(),
         deliverBoxes: z.number(),
         paymentStatus: z.string(),
-        items: z.any(),
+        note: z.string().optional(),
+        items: z.array(
+          z.object({
+            productId: z.number(),
+            qty: z.number().positive(),
+            unitPrice: z.number().nonnegative(),
+          })
+        ).default([]),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -562,13 +569,22 @@ export const dyDispatchRouter = router({
       const scopedDriverId = await resolveDriverScope(client, input.tenantId, ctx.user.id, ctx.user.role ?? "");
 
       const [dispatchRows] = await client.execute(
-        `SELECT driverId FROM dy_dispatch_orders WHERE id=? AND tenantId=? LIMIT 1`,
+        `SELECT id, driverId, dispatchDate FROM dy_dispatch_orders WHERE id=? AND tenantId=? LIMIT 1`,
         [input.dispatchOrderId, input.tenantId]
       );
       const dispatch = (dispatchRows as any[])[0];
       if (!dispatch) throw new TRPCError({ code: "NOT_FOUND", message: "Dispatch order not found" });
       if (scopedDriverId && Number(dispatch.driverId) !== scopedDriverId) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Dispatch order belongs to another driver" });
+      }
+
+      const [customerRows] = await client.execute(
+        `SELECT id, districtId FROM dy_customers WHERE id=? AND tenantId=? LIMIT 1`,
+        [input.customerId, input.tenantId]
+      );
+      const customer = (customerRows as any[])[0];
+      if (!customer) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Customer not found" });
       }
 
       const [seqRows] = await client.execute(
@@ -584,13 +600,69 @@ export const dyDispatchRouter = router({
       );
       const prevBoxes = Number((boxRows as any[])[0]?.currentBalance ?? 0);
       const remainBoxes = prevBoxes + input.deliverBoxes;
+      const normalizedItems = input.items.filter((item) => item.qty > 0);
+      const totalAmount = normalizedItems.reduce(
+        (sum, item) => sum + Number(item.qty) * Number(item.unitPrice ?? 0),
+        0
+      );
+      let orderId: number | null = null;
+
+      if (normalizedItems.length > 0) {
+        const orderNo = `DYS${Date.now()}`;
+        const [orderResult] = await client.execute(
+          `INSERT INTO dy_orders
+           (tenantId, orderNo, customerId, driverId, deliveryDate, districtId, status, totalAmount,
+            paidAmount, paymentStatus, prevBoxes, inBoxes, returnBoxes, remainBoxes, note, orderSource, createdAt, updatedAt)
+           VALUES (?,?,?,?,?,?,'assigned',?,0,'unpaid',?,?,0,?,?,'dispatch_supplement',NOW(),NOW())`,
+          [
+            input.tenantId,
+            orderNo,
+            input.customerId,
+            dispatch.driverId,
+            dispatch.dispatchDate,
+            customer.districtId ?? null,
+            totalAmount,
+            prevBoxes,
+            input.deliverBoxes,
+            remainBoxes,
+            input.note?.trim() || "Dispatch supplement order",
+          ]
+        );
+        orderId = Number((orderResult as any).insertId);
+
+        for (const item of normalizedItems) {
+          await client.execute(
+            `INSERT INTO dy_order_items
+             (tenantId, orderId, productId, qty, unitPrice, subtotal, returnQty)
+             VALUES (?,?,?,?,?,?,0)`,
+            [
+              input.tenantId,
+              orderId,
+              item.productId,
+              item.qty,
+              item.unitPrice,
+              Number(item.qty) * Number(item.unitPrice ?? 0),
+            ]
+          );
+        }
+      }
 
       const [result] = await client.execute(
         `INSERT INTO dy_dispatch_items
          (dispatchOrderId, tenantId, orderId, customerId, stopSequence,
           prevBoxes, deliverBoxes, returnBoxes, remainBoxes, paymentStatus, cashCollected, createdAt)
-         VALUES (?,?,NULL,?,?,?,?,0,?,?,0,NOW())`,
-        [input.dispatchOrderId, input.tenantId, input.customerId, nextSeq, prevBoxes, input.deliverBoxes, remainBoxes, input.paymentStatus]
+         VALUES (?,?,?,?,?,?,?,0,?,?,0,NOW())`,
+        [
+          input.dispatchOrderId,
+          input.tenantId,
+          orderId,
+          input.customerId,
+          nextSeq,
+          prevBoxes,
+          input.deliverBoxes,
+          remainBoxes,
+          input.paymentStatus,
+        ]
       );
 
       if ((boxRows as any[]).length > 0) {
@@ -605,6 +677,11 @@ export const dyDispatchRouter = router({
         );
       }
 
-      return { id: (result as any).insertId, stopSequence: nextSeq };
+      return {
+        id: (result as any).insertId,
+        stopSequence: nextSeq,
+        orderId,
+        createdOrder: !!orderId,
+      };
     }),
 });

@@ -229,4 +229,64 @@ export const dyPurchaseReceiptRouter = router({
       );
       return { success: true };
     }),
+
+  reconcileAnomaly: dyAdminProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        tenantId: z.number(),
+        reconcileNote: z.string(),
+        items: z.array(
+          z.object({
+            productId: z.number(),
+            name: z.string(),
+            qty: z.number().positive(),
+            unitPrice: z.number().nonnegative(),
+          })
+        ).min(1),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      }
+      const client = (db as any).$client;
+
+      const [rows] = await client.execute(
+        `SELECT id, status, anomalyNote FROM dy_purchase_receipts WHERE id=? AND tenantId=? LIMIT 1`,
+        [input.id, input.tenantId]
+      );
+      const receipt = (rows as any[])[0];
+      if (!receipt) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Purchase receipt not found" });
+      }
+
+      const totalQty = input.items.reduce((sum, item) => sum + Number(item.qty), 0);
+      const totalAmount = input.items.reduce(
+        (sum, item) => sum + Number(item.qty) * Number(item.unitPrice ?? 0),
+        0
+      );
+      const existingNote = String(receipt.anomalyNote ?? "").trim();
+      const mergedNote = [existingNote, `[reconcile] ${input.reconcileNote.trim()}`]
+        .filter(Boolean)
+        .join("\n");
+
+      await client.execute(
+        `UPDATE dy_purchase_receipts
+         SET items=?, totalQty=?, totalAmount=?, anomalyNote=?, status='pending',
+             supplierSignatureUrl=NULL, signedAt=NULL
+         WHERE id=? AND tenantId=?`,
+        [
+          JSON.stringify(input.items),
+          totalQty,
+          totalAmount,
+          mergedNote,
+          input.id,
+          input.tenantId,
+        ]
+      );
+
+      return { success: true, totalQty, totalAmount };
+    }),
 });

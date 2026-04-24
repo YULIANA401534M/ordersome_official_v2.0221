@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
 type ReceiptItem = {
+  productId?: number;
   name: string;
   qty: number;
   unitPrice: number;
@@ -269,6 +270,176 @@ function AnomalyDialog({
               }
             >
               {markAnomaly.isPending ? "送出中..." : "確認標記"}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ReconcileAnomalyDialog({
+  receipt,
+  onClose,
+  onSuccess,
+}: {
+  receipt: ReceiptRecord;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [note, setNote] = useState("");
+  const [items, setItems] = useState<ReceiptItem[]>(
+    parseItems(receipt.items).map((item) => ({
+      productId: item.productId,
+      name: item.name,
+      qty: Number(item.qty ?? 0),
+      unitPrice: Number(item.unitPrice ?? 0),
+    }))
+  );
+  const { data: products = [] } = trpc.dayone.products.list.useQuery({ tenantId: TENANT_ID });
+
+  const reconcile = trpc.dayone.purchaseReceipt.reconcileAnomaly.useMutation({
+    onSuccess: () => {
+      toast.success("差異對帳已回寫，單據已退回待簽收");
+      onSuccess();
+      onClose();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>差異對帳</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+            {receipt.supplierName} 的異常簽收單會先回到待簽收，更新後的明細會成為重新簽收與後續 AP 建立基準。
+          </div>
+
+          <div className="space-y-3">
+            {items.map((item, index) => (
+              <div key={`${item.name}-${index}`} className="grid gap-2 md:grid-cols-[minmax(0,1fr)_110px_130px_84px]">
+                <Select
+                  value={item.productId ? String(item.productId) : ""}
+                  onValueChange={(value) => {
+                    const product = (products as any[]).find((row: any) => String(row.id) === value);
+                    setItems((prev) =>
+                      prev.map((row, rowIndex) =>
+                        rowIndex === index
+                          ? {
+                              ...row,
+                              productId: Number(value),
+                              name: product?.name ?? row.name,
+                            }
+                          : row
+                      )
+                    );
+                  }}
+                >
+                  <SelectTrigger className="rounded-2xl">
+                    <SelectValue placeholder="選擇商品" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(products as any[]).map((product: any) => (
+                      <SelectItem key={product.id} value={String(product.id)}>
+                        {product.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Input
+                  type="number"
+                  min={0}
+                  value={item.qty}
+                  onChange={(event) =>
+                    setItems((prev) =>
+                      prev.map((row, rowIndex) =>
+                        rowIndex === index ? { ...row, qty: Math.max(0, Number(event.target.value || 0)) } : row
+                      )
+                    )
+                  }
+                  placeholder="數量"
+                />
+
+                <Input
+                  type="number"
+                  min={0}
+                  value={item.unitPrice}
+                  onChange={(event) =>
+                    setItems((prev) =>
+                      prev.map((row, rowIndex) =>
+                        rowIndex === index ? { ...row, unitPrice: Math.max(0, Number(event.target.value || 0)) } : row
+                      )
+                    )
+                  }
+                  placeholder="單價"
+                />
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                  onClick={() => setItems((prev) => prev.filter((_, rowIndex) => rowIndex !== index))}
+                  disabled={items.length === 1}
+                >
+                  刪除
+                </Button>
+              </div>
+            ))}
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-2xl"
+            onClick={() => setItems((prev) => [...prev, { productId: undefined, name: "", qty: 0, unitPrice: 0 }])}
+          >
+            新增品項
+          </Button>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-stone-700">對帳說明</label>
+            <Textarea
+              rows={4}
+              placeholder="例如：補單 2 箱、破損 1 箱已扣回、改以現場實點數量重開待簽收"
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+            />
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" className="rounded-2xl" onClick={onClose}>
+              取消
+            </Button>
+            <Button
+              className="rounded-2xl bg-amber-600 text-white hover:bg-amber-700"
+              disabled={reconcile.isPending || !note.trim()}
+              onClick={() => {
+                const validItems = items.filter(
+                  (item) => item.productId && Number(item.qty) > 0 && Number(item.unitPrice) >= 0
+                );
+                if (!validItems.length) {
+                  toast.error("至少要保留一筆對帳後的有效品項");
+                  return;
+                }
+                reconcile.mutate({
+                  id: receipt.id,
+                  tenantId: TENANT_ID,
+                  reconcileNote: note.trim(),
+                  items: validItems.map((item) => ({
+                    productId: Number(item.productId),
+                    name: item.name,
+                    qty: Number(item.qty),
+                    unitPrice: Number(item.unitPrice),
+                  })),
+                });
+              }}
+            >
+              {reconcile.isPending ? "回寫中..." : "確認對帳"}
             </Button>
           </div>
         </div>
@@ -936,6 +1107,7 @@ export default function DayonePurchaseReceipts() {
   const [signTarget, setSignTarget] = useState<{ id: number; meta: ReceiptMeta; items: ReceiptItem[] } | null>(null);
   const [receiptSummary, setReceiptSummary] = useState<(ReceiptMeta & { items: ReceiptItem[]; signatureUrl: string }) | null>(null);
   const [anomalyTarget, setAnomalyTarget] = useState<ReceiptRecord | null>(null);
+  const [reconcileTarget, setReconcileTarget] = useState<ReceiptRecord | null>(null);
   const [detailTarget, setDetailTarget] = useState<ReceiptRecord | null>(null);
   const [payableTarget, setPayableTarget] = useState<PayableRecord | null>(null);
 
@@ -1372,6 +1544,15 @@ export default function DayonePurchaseReceipts() {
                                     異常
                                   </Button>
                                 ) : null}
+                                {receipt.status === "anomaly" ? (
+                                  <Button
+                                    size="sm"
+                                    className="rounded-2xl bg-amber-600 text-white hover:bg-amber-700"
+                                    onClick={() => setReconcileTarget(receipt)}
+                                  >
+                                    對帳
+                                  </Button>
+                                ) : null}
                               </div>
                             </td>
                           </tr>
@@ -1428,6 +1609,14 @@ export default function DayonePurchaseReceipts() {
                               標記異常
                             </Button>
                           ) : null}
+                          {receipt.status === "anomaly" ? (
+                            <Button
+                              className="rounded-2xl bg-amber-600 text-white hover:bg-amber-700"
+                              onClick={() => setReconcileTarget(receipt)}
+                            >
+                              對帳
+                            </Button>
+                          ) : null}
                         </div>
                       </article>
                     );
@@ -1463,6 +1652,13 @@ export default function DayonePurchaseReceipts() {
       {receiptSummary ? <ReceiptSummaryDialog data={receiptSummary} onClose={() => setReceiptSummary(null)} /> : null}
       {anomalyTarget ? (
         <AnomalyDialog receipt={anomalyTarget} onClose={() => setAnomalyTarget(null)} onSuccess={() => refetch()} />
+      ) : null}
+      {reconcileTarget ? (
+        <ReconcileAnomalyDialog
+          receipt={reconcileTarget}
+          onClose={() => setReconcileTarget(null)}
+          onSuccess={() => refetch()}
+        />
       ) : null}
       {detailTarget ? <ReceiptDetailDialog receipt={detailTarget} onClose={() => setDetailTarget(null)} /> : null}
       {payableTarget ? (

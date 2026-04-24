@@ -91,29 +91,34 @@ function ManualAddStopDialog({
   const [customerId, setCustomerId] = useState("");
   const [deliverBoxes, setDeliverBoxes] = useState(1);
   const [paymentStatus, setPaymentStatus] = useState("unpaid");
+  const [note, setNote] = useState("");
+  const [orderItems, setOrderItems] = useState([{ productId: "", qty: 1, unitPrice: 0 }]);
   const { data: customers = [] } = trpc.dayone.customers.list.useQuery({ tenantId: TENANT_ID });
+  const { data: products = [] } = trpc.dayone.products.list.useQuery({ tenantId: TENANT_ID });
 
   const manualAddStop = trpc.dayone.dispatch.manualAddStop.useMutation({
     onSuccess: () => {
-      toast.success("已加入臨時加站");
+      toast.success("\u5df2\u65b0\u589e\u81e8\u6642\u505c\u9760\u9ede");
       onSuccess();
       onClose();
     },
     onError: (error) => toast.error(error.message),
   });
 
+  const hasSupplementItems = orderItems.some((item) => Number(item.qty) > 0 && item.productId);
+
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-sm rounded-3xl">
+      <DialogContent className="max-w-2xl rounded-3xl">
         <DialogHeader>
-          <DialogTitle>新增臨時加站</DialogTitle>
+          <DialogTitle>{"\u65b0\u589e\u81e8\u6642\u505c\u9760\u9ede"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-stone-700">客戶</label>
+            <label className="mb-1 block text-sm font-medium text-stone-700">{"\u5ba2\u6236"}</label>
             <Select value={customerId} onValueChange={setCustomerId}>
               <SelectTrigger className="rounded-2xl">
-                <SelectValue placeholder="選擇客戶" />
+                <SelectValue placeholder={"\u8acb\u9078\u64c7\u5ba2\u6236"} />
               </SelectTrigger>
               <SelectContent>
                 {customers.map((customer: any) => (
@@ -126,7 +131,7 @@ function ManualAddStopDialog({
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-stone-700">額外出貨箱數</label>
+            <label className="mb-1 block text-sm font-medium text-stone-700">{"\u914d\u9001\u7bb1\u6578"}</label>
             <Input
               type="number"
               min={1}
@@ -137,21 +142,126 @@ function ManualAddStopDialog({
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-stone-700">收款方式</label>
+            <label className="mb-1 block text-sm font-medium text-stone-700">{"\u4ed8\u6b3e\u72c0\u614b"}</label>
             <Select value={paymentStatus} onValueChange={setPaymentStatus}>
               <SelectTrigger className="rounded-2xl">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="unpaid">現場收款</SelectItem>
-                <SelectItem value="weekly">週結</SelectItem>
-                <SelectItem value="monthly">月結</SelectItem>
+                <SelectItem value="unpaid">{"\u672a\u6536\u6b3e"}</SelectItem>
+                <SelectItem value="weekly">{"\u9031\u7d50"}</SelectItem>
+                <SelectItem value="monthly">{"\u6708\u7d50"}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
+          <div>
+            <label className="mb-1 block text-sm font-medium text-stone-700">{"\u5099\u8a3b"}</label>
+            <Input
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+              placeholder={"\u4f8b\u5982\uff1a\u81e8\u6642\u52a0\u8ca8\u3001\u88dc\u55ae\u8aaa\u660e"}
+              className="rounded-2xl"
+            />
+          </div>
+
+          <div className="space-y-3 rounded-2xl border border-stone-200 bg-stone-50 p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-stone-800">{"\u88dc\u55ae\u54c1\u9805"}</p>
+                <p className="text-xs text-stone-500">{"\u6709\u586b\u54c1\u9805\u6642\u6703\u540c\u6b65\u5efa\u7acb\u88dc\u55ae\u8a02\u55ae\uff1b\u7559\u7a7a\u5247\u53ea\u65b0\u589e\u505c\u9760\u9ede\u3002"}</p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setOrderItems((current) => [...current, { productId: "", qty: 1, unitPrice: 0 }])}
+              >
+                <Plus className="mr-1 h-4 w-4" />
+                {"\u65b0\u589e\u54c1\u9805"}
+              </Button>
+            </div>
+
+            {orderItems.map((item, index) => (
+              <div key={index} className="grid gap-2 rounded-2xl bg-white p-3 md:grid-cols-[1.4fr_0.7fr_0.9fr_auto]">
+                <Select
+                  value={item.productId}
+                  onValueChange={(value) =>
+                    setOrderItems((current) =>
+                      current.map((row, rowIndex) =>
+                        rowIndex === index ? { ...row, productId: value } : row
+                      )
+                    )
+                  }
+                >
+                  <SelectTrigger className="rounded-2xl">
+                    <SelectValue placeholder={"\u5546\u54c1"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {products.map((product: any) => (
+                      <SelectItem key={product.id} value={String(product.id)}>
+                        {product.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Input
+                  type="number"
+                  min={1}
+                  value={item.qty}
+                  onChange={(event) =>
+                    setOrderItems((current) =>
+                      current.map((row, rowIndex) =>
+                        rowIndex === index ? { ...row, qty: Math.max(1, Number(event.target.value || 1)) } : row
+                      )
+                    )
+                  }
+                  className="rounded-2xl"
+                  placeholder={"\u6578\u91cf"}
+                />
+
+                <Input
+                  type="number"
+                  min={0}
+                  step="1"
+                  value={item.unitPrice}
+                  onChange={(event) =>
+                    setOrderItems((current) =>
+                      current.map((row, rowIndex) =>
+                        rowIndex === index ? { ...row, unitPrice: Math.max(0, Number(event.target.value || 0)) } : row
+                      )
+                    )
+                  }
+                  className="rounded-2xl"
+                  placeholder={"\u55ae\u50f9"}
+                />
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() =>
+                    setOrderItems((current) =>
+                      current.length === 1
+                        ? [{ productId: "", qty: 1, unitPrice: 0 }]
+                        : current.filter((_, rowIndex) => rowIndex !== index)
+                    )
+                  }
+                >
+                  {"\u522a\u9664"}
+                </Button>
+              </div>
+            ))}
+
+            {hasSupplementItems ? (
+              <div className="text-xs text-amber-700">
+                {"\u9019\u7b46\u8cc7\u6599\u6703\u540c\u6642\u5efa\u7acb dispatch_supplement \u88dc\u55ae\uff0c\u4f9b\u5f8c\u7e8c\u5c0d\u5e33\u8207\u914d\u9001\u8ffd\u8e64\u4f7f\u7528\u3002"}
+              </div>
+            ) : null}
+          </div>
+
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={onClose}>取消</Button>
+            <Button variant="outline" onClick={onClose}>{"\u53d6\u6d88"}</Button>
             <Button
               onClick={() =>
                 manualAddStop.mutate({
@@ -160,13 +270,20 @@ function ManualAddStopDialog({
                   customerId: Number(customerId),
                   deliverBoxes,
                   paymentStatus,
-                  items: [],
+                  note: note.trim() || undefined,
+                  items: orderItems
+                    .filter((item) => item.productId)
+                    .map((item) => ({
+                      productId: Number(item.productId),
+                      qty: Number(item.qty),
+                      unitPrice: Number(item.unitPrice),
+                    })),
                 })
               }
               disabled={!customerId || manualAddStop.isPending}
               className="bg-amber-600 text-white hover:bg-amber-700"
             >
-              {manualAddStop.isPending ? "新增中..." : "確認加入"}
+              {manualAddStop.isPending ? "\u65b0\u589e\u4e2d..." : "\u78ba\u8a8d\u65b0\u589e"}
             </Button>
           </div>
         </div>

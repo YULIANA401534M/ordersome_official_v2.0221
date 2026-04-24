@@ -985,3 +985,95 @@ pm run build 已通過
   - AP 已從只有 summary 進展到可直接付款核銷
   - AR / AP 的部分付款邏輯已較符合真實作業
   - 尚未完成的下一步仍是: 臨時加貨補單、差異對帳、庫存三段式、逐頁 smoke test
+## Dayone 2026-04-24 對話轉移提示（最新）
+
+### 目前最新狀態
+- 最新已 push commit: 1242b34 eat: strengthen dayone payment workflows
+- 本輪已通過 
+pm run build
+- 已新增文件:
+  - docs/system-boundary-matrix-v1.md
+- 已完成的 Dayone 補強:
+  - client/src/pages/dayone/DayonePurchaseReceipts.tsx
+    - 新增 AP 付款工作台
+    - 可直接查看供應商應付 / 已付 / 未付 / 到期日
+    - 可直接開付款核銷 dialog
+  - server/routers/dayone/ap.ts
+    - markPaid 改為累加式付款，不再覆蓋前次已付金額
+  - server/routers/dayone/ar.ts
+    - markPaid 改為累加式收款，不再覆蓋前次已收金額
+
+### Dayone 目前已完成到哪
+- 上游進貨主線較完整:
+  - 建單 -> 供應商簽名 -> 入庫 -> 建 AP -> AP 可付款核銷
+- 下游應收主線較完整:
+  - 送達後形成 / 更新 AR -> 可分次收款
+- 司機主線已比之前穩:
+  - 撿貨 -> 配送 -> 簽收 / 收款 -> 剩貨回庫 -> 日結
+
+### Dayone 還沒完成的重點
+- 逐頁 smoke test 還沒完整做完
+- 臨時加貨補單與差異對帳還沒做
+- 庫存三段式狀態 可用 / 已派車 / 回庫待驗 還沒做
+- 供應商付款單完整閉環仍可再細化，但目前已先有 AP 付款工作台
+
+### 下一個對話框必須先做的順序
+1. 先讀 CLAUDE.md 最後兩段 Dayone 交接，不要憑印象亂做
+2. 先做 Dayone 關鍵路由 smoke test 規劃與檢查，優先:
+   - /dayone
+   - /dayone/orders
+   - /dayone/customers
+   - /dayone/dispatch
+   - /dayone/purchase-receipts
+   - /dayone/ar
+   - /driver/*
+3. 再做「臨時加貨補單與差異對帳」
+4. 再規劃「庫存三段式狀態」
+5. 每新增一個節點，都要寫回 CLAUDE.md
+
+### 對下一個對話框的硬性提醒
+- 不要動 OrderSome / 宇聯前台，現在主線是先把 Dayone 做完
+- 不要碰高風險 chunk / lazy route 拆包
+- 不要自作主張大改視覺，現在優先是邏輯閉環與驗證
+- 不能說系統 100% 沒問題，必須老實區分「已驗證」和「尚未驗證」
+- 每做一輪都要 uild 驗證
+- 有 commit / push 才能算真正交付
+
+### 使用者習慣與合作規則
+- 使用者非常在意有沒有嚴格遵守 CLAUDE.md
+- 使用者不喜歡 AI 感很重的文案、設計、說法
+- 使用者要的是直接做，不要空談太久
+- 但如果是高風險決策，仍要先停一下確認，不可亂猜
+- 使用者很在意:
+  - 有沒有 commit
+  - 有沒有 push
+  - 有沒有更新 CLAUDE.md
+- 如果你說「改好了」，但沒有 push，使用者會直接認定沒有完成
+- 回報要誠實，不能把「build 有過」講成「全站都驗證完」
+
+### 可直接貼給下一個對話框的起手提示
+請先讀 CLAUDE.md 最後一段「Dayone 2026-04-24 對話轉移提示（最新）」並嚴格遵守，現在不要動 OrderSome / 宇聯前台，先把 Dayone 做完。請先從 Dayone 關鍵路由 smoke test 規劃與檢查開始，接著做臨時加貨補單與差異對帳流程。所有新增節點都要寫回 CLAUDE.md，每輪都要跑 
+pm run build 驗證，完成後一定要 commit、push，不能只改本機。請誠實區分「已驗證」與「尚未驗證」，不要亂說 100% 沒問題，也不要做高風險 chunk 拆包。
+
+## Dayone 2026-04-24 progress note (this round)
+- Scope kept on Dayone only. OrderSome / ???? not touched.
+- Smoke-test planning/check notes written in docs/dayone-smoke-test-and-stock-plan-2026-04-24.md.
+- Static route review covered: /dayone, /dayone/orders, /dayone/customers, /dayone/dispatch, /dayone/purchase-receipts, /dayone/ar, /driver/*.
+- Added dispatch supplement support in server/routers/dayone/dispatch.ts:
+  - manualAddStop can now optionally create a dispatch_supplement order with dy_order_items.
+  - Dispatch item now links to created orderId when supplement items exist.
+- Added purchase receipt anomaly reconciliation flow:
+  - server/routers/dayone/purchaseReceipt.ts -> reconcileAnomaly
+  - client/src/pages/dayone/DayonePurchaseReceipts.tsx -> reconcile dialog + action entry
+- Added dispatch-side temporary supplement inputs in client/src/pages/dayone/DayoneDispatch.tsx without changing route/chunk structure.
+- Fixed dashboard anomaly KPI in client/src/pages/dayone/DayoneDashboard.tsx to use status === 'anomaly'.
+- Inventory 3-stage status is only planned this round, not fully implemented yet.
+
+### Verified this round
+- npm run build passed after the above changes.
+- Static code/path review was completed for the listed Dayone routes.
+
+### Not fully verified yet
+- No full manual click-through smoke test across every listed route yet.
+- No end-to-end real data verification for supplement order -> dispatch -> reconciliation chain yet.
+- Inventory 3-stage state is still a plan, not a completed logic rollout yet.

@@ -61,7 +61,7 @@ export default function DayoneDashboard() {
     .filter((r: any) => (r.createdAt ?? "").startsWith(today))
     .reduce((s: number, r: any) => s + Number(r.amount), 0);
   const overdueSum = (arOverdue as any[]).reduce((s: number, r: any) => s + Number(r.amount) - Number(r.paidAmount ?? 0), 0);
-  const anomalyDrivers = (cashReports as any[]).filter((r: any) => r.hasAnomaly).length;
+  const anomalyDrivers = (cashReports as any[]).filter((r: any) => r.status === "anomaly").length;
   const pendingReceiptCount = (pendingReceipts as any[]).length;
 
   return (
