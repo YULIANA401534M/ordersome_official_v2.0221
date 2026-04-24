@@ -1,7 +1,7 @@
 ﻿# CLAUDE.md ??摰??擗ㄡ OrderSome ?銝餅?
 
 
-### 前端官網改版進度快照（2026-04-24 v5.96）
+### 前端官網改版進度快照（2026-04-24 v5.97）
 
 **設計規範（品牌系列）**
 - 色彩全用 OKLCH：暖黃 oklch(0.75 0.18 70)，奶白背景 oklch(0.97 0.02 85)，深色文字 oklch(0.18 0.02 60)
@@ -40,7 +40,7 @@ Hero 圖片規則：
 | 頁面 | 狀態 | 備註 |
 |------|------|------|
 | CorporateAbout.tsx | done | 深暖碳黑+金銅，Hero logo-intro-dark 滿版，橫線數字帶，願景使命橫線，五大價值觀 |
-| CorporateBrands.tsx | pending | 旗下品牌展示（來點什麼 + 其他） |
+| CorporateBrands.tsx | done | Hero 視差+右半logo，主品牌全版展示（橫線三特色+數字帶+CTA），食物小圖六格，即將推出三欄，引言帶 BRANDS |
 | CorporateCulture.tsx | pending | 企業文化，團隊精神，職場環境 |
 | CorporateFranchise.tsx | pending | 企業加盟（與品牌版稍有不同） |
 | CorporateNews.tsx | pending | 集團消息（publishTarget = corporate） |
