@@ -154,8 +154,7 @@ export default function BrandMenu() {
           initial={{ opacity: 0, scale: 0.9, x: 40 }}
           animate={{ opacity: 1, scale: 1, x: 0 }}
           transition={{ duration: 1, ease: EASE_OUT_EXPO, delay: 0.2 }}
-          className="absolute top-16 right-0 w-[40vw] max-w-[480px] aspect-[3/4] overflow-hidden"
-          style={{ borderRadius: "0 0 0 36% 0" }}
+          className="absolute top-12 right-8 w-[38vw] max-w-[440px] aspect-[3/4] overflow-hidden rounded-2xl"
         >
           <img
             src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663285169742/CApeTRjJBNflTLdV.jpg"
@@ -163,10 +162,16 @@ export default function BrandMenu() {
             className="w-full h-full object-cover"
             style={{ filter: "saturate(1.1)" }}
           />
+          {/* 四邊漸層融合 */}
           <div
             className="absolute inset-0"
             style={{
-              background: "linear-gradient(to bottom left, transparent 50%, oklch(0.97 0.02 85) 100%)",
+              background: [
+                "linear-gradient(to bottom, oklch(0.97 0.02 85) 0%, transparent 18%)",
+                "linear-gradient(to top, oklch(0.97 0.02 85) 0%, transparent 18%)",
+                "linear-gradient(to right, oklch(0.97 0.02 85) 0%, transparent 20%)",
+                "linear-gradient(to left, oklch(0.97 0.02 85) 0%, transparent 10%)",
+              ].join(", "),
             }}
           />
         </motion.div>
@@ -197,17 +202,16 @@ export default function BrandMenu() {
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.9, ease: EASE_OUT_EXPO, delay: 0.15 }}
+            className="whitespace-nowrap"
             style={{
               fontFamily: "var(--font-brand)",
-              fontSize: "clamp(48px, 8vw, 96px)",
-              lineHeight: 0.92,
-              letterSpacing: "-0.03em",
+              fontSize: "clamp(36px, 6vw, 88px)",
+              lineHeight: 0.95,
+              letterSpacing: "-0.02em",
               color: "oklch(0.18 0.02 60)",
             }}
           >
-            今天想來
-            <br />
-            點什麼？
+            今天，來點什麼？
           </motion.h1>
 
           <motion.p
@@ -247,7 +251,7 @@ export default function BrandMenu() {
           </RevealText>
         </div>
 
-        <StaggerGrid className="px-6 md:px-12 lg:px-20 grid md:grid-cols-2 gap-5 max-w-5xl">
+        <StaggerGrid className="px-6 md:px-12 lg:px-20 grid md:grid-cols-2 gap-5 max-w-5xl mx-auto">
           {[
             {
               src: "/menu/2026菜單-01_0.jpg",

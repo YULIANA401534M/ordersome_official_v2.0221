@@ -268,7 +268,8 @@ export default function Home() {
                       <img
                         src="/logos/corporate-logo.png"
                         alt="宇聯國際"
-                        className="h-10 w-auto mb-8 opacity-80"
+                        className="mb-8 opacity-80"
+                        style={{ height: 40, width: "auto", maxWidth: 180, objectFit: "contain" }}
                         onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                       />
 
