@@ -3,7 +3,7 @@ import { MapPin, Phone, Clock, Navigation } from "lucide-react";
 import BrandLayout from "@/components/layout/BrandLayout";
 import { trpc } from "@/lib/trpc";
 import { MapView } from "@/components/Map";
-import { motion, useInView } from "framer-motion";
+import { motion } from "framer-motion";
 import { useRestaurantSchema } from "@/hooks/useRestaurantSchema";
 
 const EASE_OUT_EXPO = [0.16, 1, 0.3, 1] as const;
@@ -16,8 +16,6 @@ export default function BrandStores() {
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
   const storeCardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
-  const gridRef = useRef<HTMLDivElement>(null);
-  const gridInView = useInView(gridRef, { once: true, margin: "-60px" });
 
   useEffect(() => {
     document.title = "來點什麼 門市據點｜全台 15 間分店為您服務";
@@ -237,24 +235,19 @@ export default function BrandStores() {
 
         {/* 門市格子 */}
         {!isLoading && (
-          <motion.div
-            ref={gridRef}
+          <div
             className="grid gap-4"
             style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}
-            initial="hidden"
-            animate={gridInView ? "show" : "hidden"}
-            variants={{ hidden: {}, show: { transition: { staggerChildren: 0.04 } } }}
           >
-            {stores?.map((store) => {
+            {stores?.map((store, index) => {
               const isSelected = selectedStoreId === store.id;
               return (
                 <motion.div
                   key={store.id}
                   ref={(el) => { if (el) storeCardRefs.current.set(store.id, el); }}
-                  variants={{
-                    hidden: { opacity: 0, y: 20 },
-                    show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: EASE_OUT_EXPO } },
-                  }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.45, ease: EASE_OUT_EXPO, delay: index * 0.04 }}
                   onClick={() => handleStoreClick(store)}
                   className="rounded-2xl p-5 cursor-pointer transition-all duration-250"
                   style={{
@@ -350,7 +343,7 @@ export default function BrandStores() {
                 </motion.div>
               );
             })}
-          </motion.div>
+          </div>
         )}
       </section>
     </BrandLayout>
