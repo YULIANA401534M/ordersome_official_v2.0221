@@ -18,10 +18,18 @@
   font-style: normal;
   font-display: swap;
 }
+@font-face {
+  font-family: 'Taipei Sans TC';
+  src: url('/fonts/taipei-sans-tc-beta.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
 
 /* ── 設計系統 CSS 變數 ─────────────────────────────────────────────────── */
 :root {
   --font-brand: 'JF-Kamabit', 'PingFang TC', sans-serif;
+  --font-corporate: 'Taipei Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif;
   --font-ui: 'Plus Jakarta Sans', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 

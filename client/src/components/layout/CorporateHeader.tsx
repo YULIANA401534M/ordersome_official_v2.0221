@@ -56,7 +56,7 @@ export default function CorporateHeader() {
             </div>
           </Link>
 
-          <nav className="hidden xl:flex items-center gap-6">
+          <nav className="hidden lg:flex items-center gap-6">
             {navItems.map((item) => (
               <Link
                 key={item.href}
@@ -112,7 +112,7 @@ export default function CorporateHeader() {
             <Button
               variant="ghost"
               size="icon"
-              className="xl:hidden"
+              className="lg:hidden"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
               {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -121,7 +121,7 @@ export default function CorporateHeader() {
         </div>
 
         {isMenuOpen && (
-          <nav className="xl:hidden py-4 border-t">
+          <nav className="lg:hidden py-4 border-t">
             <div className="flex flex-col gap-2">
               {navItems.map((item) => (
                 <Link

@@ -13,7 +13,7 @@ export default function CorporateFooter() {
                 className="h-12 w-auto"
               />
               <div>
-                <p className="font-bold">宇聯國際文化餐饮有限公司</p>
+                <p className="font-bold">宇聯國際文化餐飲有限公司</p>
                 <p className="text-sm text-gray-400">YULIAN</p>
                 <p className="text-sm text-gray-400">YULIAN International Cultural Catering Co., Ltd.</p>
               </div>
