@@ -10,7 +10,8 @@ const EASE_OUT_EXPO = [0.16, 1, 0.3, 1] as const;
 const MARKER_COLOR = "#D97706";
 
 export default function BrandStores() {
-  const { data: stores, isLoading } = trpc.store.list.useQuery();
+  const { data: storesRaw, isLoading } = trpc.store.list.useQuery();
+  const stores = storesRaw?.filter(s => !s.name.includes("宇聯") && !s.name.includes("總部"));
   useRestaurantSchema(stores);
   const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
