@@ -40,7 +40,7 @@
 - 若要擴充規格，優先往多司機、多派車單、跨日月結對帳與更多異常情境測
 
 
-### 前端官網改版進度快照（2026-04-25 v6.02）
+### 前端官網改版進度快照（2026-04-25 v6.03）
 
 **設計規範（品牌系列）**
 - 色彩全用 OKLCH：暖黃 oklch(0.75 0.18 70)，奶白背景 oklch(0.97 0.02 85)，深色文字 oklch(0.18 0.02 60)
@@ -83,7 +83,7 @@ Hero 圖片規則：
 | CorporateCulture.tsx | done | Hero 視差+右半logo，核心宣言帶，八大行動準則橫線，職場三承諾雙欄，引言帶 CULTURE，CTA底帶 |
 | CorporateFranchise.tsx | done | Hero 視差+右半logo，四大企業優勢橫線，費用結構雙欄，六步驟格子，引言帶FRANCHISE，深色表單，聯絡資訊橫線 |
 | CorporateNews.tsx | done | 深色Hero+NEWS水印，分類Tab，精選首篇橫版，三欄格子（直接animate），空狀態大字，分頁，CTA底帶 |
-| CorporateContact.tsx | pending | 企業聯絡，B2B 合作詢問 |
+| CorporateContact.tsx | done | 視差Hero+右半logo，四大聯絡資訊橫線，CONTACT水印引言帶，B2B詢問類型pills，深色表單，CTA底帶 |
 
 使用設計 skill：/impeccable craft CorporateBrands 等指令觸發。
 
