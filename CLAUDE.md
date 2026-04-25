@@ -40,7 +40,7 @@
 - 若要擴充規格，優先往多司機、多派車單、跨日月結對帳與更多異常情境測
 
 
-### 後台改版任務（v6.04 起，目前進行中）
+### 後台改版任務（v6.05 起，目前進行中）
 
 **背景**
 使用者確認：宇聯後台 + 大永後台 + 商城，三個系統都需要前端改版。
@@ -62,7 +62,7 @@
 **宇聯後台頁面改版順序（tRPC 查詢邏輯和 Link href 路由一律不動）**
 | 優先 | 頁面 | 路由 | 狀態 |
 |------|------|------|------|
-| 1 | AdminDashboardLayout.tsx | （全域 Shell） | pending |
+| 1 | AdminDashboardLayout.tsx | （全域 Shell） | done（v6.05 Warm Paper 暖色側邊欄+OKLCH token） |
 | 2 | OSProducts.tsx | /dashboard/products | pending |
 | 3 | OSProcurement.tsx | /dashboard/procurement | pending |
 | 4 | OSInventory.tsx | /dashboard/inventory | pending |

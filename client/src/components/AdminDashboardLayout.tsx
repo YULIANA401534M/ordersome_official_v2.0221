@@ -62,7 +62,7 @@ import { CSS } from "@dnd-kit/utilities";
 function SubGroupLabel({ label }: { label: string }) {
   return (
     <div className="px-4 pt-2 pb-0.5">
-      <p className="text-[10px] font-semibold text-[#57534e] uppercase tracking-wider">{label}</p>
+      <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--os-sidebar-muted)' }}>{label}</p>
     </div>
   );
 }
@@ -131,18 +131,28 @@ function SortableErpItem({
     item.path === "/dashboard/purchasing" && needsReviewCount > 0 ? needsReviewCount :
     item.path === "/dashboard/accounting" && accountingBadge > 0 ? accountingBadge :
     0;
-  const badgeColor = item.path === "/dashboard/accounting" ? "bg-red-500" : item.path === "/dashboard/purchasing" ? "bg-orange-500" : "bg-red-500";
+  const badgeBg = item.path === "/dashboard/purchasing"
+    ? 'var(--os-warning)'
+    : 'var(--os-danger)';
 
   return (
     <div ref={setNodeRef} style={style} className="flex items-center mx-2 rounded-lg cursor-default select-none">
-      <span {...attributes} {...listeners} className="px-1 py-2 text-[#44403c] hover:text-[#78716c] cursor-grab active:cursor-grabbing">
+      <span
+        {...attributes}
+        {...listeners}
+        className="os-drag-handle px-1 py-2 cursor-grab active:cursor-grabbing transition-colors"
+        style={{ color: 'var(--os-sidebar-muted)' }}
+      >
         <GripVertical className="h-4 w-4" />
       </span>
-      <div className={`flex items-center gap-3 flex-1 px-2 py-2 text-sm text-[#a8a29e]`}>
+      <div className="flex items-center gap-3 flex-1 px-2 py-2 text-sm" style={{ color: 'var(--os-sidebar-muted)' }}>
         <item.icon className="h-4 w-4 shrink-0" />
         <span className="flex-1">{item.label}</span>
         {badge > 0 && (
-          <span className={`min-w-[20px] h-5 px-1.5 ${badgeColor} text-white text-[10px] font-bold rounded-full flex items-center justify-center`}>
+          <span
+            className="min-w-[20px] h-5 px-1.5 text-white text-[10px] font-bold rounded-full flex items-center justify-center"
+            style={{ background: badgeBg }}
+          >
             {badge}
           </span>
         )}
@@ -349,13 +359,13 @@ export default function AdminDashboardLayout({
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen" style={{ background: 'var(--os-bg)' }}>
         <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">
           <div className="flex flex-col items-center gap-6">
-            <h1 className="text-2xl font-semibold tracking-tight text-center">
+            <h1 className="text-2xl font-semibold tracking-tight text-center" style={{ color: 'var(--os-text-1)' }}>
               請登入以繼續
             </h1>
-            <p className="text-sm text-gray-500 text-center max-w-sm">
+            <p className="text-sm text-center max-w-sm" style={{ color: 'var(--os-text-2)' }}>
               訪問此後台需要身份驗證。請點擊下方按鈕登入。
             </p>
           </div>
@@ -364,7 +374,8 @@ export default function AdminDashboardLayout({
               window.location.href = getLoginUrl();
             }}
             size="lg"
-            className="w-full shadow-lg hover:shadow-xl transition-all"
+            className="w-full text-white transition-colors"
+            style={{ background: 'var(--os-amber)' }}
           >
             登入
           </Button>
@@ -381,13 +392,13 @@ export default function AdminDashboardLayout({
 
   if (!hasAdminAccess) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen" style={{ background: 'var(--os-bg)' }}>
         <div className="flex flex-col items-center gap-6 p-8 max-w-md w-full">
-          <Shield className="w-16 h-16 text-red-500" />
-          <h1 className="text-2xl font-semibold tracking-tight text-center">
+          <Shield className="w-16 h-16" style={{ color: 'var(--os-danger)' }} />
+          <h1 className="text-2xl font-semibold tracking-tight text-center" style={{ color: 'var(--os-text-1)' }}>
             權限不足
           </h1>
-          <p className="text-sm text-gray-500 text-center">
+          <p className="text-sm text-center" style={{ color: 'var(--os-text-2)' }}>
             您沒有權限訪問此頁面。請聯絡管理員。
           </p>
           <Button onClick={() => (window.location.href = "/")} variant="outline">
@@ -490,14 +501,19 @@ export default function AdminDashboardLayout({
   };
 
   const menuItemClass = (path: string) =>
-    `flex items-center gap-3 px-4 py-2 text-sm transition-colors cursor-pointer rounded-lg mx-2 ${
-      isActive(path)
-        ? "bg-[#44403c] text-[#fafaf9] font-medium sidebar-item-active"
-        : "text-[#a8a29e] hover:bg-[#292524] hover:text-[#fafaf9]"
-    }`;
+    isActive(path)
+      ? "os-nav-item flex items-center gap-3 px-4 py-2 text-sm transition-colors cursor-pointer rounded-lg mx-2 font-medium sidebar-item-active"
+      : "os-nav-item flex items-center gap-3 px-4 py-2 text-sm transition-colors cursor-pointer rounded-lg mx-2";
+
+  const menuItemStyle = (path: string): React.CSSProperties =>
+    isActive(path)
+      ? { background: 'var(--os-sidebar-active)', color: 'var(--os-sidebar-text)' }
+      : { color: 'var(--os-sidebar-muted)' };
 
   const groupLabelClass =
-    "text-xs font-semibold text-amber-400/70 uppercase tracking-widest px-4 py-2 flex items-center justify-between cursor-pointer select-none hover:text-amber-400 transition-colors";
+    "os-group-label text-xs font-semibold uppercase tracking-widest px-4 py-2 flex items-center justify-between cursor-pointer select-none transition-colors";
+
+  const groupLabelStyle: React.CSSProperties = { color: 'var(--os-amber-text)' };
 
   const renderGroup = (
     label: string,
@@ -507,7 +523,7 @@ export default function AdminDashboardLayout({
     const isCollapsed = !!collapsedGroups[label];
     return (
       <div>
-        <div className={groupLabelClass} onClick={() => toggleGroup(label)}>
+        <div className={groupLabelClass} style={groupLabelStyle} onClick={() => toggleGroup(label)}>
           <span>{label}</span>
           {isCollapsed
             ? <ChevronRight className="h-3 w-3 shrink-0" />
@@ -518,6 +534,7 @@ export default function AdminDashboardLayout({
           <Link key={item.path} href={item.path}>
             <a
               className={menuItemClass(item.path)}
+              style={menuItemStyle(item.path)}
               onClick={() => setMobileOpen(false)}
             >
               <item.icon className="h-4 w-4 shrink-0" />
@@ -535,12 +552,16 @@ export default function AdminDashboardLayout({
     return items.map((item) => (
       <div
         key={item.label}
-        className="flex items-center gap-3 px-4 py-2 text-sm text-[#44403c] cursor-not-allowed rounded-lg mx-2 opacity-50"
+        className="flex items-center gap-3 px-4 py-2 text-sm cursor-not-allowed rounded-lg mx-2 opacity-40"
+        style={{ color: 'var(--os-sidebar-muted)' }}
         title="即將推出"
       >
         <item.icon className="h-4 w-4 shrink-0" />
         <span>{item.label}</span>
-        <span className="ml-auto text-[10px] bg-[#292524] text-[#78716c] rounded px-1.5 py-0.5">即將推出</span>
+        <span
+          className="ml-auto text-[10px] rounded px-1.5 py-0.5"
+          style={{ background: 'var(--os-surface-2)', color: 'var(--os-text-3)' }}
+        >即將推出</span>
       </div>
     ));
   };
@@ -563,14 +584,19 @@ export default function AdminDashboardLayout({
         item.path === "/dashboard/purchasing" && needsReviewCount > 0 ? needsReviewCount :
         item.path === "/dashboard/accounting" && accountingBadge > 0 ? accountingBadge :
         0;
-      const badgeColor = item.path === "/dashboard/purchasing" ? "bg-orange-500" : "bg-red-500";
+      const badgeBg = item.path === "/dashboard/purchasing"
+        ? 'var(--os-warning)'
+        : 'var(--os-danger)';
       nodes.push(
         <Link key={item.path} href={item.path}>
-          <a className={menuItemClass(item.path)} onClick={() => setMobileOpen(false)}>
+          <a className={menuItemClass(item.path)} style={menuItemStyle(item.path)} onClick={() => setMobileOpen(false)}>
             <item.icon className="h-4 w-4 shrink-0" />
             <span className="flex-1">{item.label}</span>
             {badge > 0 && (
-              <span className={`ml-auto min-w-[20px] h-5 px-1.5 ${badgeColor} text-white text-[10px] font-bold rounded-full flex items-center justify-center`}>
+              <span
+                className="ml-auto min-w-[20px] h-5 px-1.5 text-white text-[10px] font-bold rounded-full flex items-center justify-center"
+                style={{ background: badgeBg }}
+              >
                 {badge}
               </span>
             )}
@@ -584,13 +610,13 @@ export default function AdminDashboardLayout({
   const sidebarContent = (
     <>
       {/* Logo */}
-      <div className="h-16 flex items-center px-4 border-b border-[#292524] shrink-0">
-        <div className="w-8 h-8 rounded-lg bg-[#b45309] flex items-center justify-center shrink-0">
+      <div className="h-16 flex items-center px-4 shrink-0" style={{ borderBottom: '1px solid var(--os-sidebar-border)' }}>
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'var(--os-amber)' }}>
           <UtensilsCrossed className="h-4 w-4 text-white" />
         </div>
         <div className="ml-3 min-w-0">
-          <p className="text-sm leading-tight truncate text-[#fafaf9]" style={{ fontFamily: 'var(--font-brand)' }}>來點什麼</p>
-          <p className="text-[10px] text-[#78716c] leading-tight truncate">
+          <p className="text-sm font-semibold leading-tight truncate" style={{ fontFamily: 'var(--font-brand)', color: 'var(--os-sidebar-text)' }}>來點什麼</p>
+          <p className="text-[10px] leading-tight truncate" style={{ color: 'var(--os-sidebar-muted)' }}>
             管理後台
           </p>
         </div>
@@ -602,7 +628,7 @@ export default function AdminDashboardLayout({
         {/* ── 群組一：宇聯集團 ── */}
         {(ecommerceItems.length > 0 || contentItems.length > 0 || userItems.length > 0 || franchiseItems.length > 0 || systemItems.length > 0) && (
           <div className="px-4 pt-3 pb-1">
-            <p className="text-[10px] font-bold text-[#78716c] uppercase tracking-widest">宇聯集團</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--os-sidebar-muted)' }}>宇聯集團</p>
           </div>
         )}
         {renderGroup("商城管理", ecommerceItems)}
@@ -615,15 +641,16 @@ export default function AdminDashboardLayout({
         {showOsSection && (
           <>
             <div className="px-4 pt-3 pb-1">
-              <p className="text-[10px] font-bold text-[#78716c] uppercase tracking-widest">來點什麼</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--os-sidebar-muted)' }}>來點什麼</p>
             </div>
             <div>
-              <div className={groupLabelClass} onClick={() => !isDragMode && toggleGroup("來點什麼")}>
+              <div className={groupLabelClass} style={groupLabelStyle} onClick={() => !isDragMode && toggleGroup("來點什麼")}>
                 <span>來點什麼</span>
                 <div className="flex items-center gap-1">
                   {isSuperAdmin && !isDragMode && (
                     <button
-                      className="text-[10px] px-1.5 py-0.5 rounded bg-[#292524] text-amber-400/70 hover:text-amber-400 hover:bg-[#3c3836] transition-colors"
+                      className="text-[10px] px-1.5 py-0.5 rounded transition-colors"
+                      style={{ background: 'var(--os-surface-2)', color: 'var(--os-amber-text)' }}
                       onClick={e => {
                         e.stopPropagation();
                         setIsDragMode(true);
@@ -683,7 +710,8 @@ export default function AdminDashboardLayout({
                     <div className="mx-2 mt-1 mb-1 flex gap-1">
                       <Button
                         size="sm"
-                        className="h-7 text-xs flex-1 bg-amber-600 hover:bg-amber-700 text-white"
+                        className="h-7 text-xs flex-1 text-white"
+                        style={{ background: 'var(--os-amber)' }}
                         onClick={async () => {
                           await saveSidebarOrder.mutateAsync({
                             items: erpOrder.map((key, idx) => ({ menuKey: key, sortOrder: idx })),
@@ -698,7 +726,8 @@ export default function AdminDashboardLayout({
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-7 text-xs text-[#a8a29e]"
+                        className="h-7 text-xs"
+                        style={{ color: 'var(--os-sidebar-muted)' }}
                         onClick={() => { setIsDragMode(false); setHasUnsaved(false); }}
                       >
                         取消
@@ -715,12 +744,12 @@ export default function AdminDashboardLayout({
         {/* ── 群組三：大永蛋品 ERP ── */}
         {showDyErpSection && (
           <div className="px-4 pt-3 pb-1">
-            <p className="text-[10px] font-bold text-[#78716c] uppercase tracking-widest">大永蛋品</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--os-sidebar-muted)' }}>大永蛋品</p>
           </div>
         )}
         {showDyErpSection && (
           <div>
-            <div className={groupLabelClass} onClick={() => toggleGroup("大永蛋品 ERP")}>
+            <div className={groupLabelClass} style={groupLabelStyle} onClick={() => toggleGroup("大永蛋品 ERP")}>
               <span>大永蛋品 ERP</span>
               {!!collapsedGroups["大永蛋品 ERP"]
                 ? <ChevronRight className="h-3 w-3 shrink-0" />
@@ -739,12 +768,16 @@ export default function AdminDashboardLayout({
                     <Link key={item.path} href={item.path}>
                       <a
                         className={menuItemClass(item.path)}
+                        style={menuItemStyle(item.path)}
                         onClick={() => setMobileOpen(false)}
                       >
                         <item.icon className="h-4 w-4 shrink-0" />
                         <span className="flex-1">{item.label}</span>
                         {badge > 0 && (
-                          <span className="ml-auto min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                          <span
+                            className="ml-auto min-w-[20px] h-5 px-1.5 text-white text-[10px] font-bold rounded-full flex items-center justify-center"
+                            style={{ background: 'var(--os-danger)' }}
+                          >
                             {badge}
                           </span>
                         )}
@@ -762,24 +795,25 @@ export default function AdminDashboardLayout({
       </nav>
 
       {/* User footer */}
-      <div className="border-t border-[#292524] p-3 shrink-0">
+      <div className="p-3 shrink-0" style={{ borderTop: '1px solid var(--os-sidebar-border)' }}>
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-[#292524] flex items-center justify-center shrink-0">
-            <span className="text-xs font-medium text-[#d97706]">
+          <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--os-amber-soft)' }}>
+            <span className="text-xs font-semibold" style={{ color: 'var(--os-amber-text)' }}>
               {user.name?.charAt(0).toUpperCase() ?? "?"}
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate leading-none text-[#fafaf9]">
+            <p className="text-sm font-medium truncate leading-none" style={{ color: 'var(--os-sidebar-text)' }}>
               {user.name || "-"}
             </p>
-            <p className="text-xs text-[#78716c] truncate mt-0.5">
+            <p className="text-xs truncate mt-0.5" style={{ color: 'var(--os-sidebar-muted)' }}>
               {user.email || "-"}
             </p>
           </div>
           <button
             onClick={logout}
-            className="p-1.5 rounded-lg hover:bg-[#292524] hover:text-red-400 text-[#78716c] transition-colors"
+            className="p-1.5 rounded-lg transition-colors"
+            style={{ color: 'var(--os-sidebar-muted)' }}
             title="登出"
           >
             <LogOut className="h-4 w-4" />
@@ -790,11 +824,11 @@ export default function AdminDashboardLayout({
   );
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: 'var(--color-bg)' }}>
+    <div className="flex h-screen overflow-hidden" style={{ background: 'var(--os-bg)' }}>
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 bg-black/60 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/40 z-40 lg:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}
@@ -808,7 +842,7 @@ export default function AdminDashboardLayout({
           transition-transform duration-300 ease-in-out
           ${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
         `}
-        style={{ background: 'var(--color-sidebar-bg)' }}
+        style={{ background: 'var(--os-sidebar-bg)', borderRight: '1px solid var(--os-sidebar-border)' }}
       >
         {sidebarContent}
       </aside>
@@ -816,15 +850,16 @@ export default function AdminDashboardLayout({
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Mobile header */}
-        <header className="lg:hidden h-14 flex items-center justify-between px-4 bg-white border-b border-[#e7e5e4] shrink-0">
+        <header className="lg:hidden h-14 flex items-center justify-between px-4 shrink-0" style={{ background: 'var(--os-surface)', borderBottom: '1px solid var(--os-border)' }}>
           <button
             onClick={() => setMobileOpen(true)}
-            className="p-2 rounded-lg hover:bg-stone-100 transition-colors"
+            className="p-2 rounded-lg transition-colors"
+            style={{ color: 'var(--os-text-2)' }}
             aria-label="開啟選單"
           >
-            <Menu className="h-5 w-5 text-stone-600" />
+            <Menu className="h-5 w-5" />
           </button>
-          <span className="text-sm font-medium text-stone-700" style={{ fontFamily: 'var(--font-brand)' }}>
+          <span className="text-sm font-medium" style={{ fontFamily: 'var(--font-brand)', color: 'var(--os-text-1)' }}>
             {activeMenuItem?.label ?? "管理後台"}
           </span>
           <div className="w-9" />

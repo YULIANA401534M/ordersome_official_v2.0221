@@ -51,10 +51,47 @@
   --color-amber-bg: #fef3c7;
   --color-amber-border: #fcd34d;
 
-  /* 側邊欄 */
+  /* 側邊欄（legacy hex，保留供舊元件使用） */
   --color-sidebar-bg: #1c1917;
   --color-sidebar-hover: #292524;
   --color-sidebar-active: #44403c;
+
+  /* ── Warm Paper 後台設計系統 (--os-*) ─────────────────────────────────── */
+  /* 背景與表面 */
+  --os-bg:          oklch(0.97 0.008 80);
+  --os-surface:     oklch(1.00 0.004 80);
+  --os-surface-2:   oklch(0.95 0.010 78);
+  --os-border:      oklch(0.90 0.008 75);
+  --os-border-2:    oklch(0.93 0.006 78);
+
+  /* 側邊欄 */
+  --os-sidebar-bg:      oklch(0.94 0.014 78);
+  --os-sidebar-hover:   oklch(0.90 0.018 76);
+  --os-sidebar-active:  oklch(0.87 0.022 74);
+  --os-sidebar-text:    oklch(0.35 0.012 65);
+  --os-sidebar-muted:   oklch(0.60 0.010 68);
+  --os-sidebar-border:  oklch(0.88 0.012 76);
+
+  /* 文字 */
+  --os-text-1: oklch(0.18 0.010 60);
+  --os-text-2: oklch(0.40 0.010 65);
+  --os-text-3: oklch(0.62 0.008 68);
+
+  /* Amber 強調色 */
+  --os-amber:       oklch(0.65 0.16 72);
+  --os-amber-hover: oklch(0.60 0.17 70);
+  --os-amber-soft:  oklch(0.93 0.06 80);
+  --os-amber-text:  oklch(0.52 0.14 68);
+
+  /* 語意色 */
+  --os-success:     oklch(0.50 0.14 145);
+  --os-success-bg:  oklch(0.96 0.04 145);
+  --os-warning:     oklch(0.62 0.14 72);
+  --os-warning-bg:  oklch(0.96 0.05 80);
+  --os-danger:      oklch(0.52 0.18 25);
+  --os-danger-bg:   oklch(0.97 0.03 25);
+  --os-info:        oklch(0.50 0.12 250);
+  --os-info-bg:     oklch(0.96 0.03 250);
 
   /* 語意色 */
   --color-success: #15803d;
@@ -315,6 +352,18 @@
   .animate-float {
     animation: float 3s ease-in-out infinite;
   }
+}
+
+/* ── Warm Paper 側邊欄 hover 行為 ──────────────────────────────────────── */
+.os-nav-item:hover {
+  background: var(--os-sidebar-hover);
+  color: var(--os-sidebar-text);
+}
+.os-group-label:hover {
+  color: var(--os-amber-text);
+}
+.os-drag-handle:hover {
+  color: var(--os-sidebar-text);
 }
 
 /* ── 後台設計系統元件樣式 ──────────────────────────────────────────────── */
