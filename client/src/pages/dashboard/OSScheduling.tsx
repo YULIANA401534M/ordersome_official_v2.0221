@@ -2,13 +2,9 @@ import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import AdminDashboardLayout from "@/components/AdminDashboardLayout";
-import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Settings, Download } from "lucide-react";
 import * as XLSX from "xlsx";
@@ -16,17 +12,25 @@ import * as XLSX from "xlsx";
 const HQ_STORE_ID = 401534;
 
 const STATUS_CONFIG = {
-  work:           { label: "●", color: "#1c1917", bg: "transparent" },
-  rest:           { label: "休", color: "#9ca3af", bg: "transparent" },
-  designated:     { label: "指", color: "#b45309", bg: "transparent" },
-  personal_leave: { label: "事", color: "#dc2626", bg: "transparent" },
-  public_leave:   { label: "公", color: "#0369a1", bg: "transparent" },
-  absent:         { label: "曠", color: "#dc2626", bg: "#fef2f2" },
-  overtime:       { label: "加", color: "#15803d", bg: "transparent" },
+  work:           { label: "●", color: "var(--os-text-1)",    bg: "transparent" },
+  rest:           { label: "休", color: "var(--os-text-3)",   bg: "transparent" },
+  designated:     { label: "指", color: "var(--os-amber)",    bg: "transparent" },
+  personal_leave: { label: "事", color: "var(--os-danger)",   bg: "transparent" },
+  public_leave:   { label: "公", color: "var(--os-info)",     bg: "transparent" },
+  absent:         { label: "曠", color: "var(--os-danger)",   bg: "var(--os-danger-bg)" },
+  overtime:       { label: "加", color: "var(--os-success)",  bg: "transparent" },
 } as const;
 
 const WEEKDAYS = ["日","一","二","三","四","五","六"];
 const SCHEDULE_TYPE_LABELS = { early:"早班", late:"晚班", mobile:"機動人員" };
+
+const inputSt: React.CSSProperties = {
+  width: "100%", padding: "7px 10px", border: "1px solid var(--os-border)",
+  borderRadius: 8, fontSize: 13, background: "var(--os-surface)", color: "var(--os-text-1)", outline: "none",
+};
+const labelSt: React.CSSProperties = {
+  fontSize: 11, fontWeight: 600, color: "var(--os-text-2)", display: "block", marginBottom: 4,
+};
 
 export default function OSScheduling() {
   const { user } = useAuth();
@@ -163,29 +167,33 @@ export default function OSScheduling() {
           <SheetHeader>
             <SheetTitle>員工班別設定</SheetTitle>
           </SheetHeader>
-          <div className="mt-4 space-y-2">
+          <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 8 }}>
             {templates.map((t: any) => (
-              <div key={t.id} className="flex items-center justify-between p-3 border rounded-lg bg-white">
+              <div key={t.id}
+                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", border: "1px solid var(--os-border)", borderRadius: 10, background: "var(--os-surface)" }}>
                 <div>
-                  <p className="font-medium text-sm">{t.employeeName}</p>
-                  <p className="text-xs text-stone-400">
+                  <p style={{ fontSize: 13, fontWeight: 600, color: "var(--os-text-1)", margin: 0 }}>{t.employeeName}</p>
+                  <p style={{ fontSize: 11, color: "var(--os-text-3)", margin: "2px 0 0" }}>
                     {SCHEDULE_TYPE_LABELS[t.scheduleType as keyof typeof SCHEDULE_TYPE_LABELS]}
                     {t.defaultStartTime && t.defaultEndTime && ` · ${t.defaultStartTime}-${t.defaultEndTime}`}
                   </p>
                 </div>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => { setEditTemplate(t); setShowTemplateDialog(true); }}>編輯</Button>
-                  <Button size="sm" variant="ghost" className="text-red-500"
-                    onClick={() => { if (confirm(`確定停用 ${t.employeeName}？`)) deleteTemplate.mutate({ id: t.id }); }}>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button onClick={() => { setEditTemplate(t); setShowTemplateDialog(true); }}
+                    style={{ padding: "5px 12px", border: "1px solid var(--os-border)", borderRadius: 8, background: "var(--os-surface)", color: "var(--os-text-2)", fontSize: 12, cursor: "pointer" }}>
+                    編輯
+                  </button>
+                  <button onClick={() => { if (confirm(`確定停用 ${t.employeeName}？`)) deleteTemplate.mutate({ id: t.id }); }}
+                    style={{ padding: "5px 12px", border: "none", borderRadius: 8, background: "none", color: "var(--os-danger)", fontSize: 12, cursor: "pointer" }}>
                     停用
-                  </Button>
+                  </button>
                 </div>
               </div>
             ))}
-            <Button className="w-full mt-4 bg-amber-700 hover:bg-amber-800 text-white"
-              onClick={() => { setEditTemplate(null); setShowTemplateDialog(true); }}>
+            <button onClick={() => { setEditTemplate(null); setShowTemplateDialog(true); }}
+              style={{ width: "100%", marginTop: 8, padding: "10px 0", border: "none", borderRadius: 10, background: "var(--os-amber)", color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
               新增員工
-            </Button>
+            </button>
           </div>
         </SheetContent>
       </Sheet>
@@ -195,12 +203,13 @@ export default function OSScheduling() {
   if (templates.length === 0) {
     return (
       <AdminDashboardLayout>
-        <div className="flex flex-col items-center justify-center h-64 gap-4">
-          <p className="text-stone-500">尚未設定員工班別，請先新增員工</p>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: 256, gap: 16 }}>
+          <p style={{ color: "var(--os-text-3)", fontSize: 14 }}>尚未設定員工班別，請先新增員工</p>
           {canEdit && (
-            <Button onClick={() => setShowTemplateDrawer(true)} className="bg-amber-700 hover:bg-amber-800 text-white">
+            <button onClick={() => setShowTemplateDrawer(true)}
+              style={{ padding: "8px 20px", border: "none", borderRadius: 8, background: "var(--os-amber)", color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
               前往員工設定
-            </Button>
+            </button>
           )}
           {renderTemplateDrawer()}
           <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
@@ -224,50 +233,60 @@ export default function OSScheduling() {
 
   return (
     <AdminDashboardLayout>
-      <div className="p-4 space-y-4" style={{ background: "#f7f6f3", minHeight: "100vh" }}>
+      <div style={{ padding: 16, background: "var(--os-bg)", minHeight: "100vh", display: "flex", flexDirection: "column", gap: 16 }}>
         {/* 頂部控制列 */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
           <Select value={selectedStoreId?.toString() ?? "all"}
             onValueChange={v => setSelectedStoreId(v === "all" ? undefined : Number(v))}>
-            <SelectTrigger className="w-44"><SelectValue placeholder="選擇門市" /></SelectTrigger>
+            <SelectTrigger style={{ width: 176 }}><SelectValue placeholder="選擇門市" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">全部門市</SelectItem>
               {stores.map((s: any) => <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>)}
             </SelectContent>
           </Select>
 
-          <div className="flex border rounded-lg overflow-hidden">
+          <div style={{ display: "flex", border: "1px solid var(--os-border)", borderRadius: 8, overflow: "hidden" }}>
             {(["early","late","mobile"] as const).map(tab => (
               <button key={tab}
-                className={`px-3 py-1.5 text-sm ${scheduleTab === tab ? "bg-amber-700 text-white" : "bg-white text-stone-600 hover:bg-stone-50"}`}
+                style={{ padding: "7px 14px", fontSize: 13, border: "none", cursor: "pointer", background: scheduleTab === tab ? "var(--os-amber)" : "var(--os-surface)", color: scheduleTab === tab ? "#fff" : "var(--os-text-2)", fontWeight: scheduleTab === tab ? 600 : 400, transition: "all 0.15s" }}
                 onClick={() => setScheduleTab(tab)}>
                 {SCHEDULE_TYPE_LABELS[tab]}
               </button>
             ))}
           </div>
 
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" onClick={prevMonth}><ChevronLeft className="w-4 h-4" /></Button>
-            <span className="text-sm font-medium px-2">{year}年{String(month).padStart(2,"0")}月</span>
-            <Button variant="ghost" size="sm" onClick={nextMonth}><ChevronRight className="w-4 h-4" /></Button>
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <button onClick={prevMonth}
+              style={{ padding: "6px 8px", border: "1px solid var(--os-border)", borderRadius: 8, background: "var(--os-surface)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <ChevronLeft style={{ width: 14, height: 14, color: "var(--os-text-2)" }} />
+            </button>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--os-text-1)", padding: "0 8px" }}>{year}年{String(month).padStart(2,"0")}月</span>
+            <button onClick={nextMonth}
+              style={{ padding: "6px 8px", border: "1px solid var(--os-border)", borderRadius: 8, background: "var(--os-surface)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <ChevronRight style={{ width: 14, height: 14, color: "var(--os-text-2)" }} />
+            </button>
           </div>
 
-          <div className="ml-auto flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleExport}><Download className="w-4 h-4 mr-1" />匯出</Button>
+          <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+            <button onClick={handleExport}
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", border: "1px solid var(--os-border)", borderRadius: 8, background: "var(--os-surface)", color: "var(--os-text-2)", fontSize: 13, cursor: "pointer" }}>
+              <Download style={{ width: 14, height: 14 }} />匯出
+            </button>
             {canEdit && (
-              <Button variant="outline" size="sm" onClick={() => setShowTemplateDrawer(true)}>
-                <Settings className="w-4 h-4 mr-1" />員工設定
-              </Button>
+              <button onClick={() => setShowTemplateDrawer(true)}
+                style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", border: "1px solid var(--os-border)", borderRadius: 8, background: "var(--os-surface)", color: "var(--os-text-2)", fontSize: 13, cursor: "pointer" }}>
+                <Settings style={{ width: 14, height: 14 }} />員工設定
+              </button>
             )}
           </div>
         </div>
 
         {/* 班表主體 */}
-        <div className="bg-white rounded-xl border border-stone-200 overflow-x-auto">
-          <table className="text-xs border-collapse" style={{ minWidth: "max-content" }}>
+        <div style={{ background: "var(--os-surface)", border: "1px solid var(--os-border)", borderRadius: 12, overflowX: "auto" }}>
+          <table style={{ fontSize: 11, borderCollapse: "collapse", minWidth: "max-content", width: "100%" }}>
             <thead>
               <tr>
-                <th className="sticky left-0 bg-white z-10 px-3 py-2 text-left border-b border-r border-stone-100 font-medium text-stone-600 min-w-[80px]">員工</th>
+                <th style={{ position: "sticky", left: 0, background: "var(--os-surface)", zIndex: 10, padding: "8px 12px", textAlign: "left", borderBottom: "1px solid var(--os-border)", borderRight: "1px solid var(--os-border)", fontWeight: 600, color: "var(--os-text-2)", minWidth: 80 }}>員工</th>
                 {days.map(d => {
                   const dt = new Date(year, month-1, d);
                   const dow = dt.getDay();
@@ -275,26 +294,26 @@ export default function OSScheduling() {
                   const isHoliday = holidaySet.has(dateStr);
                   const isWeekend = dow === 0 || dow === 6;
                   return (
-                    <th key={d} className="px-1 py-2 text-center border-b border-stone-100 min-w-[36px]"
-                      style={{ background: isHoliday ? "#fef2f2" : "transparent" }}>
-                      <div style={{ color: isWeekend ? "#9ca3af" : "#1c1917" }}>{d}</div>
-                      <div style={{ color: isWeekend ? "#9ca3af" : "#6b7280" }}>{WEEKDAYS[dow]}</div>
+                    <th key={d} style={{ padding: "6px 4px", textAlign: "center", borderBottom: "1px solid var(--os-border)", minWidth: 36, background: isHoliday ? "var(--os-danger-bg)" : "transparent" }}>
+                      <div style={{ color: isWeekend ? "var(--os-text-3)" : "var(--os-text-1)" }}>{d}</div>
+                      <div style={{ color: isWeekend ? "var(--os-text-3)" : "var(--os-text-2)", fontSize: 10 }}>{WEEKDAYS[dow]}</div>
                     </th>
                   );
                 })}
-                <th className="sticky right-0 bg-white z-10 px-2 py-2 text-center border-b border-l border-stone-100 font-medium text-stone-600 min-w-[40px]">出勤</th>
+                <th style={{ position: "sticky", right: 0, background: "var(--os-surface)", zIndex: 10, padding: "8px 8px", textAlign: "center", borderBottom: "1px solid var(--os-border)", borderLeft: "1px solid var(--os-border)", fontWeight: 600, color: "var(--os-text-2)", minWidth: 40 }}>出勤</th>
               </tr>
             </thead>
             <tbody>
               {filteredTemplates.map((t: any, idx: number) => {
+                const isEven = idx % 2 === 0;
+                const rowBg = isEven ? "var(--os-surface)" : "var(--os-surface-2)";
                 const workCount = days.filter(d => {
                   const cell = getCell(t.employeeName, t.storeId, d);
                   return cell && ["work","designated","overtime"].includes(cell.status);
                 }).length;
                 return (
-                  <tr key={t.id} className={idx % 2 === 0 ? "bg-white" : "bg-stone-50/50"}>
-                    <td className="sticky left-0 z-10 px-3 py-1 border-r border-stone-100 font-medium text-stone-700"
-                      style={{ background: idx % 2 === 0 ? "white" : "#fafaf9" }}>
+                  <tr key={t.id}>
+                    <td style={{ position: "sticky", left: 0, zIndex: 10, padding: "5px 12px", borderRight: "1px solid var(--os-border)", fontWeight: 600, color: "var(--os-text-1)", background: rowBg }}>
                       {t.employeeName}
                     </td>
                     {days.map(d => {
@@ -307,8 +326,7 @@ export default function OSScheduling() {
                         : "";
                       return (
                         <td key={d}
-                          className={`px-1 py-1 text-center border-stone-100 cursor-pointer hover:bg-amber-50 transition-colors ${isActive ? "ring-2 ring-amber-400 ring-inset" : ""}`}
-                          style={{ background: cfg?.bg }}
+                          style={{ padding: "4px", textAlign: "center", cursor: canEdit ? "pointer" : "default", background: cfg?.bg !== "transparent" ? cfg?.bg : (isActive ? "var(--os-amber-soft)" : rowBg), outline: isActive ? "2px solid var(--os-amber)" : "none", outlineOffset: -2, transition: "background 0.1s" }}
                           onClick={() => handleCellClick(t.employeeName, t.storeId, d)}>
                           {cfg ? (
                             <div>
@@ -316,23 +334,21 @@ export default function OSScheduling() {
                                 {cfg.label}
                               </span>
                               {cell?.startTime && cell?.endTime && (
-                                <div style={{ color: "#9ca3af", fontSize: "9px" }}>
+                                <div style={{ color: "var(--os-text-3)", fontSize: 9 }}>
                                   {cell.startTime.slice(0,2)}-{cell.endTime.slice(0,2)}
                                 </div>
                               )}
                               {storeName && (
-                                <div style={{ color: "#b45309", fontSize: "9px" }}>{storeName}</div>
+                                <div style={{ color: "var(--os-amber)", fontSize: 9 }}>{storeName}</div>
                               )}
                             </div>
                           ) : (
-                            <span style={{ color: "#e5e7eb" }}>·</span>
+                            <span style={{ color: "var(--os-border)" }}>·</span>
                           )}
                         </td>
                       );
                     })}
-                    <td className="sticky right-0 z-10 px-2 py-1 text-center border-l border-stone-100 font-medium"
-                      style={{ background: idx % 2 === 0 ? "white" : "#fafaf9",
-                               fontFamily: "'jf-kamabit', sans-serif", color: "#b45309" }}>
+                    <td style={{ position: "sticky", right: 0, zIndex: 10, padding: "5px 8px", textAlign: "center", borderLeft: "1px solid var(--os-border)", fontWeight: 600, color: "var(--os-amber)", background: rowBg }}>
                       {workCount}
                     </td>
                   </tr>
@@ -344,28 +360,28 @@ export default function OSScheduling() {
 
         {/* 月結摘要 */}
         {summary.length > 0 && (
-          <div className="bg-white rounded-xl border border-stone-200 p-4">
-            <h3 className="text-sm font-medium text-stone-700 mb-3">本月統計</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
+          <div style={{ background: "var(--os-surface)", border: "1px solid var(--os-border)", borderRadius: 12, padding: 16 }}>
+            <h3 style={{ fontSize: 13, fontWeight: 600, color: "var(--os-text-2)", marginBottom: 12 }}>本月統計</h3>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", fontSize: 11, borderCollapse: "collapse" }}>
                 <thead>
-                  <tr className="border-b border-stone-100">
+                  <tr style={{ borderBottom: "1px solid var(--os-border)" }}>
                     {["員工","出勤","例休","事假","公假","曠職","加班","總工時"].map(h => (
-                      <th key={h} className="px-2 py-1.5 text-left text-stone-500 font-medium">{h}</th>
+                      <th key={h} style={{ padding: "6px 8px", textAlign: "left", fontWeight: 600, color: "var(--os-text-3)" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {summary.map((s: any) => (
-                    <tr key={s.employeeName} className="border-b border-stone-50">
-                      <td className="px-2 py-1.5 font-medium text-stone-700">{s.employeeName}</td>
-                      <td className="px-2 py-1.5 text-stone-600">{s.workDays}</td>
-                      <td className="px-2 py-1.5 text-stone-400">{s.restDays}</td>
-                      <td className="px-2 py-1.5 text-red-500">{s.personalLeaveDays}</td>
-                      <td className="px-2 py-1.5 text-blue-500">{s.publicLeaveDays}</td>
-                      <td className="px-2 py-1.5 text-red-700 font-medium">{s.absentDays}</td>
-                      <td className="px-2 py-1.5 text-green-600">{s.overtimeDays}</td>
-                      <td className="px-2 py-1.5" style={{ fontFamily:"'jf-kamabit',sans-serif", color:"#b45309" }}>
+                    <tr key={s.employeeName} style={{ borderBottom: "1px solid var(--os-border-2)" }}>
+                      <td style={{ padding: "6px 8px", fontWeight: 600, color: "var(--os-text-1)" }}>{s.employeeName}</td>
+                      <td style={{ padding: "6px 8px", color: "var(--os-text-2)" }}>{s.workDays}</td>
+                      <td style={{ padding: "6px 8px", color: "var(--os-text-3)" }}>{s.restDays}</td>
+                      <td style={{ padding: "6px 8px", color: "var(--os-danger)" }}>{s.personalLeaveDays}</td>
+                      <td style={{ padding: "6px 8px", color: "var(--os-info)" }}>{s.publicLeaveDays}</td>
+                      <td style={{ padding: "6px 8px", color: "var(--os-danger)", fontWeight: 700 }}>{s.absentDays}</td>
+                      <td style={{ padding: "6px 8px", color: "var(--os-success)" }}>{s.overtimeDays}</td>
+                      <td style={{ padding: "6px 8px", color: "var(--os-amber)", fontWeight: 600 }}>
                         {Number(s.totalHours).toFixed(1)}h
                       </td>
                     </tr>
@@ -378,43 +394,42 @@ export default function OSScheduling() {
 
         {/* Popover 編輯格子 */}
         {popoverCell && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20"
+          <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.15)" }}
             onClick={() => setPopoverCell(null)}>
-            <div className="bg-white rounded-xl border border-stone-200 shadow-lg p-4 w-72"
+            <div style={{ background: "var(--os-surface)", border: "1px solid var(--os-border)", borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.12)", padding: 16, width: 288 }}
               onClick={e => e.stopPropagation()}>
-              <p className="text-sm font-medium text-stone-700 mb-3">
+              <p style={{ fontSize: 13, fontWeight: 600, color: "var(--os-text-1)", marginBottom: 12 }}>
                 {popoverCell.employeeName} · {popoverCell.date}
               </p>
-              <div className="flex flex-wrap gap-1.5 mb-3">
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
                 {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
                   <button key={key}
-                    className={`px-2 py-1 rounded-md text-xs border transition-colors ${popoverData.status === key ? "border-amber-500 bg-amber-50" : "border-stone-200 bg-white hover:bg-stone-50"}`}
-                    style={{ color: cfg.color }}
+                    style={{ padding: "5px 8px", borderRadius: 6, fontSize: 11, border: `1px solid ${popoverData.status === key ? "var(--os-amber)" : "var(--os-border)"}`, background: popoverData.status === key ? "var(--os-amber-soft)" : "var(--os-surface)", color: cfg.color, cursor: "pointer", transition: "all 0.1s" }}
                     onClick={() => setPopoverData((p:any) => ({ ...p, status: key }))}>
                     {cfg.label} {key === "work" ? "出勤" : key === "rest" ? "例休" : key === "designated" ? "指定班" : key === "personal_leave" ? "事假" : key === "public_leave" ? "公假" : key === "absent" ? "曠職" : "加班"}
                   </button>
                 ))}
               </div>
-              <div className="grid grid-cols-2 gap-2 mb-3">
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
                 <div>
-                  <Label className="text-xs">上班時間</Label>
-                  <Input className="h-7 text-xs mt-0.5" placeholder="0600"
+                  <label style={labelSt}>上班時間</label>
+                  <input style={{ ...inputSt, height: 30, fontSize: 12 }} placeholder="0600"
                     value={popoverData.startTime}
                     onChange={e => setPopoverData((p:any) => ({ ...p, startTime: e.target.value }))} />
                 </div>
                 <div>
-                  <Label className="text-xs">下班時間</Label>
-                  <Input className="h-7 text-xs mt-0.5" placeholder="1430"
+                  <label style={labelSt}>下班時間</label>
+                  <input style={{ ...inputSt, height: 30, fontSize: 12 }} placeholder="1430"
                     value={popoverData.endTime}
                     onChange={e => setPopoverData((p:any) => ({ ...p, endTime: e.target.value }))} />
                 </div>
               </div>
               {scheduleTab === "mobile" && (
-                <div className="mb-3">
-                  <Label className="text-xs">支援門市</Label>
+                <div style={{ marginBottom: 10 }}>
+                  <label style={labelSt}>支援門市</label>
                   <Select value={popoverData.supportStoreId?.toString() || "none"}
                     onValueChange={v => setPopoverData((p:any) => ({ ...p, supportStoreId: v === "none" ? "" : v }))}>
-                    <SelectTrigger className="h-7 text-xs mt-0.5"><SelectValue placeholder="選擇門市" /></SelectTrigger>
+                    <SelectTrigger style={{ height: 30, fontSize: 12 }}><SelectValue placeholder="選擇門市" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">不指定</SelectItem>
                       {(stores as any[]).filter((s:any) => s.id !== HQ_STORE_ID).map((s:any) => (
@@ -424,27 +439,28 @@ export default function OSScheduling() {
                   </Select>
                 </div>
               )}
-              <div className="mb-3">
-                <Label className="text-xs">備註</Label>
-                <Input className="h-7 text-xs mt-0.5" placeholder="選填"
+              <div style={{ marginBottom: 12 }}>
+                <label style={labelSt}>備註</label>
+                <input style={{ ...inputSt, height: 30, fontSize: 12 }} placeholder="選填"
                   value={popoverData.note}
                   onChange={e => setPopoverData((p:any) => ({ ...p, note: e.target.value }))} />
               </div>
-              <div className="flex gap-2">
-                <Button size="sm" className="flex-1 bg-amber-700 hover:bg-amber-800 text-white"
-                  onClick={handleSaveCell} disabled={upsertSchedule.isPending}>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={handleSaveCell} disabled={upsertSchedule.isPending}
+                  style={{ flex: 1, padding: "8px 0", border: "none", borderRadius: 8, background: "var(--os-amber)", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", opacity: upsertSchedule.isPending ? 0.7 : 1 }}>
                   {upsertSchedule.isPending ? "儲存中..." : "儲存"}
-                </Button>
-                <Button size="sm" variant="outline" className="flex-1" onClick={() => setPopoverCell(null)}>取消</Button>
+                </button>
+                <button onClick={() => setPopoverCell(null)}
+                  style={{ flex: 1, padding: "8px 0", border: "1px solid var(--os-border)", borderRadius: 8, background: "var(--os-surface)", color: "var(--os-text-2)", fontSize: 13, cursor: "pointer" }}>
+                  取消
+                </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* 員工設定 Drawer */}
         {renderTemplateDrawer()}
 
-        {/* 新增/編輯員工 Dialog */}
         <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
           <DialogContent>
             <DialogHeader>
@@ -475,7 +491,9 @@ function TemplateForm({ initial, stores, onSave, onCancel, isPending }: any) {
     fixedRestDays: initial?.fixedRestDays ? JSON.parse(initial.fixedRestDays) : [],
     note: initial?.note ?? ""
   });
+
   const WEEKDAY_LABELS = ["日","一","二","三","四","五","六"];
+
   const toggleRestDay = (d: number) => {
     setForm(f => ({
       ...f,
@@ -484,14 +502,23 @@ function TemplateForm({ initial, stores, onSave, onCancel, isPending }: any) {
         : [...f.fixedRestDays, d]
     }));
   };
+
+  const inputSt: React.CSSProperties = {
+    width: "100%", padding: "7px 10px", border: "1px solid var(--os-border)",
+    borderRadius: 8, fontSize: 13, background: "var(--os-surface)", color: "var(--os-text-1)", outline: "none",
+  };
+  const labelSt: React.CSSProperties = {
+    fontSize: 12, fontWeight: 600, color: "var(--os-text-2)", display: "block", marginBottom: 4,
+  };
+
   return (
-    <div className="space-y-3">
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <div>
-        <Label>員工姓名</Label>
-        <Input value={form.employeeName} onChange={e => setForm(f => ({...f, employeeName: e.target.value}))} />
+        <label style={labelSt}>員工姓名</label>
+        <input style={inputSt} value={form.employeeName} onChange={e => setForm(f => ({...f, employeeName: e.target.value}))} />
       </div>
       <div>
-        <Label>所屬門市</Label>
+        <label style={labelSt}>所屬門市</label>
         <Select value={form.storeId?.toString()} onValueChange={v => setForm(f => ({...f, storeId: Number(v)}))}>
           <SelectTrigger><SelectValue placeholder="選擇門市" /></SelectTrigger>
           <SelectContent>
@@ -500,7 +527,7 @@ function TemplateForm({ initial, stores, onSave, onCancel, isPending }: any) {
         </Select>
       </div>
       <div>
-        <Label>班別</Label>
+        <label style={labelSt}>班別</label>
         <Select value={form.scheduleType} onValueChange={v => setForm(f => ({...f, scheduleType: v}))}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -510,39 +537,48 @@ function TemplateForm({ initial, stores, onSave, onCancel, isPending }: any) {
           </SelectContent>
         </Select>
       </div>
-      <div className="grid grid-cols-2 gap-2">
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <div>
-          <Label>預設上班</Label>
-          <Input placeholder="0600" value={form.defaultStartTime} onChange={e => setForm(f => ({...f, defaultStartTime: e.target.value}))} />
+          <label style={labelSt}>預設上班</label>
+          <input style={inputSt} placeholder="0600" value={form.defaultStartTime} onChange={e => setForm(f => ({...f, defaultStartTime: e.target.value}))} />
         </div>
         <div>
-          <Label>預設下班</Label>
-          <Input placeholder="1430" value={form.defaultEndTime} onChange={e => setForm(f => ({...f, defaultEndTime: e.target.value}))} />
+          <label style={labelSt}>預設下班</label>
+          <input style={inputSt} placeholder="1430" value={form.defaultEndTime} onChange={e => setForm(f => ({...f, defaultEndTime: e.target.value}))} />
         </div>
       </div>
       <div>
-        <Label className="block mb-1">固定休假日</Label>
-        <div className="flex gap-2">
-          {WEEKDAY_LABELS.map((label, idx) => (
-            <label key={idx} className="flex flex-col items-center gap-1 cursor-pointer">
-              <Checkbox checked={form.fixedRestDays.includes(idx)}
-                onCheckedChange={() => toggleRestDay(idx)} />
-              <span className="text-xs">{label}</span>
-            </label>
-          ))}
+        <label style={{ ...labelSt, marginBottom: 8 }}>固定休假日</label>
+        <div style={{ display: "flex", gap: 8 }}>
+          {WEEKDAY_LABELS.map((label, idx) => {
+            const checked = form.fixedRestDays.includes(idx);
+            return (
+              <label key={idx}
+                style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, cursor: "pointer" }}
+                onClick={() => toggleRestDay(idx)}>
+                <div style={{ width: 22, height: 22, border: `2px solid ${checked ? "var(--os-amber)" : "var(--os-border)"}`, borderRadius: 4, background: checked ? "var(--os-amber-soft)" : "var(--os-surface)", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s" }}>
+                  {checked && <div style={{ width: 10, height: 10, background: "var(--os-amber)", borderRadius: 2 }} />}
+                </div>
+                <span style={{ fontSize: 11, color: "var(--os-text-2)" }}>{label}</span>
+              </label>
+            );
+          })}
         </div>
       </div>
       <div>
-        <Label>備註</Label>
-        <Input value={form.note} onChange={e => setForm(f => ({...f, note: e.target.value}))} />
+        <label style={labelSt}>備註</label>
+        <input style={inputSt} value={form.note} onChange={e => setForm(f => ({...f, note: e.target.value}))} />
       </div>
       <DialogFooter>
-        <Button variant="outline" onClick={onCancel}>取消</Button>
-        <Button className="bg-amber-700 hover:bg-amber-800 text-white"
-          onClick={() => onSave({ ...form, storeId: Number(form.storeId) })}
-          disabled={isPending || !form.employeeName || !form.storeId}>
+        <button onClick={onCancel}
+          style={{ padding: "8px 18px", border: "1px solid var(--os-border)", borderRadius: 8, background: "var(--os-surface)", color: "var(--os-text-2)", fontSize: 13, cursor: "pointer" }}>
+          取消
+        </button>
+        <button onClick={() => onSave({ ...form, storeId: Number(form.storeId) })}
+          disabled={isPending || !form.employeeName || !form.storeId}
+          style={{ padding: "8px 18px", border: "none", borderRadius: 8, background: "var(--os-amber)", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", opacity: (isPending || !form.employeeName || !form.storeId) ? 0.6 : 1 }}>
           {isPending ? "儲存中..." : "儲存"}
-        </Button>
+        </button>
       </DialogFooter>
     </div>
   );
