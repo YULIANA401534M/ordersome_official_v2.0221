@@ -33,6 +33,9 @@ export async function getDb() {
         ssl: { rejectUnauthorized: true },
         waitForConnections: true,
         connectionLimit: 10,
+        // TiDB does not support LIMIT as a prepared statement parameter;
+        // disabling prepare forces mysql2 to send plain text queries instead.
+        prepare: false,
       });
       _db = drizzle(pool);
     } catch (error) {
