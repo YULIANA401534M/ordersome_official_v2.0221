@@ -1,7 +1,7 @@
 # CLAUDE.md — OrderSome 專案主腦
 
 
-### 前端官網改版進度快照（2026-04-24 v5.98）
+### 前端官網改版進度快照（2026-04-25 v5.99）
 
 **設計規範（品牌系列）**
 - 色彩全用 OKLCH：暖黃 oklch(0.75 0.18 70)，奶白背景 oklch(0.97 0.02 85)，深色文字 oklch(0.18 0.02 60)
@@ -42,7 +42,7 @@ Hero 圖片規則：
 | CorporateAbout.tsx | done | 深暖碳黑+金銅，Hero logo-intro-dark 滿版，橫線數字帶，願景使命橫線，五大價值觀 |
 | CorporateBrands.tsx | done | Hero 視差+右半logo，主品牌全版展示（橫線三特色+數字帶+CTA），食物小圖六格，即將推出三欄，引言帶 BRANDS |
 | CorporateCulture.tsx | done | Hero 視差+右半logo，核心宣言帶，八大行動準則橫線，職場三承諾雙欄，引言帶 CULTURE，CTA底帶 |
-| CorporateFranchise.tsx | pending | 企業加盟（與品牌版稍有不同） |
+| CorporateFranchise.tsx | done | Hero 視差+右半logo，四大企業優勢橫線，費用結構雙欄，六步驟格子，引言帶FRANCHISE，深色表單，聯絡資訊橫線 |
 | CorporateNews.tsx | pending | 集團消息（publishTarget = corporate） |
 | CorporateContact.tsx | pending | 企業聯絡，B2B 合作詢問 |
 
@@ -660,3 +660,71 @@ Dayone 主線 Table 對照：
     - Current live signature path is `DriverOrderDetail.tsx -> dayone.driver.uploadSignature`.
     - This old page is currently treated as legacy/unmounted and was not exposed again in this round.
   - Verified: `npm run build`
+- Dayone 2026-04-25 route review and truthful stock view
+  - Continued static route review for:
+    - `/dayone`
+    - `/dayone/orders`
+    - `/dayone/customers`
+    - `/dayone/dispatch`
+    - `/dayone/purchase-receipts`
+    - `/dayone/ar`
+    - `/driver/*`
+  - Confirmed in `client/src/App.tsx`:
+    - The main Dayone and driver routes above are mounted.
+    - `client/src/pages/dayone/driver/DriverSign.tsx` remains legacy/unmounted and is not part of the live route tree.
+  - Important logic finding:
+    - Current Dayone data is still not enough to truthfully calculate per-product `車上庫存`.
+    - This round intentionally does NOT fake truck-stock numbers.
+    - The truthful three-state view currently shown is:
+      - `可賣庫存` = `dy_inventory.currentQty`
+      - `待入倉進貨` = signed receipts not yet warehoused
+      - `回庫待驗` = `dy_pending_returns`
+  - Safety fix:
+    - `server/routers/dayone/purchaseReceipt.ts -> create` no longer silently falls back to the first tenant driver.
+    - It now validates selected / linked active Dayone driver and blocks creation when no valid driver is available.
+    - `client/src/pages/dayone/DayonePurchaseReceipts.tsx` now requires explicit driver selection before submit.
+  - Page updates:
+    - `client/src/pages/dayone/DayoneInventoryContent.tsx` adds `待入倉進貨`.
+    - `client/src/pages/dayone/DayoneDashboard.tsx` adds `待入倉進貨` and `回庫待驗` KPI cards.
+  - Verified:
+    - `npm run build`
+  - Not yet verified:
+    - No full browser click-through across the reviewed routes yet.
+    - No live-data replay yet for signed receipt -> warehouse receipt -> inventory dashboard.
+    - No full AR entry-point unification yet.
+- Dayone 2026-04-25 live TiDB verification + repair note
+  - This round did not stop at static review. Live TiDB verification was run against:
+    - DB: `ordersome`
+    - tenantId: `90004`
+    - tenant slug: `dayone-eggs`
+  - Added local-only verification / repair scripts:
+    - `scripts/dayone-tidb-live-verify.mjs`
+    - `scripts/dayone-live-closure-audit.mjs`
+    - `scripts/dayone-live-repair.mjs`
+  - Live DB facts confirmed:
+    - Dayone currently has 28 `dy_` tables in TiDB after provisioning `dy_pending_returns`.
+    - Rollback write test succeeded on TiDB, proving current credentials can safely write and rollback.
+    - Safe write-test candidates confirmed: `dy_pending_returns`, `dy_stock_movements`, `dy_ap_records`, `dy_ar_records`, `dy_driver_cash_reports`.
+  - Live data repairs applied in TiDB:
+    - Provisioned `dy_pending_returns` into the real Dayone database.
+    - Backfilled missing AP rows for signed purchase receipts `#2 #3 #4`.
+    - Removed one premature AR row that existed before delivery.
+    - Backfilled one printed dispatch stock-out movement and synced that order status from `pending` to `picked`.
+  - Backend closure fix:
+    - `server/routers/dayone/driver.ts -> recordCashPayment` now also upserts `dy_ar_records`, so driver-side cash collection no longer leaves order and AR out of sync.
+    - `server/routers/dayone/purchaseReceipt.ts -> sign` now uses receipt date + 30 days for AP due date instead of `CURDATE()`.
+  - Driver-side route review finding:
+    - `client/src/pages/dayone/driver/DriverWorkLog.tsx` previously only allowed leftover return reporting for the first dispatch of the day.
+    - It now supports switching between same-day dispatch orders before sending pending-return items.
+  - UI wording alignment:
+    - Dispatch / driver worklog copy now says leftover stock goes to `回庫待驗`, not immediate inventory return.
+  - Verified after repair:
+    - `npm run build`
+    - Live closure audit result:
+      - no signed receipts missing AP
+      - no printed dispatch missing stock-out
+      - no AR rows attached to undelivered orders
+      - `dy_pending_returns` exists in real TiDB
+  - Still not fully done:
+    - Full browser click-through / manual test across `/dayone/*` and `/driver/*` is still pending.
+    - Live delivery -> cash collection -> AR -> driver cash report full scenario replay is still pending.
