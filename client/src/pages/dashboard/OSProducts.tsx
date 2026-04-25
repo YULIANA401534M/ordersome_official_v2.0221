@@ -39,13 +39,16 @@ function calcMargin(packCost: number, batchPrice: number): string | null {
   return (((batchPrice - packCost) / batchPrice) * 100).toFixed(1);
 }
 
-function marginClass(margin: string | null): string {
-  if (margin === null) return "";
+function marginStyle(margin: string | null): React.CSSProperties {
+  if (margin === null) return {};
   const n = Number(margin);
-  if (n >= 20) return "bg-green-100 text-green-700";
-  if (n >= 5) return "bg-orange-100 text-orange-700";
-  return "bg-red-100 text-red-700";
+  if (n >= 20) return { background: 'var(--os-success-bg)', color: 'var(--os-success)' };
+  if (n >= 5)  return { background: 'var(--os-warning-bg)', color: 'var(--os-warning)' };
+  return { background: 'var(--os-danger-bg)', color: 'var(--os-danger)' };
 }
+
+const labelStyle: React.CSSProperties = { color: 'var(--os-text-2)', fontSize: 13, fontWeight: 500 };
+const thStyle: React.CSSProperties = { color: 'var(--os-text-3)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' };
 
 // ── SupplierDialog ───────────────────────────────────────────────────────────
 
@@ -97,49 +100,49 @@ function SupplierDialog({
         </DialogHeader>
         <form onSubmit={submit} className="space-y-3">
           <div>
-            <label className="text-sm font-medium text-gray-700">廠商名稱 *</label>
-            <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required className="mt-1" />
+            <label className="block mb-1" style={labelStyle}>廠商名稱 *</label>
+            <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-sm font-medium text-gray-700">電話</label>
-              <Input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className="mt-1" />
+              <label className="block mb-1" style={labelStyle}>電話</label>
+              <Input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">聯絡人</label>
-              <Input value={form.contact} onChange={e => setForm(p => ({ ...p, contact: e.target.value }))} className="mt-1" />
+              <label className="block mb-1" style={labelStyle}>聯絡人</label>
+              <Input value={form.contact} onChange={e => setForm(p => ({ ...p, contact: e.target.value }))} />
             </div>
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="text-sm font-medium text-gray-700">付款方式</label>
+              <label className="block mb-1" style={labelStyle}>付款方式</label>
               <Select value={form.paymentType} onValueChange={v => setForm(p => ({ ...p, paymentType: v }))}>
-                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {["現付", "週結", "月結"].map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">退佣 %</label>
-              <Input type="number" step="0.01" value={form.rebateRate} onChange={e => setForm(p => ({ ...p, rebateRate: e.target.value }))} className="mt-1" />
+              <label className="block mb-1" style={labelStyle}>退佣 %</label>
+              <Input type="number" step="0.01" value={form.rebateRate} onChange={e => setForm(p => ({ ...p, rebateRate: e.target.value }))} />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">退佣門檻</label>
-              <Input type="number" value={form.rebateCondition} onChange={e => setForm(p => ({ ...p, rebateCondition: e.target.value }))} className="mt-1" />
+              <label className="block mb-1" style={labelStyle}>退佣門檻</label>
+              <Input type="number" value={form.rebateCondition} onChange={e => setForm(p => ({ ...p, rebateCondition: e.target.value }))} />
             </div>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700">備註</label>
-            <Input value={form.note} onChange={e => setForm(p => ({ ...p, note: e.target.value }))} className="mt-1" />
+            <label className="block mb-1" style={labelStyle}>備註</label>
+            <Input value={form.note} onChange={e => setForm(p => ({ ...p, note: e.target.value }))} />
           </div>
           <div className="flex items-center gap-2">
             <input type="checkbox" id="isActive" checked={form.isActive} onChange={e => setForm(p => ({ ...p, isActive: e.target.checked }))} />
-            <label htmlFor="isActive" className="text-sm text-gray-700">啟用</label>
+            <label htmlFor="isActive" style={labelStyle}>啟用</label>
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="ghost" onClick={onClose}>取消</Button>
-            <Button type="submit" disabled={upsert.isPending}>
+            <Button type="submit" disabled={upsert.isPending} className="text-white" style={{ background: 'var(--os-amber)' }}>
               {upsert.isPending ? "儲存中..." : "儲存"}
             </Button>
           </div>
@@ -188,21 +191,21 @@ function CostDialog({
         </DialogHeader>
         <form onSubmit={submit} className="space-y-3">
           <div>
-            <label className="text-sm font-medium text-gray-700">進貨成本（元/{product.unit || "件"}）</label>
-            <Input type="number" step="0.0001" value={unitCost} onChange={e => setUnitCost(e.target.value)} required className="mt-1" />
+            <label className="block mb-1" style={labelStyle}>進貨成本（元/{product.unit || "件"}）</label>
+            <Input type="number" step="0.0001" value={unitCost} onChange={e => setUnitCost(e.target.value)} required />
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700">批價</label>
-            <Input type="number" step="0.0001" value={batchPrice} onChange={e => setBatchPrice(e.target.value)} className="mt-1" />
+            <label className="block mb-1" style={labelStyle}>批價</label>
+            <Input type="number" step="0.0001" value={batchPrice} onChange={e => setBatchPrice(e.target.value)} />
           </div>
           {Number(batchPrice) > 0 && (
-            <p className="text-sm text-gray-500">
+            <p className="text-sm" style={{ color: 'var(--os-text-3)' }}>
               毛利率：{calcMargin(Number(unitCost), Number(batchPrice))}%
             </p>
           )}
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="ghost" onClick={onClose}>取消</Button>
-            <Button type="submit" disabled={mut.isPending}>
+            <Button type="submit" disabled={mut.isPending} className="text-white" style={{ background: 'var(--os-amber)' }}>
               {mut.isPending ? "更新中..." : "更新"}
             </Button>
           </div>
@@ -287,13 +290,13 @@ function ProductDialog({
         <form onSubmit={submit} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-sm font-medium text-gray-700">品名 *</label>
-              <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required className="mt-1" />
+              <label className="block mb-1" style={labelStyle}>品名 *</label>
+              <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">品類</label>
+              <label className="block mb-1" style={labelStyle}>品類</label>
               <Select value={form.category} onValueChange={v => setForm(p => ({ ...p, category: v }))}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="選擇品類" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="選擇品類" /></SelectTrigger>
                 <SelectContent>
                   {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                 </SelectContent>
@@ -302,9 +305,9 @@ function ProductDialog({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-sm font-medium text-gray-700">供應商</label>
+              <label className="block mb-1" style={labelStyle}>供應商</label>
               <Select value={form.supplierId || "__none"} onValueChange={v => setForm(p => ({ ...p, supplierId: v === "__none" ? "" : v }))}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="未指定" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="未指定" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none">未指定</SelectItem>
                   {suppliers.map((s: any) => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
@@ -312,54 +315,57 @@ function ProductDialog({
               </Select>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">整包單位（packUnit）</label>
-              <Input value={form.packUnit} onChange={e => setForm(p => ({ ...p, packUnit: e.target.value }))} className="mt-1" placeholder="包/箱/條" />
+              <label className="block mb-1" style={labelStyle}>整包單位（packUnit）</label>
+              <Input value={form.packUnit} onChange={e => setForm(p => ({ ...p, packUnit: e.target.value }))} placeholder="包/箱/條" />
             </div>
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="text-sm font-medium text-gray-700">最小單位數量</label>
-              <Input type="number" step="0.01" value={form.unitQty} onChange={e => setForm(p => ({ ...p, unitQty: e.target.value }))} className="mt-1" />
+              <label className="block mb-1" style={labelStyle}>最小單位數量</label>
+              <Input type="number" step="0.01" value={form.unitQty} onChange={e => setForm(p => ({ ...p, unitQty: e.target.value }))} />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">最小單位名稱</label>
-              <Input value={form.unitName} onChange={e => setForm(p => ({ ...p, unitName: e.target.value }))} className="mt-1" placeholder="片/克/毫升" />
+              <label className="block mb-1" style={labelStyle}>最小單位名稱</label>
+              <Input value={form.unitName} onChange={e => setForm(p => ({ ...p, unitName: e.target.value }))} placeholder="片/克/毫升" />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">單位成本（/最小）</label>
-              <Input type="number" step="0.0001" value={form.unitCost} onChange={e => setForm(p => ({ ...p, unitCost: e.target.value }))} className="mt-1" />
+              <label className="block mb-1" style={labelStyle}>單位成本（/最小）</label>
+              <Input type="number" step="0.0001" value={form.unitCost} onChange={e => setForm(p => ({ ...p, unitCost: e.target.value }))} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-sm font-medium text-gray-700">整包進貨成本（packCost）</label>
-              <Input type="number" step="0.01" value={form.packCost} onChange={e => setForm(p => ({ ...p, packCost: e.target.value }))} className="mt-1" />
+              <label className="block mb-1" style={labelStyle}>整包進貨成本（packCost）</label>
+              <Input type="number" step="0.01" value={form.packCost} onChange={e => setForm(p => ({ ...p, packCost: e.target.value }))} />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">批售價（batchPrice）</label>
-              <Input type="number" step="0.0001" value={form.batchPrice} onChange={e => setForm(p => ({ ...p, batchPrice: e.target.value }))} className="mt-1" />
+              <label className="block mb-1" style={labelStyle}>批售價（batchPrice）</label>
+              <Input type="number" step="0.0001" value={form.batchPrice} onChange={e => setForm(p => ({ ...p, batchPrice: e.target.value }))} />
             </div>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700">別名（aliases）<span className="text-gray-400 font-normal ml-1 text-xs">每行一個，如大麥原始品名</span></label>
+            <label className="block mb-1" style={labelStyle}>
+              別名（aliases）<span className="font-normal ml-1 text-xs" style={{ color: 'var(--os-text-3)' }}>每行一個，如大買原始品名</span>
+            </label>
             <textarea
-              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[60px] resize-y"
+              className="w-full rounded-md border px-3 py-2 text-sm min-h-[60px] resize-y"
+              style={{ borderColor: 'var(--os-border)', background: 'var(--os-surface)', color: 'var(--os-text-1)' }}
               value={form.aliasesText}
               onChange={e => setForm(p => ({ ...p, aliasesText: e.target.value }))}
               placeholder={"廣弘-漢拿辣白菜豬耳10片\n另一個別名"}
             />
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700">備註</label>
-            <Input value={form.note} onChange={e => setForm(p => ({ ...p, note: e.target.value }))} className="mt-1" />
+            <label className="block mb-1" style={labelStyle}>備註</label>
+            <Input value={form.note} onChange={e => setForm(p => ({ ...p, note: e.target.value }))} />
           </div>
           <div className="flex items-center gap-2">
             <input type="checkbox" id="pIsActive" checked={form.isActive} onChange={e => setForm(p => ({ ...p, isActive: e.target.checked }))} />
-            <label htmlFor="pIsActive" className="text-sm text-gray-700">啟用</label>
+            <label htmlFor="pIsActive" style={labelStyle}>啟用</label>
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="ghost" onClick={onClose}>取消</Button>
-            <Button type="submit" disabled={upsert.isPending}>
+            <Button type="submit" disabled={upsert.isPending} className="text-white" style={{ background: 'var(--os-amber)' }}>
               {upsert.isPending ? "儲存中..." : "儲存"}
             </Button>
           </div>
@@ -497,26 +503,25 @@ function MenuItemDialog({
           <DialogTitle>{item ? "編輯菜單品項" : "新增菜單品項"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-4">
-          {/* 基本資訊 */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-sm font-medium text-gray-700">品項名稱 *</label>
-              <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required className="mt-1" />
+              <label className="block mb-1" style={labelStyle}>品項名稱 *</label>
+              <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">分類 *</label>
-              <Input value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))} required className="mt-1" placeholder="來點什麼 / 來點蛋餅 / ..." />
+              <label className="block mb-1" style={labelStyle}>分類 *</label>
+              <Input value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))} required placeholder="來點什麼 / 來點蛋餅 / ..." />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-sm font-medium text-gray-700">主食描述</label>
-              <Input value={form.mainIngredient} onChange={e => setForm(p => ({ ...p, mainIngredient: e.target.value }))} className="mt-1" placeholder="黃金薯餅(3個)" />
+              <label className="block mb-1" style={labelStyle}>主食描述</label>
+              <Input value={form.mainIngredient} onChange={e => setForm(p => ({ ...p, mainIngredient: e.target.value }))} placeholder="黃金薯餅(3個)" />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">供餐方式</label>
+              <label className="block mb-1" style={labelStyle}>供餐方式</label>
               <Select value={form.servingType} onValueChange={v => setForm(p => ({ ...p, servingType: v as any }))}>
-                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="both">內用＋外帶</SelectItem>
                   <SelectItem value="dine_in_only">僅內用</SelectItem>
@@ -527,31 +532,31 @@ function MenuItemDialog({
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="text-sm font-medium text-gray-700">原始售價</label>
-              <Input type="number" step="0.01" value={form.basePrice} onChange={e => setForm(p => ({ ...p, basePrice: e.target.value }))} className="mt-1" />
+              <label className="block mb-1" style={labelStyle}>原始售價</label>
+              <Input type="number" step="0.01" value={form.basePrice} onChange={e => setForm(p => ({ ...p, basePrice: e.target.value }))} />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">最新售價</label>
-              <Input type="number" step="0.01" value={form.currentPrice} onChange={e => setForm(p => ({ ...p, currentPrice: e.target.value }))} className="mt-1" />
+              <label className="block mb-1" style={labelStyle}>最新售價</label>
+              <Input type="number" step="0.01" value={form.currentPrice} onChange={e => setForm(p => ({ ...p, currentPrice: e.target.value }))} />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">平台售價</label>
-              <Input type="number" step="0.01" value={form.platformPrice} onChange={e => setForm(p => ({ ...p, platformPrice: e.target.value }))} className="mt-1" />
+              <label className="block mb-1" style={labelStyle}>平台售價</label>
+              <Input type="number" step="0.01" value={form.platformPrice} onChange={e => setForm(p => ({ ...p, platformPrice: e.target.value }))} />
             </div>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700">備註</label>
-            <Input value={form.note} onChange={e => setForm(p => ({ ...p, note: e.target.value }))} className="mt-1" />
+            <label className="block mb-1" style={labelStyle}>備註</label>
+            <Input value={form.note} onChange={e => setForm(p => ({ ...p, note: e.target.value }))} />
           </div>
           <div className="flex items-center gap-2">
             <input type="checkbox" id="miIsActive" checked={form.isActive} onChange={e => setForm(p => ({ ...p, isActive: e.target.checked }))} />
-            <label htmlFor="miIsActive" className="text-sm text-gray-700">啟用</label>
+            <label htmlFor="miIsActive" style={labelStyle}>啟用</label>
           </div>
 
           {/* 食材清單 */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">食材清單</span>
+              <span className="text-sm font-medium" style={{ color: 'var(--os-text-2)' }}>食材清單</span>
               <Button type="button" size="sm" variant="outline" className="h-7 text-xs"
                 onClick={() => setRows(prev => [...prev, emptyIngRow(prev.length)])}>
                 + 新增食材
@@ -572,26 +577,9 @@ function MenuItemDialog({
                       ))}
                     </SelectContent>
                   </Select>
-                  <Input
-                    className="h-8 text-xs"
-                    placeholder="食材名稱"
-                    value={row.ingredientName}
-                    onChange={e => setRow(i, { ingredientName: e.target.value })}
-                  />
-                  <Input
-                    className="h-8 text-xs"
-                    type="number"
-                    step="0.0001"
-                    placeholder="用量"
-                    value={row.quantity}
-                    onChange={e => setRow(i, { quantity: e.target.value })}
-                  />
-                  <Input
-                    className="h-8 text-xs"
-                    placeholder="單位"
-                    value={row.unit}
-                    onChange={e => setRow(i, { unit: e.target.value })}
-                  />
+                  <Input className="h-8 text-xs" placeholder="食材名稱" value={row.ingredientName} onChange={e => setRow(i, { ingredientName: e.target.value })} />
+                  <Input className="h-8 text-xs" type="number" step="0.0001" placeholder="用量" value={row.quantity} onChange={e => setRow(i, { quantity: e.target.value })} />
+                  <Input className="h-8 text-xs" placeholder="單位" value={row.unit} onChange={e => setRow(i, { unit: e.target.value })} />
                   <Select value={row.ingredientType} onValueChange={v => setRow(i, { ingredientType: v as any })}>
                     <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -599,7 +587,8 @@ function MenuItemDialog({
                       <SelectItem value="packaging">包材</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button type="button" size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-400 hover:text-red-600"
+                  <Button type="button" size="sm" variant="ghost" className="h-7 w-7 p-0"
+                    style={{ color: 'var(--os-danger)' }}
                     onClick={() => setRows(prev => prev.filter((_, idx) => idx !== i))}>
                     ×
                   </Button>
@@ -610,7 +599,7 @@ function MenuItemDialog({
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="ghost" onClick={onClose}>取消</Button>
-            <Button type="submit" disabled={isPending}>
+            <Button type="submit" disabled={isPending} className="text-white" style={{ background: 'var(--os-amber)' }}>
               {isPending ? "儲存中..." : "儲存"}
             </Button>
           </div>
@@ -639,29 +628,29 @@ function MenuIngredientDrawer({
           <DialogTitle>{item.name} — 食材明細</DialogTitle>
         </DialogHeader>
         {ings.length === 0 ? (
-          <p className="text-sm text-gray-400 py-4 text-center">尚無食材資料</p>
+          <p className="text-sm py-4 text-center" style={{ color: 'var(--os-text-3)' }}>尚無食材資料</p>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
+            <thead style={{ background: 'var(--os-surface-2)', borderBottom: '1px solid var(--os-border)' }}>
               <tr>
-                <th className="px-3 py-2 text-left font-medium text-gray-600">食材</th>
-                <th className="px-3 py-2 text-left font-medium text-gray-600">用量</th>
-                <th className="px-3 py-2 text-left font-medium text-gray-600">類型</th>
-                {hasCostAccess && <th className="px-3 py-2 text-left font-medium text-gray-600">單位成本</th>}
+                <th className="px-3 py-2 text-left" style={thStyle}>食材</th>
+                <th className="px-3 py-2 text-left" style={thStyle}>用量</th>
+                <th className="px-3 py-2 text-left" style={thStyle}>類型</th>
+                {hasCostAccess && <th className="px-3 py-2 text-left" style={thStyle}>單位成本</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody>
               {ings.map((ing: any, i: number) => (
-                <tr key={i}>
-                  <td className="px-3 py-2 text-gray-900">{ing.ingredientName}</td>
-                  <td className="px-3 py-2 text-gray-600">{ing.quantity} {ing.unit}</td>
+                <tr key={i} style={{ borderBottom: '1px solid var(--os-border-2)' }}>
+                  <td className="px-3 py-2" style={{ color: 'var(--os-text-1)' }}>{ing.ingredientName}</td>
+                  <td className="px-3 py-2" style={{ color: 'var(--os-text-2)' }}>{ing.quantity} {ing.unit}</td>
                   <td className="px-3 py-2">
                     <Badge variant="secondary" className="text-xs">
                       {ing.ingredientType === "packaging" ? "包材" : "食材"}
                     </Badge>
                   </td>
                   {hasCostAccess && (
-                    <td className="px-3 py-2 text-blue-700">
+                    <td className="px-3 py-2" style={{ color: 'var(--os-amber-text)' }}>
                       {ing.resolvedUnitCost !== null && ing.resolvedUnitCost !== undefined
                         ? fmtCost(ing.resolvedUnitCost)
                         : "-"}
@@ -789,40 +778,40 @@ function OemProductDialog({
         <form onSubmit={submit} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-sm font-medium text-gray-700">品項名稱 *</label>
-              <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required className="mt-1" />
+              <label className="block mb-1" style={labelStyle}>品項名稱 *</label>
+              <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">單位</label>
-              <Input value={form.unit} onChange={e => setForm(p => ({ ...p, unit: e.target.value }))} className="mt-1" />
+              <label className="block mb-1" style={labelStyle}>單位</label>
+              <Input value={form.unit} onChange={e => setForm(p => ({ ...p, unit: e.target.value }))} />
             </div>
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="text-sm font-medium text-gray-700">代工費/單位</label>
-              <Input type="number" step="0.0001" value={form.processingFee} onChange={e => setForm(p => ({ ...p, processingFee: e.target.value }))} className="mt-1" />
+              <label className="block mb-1" style={labelStyle}>代工費/單位</label>
+              <Input type="number" step="0.0001" value={form.processingFee} onChange={e => setForm(p => ({ ...p, processingFee: e.target.value }))} />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">包材費</label>
-              <Input type="number" step="0.0001" value={form.packagingCost} onChange={e => setForm(p => ({ ...p, packagingCost: e.target.value }))} className="mt-1" />
+              <label className="block mb-1" style={labelStyle}>包材費</label>
+              <Input type="number" step="0.0001" value={form.packagingCost} onChange={e => setForm(p => ({ ...p, packagingCost: e.target.value }))} />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">批價</label>
-              <Input type="number" step="0.0001" value={form.batchPrice} onChange={e => setForm(p => ({ ...p, batchPrice: e.target.value }))} className="mt-1" />
+              <label className="block mb-1" style={labelStyle}>批價</label>
+              <Input type="number" step="0.0001" value={form.batchPrice} onChange={e => setForm(p => ({ ...p, batchPrice: e.target.value }))} />
             </div>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700">備註</label>
-            <Input value={form.note} onChange={e => setForm(p => ({ ...p, note: e.target.value }))} className="mt-1" />
+            <label className="block mb-1" style={labelStyle}>備註</label>
+            <Input value={form.note} onChange={e => setForm(p => ({ ...p, note: e.target.value }))} />
           </div>
           <div className="flex items-center gap-2">
             <input type="checkbox" id="oemIsActive" checked={form.isActive} onChange={e => setForm(p => ({ ...p, isActive: e.target.checked }))} />
-            <label htmlFor="oemIsActive" className="text-sm text-gray-700">啟用</label>
+            <label htmlFor="oemIsActive" style={labelStyle}>啟用</label>
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">原料清單</span>
+              <span className="text-sm font-medium" style={{ color: 'var(--os-text-2)' }}>原料清單</span>
               <Button type="button" size="sm" variant="outline" className="h-7 text-xs"
                 onClick={() => setRows(prev => [...prev, emptyOemRow(prev.length)])}>
                 + 新增原料
@@ -831,10 +820,7 @@ function OemProductDialog({
             <div className="space-y-2">
               {rows.map((row, i) => (
                 <div key={i} className="grid grid-cols-[1fr_1fr_80px_80px_28px] gap-1.5 items-center">
-                  <Select
-                    value={row.productId ? String(row.productId) : "__manual"}
-                    onValueChange={v => pickProduct(i, v)}
-                  >
+                  <Select value={row.productId ? String(row.productId) : "__manual"} onValueChange={v => pickProduct(i, v)}>
                     <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="選原物料" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__manual">手動輸入</SelectItem>
@@ -846,7 +832,8 @@ function OemProductDialog({
                   <Input className="h-8 text-xs" placeholder="原料名稱" value={row.ingredientName} onChange={e => setRow(i, { ingredientName: e.target.value })} />
                   <Input className="h-8 text-xs" type="number" step="0.0001" placeholder="用量" value={row.quantity} onChange={e => setRow(i, { quantity: e.target.value })} />
                   <Input className="h-8 text-xs" placeholder="單位" value={row.unit} onChange={e => setRow(i, { unit: e.target.value })} />
-                  <Button type="button" size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-400 hover:text-red-600"
+                  <Button type="button" size="sm" variant="ghost" className="h-7 w-7 p-0"
+                    style={{ color: 'var(--os-danger)' }}
                     onClick={() => setRows(prev => prev.filter((_, idx) => idx !== i))}>
                     ×
                   </Button>
@@ -857,7 +844,7 @@ function OemProductDialog({
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="ghost" onClick={onClose}>取消</Button>
-            <Button type="submit" disabled={isPending}>
+            <Button type="submit" disabled={isPending} className="text-white" style={{ background: 'var(--os-amber)' }}>
               {isPending ? "儲存中..." : "儲存"}
             </Button>
           </div>
@@ -882,13 +869,11 @@ export default function OSProducts() {
   const [showSupplierDialog, setShowSupplierDialog] = useState(false);
   const [editCostProduct, setEditCostProduct] = useState<any | null>(null);
 
-  // Menu tab state
   const [menuCategory, setMenuCategory] = useState<string>("");
   const [editMenuItem, setEditMenuItem] = useState<any | null>(null);
   const [showMenuDialog, setShowMenuDialog] = useState(false);
   const [viewMenuItem, setViewMenuItem] = useState<any | null>(null);
 
-  // OEM tab state
   const [editOemItem, setEditOemItem] = useState<any | null>(null);
   const [showOemDialog, setShowOemDialog] = useState(false);
 
@@ -938,8 +923,11 @@ export default function OSProducts() {
 
   return (
     <AdminDashboardLayout>
-      <div className="p-4 md:p-6 space-y-4 max-w-7xl mx-auto">
-        <h1 className="text-2xl font-bold text-gray-900">品項成本管理</h1>
+      <div className="space-y-5 max-w-7xl mx-auto">
+        <div>
+          <h1 className="text-xl font-semibold" style={{ color: 'var(--os-text-1)' }}>品項成本管理</h1>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--os-text-3)' }}>管理進貨品項、成本與供應商</p>
+        </div>
 
         <Tabs defaultValue="products">
           <TabsList>
@@ -951,10 +939,10 @@ export default function OSProducts() {
 
           {/* ── 品項成本 Tab ── */}
           <TabsContent value="products" className="space-y-3 mt-4">
-            <Card>
+            <Card style={{ background: 'var(--os-surface)', border: '1px solid var(--os-border)' }}>
               <CardHeader className="pb-3">
                 <div className="flex flex-wrap items-center gap-2">
-                  <CardTitle className="text-base font-semibold">品項清單</CardTitle>
+                  <CardTitle className="text-base font-semibold" style={{ color: 'var(--os-text-1)' }}>品項清單</CardTitle>
                   <div className="ml-auto flex flex-wrap gap-2 items-center">
                     <Select value={filterSupplier || "__all"} onValueChange={v => { setFilterSupplier(v === "__all" ? "" : v); setCostPage(1); }}>
                       <SelectTrigger className="w-36 h-8 text-sm"><SelectValue placeholder="全部廠商" /></SelectTrigger>
@@ -971,14 +959,16 @@ export default function OSProducts() {
                       </SelectContent>
                     </Select>
                     <button
-                      className={`text-xs px-3 py-1 rounded border h-8 ${filterNeedsReview
-                        ? "bg-amber-100 border-amber-400 text-amber-800"
-                        : "border-stone-300 text-stone-600 hover:bg-stone-50"}`}
+                      className="text-xs px-3 py-1 rounded border h-8 transition-colors"
+                      style={filterNeedsReview
+                        ? { background: 'var(--os-amber-soft)', borderColor: 'var(--os-amber)', color: 'var(--os-amber-text)' }
+                        : { borderColor: 'var(--os-border)', color: 'var(--os-text-2)' }}
                       onClick={() => { setFilterNeedsReview(v => !v); setCostPage(1); }}
                     >
                       ⚠ 只看待確認（{needsReviewCount}）
                     </button>
-                    <Button size="sm" className="h-8" onClick={() => { setEditProduct(null); setShowProductDialog(true); }}>
+                    <Button size="sm" className="h-8 text-white" style={{ background: 'var(--os-amber)' }}
+                      onClick={() => { setEditProduct(null); setShowProductDialog(true); }}>
                       + 新增品項
                     </Button>
                   </div>
@@ -986,43 +976,52 @@ export default function OSProducts() {
               </CardHeader>
               <CardContent className="p-0">
                 {products.isLoading ? (
-                  <div className="p-6 text-center text-gray-400 text-sm">載入中...</div>
+                  <div className="p-6 text-center text-sm" style={{ color: 'var(--os-text-3)' }}>載入中...</div>
                 ) : productList.length === 0 ? (
-                  <div className="p-6 text-center text-gray-400 text-sm">尚無品項資料</div>
+                  <div className="p-6 text-center text-sm" style={{ color: 'var(--os-text-3)' }}>尚無品項資料</div>
                 ) : (
                   <>
                     {/* 桌面版 */}
                     <div className="hidden md:block overflow-x-auto">
                       <table className="w-full text-sm">
-                        <thead className="bg-gray-50 border-b">
+                        <thead style={{ background: 'var(--os-surface-2)', borderBottom: '1px solid var(--os-border)' }}>
                           <tr>
                             {["供應商", "品名", "分類", "最小單位", "整包單位", "成本", "批價", "毛利率", ""].map(h => (
-                              <th key={h} className="px-4 py-2.5 text-left font-medium text-gray-600">{h}</th>
+                              <th key={h} className="px-4 py-2.5 text-left" style={thStyle}>{h}</th>
                             ))}
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100">
+                        <tbody>
                           {pagedProductList.map((p: any) => {
                             const margin = calcMargin(Number(p.packCost), Number(p.batchPrice));
                             const unitDisplay = p.unitQty && Number(p.unitQty) > 0
                               ? `${Number(p.unitQty)}${p.unitName || ""}`
                               : (p.unitName || "-");
                             return (
-                              <tr key={p.id} className={`hover:bg-gray-50 transition-colors ${!p.isActive ? "opacity-50" : ""}`}>
-                                <td className="px-4 py-2.5 text-gray-600">{p.supplierName ?? "-"}</td>
-                                <td className="px-4 py-2.5 font-medium text-gray-900">{p.name}</td>
+                              <tr
+                                key={p.id}
+                                className="transition-colors"
+                                style={{
+                                  borderBottom: '1px solid var(--os-border-2)',
+                                  opacity: p.isActive ? 1 : 0.45,
+                                }}
+                                onMouseEnter={e => (e.currentTarget.style.background = 'var(--os-amber-soft)')}
+                                onMouseLeave={e => (e.currentTarget.style.background = '')}
+                              >
+                                <td className="px-4 py-2.5" style={{ color: 'var(--os-text-2)' }}>{p.supplierName ?? "-"}</td>
+                                <td className="px-4 py-2.5 font-medium" style={{ color: 'var(--os-text-1)' }}>{p.name}</td>
                                 <td className="px-4 py-2.5">
                                   {p.category && <Badge variant="secondary" className="text-xs">{p.category}</Badge>}
                                 </td>
-                                <td className="px-4 py-2.5 text-gray-600 text-xs">{unitDisplay}</td>
-                                <td className="px-4 py-2.5 text-gray-600">{p.packUnit || "-"}</td>
-                                <td className="px-4 py-2.5 text-blue-700 font-semibold">{fmtCost(p.packCost)}</td>
-                                <td className="px-4 py-2.5 text-gray-700">{fmtCost(p.batchPrice)}</td>
+                                <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--os-text-2)' }}>{unitDisplay}</td>
+                                <td className="px-4 py-2.5" style={{ color: 'var(--os-text-2)' }}>{p.packUnit || "-"}</td>
+                                <td className="px-4 py-2.5 font-semibold tabular-nums" style={{ color: 'var(--os-amber-text)' }}>{fmtCost(p.packCost)}</td>
+                                <td className="px-4 py-2.5 tabular-nums" style={{ color: 'var(--os-text-2)' }}>{fmtCost(p.batchPrice)}</td>
                                 <td className="px-4 py-2.5">
                                   {margin !== null && (
-                                    <Badge className={marginClass(margin)}>
+                                    <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={marginStyle(margin)}>
                                       {margin}%
-                                    </Badge>
+                                    </span>
                                   )}
                                 </td>
                                 <td className="px-4 py-2.5">
@@ -1031,7 +1030,8 @@ export default function OSProducts() {
                                       onClick={() => setEditCostProduct(p)}>更新成本</Button>
                                     <Button size="sm" variant="ghost" className="h-7 text-xs px-2"
                                       onClick={() => { setEditProduct(p); setShowProductDialog(true); }}>編輯</Button>
-                                    <Button size="sm" variant="ghost" className="h-7 text-xs px-2 text-red-500 hover:text-red-700"
+                                    <Button size="sm" variant="ghost" className="h-7 text-xs px-2"
+                                      style={{ color: 'var(--os-danger)' }}
                                       onClick={() => { if (confirm(`刪除「${p.name}」？`)) deleteProduct.mutate({ id: p.id }); }}>刪除</Button>
                                   </div>
                                 </td>
@@ -1042,35 +1042,38 @@ export default function OSProducts() {
                       </table>
                     </div>
                     {/* 手機版 */}
-                    <div className="md:hidden divide-y divide-gray-100">
+                    <div className="md:hidden">
                       {pagedProductList.map((p: any) => {
                         const margin = calcMargin(Number(p.packCost), Number(p.batchPrice));
                         const unitDisplay = p.unitQty && Number(p.unitQty) > 0
                           ? `${Number(p.unitQty)}${p.unitName || ""}`
                           : (p.unitName || "-");
                         return (
-                          <div key={p.id} className={`p-4 space-y-2 ${!p.isActive ? "opacity-50" : ""}`}>
+                          <div key={p.id} className="p-4 space-y-2" style={{ borderBottom: '1px solid var(--os-border-2)', opacity: p.isActive ? 1 : 0.45 }}>
                             <div className="flex justify-between items-center">
                               <div>
-                                <span className="font-medium text-gray-900">{p.name}</span>
+                                <span className="font-medium" style={{ color: 'var(--os-text-1)' }}>{p.name}</span>
                                 {p.category && <Badge variant="secondary" className="ml-2 text-xs">{p.category}</Badge>}
                               </div>
-                              <span className="text-blue-700 font-bold">{fmtCost(p.packCost)}</span>
+                              <span className="font-bold tabular-nums" style={{ color: 'var(--os-amber-text)' }}>{fmtCost(p.packCost)}</span>
                             </div>
-                            <div className="flex gap-1 text-xs text-gray-500">
+                            <div className="flex gap-1 text-xs" style={{ color: 'var(--os-text-3)' }}>
                               <span>{p.supplierName ?? "-"}</span>
                               <span>·</span>
                               <span>{unitDisplay}</span>
                               <span>·</span>
                               <span>{p.packUnit || "-"}</span>
-                              {margin && <><span>·</span><span className={`font-medium ${Number(margin) >= 20 ? "text-green-600" : Number(margin) >= 5 ? "text-orange-600" : "text-red-600"}`}>毛利 {margin}%</span></>}
+                              {margin && (
+                                <><span>·</span>
+                                <span className="font-medium" style={{ color: Number(margin) >= 20 ? 'var(--os-success)' : Number(margin) >= 5 ? 'var(--os-warning)' : 'var(--os-danger)' }}>
+                                  毛利 {margin}%
+                                </span></>
+                              )}
                             </div>
                             <div className="flex gap-1">
-                              <Button size="sm" variant="ghost" className="h-7 text-xs px-2"
-                                onClick={() => setEditCostProduct(p)}>更新成本</Button>
-                              <Button size="sm" variant="ghost" className="h-7 text-xs px-2"
-                                onClick={() => { setEditProduct(p); setShowProductDialog(true); }}>編輯</Button>
-                              <Button size="sm" variant="ghost" className="h-7 text-xs px-2 text-red-500"
+                              <Button size="sm" variant="ghost" className="h-7 text-xs px-2" onClick={() => setEditCostProduct(p)}>更新成本</Button>
+                              <Button size="sm" variant="ghost" className="h-7 text-xs px-2" onClick={() => { setEditProduct(p); setShowProductDialog(true); }}>編輯</Button>
+                              <Button size="sm" variant="ghost" className="h-7 text-xs px-2" style={{ color: 'var(--os-danger)' }}
                                 onClick={() => { if (confirm(`刪除「${p.name}」？`)) deleteProduct.mutate({ id: p.id }); }}>刪除</Button>
                             </div>
                           </div>
@@ -1078,18 +1081,20 @@ export default function OSProducts() {
                       })}
                     </div>
                     {costTotalPages > 1 && (
-                      <div className="flex items-center justify-between px-4 py-3 border-t border-stone-200">
-                        <span className="text-xs text-stone-500">
+                      <div className="flex items-center justify-between px-4 py-3" style={{ borderTop: '1px solid var(--os-border)' }}>
+                        <span className="text-xs" style={{ color: 'var(--os-text-3)' }}>
                           第 {costPage} / {costTotalPages} 頁，共 {productList.length} 筆
                         </span>
                         <div className="flex gap-1">
                           <button
-                            className="px-2 py-1 text-xs border border-stone-300 rounded disabled:opacity-40"
+                            className="px-2 py-1 text-xs rounded disabled:opacity-40"
+                            style={{ border: '1px solid var(--os-border)', color: 'var(--os-text-2)' }}
                             disabled={costPage === 1}
                             onClick={() => setCostPage(p => p - 1)}
                           >上一頁</button>
                           <button
-                            className="px-2 py-1 text-xs border border-stone-300 rounded disabled:opacity-40"
+                            className="px-2 py-1 text-xs rounded disabled:opacity-40"
+                            style={{ border: '1px solid var(--os-border)', color: 'var(--os-text-2)' }}
                             disabled={costPage === costTotalPages}
                             onClick={() => setCostPage(p => p + 1)}
                           >下一頁</button>
@@ -1104,56 +1109,67 @@ export default function OSProducts() {
 
           {/* ── 供應商 Tab ── */}
           <TabsContent value="suppliers" className="mt-4">
-            <Card>
+            <Card style={{ background: 'var(--os-surface)', border: '1px solid var(--os-border)' }}>
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-3">
-                  <CardTitle className="text-base font-semibold">供應商清單</CardTitle>
-                  <Button size="sm" className="h-8 ml-auto" onClick={() => { setEditSupplier(null); setShowSupplierDialog(true); }}>
+                  <CardTitle className="text-base font-semibold" style={{ color: 'var(--os-text-1)' }}>供應商清單</CardTitle>
+                  <Button size="sm" className="h-8 ml-auto text-white" style={{ background: 'var(--os-amber)' }}
+                    onClick={() => { setEditSupplier(null); setShowSupplierDialog(true); }}>
                     + 新增供應商
                   </Button>
                 </div>
               </CardHeader>
               <CardContent className="p-0">
                 {suppliers.isLoading ? (
-                  <div className="p-6 text-center text-gray-400 text-sm">載入中...</div>
+                  <div className="p-6 text-center text-sm" style={{ color: 'var(--os-text-3)' }}>載入中...</div>
                 ) : supplierList.length === 0 ? (
-                  <div className="p-6 text-center text-gray-400 text-sm">尚無供應商資料</div>
+                  <div className="p-6 text-center text-sm" style={{ color: 'var(--os-text-3)' }}>尚無供應商資料</div>
                 ) : (
                   <>
                     {/* 桌面版 */}
                     <div className="hidden md:block overflow-x-auto">
                       <table className="w-full text-sm">
-                        <thead className="bg-gray-50 border-b">
+                        <thead style={{ background: 'var(--os-surface-2)', borderBottom: '1px solid var(--os-border)' }}>
                           <tr>
                             {["廠商名稱", "聯絡人", "電話", "付款方式", "退佣", "備註", "狀態", ""].map(h => (
-                              <th key={h} className="px-4 py-2.5 text-left font-medium text-gray-600">{h}</th>
+                              <th key={h} className="px-4 py-2.5 text-left" style={thStyle}>{h}</th>
                             ))}
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100">
+                        <tbody>
                           {supplierList.map((s: any) => (
-                            <tr key={s.id} className={`hover:bg-gray-50 transition-colors ${!s.isActive ? "opacity-50" : ""}`}>
-                              <td className="px-4 py-2.5 font-medium text-gray-900">{s.name}</td>
-                              <td className="px-4 py-2.5 text-gray-600">{s.contact ?? "-"}</td>
-                              <td className="px-4 py-2.5 text-gray-600">{s.phone ?? "-"}</td>
+                            <tr
+                              key={s.id}
+                              className="transition-colors"
+                              style={{ borderBottom: '1px solid var(--os-border-2)', opacity: s.isActive ? 1 : 0.45 }}
+                              onMouseEnter={e => (e.currentTarget.style.background = 'var(--os-amber-soft)')}
+                              onMouseLeave={e => (e.currentTarget.style.background = '')}
+                            >
+                              <td className="px-4 py-2.5 font-medium" style={{ color: 'var(--os-text-1)' }}>{s.name}</td>
+                              <td className="px-4 py-2.5" style={{ color: 'var(--os-text-2)' }}>{s.contact ?? "-"}</td>
+                              <td className="px-4 py-2.5" style={{ color: 'var(--os-text-2)' }}>{s.phone ?? "-"}</td>
                               <td className="px-4 py-2.5">
                                 <Badge variant="secondary">{s.paymentType}</Badge>
                               </td>
-                              <td className="px-4 py-2.5 text-gray-600">
+                              <td className="px-4 py-2.5" style={{ color: 'var(--os-text-2)' }}>
                                 {Number(s.rebateRate) > 0 ? `${s.rebateRate}%` : "-"}
-                                {Number(s.rebateCondition) > 0 && <span className="text-xs text-gray-400 ml-1">(≥${Number(s.rebateCondition).toLocaleString()})</span>}
+                                {Number(s.rebateCondition) > 0 && <span className="text-xs ml-1" style={{ color: 'var(--os-text-3)' }}>(≥${Number(s.rebateCondition).toLocaleString()})</span>}
                               </td>
-                              <td className="px-4 py-2.5 text-gray-500 text-xs max-w-[150px] truncate">{s.note ?? "-"}</td>
+                              <td className="px-4 py-2.5 text-xs max-w-[150px] truncate" style={{ color: 'var(--os-text-3)' }}>{s.note ?? "-"}</td>
                               <td className="px-4 py-2.5">
-                                <Badge className={s.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}>
+                                <span className="text-xs font-medium px-2 py-0.5 rounded-full"
+                                  style={s.isActive
+                                    ? { background: 'var(--os-success-bg)', color: 'var(--os-success)' }
+                                    : { background: 'var(--os-surface-2)', color: 'var(--os-text-3)' }}>
                                   {s.isActive ? "啟用" : "停用"}
-                                </Badge>
+                                </span>
                               </td>
                               <td className="px-4 py-2.5">
                                 <div className="flex gap-1">
                                   <Button size="sm" variant="ghost" className="h-7 text-xs px-2"
                                     onClick={() => { setEditSupplier(s); setShowSupplierDialog(true); }}>編輯</Button>
-                                  <Button size="sm" variant="ghost" className="h-7 text-xs px-2 text-red-500 hover:text-red-700"
+                                  <Button size="sm" variant="ghost" className="h-7 text-xs px-2"
+                                    style={{ color: 'var(--os-danger)' }}
                                     onClick={() => { if (confirm(`刪除「${s.name}」？`)) deleteSupplier.mutate({ id: s.id }); }}>刪除</Button>
                                 </div>
                               </td>
@@ -1163,14 +1179,14 @@ export default function OSProducts() {
                       </table>
                     </div>
                     {/* 手機版 */}
-                    <div className="md:hidden divide-y divide-gray-100">
+                    <div className="md:hidden">
                       {supplierList.map((s: any) => (
-                        <div key={s.id} className={`p-4 space-y-2 ${!s.isActive ? "opacity-50" : ""}`}>
+                        <div key={s.id} className="p-4 space-y-2" style={{ borderBottom: '1px solid var(--os-border-2)', opacity: s.isActive ? 1 : 0.45 }}>
                           <div className="flex justify-between items-center">
-                            <span className="font-medium text-gray-900">{s.name}</span>
+                            <span className="font-medium" style={{ color: 'var(--os-text-1)' }}>{s.name}</span>
                             <Badge variant="secondary">{s.paymentType}</Badge>
                           </div>
-                          <div className="text-xs text-gray-500">
+                          <div className="text-xs" style={{ color: 'var(--os-text-3)' }}>
                             {s.contact && <span>{s.contact} · </span>}
                             {s.phone && <span>{s.phone}</span>}
                             {Number(s.rebateRate) > 0 && <span> · 退佣 {s.rebateRate}%</span>}
@@ -1178,7 +1194,8 @@ export default function OSProducts() {
                           <div className="flex gap-1">
                             <Button size="sm" variant="ghost" className="h-7 text-xs px-2"
                               onClick={() => { setEditSupplier(s); setShowSupplierDialog(true); }}>編輯</Button>
-                            <Button size="sm" variant="ghost" className="h-7 text-xs px-2 text-red-500"
+                            <Button size="sm" variant="ghost" className="h-7 text-xs px-2"
+                              style={{ color: 'var(--os-danger)' }}
                               onClick={() => { if (confirm(`刪除「${s.name}」？`)) deleteSupplier.mutate({ id: s.id }); }}>刪除</Button>
                           </div>
                         </div>
@@ -1192,10 +1209,10 @@ export default function OSProducts() {
 
           {/* ── 菜單品項成本 Tab ── */}
           <TabsContent value="menu" className="space-y-3 mt-4">
-            <Card>
+            <Card style={{ background: 'var(--os-surface)', border: '1px solid var(--os-border)' }}>
               <CardHeader className="pb-3">
                 <div className="flex flex-wrap items-center gap-2">
-                  <CardTitle className="text-base font-semibold">菜單品項</CardTitle>
+                  <CardTitle className="text-base font-semibold" style={{ color: 'var(--os-text-1)' }}>菜單品項</CardTitle>
                   <div className="ml-auto flex flex-wrap gap-2 items-center">
                     <Select value={menuCategory || "__all"} onValueChange={v => setMenuCategory(v === "__all" ? "" : v)}>
                       <SelectTrigger className="w-40 h-8 text-sm"><SelectValue placeholder="全部分類" /></SelectTrigger>
@@ -1207,7 +1224,8 @@ export default function OSProducts() {
                       </SelectContent>
                     </Select>
                     {hasCostAccess && (
-                      <Button size="sm" className="h-8" onClick={() => { setEditMenuItem(null); setShowMenuDialog(true); }}>
+                      <Button size="sm" className="h-8 text-white" style={{ background: 'var(--os-amber)' }}
+                        onClick={() => { setEditMenuItem(null); setShowMenuDialog(true); }}>
                         + 新增品項
                       </Button>
                     )}
@@ -1216,54 +1234,66 @@ export default function OSProducts() {
               </CardHeader>
               <CardContent className="p-0">
                 {menuItems.isLoading ? (
-                  <div className="p-6 text-center text-gray-400 text-sm">載入中...</div>
+                  <div className="p-6 text-center text-sm" style={{ color: 'var(--os-text-3)' }}>載入中...</div>
                 ) : menuItemList.length === 0 ? (
-                  <div className="p-6 text-center text-gray-400 text-sm">尚無菜單品項資料</div>
+                  <div className="p-6 text-center text-sm" style={{ color: 'var(--os-text-3)' }}>尚無菜單品項資料</div>
                 ) : (
                   <>
                     {/* 桌面版 */}
                     <div className="hidden md:block overflow-x-auto">
                       <table className="w-full text-sm">
-                        <thead className="bg-gray-50 border-b">
+                        <thead style={{ background: 'var(--os-surface-2)', borderBottom: '1px solid var(--os-border)' }}>
                           <tr>
-                            <th className="px-4 py-2.5 text-left font-medium text-gray-600">品項名稱</th>
-                            <th className="px-4 py-2.5 text-left font-medium text-gray-600">分類</th>
-                            <th className="px-4 py-2.5 text-left font-medium text-gray-600">批價</th>
+                            <th className="px-4 py-2.5 text-left" style={thStyle}>品項名稱</th>
+                            <th className="px-4 py-2.5 text-left" style={thStyle}>分類</th>
+                            <th className="px-4 py-2.5 text-left" style={thStyle}>批價</th>
                             {hasCostAccess && <>
-                              <th className="px-4 py-2.5 text-left font-medium text-gray-600">食材成本</th>
-                              <th className="px-4 py-2.5 text-left font-medium text-gray-600">包材成本</th>
-                              <th className="px-4 py-2.5 text-left font-medium text-gray-600">內用毛利%</th>
-                              <th className="px-4 py-2.5 text-left font-medium text-gray-600">外帶毛利%</th>
+                              <th className="px-4 py-2.5 text-left" style={thStyle}>食材成本</th>
+                              <th className="px-4 py-2.5 text-left" style={thStyle}>包材成本</th>
+                              <th className="px-4 py-2.5 text-left" style={thStyle}>內用毛利%</th>
+                              <th className="px-4 py-2.5 text-left" style={thStyle}>外帶毛利%</th>
                             </>}
-                            <th className="px-4 py-2.5 text-left font-medium text-gray-600"></th>
+                            <th className="px-4 py-2.5 text-left" style={thStyle}></th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100">
+                        <tbody>
                           {menuItemList.map((item: any) => (
-                            <tr key={item.id} className={`hover:bg-gray-50 transition-colors ${!item.isActive ? "opacity-50" : ""}`}>
+                            <tr
+                              key={item.id}
+                              className="transition-colors"
+                              style={{ borderBottom: '1px solid var(--os-border-2)', opacity: item.isActive ? 1 : 0.45 }}
+                              onMouseEnter={e => (e.currentTarget.style.background = 'var(--os-amber-soft)')}
+                              onMouseLeave={e => (e.currentTarget.style.background = '')}
+                            >
                               <td className="px-4 py-2.5">
-                                <div className="font-medium text-gray-900">{item.name}</div>
-                                {item.mainIngredient && <div className="text-xs text-gray-400">{item.mainIngredient}</div>}
+                                <div className="font-medium" style={{ color: 'var(--os-text-1)' }}>{item.name}</div>
+                                {item.mainIngredient && <div className="text-xs" style={{ color: 'var(--os-text-3)' }}>{item.mainIngredient}</div>}
                               </td>
                               <td className="px-4 py-2.5">
                                 <Badge variant="secondary" className="text-xs">{item.category}</Badge>
                               </td>
-                              <td className="px-4 py-2.5 text-gray-700">{item.currentPrice ? fmtCost(item.currentPrice) : "-"}</td>
+                              <td className="px-4 py-2.5 tabular-nums" style={{ color: 'var(--os-text-2)' }}>{item.currentPrice ? fmtCost(item.currentPrice) : "-"}</td>
                               {hasCostAccess && <>
-                                <td className="px-4 py-2.5 text-blue-700">{item.totalIngredientCost !== null ? fmtCost(item.totalIngredientCost) : "-"}</td>
-                                <td className="px-4 py-2.5 text-purple-700">{item.totalPackagingCost !== null ? fmtCost(item.totalPackagingCost) : "-"}</td>
+                                <td className="px-4 py-2.5 tabular-nums" style={{ color: 'var(--os-amber-text)' }}>{item.totalIngredientCost !== null ? fmtCost(item.totalIngredientCost) : "-"}</td>
+                                <td className="px-4 py-2.5 tabular-nums" style={{ color: 'var(--os-info)' }}>{item.totalPackagingCost !== null ? fmtCost(item.totalPackagingCost) : "-"}</td>
                                 <td className="px-4 py-2.5">
                                   {item.dineInMargin !== null && (
-                                    <Badge className={Number(item.dineInMargin) >= 0.3 ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}>
+                                    <span className="text-xs font-medium px-2 py-0.5 rounded-full"
+                                      style={Number(item.dineInMargin) >= 0.3
+                                        ? { background: 'var(--os-success-bg)', color: 'var(--os-success)' }
+                                        : { background: 'var(--os-warning-bg)', color: 'var(--os-warning)' }}>
                                       {fmtPct(item.dineInMargin)}
-                                    </Badge>
+                                    </span>
                                   )}
                                 </td>
                                 <td className="px-4 py-2.5">
                                   {item.takeoutMargin !== null && (
-                                    <Badge className={Number(item.takeoutMargin) >= 0.3 ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}>
+                                    <span className="text-xs font-medium px-2 py-0.5 rounded-full"
+                                      style={Number(item.takeoutMargin) >= 0.3
+                                        ? { background: 'var(--os-success-bg)', color: 'var(--os-success)' }
+                                        : { background: 'var(--os-warning-bg)', color: 'var(--os-warning)' }}>
                                       {fmtPct(item.takeoutMargin)}
-                                    </Badge>
+                                    </span>
                                   )}
                                 </td>
                               </>}
@@ -1274,7 +1304,8 @@ export default function OSProducts() {
                                   {hasCostAccess && <>
                                     <Button size="sm" variant="ghost" className="h-7 text-xs px-2"
                                       onClick={() => { setEditMenuItem(item); setShowMenuDialog(true); }}>編輯</Button>
-                                    <Button size="sm" variant="ghost" className="h-7 text-xs px-2 text-red-500 hover:text-red-700"
+                                    <Button size="sm" variant="ghost" className="h-7 text-xs px-2"
+                                      style={{ color: 'var(--os-danger)' }}
                                       onClick={() => { if (confirm(`刪除「${item.name}」？`)) deleteMenuItem.mutate({ id: item.id }); }}>刪除</Button>
                                   </>}
                                 </div>
@@ -1285,21 +1316,21 @@ export default function OSProducts() {
                       </table>
                     </div>
                     {/* 手機版 */}
-                    <div className="md:hidden divide-y divide-gray-100">
+                    <div className="md:hidden">
                       {menuItemList.map((item: any) => (
-                        <div key={item.id} className={`p-4 space-y-2 ${!item.isActive ? "opacity-50" : ""}`}>
+                        <div key={item.id} className="p-4 space-y-2" style={{ borderBottom: '1px solid var(--os-border-2)', opacity: item.isActive ? 1 : 0.45 }}>
                           <div className="flex justify-between items-center">
                             <div>
-                              <span className="font-medium text-gray-900">{item.name}</span>
+                              <span className="font-medium" style={{ color: 'var(--os-text-1)' }}>{item.name}</span>
                               <Badge variant="secondary" className="ml-2 text-xs">{item.category}</Badge>
                             </div>
-                            {item.currentPrice && <span className="text-gray-700 font-semibold">{fmtCost(item.currentPrice)}</span>}
+                            {item.currentPrice && <span className="font-semibold tabular-nums" style={{ color: 'var(--os-text-2)' }}>{fmtCost(item.currentPrice)}</span>}
                           </div>
                           {hasCostAccess && item.dineInMargin !== null && (
-                            <div className="flex gap-2 text-xs">
-                              <span className="text-gray-500">食材 {fmtCost(item.totalIngredientCost)}</span>
+                            <div className="flex gap-2 text-xs" style={{ color: 'var(--os-text-3)' }}>
+                              <span>食材 {fmtCost(item.totalIngredientCost)}</span>
                               <span>·</span>
-                              <span className="text-gray-500">內用毛利 {fmtPct(item.dineInMargin)}</span>
+                              <span>內用毛利 {fmtPct(item.dineInMargin)}</span>
                             </div>
                           )}
                           <div className="flex gap-1">
@@ -1308,7 +1339,8 @@ export default function OSProducts() {
                             {hasCostAccess && <>
                               <Button size="sm" variant="ghost" className="h-7 text-xs px-2"
                                 onClick={() => { setEditMenuItem(item); setShowMenuDialog(true); }}>編輯</Button>
-                              <Button size="sm" variant="ghost" className="h-7 text-xs px-2 text-red-500"
+                              <Button size="sm" variant="ghost" className="h-7 text-xs px-2"
+                                style={{ color: 'var(--os-danger)' }}
                                 onClick={() => { if (confirm(`刪除「${item.name}」？`)) deleteMenuItem.mutate({ id: item.id }); }}>刪除</Button>
                             </>}
                           </div>
@@ -1321,14 +1353,14 @@ export default function OSProducts() {
             </Card>
           </TabsContent>
 
-          {/* ── OEM 品項 Tab（hasCostAccess only）── */}
+          {/* ── OEM 品項 Tab ── */}
           {hasCostAccess && (
             <TabsContent value="oem" className="space-y-3 mt-4">
-              <Card>
+              <Card style={{ background: 'var(--os-surface)', border: '1px solid var(--os-border)' }}>
                 <CardHeader className="pb-3">
                   <div className="flex items-center gap-2">
-                    <CardTitle className="text-base font-semibold">OEM 品項</CardTitle>
-                    <Button size="sm" className="h-8 ml-auto"
+                    <CardTitle className="text-base font-semibold" style={{ color: 'var(--os-text-1)' }}>OEM 品項</CardTitle>
+                    <Button size="sm" className="h-8 ml-auto text-white" style={{ background: 'var(--os-amber)' }}
                       onClick={() => { setEditOemItem(null); setShowOemDialog(true); }}>
                       + 新增 OEM 品項
                     </Button>
@@ -1336,30 +1368,36 @@ export default function OSProducts() {
                 </CardHeader>
                 <CardContent className="p-0">
                   {oemItems.isLoading ? (
-                    <div className="p-6 text-center text-gray-400 text-sm">載入中...</div>
+                    <div className="p-6 text-center text-sm" style={{ color: 'var(--os-text-3)' }}>載入中...</div>
                   ) : oemItemList.length === 0 ? (
-                    <div className="p-6 text-center text-gray-400 text-sm">尚無 OEM 品項資料</div>
+                    <div className="p-6 text-center text-sm" style={{ color: 'var(--os-text-3)' }}>尚無 OEM 品項資料</div>
                   ) : (
                     <>
                       {/* 桌面版 */}
                       <div className="hidden md:block overflow-x-auto">
                         <table className="w-full text-sm">
-                          <thead className="bg-gray-50 border-b">
+                          <thead style={{ background: 'var(--os-surface-2)', borderBottom: '1px solid var(--os-border)' }}>
                             <tr>
                               {["品項名稱", "單位", "代工費", "包材費", "批價", "原料數", ""].map(h => (
-                                <th key={h} className="px-4 py-2.5 text-left font-medium text-gray-600">{h}</th>
+                                <th key={h} className="px-4 py-2.5 text-left" style={thStyle}>{h}</th>
                               ))}
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-gray-100">
+                          <tbody>
                             {oemItemList.map((item: any) => (
-                              <tr key={item.id} className={`hover:bg-gray-50 transition-colors ${!item.isActive ? "opacity-50" : ""}`}>
-                                <td className="px-4 py-2.5 font-medium text-gray-900">{item.name}</td>
-                                <td className="px-4 py-2.5 text-gray-600">{item.unit}</td>
-                                <td className="px-4 py-2.5 text-blue-700">{fmtCost(item.processingFee)}</td>
-                                <td className="px-4 py-2.5 text-purple-700">{fmtCost(item.packagingCost)}</td>
-                                <td className="px-4 py-2.5 text-gray-700">{item.batchPrice ? fmtCost(item.batchPrice) : "-"}</td>
-                                <td className="px-4 py-2.5 text-gray-500">{(item.ingredients ?? []).length} 項</td>
+                              <tr
+                                key={item.id}
+                                className="transition-colors"
+                                style={{ borderBottom: '1px solid var(--os-border-2)', opacity: item.isActive ? 1 : 0.45 }}
+                                onMouseEnter={e => (e.currentTarget.style.background = 'var(--os-amber-soft)')}
+                                onMouseLeave={e => (e.currentTarget.style.background = '')}
+                              >
+                                <td className="px-4 py-2.5 font-medium" style={{ color: 'var(--os-text-1)' }}>{item.name}</td>
+                                <td className="px-4 py-2.5" style={{ color: 'var(--os-text-2)' }}>{item.unit}</td>
+                                <td className="px-4 py-2.5 tabular-nums" style={{ color: 'var(--os-amber-text)' }}>{fmtCost(item.processingFee)}</td>
+                                <td className="px-4 py-2.5 tabular-nums" style={{ color: 'var(--os-info)' }}>{fmtCost(item.packagingCost)}</td>
+                                <td className="px-4 py-2.5 tabular-nums" style={{ color: 'var(--os-text-2)' }}>{item.batchPrice ? fmtCost(item.batchPrice) : "-"}</td>
+                                <td className="px-4 py-2.5" style={{ color: 'var(--os-text-3)' }}>{(item.ingredients ?? []).length} 項</td>
                                 <td className="px-4 py-2.5">
                                   <Button size="sm" variant="ghost" className="h-7 text-xs px-2"
                                     onClick={() => { setEditOemItem(item); setShowOemDialog(true); }}>編輯</Button>
@@ -1370,14 +1408,14 @@ export default function OSProducts() {
                         </table>
                       </div>
                       {/* 手機版 */}
-                      <div className="md:hidden divide-y divide-gray-100">
+                      <div className="md:hidden">
                         {oemItemList.map((item: any) => (
-                          <div key={item.id} className={`p-4 space-y-2 ${!item.isActive ? "opacity-50" : ""}`}>
+                          <div key={item.id} className="p-4 space-y-2" style={{ borderBottom: '1px solid var(--os-border-2)', opacity: item.isActive ? 1 : 0.45 }}>
                             <div className="flex justify-between items-center">
-                              <span className="font-medium text-gray-900">{item.name}</span>
-                              <span className="text-sm text-gray-500">{item.unit}</span>
+                              <span className="font-medium" style={{ color: 'var(--os-text-1)' }}>{item.name}</span>
+                              <span className="text-sm" style={{ color: 'var(--os-text-3)' }}>{item.unit}</span>
                             </div>
-                            <div className="flex gap-2 text-xs text-gray-500">
+                            <div className="flex gap-2 text-xs" style={{ color: 'var(--os-text-3)' }}>
                               <span>代工費 {fmtCost(item.processingFee)}</span>
                               <span>·</span>
                               <span>包材 {fmtCost(item.packagingCost)}</span>
