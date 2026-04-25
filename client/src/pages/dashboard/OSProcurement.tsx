@@ -1,8 +1,6 @@
 import { useState } from "react";
 import AdminDashboardLayout from "@/components/AdminDashboardLayout";
 import { trpc } from "@/lib/trpc";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -42,22 +40,30 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: '已取消',
 };
 
-const STATUS_BADGE: Record<string, string> = {
-  pending: 'bg-gray-100 text-gray-700',
-  sent: 'bg-blue-100 text-blue-700',
-  confirmed: 'bg-green-100 text-green-700',
-  received: 'bg-teal-100 text-teal-700',
-  cancelled: 'bg-red-100 text-red-700',
+// status badge styles using --os-* tokens
+const STATUS_STYLE: Record<string, React.CSSProperties> = {
+  pending:   { background: 'var(--os-surface-2)',  color: 'var(--os-text-2)' },
+  sent:      { background: 'var(--os-info-bg)',     color: 'var(--os-info)' },
+  confirmed: { background: 'var(--os-success-bg)', color: 'var(--os-success)' },
+  received:  { background: 'var(--os-amber-soft)', color: 'var(--os-amber-text)' },
+  cancelled: { background: 'var(--os-danger-bg)',  color: 'var(--os-danger)' },
 };
 
 function StatusBadge({ status }: { status: string }) {
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${STATUS_BADGE[status] ?? 'bg-gray-100 text-gray-700'}`}>
-      {STATUS_LABELS[status] ?? status}
-    </span>
-  );
+  const style: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '1px 8px',
+    borderRadius: 4,
+    fontSize: 12,
+    fontWeight: 500,
+    ...(STATUS_STYLE[status] ?? { background: 'var(--os-surface-2)', color: 'var(--os-text-2)' }),
+  };
+  return <span style={style}>{STATUS_LABELS[status] ?? status}</span>;
 }
 
+const labelSt: React.CSSProperties = { color: 'var(--os-text-3)', fontSize: 12, display: 'block', marginBottom: 4 };
+const thSt: React.CSSProperties = { color: 'var(--os-text-3)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' };
 const TEMPERATURE_OPTIONS = ['常溫', '冷藏', '冷凍'] as const;
 
 // ── 叫貨單列表 Tab ────────────────────────────────────────────────────────────
@@ -86,15 +92,15 @@ function OrderListTab() {
       {/* 篩選 */}
       <div className="flex flex-wrap gap-3 items-end">
         <div>
-          <label className="text-xs text-gray-500 block mb-1">開始日期</label>
+          <label style={labelSt}>開始日期</label>
           <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-36" />
         </div>
         <div>
-          <label className="text-xs text-gray-500 block mb-1">結束日期</label>
+          <label style={labelSt}>結束日期</label>
           <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-36" />
         </div>
         <div>
-          <label className="text-xs text-gray-500 block mb-1">狀態</label>
+          <label style={labelSt}>狀態</label>
           <Select value={status} onValueChange={setStatus}>
             <SelectTrigger className="w-32">
               <SelectValue placeholder="全部" />
@@ -111,48 +117,61 @@ function OrderListTab() {
       </div>
 
       {/* 表格 */}
-      <div className="overflow-x-auto rounded border">
+      <div style={{ overflowX: 'auto', borderRadius: 8, border: '1px solid var(--os-border)' }}>
         <table className="w-full text-sm">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-3 py-2 text-left font-medium text-gray-600">訂單號</th>
-              <th className="px-3 py-2 text-left font-medium text-gray-600">日期</th>
-              <th className="px-3 py-2 text-left font-medium text-gray-600">來源</th>
-              <th className="px-3 py-2 text-left font-medium text-gray-600">廠商</th>
-              <th className="px-3 py-2 text-left font-medium text-gray-600">門市</th>
-              <th className="px-3 py-2 text-center font-medium text-gray-600">品項</th>
-              <th className="px-3 py-2 text-left font-medium text-gray-600">狀態</th>
-              <th className="px-3 py-2 text-center font-medium text-gray-600">操作</th>
+          <thead>
+            <tr style={{ background: 'var(--os-surface-2)', borderBottom: '1px solid var(--os-border)' }}>
+              <th className="px-3 py-2 text-left" style={thSt}>訂單號</th>
+              <th className="px-3 py-2 text-left" style={thSt}>日期</th>
+              <th className="px-3 py-2 text-left" style={thSt}>來源</th>
+              <th className="px-3 py-2 text-left" style={thSt}>廠商</th>
+              <th className="px-3 py-2 text-left" style={thSt}>門市</th>
+              <th className="px-3 py-2 text-center" style={thSt}>品項</th>
+              <th className="px-3 py-2 text-left" style={thSt}>狀態</th>
+              <th className="px-3 py-2 text-center" style={thSt}>操作</th>
             </tr>
           </thead>
-          <tbody className="divide-y">
+          <tbody style={{ borderTop: '1px solid var(--os-border)' }}>
             {orders.length === 0 && (
-              <tr><td colSpan={8} className="text-center py-8 text-gray-400">目前無資料</td></tr>
+              <tr>
+                <td colSpan={8} className="text-center py-10" style={{ color: 'var(--os-text-3)' }}>
+                  目前無資料
+                </td>
+              </tr>
             )}
             {orders.map((o: any) => (
               <>
                 <tr
                   key={o.id}
-                  className="hover:bg-gray-50 cursor-pointer"
+                  style={{ borderBottom: '1px solid var(--os-border)', cursor: 'pointer' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--os-amber-soft)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = '')}
                   onClick={() => setExpandedId(expandedId === o.id ? null : o.id)}
                 >
-                  <td className="px-3 py-2 font-mono text-blue-600 underline">{o.orderNo}</td>
-                  <td className="px-3 py-2">{o.orderDate?.slice(0,10)}</td>
+                  <td className="px-3 py-2 font-mono" style={{ color: 'var(--os-amber-text)', textDecoration: 'underline' }}>
+                    {o.orderNo}
+                  </td>
+                  <td className="px-3 py-2" style={{ color: 'var(--os-text-1)' }}>{o.orderDate?.slice(0, 10)}</td>
                   <td className="px-3 py-2">
-                    <span className={`text-xs px-1.5 py-0.5 rounded ${o.sourceType === 'damai_import' ? 'bg-purple-100 text-purple-700' : 'bg-orange-100 text-orange-700'}`}>
+                    <span style={{
+                      fontSize: 11,
+                      padding: '1px 6px',
+                      borderRadius: 4,
+                      ...(o.sourceType === 'damai_import'
+                        ? { background: 'var(--os-info-bg)', color: 'var(--os-info)' }
+                        : { background: 'var(--os-warning-bg)', color: 'var(--os-warning)' }),
+                    }}>
                       {o.sourceType === 'damai_import' ? '大麥匯入' : '手動'}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-xs max-w-[160px] truncate">{o.suppliers}</td>
-                  <td className="px-3 py-2 text-xs max-w-[120px] truncate">{o.stores}</td>
-                  <td className="px-3 py-2 text-center">{o.itemCount}</td>
+                  <td className="px-3 py-2 text-xs max-w-[160px] truncate" style={{ color: 'var(--os-text-1)' }}>{o.suppliers}</td>
+                  <td className="px-3 py-2 text-xs max-w-[120px] truncate" style={{ color: 'var(--os-text-2)' }}>{o.stores}</td>
+                  <td className="px-3 py-2 text-center" style={{ color: 'var(--os-text-1)' }}>{o.itemCount}</td>
                   <td className="px-3 py-2"><StatusBadge status={o.status} /></td>
                   <td className="px-3 py-2 text-center">
                     <Select
                       value={o.status}
-                      onValueChange={(v) => {
-                        updateStatus.mutate({ orderId: o.id, status: v as any });
-                      }}
+                      onValueChange={(v) => updateStatus.mutate({ orderId: o.id, status: v as any })}
                     >
                       <SelectTrigger className="h-7 text-xs w-28" onClick={e => e.stopPropagation()}>
                         <SelectValue />
@@ -167,11 +186,11 @@ function OrderListTab() {
                 </tr>
                 {expandedId === o.id && (
                   <tr key={`${o.id}-detail`}>
-                    <td colSpan={8} className="bg-blue-50 px-4 py-3">
+                    <td colSpan={8} style={{ background: 'var(--os-amber-soft)', padding: '12px 16px', borderBottom: '1px solid var(--os-border)' }}>
                       <OrderDetail
                         orderId={o.id}
-                        orderDate={o.orderDate?.slice(0,10)}
-                        onPush={() => { setPushDialogOrderId(o.id); setPushDialogDate(o.orderDate?.slice(0,10)); }}
+                        orderDate={o.orderDate?.slice(0, 10)}
+                        onPush={() => { setPushDialogOrderId(o.id); setPushDialogDate(o.orderDate?.slice(0, 10)); }}
                       />
                     </td>
                   </tr>
@@ -197,38 +216,45 @@ function OrderListTab() {
 function OrderDetail({ orderId, orderDate, onPush }: { orderId: number; orderDate: string; onPush: () => void }) {
   const { data } = trpc.procurement.getDetail.useQuery({ orderId });
 
-  if (!data) return <div className="text-gray-400 text-sm">載入中...</div>;
+  if (!data) return <div style={{ color: 'var(--os-text-3)', fontSize: 13 }}>載入中...</div>;
 
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-medium text-gray-700">訂單明細</span>
-        <Button size="sm" variant="default" onClick={onPush}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--os-text-1)' }}>訂單明細</span>
+        <Button
+          size="sm"
+          className="text-white"
+          style={{ background: 'var(--os-amber)' }}
+          onMouseEnter={e => ((e.currentTarget as HTMLButtonElement).style.background = 'var(--os-amber-hover)')}
+          onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.background = 'var(--os-amber)')}
+          onClick={onPush}
+        >
           彙整並推播 LINE
         </Button>
       </div>
       <table className="w-full text-xs">
         <thead>
-          <tr className="text-gray-500">
-            <th className="text-left py-1 pr-3">廠商</th>
-            <th className="text-left py-1 pr-3">門市</th>
-            <th className="text-left py-1 pr-3">品名</th>
-            <th className="text-right py-1 pr-3">數量</th>
-            <th className="text-left py-1 pr-3">單位</th>
-            <th className="text-left py-1 pr-3">溫層</th>
-            <th className="text-left py-1">LINE</th>
+          <tr>
+            {['廠商', '門市', '品名', '數量', '單位', '溫層', 'LINE'].map(h => (
+              <th key={h} className="text-left py-1 pr-3" style={thSt}>{h}</th>
+            ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-blue-100">
+        <tbody>
           {(data.items as any[]).map((item: any) => (
-            <tr key={item.id}>
-              <td className="py-1 pr-3">{item.supplierName}</td>
-              <td className="py-1 pr-3">{item.storeName}</td>
-              <td className="py-1 pr-3">{item.productName}</td>
-              <td className="py-1 pr-3 text-right">{item.quantity}</td>
-              <td className="py-1 pr-3">{item.unit}</td>
-              <td className="py-1 pr-3">{item.temperature}</td>
-              <td className="py-1">{item.lineSent ? <span className="text-green-600">已推</span> : <span className="text-gray-400">未推</span>}</td>
+            <tr key={item.id} style={{ borderTop: '1px solid var(--os-border-2)' }}>
+              <td className="py-1 pr-3" style={{ color: 'var(--os-text-1)' }}>{item.supplierName}</td>
+              <td className="py-1 pr-3" style={{ color: 'var(--os-text-2)' }}>{item.storeName}</td>
+              <td className="py-1 pr-3" style={{ color: 'var(--os-text-1)' }}>{item.productName}</td>
+              <td className="py-1 pr-3 text-right" style={{ color: 'var(--os-text-1)' }}>{item.quantity}</td>
+              <td className="py-1 pr-3" style={{ color: 'var(--os-text-2)' }}>{item.unit}</td>
+              <td className="py-1 pr-3" style={{ color: 'var(--os-text-2)' }}>{item.temperature}</td>
+              <td className="py-1">
+                {item.lineSent
+                  ? <span style={{ color: 'var(--os-success)', fontSize: 12 }}>已推</span>
+                  : <span style={{ color: 'var(--os-text-3)', fontSize: 12 }}>未推</span>}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -289,8 +315,17 @@ function PushLineDialog({ orderId, orderDate, onClose, onSuccess }: {
         </DialogHeader>
         <div className="space-y-3">
           {allGroups.map((g: any) => (
-            <div key={g.supplierName} className={`border rounded p-3 ${g.lineGroupId ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50 opacity-60'}`}>
-              <div className="flex items-center justify-between mb-1">
+            <div
+              key={g.supplierName}
+              style={{
+                border: `1px solid ${g.lineGroupId ? 'var(--os-border)' : 'var(--os-border-2)'}`,
+                borderRadius: 8,
+                padding: 12,
+                background: g.lineGroupId ? 'var(--os-surface)' : 'var(--os-surface-2)',
+                opacity: g.lineGroupId ? 1 : 0.6,
+              }}
+            >
+              <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <input
                     type="checkbox"
@@ -298,14 +333,25 @@ function PushLineDialog({ orderId, orderDate, onClose, onSuccess }: {
                     disabled={!g.lineGroupId}
                     onChange={e => setSelected(s => ({ ...s, [g.supplierName]: e.target.checked }))}
                   />
-                  <span className="font-medium text-sm">{g.supplierName}</span>
-                  <span className="text-xs text-gray-500">({g.itemCount} 品項)</span>
+                  <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--os-text-1)' }}>{g.supplierName}</span>
+                  <span style={{ fontSize: 12, color: 'var(--os-text-3)' }}>({g.itemCount} 品項)</span>
                 </div>
                 {g.lineGroupId
-                  ? <span className="text-xs text-green-600">LINE 已設定</span>
-                  : <span className="text-xs text-red-500">LINE 未設定</span>}
+                  ? <span style={{ fontSize: 12, color: 'var(--os-success)' }}>LINE 已設定</span>
+                  : <span style={{ fontSize: 12, color: 'var(--os-danger)' }}>LINE 未設定</span>}
               </div>
-              <pre className="text-xs bg-white rounded border p-2 whitespace-pre-wrap font-sans">
+              <pre
+                style={{
+                  fontSize: 12,
+                  background: 'var(--os-bg)',
+                  border: '1px solid var(--os-border)',
+                  borderRadius: 6,
+                  padding: '8px 10px',
+                  whiteSpace: 'pre-wrap',
+                  fontFamily: 'inherit',
+                  color: 'var(--os-text-1)',
+                }}
+              >
                 {`【來點什麼採購訂單】\n日期：${orderDate}\n\n${g.itemList}\n\n請確認並回覆收到，謝謝！`}
               </pre>
             </div>
@@ -313,7 +359,12 @@ function PushLineDialog({ orderId, orderDate, onClose, onSuccess }: {
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>取消</Button>
-          <Button onClick={handlePush} disabled={pushMutation.isPending}>
+          <Button
+            className="text-white"
+            style={{ background: 'var(--os-amber)' }}
+            onClick={handlePush}
+            disabled={pushMutation.isPending}
+          >
             {pushMutation.isPending ? '推播中...' : '確認推播'}
           </Button>
         </DialogFooter>
@@ -384,32 +435,27 @@ function CreateOrderTab() {
     <div className="space-y-4">
       <div className="flex gap-4 items-end">
         <div>
-          <label className="text-xs text-gray-500 block mb-1">叫貨日期</label>
+          <label style={labelSt}>叫貨日期</label>
           <Input type="date" value={orderDate} onChange={e => setOrderDate(e.target.value)} className="w-36" />
         </div>
         <div className="flex-1">
-          <label className="text-xs text-gray-500 block mb-1">備註</label>
+          <label style={labelSt}>備註</label>
           <Input value={note} onChange={e => setNote(e.target.value)} placeholder="選填" />
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded border">
+      <div style={{ overflowX: 'auto', borderRadius: 8, border: '1px solid var(--os-border)' }}>
         <table className="w-full text-sm">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-2 py-2 text-left text-gray-600 font-medium">廠商 *</th>
-              <th className="px-2 py-2 text-left text-gray-600 font-medium">門市 *</th>
-              <th className="px-2 py-2 text-left text-gray-600 font-medium">品名 *</th>
-              <th className="px-2 py-2 text-left text-gray-600 font-medium">單位</th>
-              <th className="px-2 py-2 text-left text-gray-600 font-medium">數量 *</th>
-              <th className="px-2 py-2 text-left text-gray-600 font-medium">單價</th>
-              <th className="px-2 py-2 text-left text-gray-600 font-medium">溫層</th>
-              <th className="px-2 py-2"></th>
+          <thead>
+            <tr style={{ background: 'var(--os-surface-2)', borderBottom: '1px solid var(--os-border)' }}>
+              {['廠商 *', '門市 *', '品名 *', '單位', '數量 *', '單價', '溫層', ''].map(h => (
+                <th key={h} className="px-2 py-2 text-left" style={h ? thSt : undefined}>{h}</th>
+              ))}
             </tr>
           </thead>
-          <tbody className="divide-y">
+          <tbody>
             {items.map((row, i) => (
-              <tr key={i}>
+              <tr key={i} style={{ borderTop: '1px solid var(--os-border-2)' }}>
                 <td className="px-2 py-1">
                   <Input value={row.supplierName} onChange={e => setItem(i, 'supplierName', e.target.value)} className="h-8 text-sm" placeholder="廠商" />
                 </td>
@@ -439,7 +485,15 @@ function CreateOrderTab() {
                   </Select>
                 </td>
                 <td className="px-2 py-1">
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-500" onClick={() => removeRow(i)}>✕</Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    style={{ color: 'var(--os-danger)' }}
+                    onClick={() => removeRow(i)}
+                  >
+                    ✕
+                  </Button>
                 </td>
               </tr>
             ))}
@@ -449,7 +503,12 @@ function CreateOrderTab() {
 
       <div className="flex justify-between">
         <Button variant="outline" size="sm" onClick={addRow}>＋ 新增品項</Button>
-        <Button onClick={handleSubmit} disabled={createMutation.isPending}>
+        <Button
+          className="text-white"
+          style={{ background: 'var(--os-amber)' }}
+          onClick={handleSubmit}
+          disabled={createMutation.isPending}
+        >
           {createMutation.isPending ? '建立中...' : '建立叫貨單'}
         </Button>
       </div>
@@ -465,34 +524,44 @@ function SupplierLineTab() {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-gray-500">
-        設定各廠商的 LINE 群組 ID 後，叫貨單可直接推播給廠商群組。
-        <br />
+      <p style={{ fontSize: 13, color: 'var(--os-text-3)', lineHeight: 1.7 }}>
+        設定各廠商的 LINE 群組 ID 後，叫貨單可直接推播給廠商群組。<br />
         取得 Group ID 方式：將 LINE Bot 加入廠商群組，群組內任意發訊後，從後台 Webhook log 取得 groupId。
       </p>
 
-      <div className="overflow-x-auto rounded border">
+      <div style={{ overflowX: 'auto', borderRadius: 8, border: '1px solid var(--os-border)' }}>
         <table className="w-full text-sm">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-3 py-2 text-left font-medium text-gray-600">廠商名稱</th>
-              <th className="px-3 py-2 text-left font-medium text-gray-600">LINE 群組 ID</th>
-              <th className="px-3 py-2 text-center font-medium text-gray-600">啟用</th>
-              <th className="px-3 py-2 text-left font-medium text-gray-600">備註</th>
-              <th className="px-3 py-2 text-center font-medium text-gray-600">編輯</th>
+          <thead>
+            <tr style={{ background: 'var(--os-surface-2)', borderBottom: '1px solid var(--os-border)' }}>
+              <th className="px-3 py-2 text-left" style={thSt}>廠商名稱</th>
+              <th className="px-3 py-2 text-left" style={thSt}>LINE 群組 ID</th>
+              <th className="px-3 py-2 text-center" style={thSt}>啟用</th>
+              <th className="px-3 py-2 text-left" style={thSt}>備註</th>
+              <th className="px-3 py-2 text-center" style={thSt}>編輯</th>
             </tr>
           </thead>
-          <tbody className="divide-y">
+          <tbody>
             {(suppliers as any[]).map((s: any) => (
-              <tr key={s.id} className="hover:bg-gray-50">
-                <td className="px-3 py-2 font-medium">{s.supplierName}</td>
-                <td className="px-3 py-2 font-mono text-xs text-gray-600">{s.lineGroupId || <span className="text-gray-300">未設定</span>}</td>
-                <td className="px-3 py-2 text-center">
-                  {s.isActive ? <span className="text-green-600 text-xs">●</span> : <span className="text-gray-300 text-xs">●</span>}
+              <tr
+                key={s.id}
+                style={{ borderTop: '1px solid var(--os-border-2)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--os-amber-soft)')}
+                onMouseLeave={e => (e.currentTarget.style.background = '')}
+              >
+                <td className="px-3 py-2 font-medium" style={{ color: 'var(--os-text-1)' }}>{s.supplierName}</td>
+                <td className="px-3 py-2 font-mono text-xs" style={{ color: 'var(--os-text-2)' }}>
+                  {s.lineGroupId || <span style={{ color: 'var(--os-text-3)' }}>未設定</span>}
                 </td>
-                <td className="px-3 py-2 text-xs text-gray-500">{s.note}</td>
                 <td className="px-3 py-2 text-center">
-                  <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setEditingSupplier(s)}>編輯</Button>
+                  {s.isActive
+                    ? <span style={{ color: 'var(--os-success)', fontSize: 12 }}>●</span>
+                    : <span style={{ color: 'var(--os-text-3)', fontSize: 12 }}>●</span>}
+                </td>
+                <td className="px-3 py-2 text-xs" style={{ color: 'var(--os-text-3)' }}>{s.note}</td>
+                <td className="px-3 py-2 text-center">
+                  <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setEditingSupplier(s)}>
+                    編輯
+                  </Button>
                 </td>
               </tr>
             ))}
@@ -536,17 +605,19 @@ function SupplierLineDialog({ supplier, onClose, onSuccess }: {
         </DialogHeader>
         <div className="space-y-3">
           <div>
-            <label className="text-xs text-gray-500 block mb-1">LINE 群組 ID</label>
+            <label style={labelSt}>LINE 群組 ID</label>
             <Input
               value={form.lineGroupId}
               onChange={e => setForm(f => ({ ...f, lineGroupId: e.target.value }))}
               placeholder="C1234567890abcdef..."
               className="font-mono text-sm"
             />
-            <p className="text-xs text-gray-400 mt-1">格式通常為 C 開頭的字串（群組）或 U 開頭（個人）</p>
+            <p style={{ fontSize: 11, color: 'var(--os-text-3)', marginTop: 4 }}>
+              格式通常為 C 開頭的字串（群組）或 U 開頭（個人）
+            </p>
           </div>
           <div>
-            <label className="text-xs text-gray-500 block mb-1">LINE 個人 ID（備用）</label>
+            <label style={labelSt}>LINE 個人 ID（備用）</label>
             <Input
               value={form.lineUserId}
               onChange={e => setForm(f => ({ ...f, lineUserId: e.target.value }))}
@@ -555,7 +626,7 @@ function SupplierLineDialog({ supplier, onClose, onSuccess }: {
             />
           </div>
           <div>
-            <label className="text-xs text-gray-500 block mb-1">備註</label>
+            <label style={labelSt}>備註</label>
             <Input value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} />
           </div>
           <div className="flex items-center gap-2">
@@ -565,12 +636,14 @@ function SupplierLineDialog({ supplier, onClose, onSuccess }: {
               checked={form.isActive}
               onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))}
             />
-            <label htmlFor="lineActive" className="text-sm">啟用</label>
+            <label htmlFor="lineActive" style={{ fontSize: 14, color: 'var(--os-text-1)' }}>啟用</label>
           </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>取消</Button>
           <Button
+            className="text-white"
+            style={{ background: 'var(--os-amber)' }}
             onClick={() => upsert.mutate({
               supplierName: supplier.supplierName,
               lineGroupId: form.lineGroupId || undefined,
@@ -593,50 +666,59 @@ function SupplierLineDialog({ supplier, onClose, onSuccess }: {
 export default function OSProcurement() {
   return (
     <AdminDashboardLayout>
-      <div className="p-6 max-w-7xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">叫貨管理</h1>
-          <p className="text-sm text-gray-500 mt-1">採購訂單管理、LINE 推播廠商</p>
+      <div style={{ maxWidth: 1120, margin: '0 auto' }}>
+        <div style={{ marginBottom: 24 }}>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--os-text-1)', margin: 0 }}>叫貨管理</h1>
+          <p style={{ fontSize: 13, color: 'var(--os-text-3)', marginTop: 4 }}>採購訂單管理、LINE 推播廠商</p>
         </div>
 
         <Tabs defaultValue="list">
-          <TabsList className="mb-4">
+          <TabsList style={{ marginBottom: 16 }}>
             <TabsTrigger value="list">叫貨單列表</TabsTrigger>
             <TabsTrigger value="create">新建叫貨單</TabsTrigger>
             <TabsTrigger value="suppliers">廠商 LINE 設定</TabsTrigger>
           </TabsList>
 
           <TabsContent value="list">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">叫貨單列表</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <OrderListTab />
-              </CardContent>
-            </Card>
+            <div
+              style={{
+                background: 'var(--os-surface)',
+                border: '1px solid var(--os-border)',
+                borderRadius: 10,
+                padding: '16px 20px',
+              }}
+            >
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--os-text-1)', marginBottom: 16 }}>叫貨單列表</div>
+              <OrderListTab />
+            </div>
           </TabsContent>
 
           <TabsContent value="create">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">新建叫貨單</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CreateOrderTab />
-              </CardContent>
-            </Card>
+            <div
+              style={{
+                background: 'var(--os-surface)',
+                border: '1px solid var(--os-border)',
+                borderRadius: 10,
+                padding: '16px 20px',
+              }}
+            >
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--os-text-1)', marginBottom: 16 }}>新建叫貨單</div>
+              <CreateOrderTab />
+            </div>
           </TabsContent>
 
           <TabsContent value="suppliers">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">廠商 LINE 設定</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <SupplierLineTab />
-              </CardContent>
-            </Card>
+            <div
+              style={{
+                background: 'var(--os-surface)',
+                border: '1px solid var(--os-border)',
+                borderRadius: 10,
+                padding: '16px 20px',
+              }}
+            >
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--os-text-1)', marginBottom: 16 }}>廠商 LINE 設定</div>
+              <SupplierLineTab />
+            </div>
           </TabsContent>
         </Tabs>
       </div>
