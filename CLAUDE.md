@@ -1,7 +1,7 @@
 # CLAUDE.md — OrderSome 專案主腦
 
 
-### 前端官網改版進度快照（2026-04-25 v6.00）
+### 前端官網改版進度快照（2026-04-25 v6.01）
 
 **設計規範（品牌系列）**
 - 色彩全用 OKLCH：暖黃 oklch(0.75 0.18 70)，奶白背景 oklch(0.97 0.02 85)，深色文字 oklch(0.18 0.02 60)
@@ -226,6 +226,13 @@ Hero 圖片規則：
 ---
 
 ## 已知 Bug 與修法（給 Claude 看）
+
+**TiDB + drizzle-orm LIMIT 問題（v6.01 已修）**
+- 症狀：登入頁出現 "Incorrect arguments to LIMIT" / "Failed query: select ... LIMIT ?" 錯誤
+- 原因：drizzle-orm 0.44.x 把 LIMIT 改成 prepared statement 參數（`LIMIT ?`），TiDB 不支援
+- 修法：`server/db.ts` 的 `createPool` 加 `prepare: false`，讓 mysql2 走 plain text query
+- 已修 commit：e48a659
+- **注意**：之後 npm install / 升套件若又出現同樣錯誤，先查 drizzle-orm 版本是否又變，再看這個設定有沒有被覆蓋
 
 **時區問題（v5.77 已修）**
 - Railway 部署的 Node.js 時區是 UTC
