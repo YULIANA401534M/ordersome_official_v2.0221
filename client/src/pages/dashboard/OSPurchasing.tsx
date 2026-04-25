@@ -578,9 +578,9 @@ export default function OSPurchasing() {
 
   return (
     <AdminDashboardLayout>
-      <div className="p-4 space-y-4" style={{ background: "#f7f6f3", minHeight: "100vh" }}>
+      <div className="p-4 space-y-4" style={{ background: "var(--os-bg)", minHeight: "100vh" }}>
 
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">叫貨管理</h1>
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--os-text-1)", marginBottom: 24 }}>叫貨管理</h1>
 
         {/* 篩選列 */}
         <div className="flex flex-wrap items-center gap-2">
@@ -605,7 +605,7 @@ export default function OSPurchasing() {
             ].map(({ label, days }) => (
               <button
                 key={label}
-                className="text-xs px-2 py-1 rounded border border-stone-300 hover:bg-stone-100 text-stone-600"
+                style={{ fontSize: 12, padding: "3px 8px", borderRadius: 4, border: "1px solid var(--os-border)", color: "var(--os-text-2)", background: "none", cursor: "pointer" }}
                 onClick={() => {
                   if (days === 0) {
                     setFilterStartDate("");
@@ -737,7 +737,7 @@ export default function OSPurchasing() {
               </Button>
             )}
             {canEdit && (
-              <Button size="sm" onClick={() => setShowCreate(true)} className="h-8 gap-1" style={{ background: "#b45309" }}>
+              <Button size="sm" onClick={() => setShowCreate(true)} className="h-8 gap-1" style={{ background: "var(--os-amber)" }}>
                 <Plus className="w-4 h-4" /> 新增叫貨單
               </Button>
             )}
@@ -748,13 +748,13 @@ export default function OSPurchasing() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
             { label: "本月叫貨", value: kpi.total, icon: ShoppingCart, color: "#b45309" },
-            { label: "待處理", value: kpi.pending, icon: ShoppingCart, color: "#9ca3af" },
-            { label: "已傳送", value: kpi.sent, icon: Send, color: "#0369a1" },
-            { label: "已到貨", value: kpi.received, icon: CheckCircle, color: "#15803d" },
+            { label: "待處理", value: kpi.pending, icon: ShoppingCart, color: "var(--os-text-3)" },
+            { label: "已傳送", value: kpi.sent, icon: Send, color: "var(--os-info)" },
+            { label: "已到貨", value: kpi.received, icon: CheckCircle, color: "var(--os-success)" },
           ].map(card => (
-            <div key={card.label} className="bg-white rounded-xl p-4 shadow-sm">
-              <p className="text-xs text-gray-500 mb-1">{card.label}</p>
-              <p className="font-kamabit text-3xl font-bold" style={{ color: card.color }}>{card.value}</p>
+            <div key={card.label} style={{ background: "var(--os-surface)", border: "1px solid var(--os-border)", borderRadius: 10, padding: 16 }}>
+              <p style={{ fontSize: 12, color: "var(--os-text-3)", marginBottom: 4 }}>{card.label}</p>
+              <p style={{ fontSize: 28, fontWeight: 700, color: card.color, margin: 0 }}>{card.value}</p>
             </div>
           ))}
         </div>
@@ -763,7 +763,7 @@ export default function OSPurchasing() {
         <div className="space-y-3">
           {/* 全選列 */}
           {isSuperAdmin && selectableOrders.length > 0 && (
-            <div className="flex items-center gap-3 px-4 py-2 bg-white rounded-xl shadow-sm">
+            <div className="flex items-center gap-3 px-4 py-2">
               <Checkbox
                 checked={
                   selectableOrders.length > 0 &&
@@ -784,7 +784,7 @@ export default function OSPurchasing() {
             </div>
           )}
           {(orders as any[]).length === 0 ? (
-            <div className="bg-white rounded-xl p-8 text-center text-gray-600">
+            <div style={{ background: "var(--os-surface)", border: "1px solid var(--os-border)", borderRadius: 10, padding: 32, textAlign: "center", color: "var(--os-text-2)" }}>
               {isFranchisee ? "尚無您門市的叫貨紀錄" : "無符合條件的叫貨紀錄"}
             </div>
           ) : (
@@ -799,9 +799,9 @@ export default function OSPurchasing() {
                 : "金額待填";
 
               return (
-                <div key={order.id} className="bg-white rounded-xl shadow-sm overflow-hidden">
+                <div key={order.id} style={{ background: "var(--os-surface)", border: "1px solid var(--os-border)", borderRadius: 10, overflow: "hidden" }}>
                   <div
-                    className="flex items-center gap-3 p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                    className="flex items-center gap-3 p-4 cursor-pointer" onMouseEnter={e => (e.currentTarget.style.background = "var(--os-amber-soft)")} onMouseLeave={e => (e.currentTarget.style.background = "")}
                     onClick={() => setExpandedId(isExpanded ? null : order.id)}
                   >
                     {/* Checkbox for pending/sent orders — 僅 super_admin 可批量刪除 */}
@@ -849,12 +849,12 @@ export default function OSPurchasing() {
                   </div>
 
                   {isExpanded && (
-                    <div className="border-t px-4 pb-4 pt-3 space-y-3">
+                    <div style={{ borderTop: "1px solid var(--os-border)", padding: "12px 16px 16px" }} className="space-y-3">
                       {/* 品項明細 */}
                       <div className="overflow-x-auto">
                         <table className="w-full text-xs">
                           <thead>
-                            <tr className="text-gray-600 border-b">
+                            <tr style={{ borderBottom: "1px solid var(--os-border)", color: "var(--os-text-3)" }}>
                               <th className="text-left py-1 pr-3">廠商</th>
                               <th className="text-left py-1 pr-3">門市</th>
                               <th className="text-left py-1 pr-3">品項</th>
@@ -868,7 +868,7 @@ export default function OSPurchasing() {
                           </thead>
                           <tbody>
                             {(detail?.items ?? []).map((item: any, i: number) => (
-                              <tr key={i} className="border-b last:border-0 hover:bg-gray-50">
+                              <tr key={i} style={{ borderTop: "1px solid var(--os-border-2)" }} onMouseEnter={e => (e.currentTarget.style.background = "var(--os-amber-soft)")} onMouseLeave={e => (e.currentTarget.style.background = "")}>
                                 <td className="py-1 pr-3 text-gray-700">{item.supplierName}</td>
                                 <td className="py-1 pr-3 text-gray-700">{item.storeName}</td>
                                 <td className="py-1 pr-3 font-medium">{item.productName}</td>
@@ -936,7 +936,7 @@ export default function OSPurchasing() {
                       {canEdit && (
                         <div className="flex flex-wrap gap-2 pt-1 items-center">
                           {order.status === "received" ? (
-                            <Badge style={{ color: "#166534", background: "#dcfce7", border: "none" }} className="text-xs px-3 py-1">已到貨入庫</Badge>
+                            <Badge style={{ color: "var(--os-success)", background: "var(--os-success-bg)", border: "none" }} className="text-xs px-3 py-1">已到貨入庫</Badge>
                           ) : next && (
                             <div className="flex items-center gap-2">
                               <Button
@@ -1122,7 +1122,7 @@ export default function OSPurchasing() {
             <Button
               onClick={() => noteTargetId !== null && updateNote.mutate({ orderId: noteTargetId, note: noteText })}
               disabled={updateNote.isPending}
-              style={{ background: "#b45309" }}
+              style={{ background: "var(--os-amber)" }}
             >
               儲存
             </Button>
@@ -1187,7 +1187,7 @@ export default function OSPurchasing() {
                 temperature: editItemField.temperature,
               })}
               disabled={updateItem.isPending}
-              style={{ background: "#b45309" }}
+              style={{ background: "var(--os-amber)" }}
             >
               儲存
             </Button>
@@ -1258,7 +1258,7 @@ export default function OSPurchasing() {
                 });
               }}
               disabled={addItem.isPending}
-              style={{ background: "#b45309" }}
+              style={{ background: "var(--os-amber)" }}
             >
               新增
             </Button>
@@ -1293,7 +1293,7 @@ export default function OSPurchasing() {
               </div>
               <div className="space-y-2">
                 {newItems.map((item, idx) => (
-                  <div key={idx} className="grid grid-cols-7 gap-1 items-end bg-gray-50 p-2 rounded-lg">
+                  <div key={idx} style={{ background: "var(--os-surface-2)", borderRadius: 8, padding: 8 }} className="grid grid-cols-7 gap-1 items-end">
                     <div className="col-span-2">
                       {idx === 0 && <p className="text-xs text-gray-600 mb-1">廠商 *</p>}
                       <Input value={item.supplierName} onChange={e => handleItemChange(idx, "supplierName", e.target.value)} placeholder="廠商名稱" className="h-8 text-xs" />
@@ -1331,7 +1331,7 @@ export default function OSPurchasing() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCreate(false)}>取消</Button>
-            <Button onClick={handleCreate} disabled={createMutation.isPending} style={{ background: "#b45309" }}>
+            <Button onClick={handleCreate} disabled={createMutation.isPending} style={{ background: "var(--os-amber)" }}>
               {createMutation.isPending ? "建立中…" : "建立叫貨單"}
             </Button>
           </DialogFooter>
@@ -1347,17 +1347,17 @@ export default function OSPurchasing() {
           <div className="space-y-3 py-2">
             <p className="text-sm text-gray-500">以下廠商將收到此叫貨單的 LINE 推播：</p>
             {(supplierGroups as any[]).map((g: any, i: number) => (
-              <div key={i} className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
+              <div key={i} style={{ background: "var(--os-surface-2)", borderRadius: 8, padding: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div>
                   <p className="text-sm font-medium">{g.supplierName}</p>
                   <p className="text-xs text-gray-600">{g.itemCount} 項品項</p>
                 </div>
                 {g.lineGroupId ? (
-                  <Badge style={{ color: "#15803d", background: "#f0fdf4", border: "none" }} className="text-xs">
+                  <Badge style={{ color: "var(--os-success)", background: "var(--os-success-bg)", border: "none" }} className="text-xs">
                     LINE 已設定
                   </Badge>
                 ) : (
-                  <Badge style={{ color: "#dc2626", background: "#fef2f2", border: "none" }} className="text-xs">
+                  <Badge style={{ color: "var(--os-danger)", background: "var(--os-danger-bg)", border: "none" }} className="text-xs">
                     未設定 LINE
                   </Badge>
                 )}
@@ -1415,7 +1415,7 @@ export default function OSPurchasing() {
               </div>
               <div className="space-y-2">
                 {importItems.map((item, idx) => (
-                  <div key={idx} className="grid grid-cols-8 gap-1 items-end bg-gray-50 p-2 rounded-lg">
+                  <div key={idx} style={{ background: "var(--os-surface-2)", borderRadius: 8, padding: 8 }} className="grid grid-cols-8 gap-1 items-end">
                     <div className="col-span-2">
                       {idx === 0 && <p className="text-xs text-gray-600 mb-1">廠商 *</p>}
                       <Select value={item.supplierName} onValueChange={v => setImportItems(items => items.map((it, i) => i === idx ? { ...it, supplierName: v } : it))}>
@@ -1472,7 +1472,7 @@ export default function OSPurchasing() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowImport(false)}>取消</Button>
-            <Button onClick={handleImport} disabled={importMutation.isPending} style={{ background: "#b45309" }}>
+            <Button onClick={handleImport} disabled={importMutation.isPending} style={{ background: "var(--os-amber)" }}>
               {importMutation.isPending ? "匯入中…" : "確認補單"}
             </Button>
           </DialogFooter>
@@ -1488,12 +1488,12 @@ export default function OSPurchasing() {
           <div className="space-y-3 py-2">
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {(supplierLines as any[]).map((sl: any) => (
-                <div key={sl.id} className="flex items-center justify-between bg-gray-50 rounded-lg p-3 text-sm">
+                <div key={sl.id} style={{ background: "var(--os-surface-2)", borderRadius: 8, padding: 12, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <div>
                     <p className="font-medium">{sl.supplierName}</p>
                     <p className="text-xs text-gray-600 font-mono truncate w-40">{sl.lineGroupId || "—"}</p>
                   </div>
-                  <Badge style={{ color: sl.isActive ? "#15803d" : "#9ca3af", background: sl.isActive ? "#f0fdf4" : "#f3f4f6", border: "none" }} className="text-xs">
+                  <Badge style={{ color: sl.isActive ? "var(--os-success)" : "var(--os-text-3)", background: sl.isActive ? "var(--os-success-bg)" : "var(--os-surface-2)", border: "none" }} className="text-xs">
                     {sl.isActive ? "啟用" : "停用"}
                   </Badge>
                 </div>
@@ -1517,7 +1517,7 @@ export default function OSPurchasing() {
                 setLineConfigName(""); setLineConfigGroupId("");
               }}
               disabled={lineUpsert.isPending}
-              style={{ background: "#b45309" }}
+              style={{ background: "var(--os-amber)" }}
             >
               儲存
             </Button>
@@ -1560,7 +1560,7 @@ export default function OSPurchasing() {
               const printedCount = Array.from(new Set(rows.filter((r: any) => r.printedAt).map((r: any) => r.orderId))).length;
               const lastPrinted = rows.filter((r: any) => r.printedAt).sort((a: any, b: any) => b.printedAt > a.printedAt ? 1 : -1)[0];
               return (
-                <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
+                <div style={{ background: "var(--os-surface-2)", borderRadius: 8, padding: 12, fontSize: 13 }} className="space-y-1">
                   <p className="text-gray-700">找到 <strong>{orderIds.length}</strong> 張叫貨單，共 <strong>{filtered.length}</strong> 項品項</p>
                   <p className="text-gray-500 text-xs">門市：{storeSet.join("、") || "無"}</p>
                   {printedCount > 0 && lastPrinted && (
@@ -1572,7 +1572,7 @@ export default function OSPurchasing() {
                 </div>
               );
             })() : (
-              <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600 text-center">
+              <div style={{ background: "var(--os-surface-2)", borderRadius: 8, padding: 12, fontSize: 13, color: "var(--os-text-2)", textAlign: "center" }}>
                 {showPickPrint ? "查詢中或此日期範圍無撿貨單（不含已作廢和已到貨的 B 類廠商叫貨單）" : ""}
               </div>
             )}
@@ -1586,7 +1586,7 @@ export default function OSPurchasing() {
                 const filtered = pickOnlyUnprinted ? rows.filter((r) => !r.printedAt) : rows;
                 return filtered.length === 0;
               })()}
-              style={{ background: "#b45309" }}
+              style={{ background: "var(--os-amber)" }}
             >
               <Printer className="w-4 h-4 mr-1" /> 產生並列印
             </Button>
@@ -1621,7 +1621,7 @@ export default function OSPurchasing() {
             {damaiPreview.length > 0 && !damaiImportResult && (
               <div className="space-y-2">
                 <Label className="text-xs text-gray-500">步驟二：確認預覽</Label>
-                <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
+                <div style={{ background: "var(--os-surface-2)", borderRadius: 8, padding: 12, fontSize: 13 }} className="space-y-1">
                   {(() => {
                     const orderNos = Array.from(new Set(damaiPreview.map(r => r.orderNo)));
                     const dates = damaiPreview.map(r => r.orderDate).filter(Boolean).sort();
@@ -1654,8 +1654,8 @@ export default function OSPurchasing() {
 
             {/* 步驟三：匯入結果 */}
             {damaiImportResult && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm space-y-1">
-                <p className="font-medium text-green-700">✅ 匯入完成</p>
+              <div style={{ background: "var(--os-success-bg)", border: "1px solid var(--os-success)", borderRadius: 8, padding: 12, fontSize: 13 }} className="space-y-1">
+                <p style={{ fontWeight: 600, color: "var(--os-success)" }}>✅ 匯入完成</p>
                 <p className="text-gray-600">建立叫貨單：<strong>{damaiImportResult.created}</strong> 張</p>
                 <p className="text-gray-600">略過（重複）：<strong>{damaiImportResult.skipped}</strong> 張</p>
                 {damaiImportResult.flagged > 0 && (
@@ -1679,7 +1679,7 @@ export default function OSPurchasing() {
                   }
                 }}
                 disabled={damaiPreview.length === 0 || importFromDamaiExcel.isPending}
-                style={{ background: "#b45309" }}
+                style={{ background: "var(--os-amber)" }}
               >
                 {importFromDamaiExcel.isPending ? "匯入中..." : "確認匯入"}
               </Button>
