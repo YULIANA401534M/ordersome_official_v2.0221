@@ -1,6 +1,6 @@
 # CLAUDE.md — OrderSome 專案主腦
 
-### Dayone 真資料閉環交接（2026-04-25 v6.20 / app v1.1.0）
+### Dayone 真資料閉環交接（2026-04-25 v6.21 / app v1.1.0）
 
 **這輪已完成**
 - 已直接連線 TiDB `ordersome`，確認 Dayone 租戶為 `tenantId=90004 / dayone-eggs`
@@ -76,7 +76,7 @@
 | 12 | FranchiseDashboard / Franchisees / FranchiseInquiries | /dashboard/franchise* | done（v6.18） |
 | 13 | AdminUsers / AdminPermissions / AdminTenants / AdminSopPermissions | /dashboard/admin-* | done（v6.19） |
 | 14 | ContentManagement / ContentEditor / AIWriter | /dashboard/content* | done（v6.20） |
-| 15 | SOPKnowledgeBase / DailyChecklist / EquipmentRepairs / OSScheduling | 其餘 | pending |
+| 15 | SOPKnowledgeBase / DailyChecklist / EquipmentRepairs / OSScheduling | 其餘 | done（v6.21） |
 
 **大永後台頁面改版順序**
 | 優先 | 頁面 | 路由 | 狀態 |
