@@ -61,8 +61,8 @@ import { CSS } from "@dnd-kit/utilities";
 // ── 子群組標題（不可點擊）──
 function SubGroupLabel({ label }: { label: string }) {
   return (
-    <div className="px-4 pt-2 pb-0.5">
-      <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--os-sidebar-muted)' }}>{label}</p>
+    <div className="px-4 pt-3 pb-0.5">
+      <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--os-amber-text)', opacity: 0.7 }}>{label}</p>
     </div>
   );
 }
@@ -169,7 +169,16 @@ export default function AdminDashboardLayout({
   const { loading, user, logout } = useAuth();
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({
+    "商城管理": true,
+    "內容管理": true,
+    "人員管理": true,
+    "加盟管理": true,
+    "Super Admin": true,
+    "來點什麼": true,
+    "大永蛋品 ERP": true,
+    "其他": true,
+  });
   const toggleGroup = (label: string) =>
     setCollapsedGroups(prev => ({ ...prev, [label]: !prev[label] }));
   const [isDragMode, setIsDragMode] = useState(false);
@@ -507,13 +516,13 @@ export default function AdminDashboardLayout({
 
   const menuItemStyle = (path: string): React.CSSProperties =>
     isActive(path)
-      ? { background: 'var(--os-sidebar-active)', color: 'var(--os-sidebar-text)' }
-      : { color: 'var(--os-sidebar-muted)' };
+      ? { background: 'var(--os-sidebar-active)', color: 'var(--os-sidebar-text)', fontWeight: 500 }
+      : { color: 'var(--os-sidebar-text)' };
 
   const groupLabelClass =
-    "os-group-label text-xs font-semibold uppercase tracking-widest px-4 py-2 flex items-center justify-between cursor-pointer select-none transition-colors";
+    "os-group-label text-[13px] font-medium px-4 py-2 flex items-center justify-between cursor-pointer select-none transition-colors";
 
-  const groupLabelStyle: React.CSSProperties = { color: 'var(--os-amber-text)' };
+  const groupLabelStyle: React.CSSProperties = { color: 'var(--os-sidebar-text)' };
 
   const renderGroup = (
     label: string,
@@ -526,8 +535,8 @@ export default function AdminDashboardLayout({
         <div className={groupLabelClass} style={groupLabelStyle} onClick={() => toggleGroup(label)}>
           <span>{label}</span>
           {isCollapsed
-            ? <ChevronRight className="h-3 w-3 shrink-0" />
-            : <ChevronDown className="h-3 w-3 shrink-0" />
+            ? <ChevronRight className="h-4 w-4 shrink-0 opacity-60" />
+            : <ChevronDown className="h-4 w-4 shrink-0 opacity-60" />
           }
         </div>
         {!isCollapsed && items.map((item) => (
@@ -627,8 +636,8 @@ export default function AdminDashboardLayout({
 
         {/* ── 群組一：宇聯集團 ── */}
         {(ecommerceItems.length > 0 || contentItems.length > 0 || userItems.length > 0 || franchiseItems.length > 0 || systemItems.length > 0) && (
-          <div className="px-4 pt-3 pb-1">
-            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--os-sidebar-muted)' }}>宇聯集團</p>
+          <div className="px-4 pt-4 pb-1">
+            <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--os-sidebar-text)' }}>宇聯集團</p>
           </div>
         )}
         {renderGroup("商城管理", ecommerceItems)}
@@ -640,17 +649,17 @@ export default function AdminDashboardLayout({
         {/* ── 群組二：來點什麼 ── */}
         {showOsSection && (
           <>
-            <div className="px-4 pt-3 pb-1">
-              <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--os-sidebar-muted)' }}>來點什麼</p>
+            <div className="px-4 pt-4 pb-1">
+              <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--os-sidebar-text)' }}>來點什麼 ERP</p>
             </div>
             <div>
               <div className={groupLabelClass} style={groupLabelStyle} onClick={() => !isDragMode && toggleGroup("來點什麼")}>
-                <span>來點什麼</span>
-                <div className="flex items-center gap-1">
+                <span>來點什麼 ERP</span>
+                <div className="flex items-center gap-2">
                   {isSuperAdmin && !isDragMode && (
                     <button
-                      className="text-[10px] px-1.5 py-0.5 rounded transition-colors"
-                      style={{ background: 'var(--os-surface-2)', color: 'var(--os-amber-text)' }}
+                      className="text-[11px] px-2 py-0.5 rounded transition-colors"
+                      style={{ background: 'var(--os-amber-soft)', color: 'var(--os-amber-text)' }}
                       onClick={e => {
                         e.stopPropagation();
                         setIsDragMode(true);
@@ -661,8 +670,8 @@ export default function AdminDashboardLayout({
                     </button>
                   )}
                   {!isDragMode && (!!collapsedGroups["來點什麼"]
-                    ? <ChevronRight className="h-3 w-3 shrink-0" />
-                    : <ChevronDown className="h-3 w-3 shrink-0" />
+                    ? <ChevronRight className="h-4 w-4 shrink-0 opacity-60" />
+                    : <ChevronDown className="h-4 w-4 shrink-0 opacity-60" />
                   )}
                 </div>
               </div>
@@ -706,11 +715,11 @@ export default function AdminDashboardLayout({
                   ) : (
                     renderOsItemsWithSubGroups(erpOrder)
                   )}
-                  {isDragMode && hasUnsaved && (
-                    <div className="mx-2 mt-1 mb-1 flex gap-1">
+                  {isDragMode && (
+                    <div className="mx-2 mt-2 mb-1 flex gap-1">
                       <Button
                         size="sm"
-                        className="h-7 text-xs flex-1 text-white"
+                        className="h-8 text-xs flex-1 text-white"
                         style={{ background: 'var(--os-amber)' }}
                         onClick={async () => {
                           await saveSidebarOrder.mutateAsync({
@@ -721,12 +730,12 @@ export default function AdminDashboardLayout({
                         }}
                         disabled={saveSidebarOrder.isPending}
                       >
-                        {saveSidebarOrder.isPending ? "儲存中..." : "儲存排列"}
+                        {saveSidebarOrder.isPending ? "儲存中..." : "確認排列"}
                       </Button>
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-7 text-xs"
+                        className="h-8 text-xs"
                         style={{ color: 'var(--os-sidebar-muted)' }}
                         onClick={() => { setIsDragMode(false); setHasUnsaved(false); }}
                       >
@@ -743,8 +752,8 @@ export default function AdminDashboardLayout({
 
         {/* ── 群組三：大永蛋品 ERP ── */}
         {showDyErpSection && (
-          <div className="px-4 pt-3 pb-1">
-            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--os-sidebar-muted)' }}>大永蛋品</p>
+          <div className="px-4 pt-4 pb-1">
+            <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--os-sidebar-text)' }}>大永蛋品 ERP</p>
           </div>
         )}
         {showDyErpSection && (
@@ -752,8 +761,8 @@ export default function AdminDashboardLayout({
             <div className={groupLabelClass} style={groupLabelStyle} onClick={() => toggleGroup("大永蛋品 ERP")}>
               <span>大永蛋品 ERP</span>
               {!!collapsedGroups["大永蛋品 ERP"]
-                ? <ChevronRight className="h-3 w-3 shrink-0" />
-                : <ChevronDown className="h-3 w-3 shrink-0" />
+                ? <ChevronRight className="h-4 w-4 shrink-0 opacity-60" />
+                : <ChevronDown className="h-4 w-4 shrink-0 opacity-60" />
               }
             </div>
             {!collapsedGroups["大永蛋品 ERP"] && (

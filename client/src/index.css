@@ -357,7 +357,6 @@
 /* ── Warm Paper 側邊欄 hover 行為 ──────────────────────────────────────── */
 .os-nav-item:hover {
   background: var(--os-sidebar-hover);
-  color: var(--os-sidebar-text);
 }
 .os-group-label:hover {
   color: var(--os-amber-text);
