@@ -1,106 +1,60 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import AdminDashboardLayout from "@/components/AdminDashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Loader2, Phone, Mail, MapPin, DollarSign, Briefcase, Save, UserPlus } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
-const statusLabels: Record<string, string> = {
-  pending: "待處理",
-  contacted: "已聯繫",
-  meeting_scheduled: "已安排會議",
-  completed: "已完成",
-  cancelled: "已取消",
+const STATUS_CFG: Record<string, { label: string; color: string; bg: string }> = {
+  pending:          { label: "待處理",   color: "var(--os-warning)", bg: "var(--os-warning-bg)" },
+  contacted:        { label: "已聯繫",   color: "var(--os-info)",    bg: "var(--os-info-bg)" },
+  meeting_scheduled:{ label: "已安排會議", color: "var(--os-amber-text)", bg: "var(--os-amber-soft)" },
+  completed:        { label: "已完成",   color: "var(--os-success)", bg: "var(--os-success-bg)" },
+  cancelled:        { label: "已取消",   color: "var(--os-text-3)",  bg: "var(--os-surface-2)" },
 };
 
-const statusColors: Record<string, string> = {
-  pending: "bg-yellow-100 text-yellow-800",
-  contacted: "bg-blue-100 text-blue-800",
-  meeting_scheduled: "bg-purple-100 text-purple-800",
-  completed: "bg-green-100 text-green-800",
-  cancelled: "bg-gray-100 text-gray-800",
-};
+const inputSt: React.CSSProperties = { width: "100%", padding: "6px 10px", border: "1px solid var(--os-border)", borderRadius: 6, fontSize: 13, background: "var(--os-surface)", color: "var(--os-text-1)", outline: "none" };
+const labelSt: React.CSSProperties = { fontSize: 13, fontWeight: 500, color: "var(--os-text-2)" };
+const amberBtn: React.CSSProperties = { background: "var(--os-amber)", color: "#fff" };
 
-// ── ConvertDialog ─────────────────────────────────────────────────────────────
-
-function ConvertDialog({
-  inquiry,
-  onClose,
-  onSuccess,
-}: {
-  inquiry: any;
-  onClose: () => void;
-  onSuccess: () => void;
-}) {
-  const [form, setForm] = useState({
-    email: inquiry.email ?? "",
-    name: inquiry.name ?? "",
-    phone: inquiry.phone ?? "",
-    password: "",
-  });
+function ConvertDialog({ inquiry, onClose, onSuccess }: { inquiry: any; onClose: () => void; onSuccess: () => void }) {
+  const [form, setForm] = useState({ email: inquiry.email ?? "", name: inquiry.name ?? "", phone: inquiry.phone ?? "", password: "" });
 
   const convert = trpc.franchisee.convertToFranchisee.useMutation({
-    onSuccess: () => {
-      toast.success("已建立加盟主帳號");
-      onSuccess();
-      onClose();
-    },
+    onSuccess: () => { toast.success("已建立加盟主帳號"); onSuccess(); onClose(); },
     onError: (e) => toast.error(e.message),
   });
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    convert.mutate({
-      inquiryId: inquiry.id,
-      email: form.email,
-      name: form.name,
-      phone: form.phone || undefined,
-      password: form.password || undefined,
-    });
+    convert.mutate({ inquiryId: inquiry.id, email: form.email, name: form.name, phone: form.phone || undefined, password: form.password || undefined });
   }
 
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle>轉為正式加盟主</DialogTitle>
-        </DialogHeader>
+        <DialogHeader><DialogTitle>轉為正式加盟主</DialogTitle></DialogHeader>
         <form onSubmit={submit} className="space-y-3">
-          <div>
-            <label className="text-sm font-medium text-gray-700">姓名 *</label>
-            <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required className="mt-1" />
-          </div>
-          <div>
-            <label className="text-sm font-medium text-gray-700">Email *</label>
-            <Input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} required className="mt-1" />
-          </div>
-          <div>
-            <label className="text-sm font-medium text-gray-700">電話</label>
-            <Input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className="mt-1" />
-          </div>
-          <div>
-            <label className="text-sm font-medium text-gray-700">初始密碼</label>
-            <Input type="password" value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} className="mt-1" placeholder="留空則帳號無密碼登入" />
-          </div>
+          {[
+            { label: "姓名 *", key: "name", type: "text", required: true },
+            { label: "Email *", key: "email", type: "email", required: true },
+            { label: "電話", key: "phone", type: "text", required: false },
+            { label: "初始密碼", key: "password", type: "password", required: false, placeholder: "留空則帳號無密碼登入" },
+          ].map(f => (
+            <div key={f.key}>
+              <label style={labelSt}>{f.label}</label>
+              <input type={f.type} value={(form as any)[f.key]} required={f.required}
+                placeholder={f.placeholder}
+                onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
+                style={{ ...inputSt, marginTop: 4 }} />
+            </div>
+          ))}
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="ghost" onClick={onClose}>取消</Button>
-            <Button type="submit" disabled={convert.isPending}>
+            <Button type="submit" style={amberBtn} disabled={convert.isPending}>
               {convert.isPending ? "建立中..." : "建立帳號"}
             </Button>
           </div>
@@ -110,8 +64,6 @@ function ConvertDialog({
   );
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
-
 export default function FranchiseInquiries() {
   const [editingNotes, setEditingNotes] = useState<Record<number, string>>({});
   const [convertTarget, setConvertTarget] = useState<any | null>(null);
@@ -120,32 +72,19 @@ export default function FranchiseInquiries() {
 
   const updateStatus = trpc.franchise.updateInquiryStatus.useMutation({
     onSuccess: () => { toast.success("狀態已更新"); refetch(); },
-    onError: (error) => toast.error(error.message || "更新失敗"),
+    onError: (e) => toast.error(e.message || "更新失敗"),
   });
 
   const updateNotes = trpc.franchise.updateInquiryNotes.useMutation({
     onSuccess: () => { toast.success("備註已儲存"); refetch(); setEditingNotes({}); },
-    onError: (error) => toast.error(error.message || "儲存失敗"),
+    onError: (e) => toast.error(e.message || "儲存失敗"),
   });
-
-  const handleStatusChange = (id: number, status: string) => {
-    updateStatus.mutate({ id, status: status as any });
-  };
-
-  const handleNotesChange = (id: number, notes: string) => {
-    setEditingNotes(prev => ({ ...prev, [id]: notes }));
-  };
-
-  const handleSaveNotes = (id: number) => {
-    const notes = editingNotes[id];
-    if (notes !== undefined) updateNotes.mutate({ id, notes });
-  };
 
   if (isLoading) {
     return (
       <AdminDashboardLayout>
         <div className="flex items-center justify-center h-96">
-          <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+          <Loader2 style={{ width: 32, height: 32, color: "var(--os-amber)" }} className="animate-spin" />
         </div>
       </AdminDashboardLayout>
     );
@@ -153,125 +92,102 @@ export default function FranchiseInquiries() {
 
   return (
     <AdminDashboardLayout>
-      <div className="space-y-6">
+      <div style={{ background: "var(--os-bg)", minHeight: "100vh", padding: 20 }} className="space-y-5">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">加盟諮詢管理</h1>
-          <p className="text-gray-600 mt-2">查看和管理所有加盟諮詢</p>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--os-text-1)", margin: 0 }}>加盟諮詢管理</h1>
+          <p style={{ fontSize: 13, color: "var(--os-text-3)", marginTop: 2 }}>查看和管理所有加盟諮詢</p>
         </div>
 
-        <div className="grid gap-6">
-          {inquiries && inquiries.length > 0 ? (
-            inquiries.map((inquiry) => (
-              <Card key={inquiry.id}>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-xl">{inquiry.name}</CardTitle>
-                    <div className="flex items-center gap-3">
-                      <Badge className={statusColors[inquiry.status]}>
-                        {statusLabels[inquiry.status]}
-                      </Badge>
-                      {inquiry.status !== "completed" && inquiry.status !== "cancelled" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 text-xs gap-1 text-green-700 border-green-300 hover:bg-green-50"
-                          onClick={() => setConvertTarget(inquiry)}
-                        >
-                          <UserPlus className="w-3.5 h-3.5" />
-                          轉為正式加盟主
-                        </Button>
-                      )}
-                      <Select
-                        value={inquiry.status}
-                        onValueChange={(value) => handleStatusChange(inquiry.id, value)}
-                      >
-                        <SelectTrigger className="w-[180px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">待處理</SelectItem>
-                          <SelectItem value="contacted">已聯繫</SelectItem>
-                          <SelectItem value="meeting_scheduled">已安排會議</SelectItem>
-                          <SelectItem value="completed">已完成</SelectItem>
-                          <SelectItem value="cancelled">已取消</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+        <div className="space-y-4">
+          {!inquiries || inquiries.length === 0 ? (
+            <div style={{ background: "var(--os-surface)", border: "1px solid var(--os-border)", borderRadius: 10, padding: "48px 0", textAlign: "center", color: "var(--os-text-3)", fontSize: 13 }}>
+              目前沒有加盟諮詢
+            </div>
+          ) : inquiries.map((inquiry) => {
+            const sc = STATUS_CFG[inquiry.status] ?? STATUS_CFG.pending;
+            return (
+              <div key={inquiry.id} style={{ background: "var(--os-surface)", border: "1px solid var(--os-border)", borderRadius: 10, overflow: "hidden" }}>
+                {/* Header */}
+                <div className="flex items-center justify-between flex-wrap gap-2 px-5 py-4"
+                  style={{ borderBottom: "1px solid var(--os-border-2)" }}>
+                  <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--os-text-1)" }}>{inquiry.name}</h2>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span style={{ fontSize: 12, padding: "2px 8px", borderRadius: 4, fontWeight: 500, color: sc.color, background: sc.bg }}>
+                      {sc.label}
+                    </span>
+                    {inquiry.status !== "completed" && inquiry.status !== "cancelled" && (
+                      <Button size="sm" variant="outline" className="h-8 text-xs gap-1"
+                        style={{ color: "var(--os-success)", borderColor: "var(--os-success-bg)" }}
+                        onClick={() => setConvertTarget(inquiry)}>
+                        <UserPlus className="w-3.5 h-3.5" /> 轉為正式加盟主
+                      </Button>
+                    )}
+                    <Select value={inquiry.status} onValueChange={v => updateStatus.mutate({ id: inquiry.id, status: v as any })}>
+                      <SelectTrigger className="w-40 h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(STATUS_CFG).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div className="flex items-center gap-2 text-gray-700">
-                      <Phone className="w-4 h-4" />
-                      <span>{inquiry.phone}</span>
+                </div>
+
+                {/* Body */}
+                <div className="px-5 py-4 space-y-4">
+                  <div className="grid md:grid-cols-2 gap-3">
+                    <div className="flex items-center gap-2" style={{ fontSize: 13, color: "var(--os-text-2)" }}>
+                      <Phone style={{ width: 14, height: 14 }} />{inquiry.phone}
                     </div>
-                    <div className="flex items-center gap-2 text-gray-700">
-                      <Mail className="w-4 h-4" />
-                      <span>{inquiry.email}</span>
+                    <div className="flex items-center gap-2" style={{ fontSize: 13, color: "var(--os-text-2)" }}>
+                      <Mail style={{ width: 14, height: 14 }} />{inquiry.email}
                     </div>
                     {inquiry.location && (
-                      <div className="flex items-center gap-2 text-gray-700">
-                        <MapPin className="w-4 h-4" />
-                        <span>{inquiry.location}</span>
+                      <div className="flex items-center gap-2" style={{ fontSize: 13, color: "var(--os-text-2)" }}>
+                        <MapPin style={{ width: 14, height: 14 }} />{inquiry.location}
                       </div>
                     )}
                     {inquiry.budget && (
-                      <div className="flex items-center gap-2 text-gray-700">
-                        <DollarSign className="w-4 h-4" />
-                        <span>{inquiry.budget}</span>
+                      <div className="flex items-center gap-2" style={{ fontSize: 13, color: "var(--os-text-2)" }}>
+                        <DollarSign style={{ width: 14, height: 14 }} />{inquiry.budget}
                       </div>
                     )}
                   </div>
                   {inquiry.experience && (
-                    <div className="mt-4">
-                      <div className="flex items-center gap-2 text-gray-700 mb-2">
-                        <Briefcase className="w-4 h-4" />
-                        <span className="font-medium">餐飲經驗：</span>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1" style={{ fontSize: 13, color: "var(--os-text-2)" }}>
+                        <Briefcase style={{ width: 14, height: 14 }} /><span style={{ fontWeight: 600 }}>餐飲經驗：</span>
                       </div>
-                      <p className="text-gray-600 ml-6">{inquiry.experience}</p>
+                      <p style={{ fontSize: 13, color: "var(--os-text-2)", marginLeft: 22 }}>{inquiry.experience}</p>
                     </div>
                   )}
                   {inquiry.message && (
-                    <div className="mt-4">
-                      <p className="font-medium text-gray-700 mb-2">其他想了解的事項：</p>
-                      <p className="text-gray-600">{inquiry.message}</p>
+                    <div>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: "var(--os-text-2)", marginBottom: 4 }}>其他想了解的事項：</p>
+                      <p style={{ fontSize: 13, color: "var(--os-text-2)" }}>{inquiry.message}</p>
                     </div>
                   )}
-                  <div className="mt-4 text-sm text-gray-500">
-                    提交時間：{new Date(inquiry.createdAt).toLocaleString('zh-TW')}
-                  </div>
+                  <p style={{ fontSize: 12, color: "var(--os-text-3)" }}>提交時間：{new Date(inquiry.createdAt).toLocaleString("zh-TW")}</p>
 
-                  {/* 備註區塊 */}
-                  <div className="mt-6 pt-4 border-t border-gray-200">
+                  {/* Notes */}
+                  <div style={{ borderTop: "1px solid var(--os-border-2)", paddingTop: 16 }}>
                     <div className="flex items-center justify-between mb-2">
-                      <p className="font-medium text-gray-700">管理員備註：</p>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleSaveNotes(inquiry.id)}
-                        disabled={editingNotes[inquiry.id] === undefined}
-                      >
-                        <Save className="w-4 h-4 mr-1" />
-                        儲存備註
+                      <p style={{ fontSize: 13, fontWeight: 600, color: "var(--os-text-1)" }}>管理員備註：</p>
+                      <Button size="sm" variant="outline" className="gap-1"
+                        onClick={() => { const notes = editingNotes[inquiry.id]; if (notes !== undefined) updateNotes.mutate({ id: inquiry.id, notes }); }}
+                        disabled={editingNotes[inquiry.id] === undefined}>
+                        <Save className="w-4 h-4" /> 儲存備註
                       </Button>
                     </div>
                     <textarea
-                      className="w-full min-h-[100px] p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      style={{ width: "100%", minHeight: 90, padding: "8px 10px", border: "1px solid var(--os-border)", borderRadius: 6, fontSize: 13, background: "var(--os-surface)", color: "var(--os-text-1)", outline: "none", resize: "none" }}
                       placeholder="新增備註..."
-                      value={editingNotes[inquiry.id] !== undefined ? editingNotes[inquiry.id] : (inquiry.notes || '')}
-                      onChange={(e) => handleNotesChange(inquiry.id, e.target.value)}
+                      value={editingNotes[inquiry.id] !== undefined ? editingNotes[inquiry.id] : (inquiry.notes || "")}
+                      onChange={e => setEditingNotes(prev => ({ ...prev, [inquiry.id]: e.target.value }))}
                     />
                   </div>
-                </CardContent>
-              </Card>
-            ))
-          ) : (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <p className="text-gray-500">目前沒有加盟諮詢</p>
-              </CardContent>
-            </Card>
-          )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 

@@ -1,80 +1,51 @@
 import { useState, useRef } from "react";
 import AdminDashboardLayout from "@/components/AdminDashboardLayout";
 import { trpc } from "@/lib/trpc";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
 function fmtDate(v: string | null | undefined) {
   if (!v) return "-";
   return new Date(v).toLocaleDateString("zh-TW");
 }
-
 function fmtAmount(v: number | string | null | undefined) {
   const n = Number(v ?? 0);
   return `$${n.toLocaleString("zh-TW", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 }
 
-// ── FranchiseeDetailDialog ────────────────────────────────────────────────────
+const thSt: React.CSSProperties = { color: "var(--os-text-3)", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" };
+const panelSt: React.CSSProperties = { background: "var(--os-surface)", border: "1px solid var(--os-border)", borderRadius: 10, overflow: "hidden" };
+const amberBtn: React.CSSProperties = { background: "var(--os-amber)", color: "#fff" };
+const inputSt: React.CSSProperties = { width: "100%", padding: "6px 10px", border: "1px solid var(--os-border)", borderRadius: 6, fontSize: 13, background: "var(--os-surface)", color: "var(--os-text-1)", outline: "none" };
+const formAreaSt: React.CSSProperties = { background: "var(--os-surface-2)", border: "1px solid var(--os-border)", borderRadius: 8, padding: "12px 14px" };
 
-function FranchiseeDetailDialog({
-  userId,
-  onClose,
-}: {
-  userId: number;
-  onClose: () => void;
-}) {
+const TABS = [
+  { key: "basic",     label: "基本資料" },
+  { key: "contracts", label: "合約管理" },
+  { key: "payments",  label: "帳款往來" },
+] as const;
+
+function FranchiseeDetailDialog({ userId, onClose }: { userId: number; onClose: () => void }) {
   const utils = trpc.useUtils();
   const detail = trpc.franchisee.franchiseeDetail.useQuery({ userId });
   const stores = trpc.store.listAll.useQuery();
 
+  const [innerTab, setInnerTab] = useState<"basic" | "contracts" | "payments">("basic");
   const [basicForm, setBasicForm] = useState<any>(null);
-  const [paymentForm, setPaymentForm] = useState({
-    paymentDate: new Date().toISOString().slice(0, 10),
-    amount: "",
-    direction: "receivable" as "receivable" | "paid",
-    category: "週結帳款",
-    note: "",
-  });
-  const [contractForm, setContractForm] = useState({
-    contractType: "加盟合約",
-    signedAt: "",
-    expiresAt: "",
-    note: "",
-  });
+  const [paymentForm, setPaymentForm] = useState({ paymentDate: new Date().toISOString().slice(0, 10), amount: "", direction: "receivable" as "receivable" | "paid", category: "週結帳款", note: "" });
+  const [contractForm, setContractForm] = useState({ contractType: "加盟合約", signedAt: "", expiresAt: "", note: "" });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const updateFranchisee = trpc.franchisee.franchiseeUpdate.useMutation({
-    onSuccess: () => {
-      toast.success("已儲存");
-      utils.franchisee.franchiseeList.invalidate();
-      utils.franchisee.franchiseeDetail.invalidate({ userId });
-    },
+    onSuccess: () => { toast.success("已儲存"); utils.franchisee.franchiseeList.invalidate(); utils.franchisee.franchiseeDetail.invalidate({ userId }); },
     onError: (e) => toast.error(e.message),
   });
 
   const contractUpload = trpc.franchisee.contractUpload.useMutation({
-    onSuccess: () => {
-      toast.success("合約已上傳");
-      utils.franchisee.franchiseeDetail.invalidate({ userId });
-      setContractForm({ contractType: "加盟合約", signedAt: "", expiresAt: "", note: "" });
-    },
+    onSuccess: () => { toast.success("合約已上傳"); utils.franchisee.franchiseeDetail.invalidate({ userId }); setContractForm({ contractType: "加盟合約", signedAt: "", expiresAt: "", note: "" }); },
     onError: (e) => toast.error(e.message),
   });
 
@@ -82,11 +53,7 @@ function FranchiseeDetailDialog({
   const uploadImage = trpc.storage.uploadImage.useMutation();
 
   const paymentUpsert = trpc.franchisee.paymentUpsert.useMutation({
-    onSuccess: () => {
-      toast.success("帳款已新增");
-      utils.franchisee.franchiseeDetail.invalidate({ userId });
-      setPaymentForm({ paymentDate: new Date().toISOString().slice(0, 10), amount: "", direction: "receivable", category: "週結帳款", note: "" });
-    },
+    onSuccess: () => { toast.success("帳款已新增"); utils.franchisee.franchiseeDetail.invalidate({ userId }); setPaymentForm({ paymentDate: new Date().toISOString().slice(0, 10), amount: "", direction: "receivable", category: "週結帳款", note: "" }); },
     onError: (e) => toast.error(e.message),
   });
 
@@ -94,7 +61,7 @@ function FranchiseeDetailDialog({
     return (
       <Dialog open onOpenChange={onClose}>
         <DialogContent className="max-w-3xl">
-          <div className="p-8 text-center text-gray-400 text-sm">載入中...</div>
+          <div style={{ padding: 32, textAlign: "center", color: "var(--os-text-3)", fontSize: 13 }}>載入中...</div>
         </DialogContent>
       </Dialog>
     );
@@ -102,23 +69,11 @@ function FranchiseeDetailDialog({
 
   const data = detail.data;
   if (!data) return null;
-
   const { user, contracts, payments } = data;
-  const form = basicForm ?? {
-    storeId: user.storeId ?? "",
-    status: user.status ?? "active",
-    has_procurement_access: !!user.has_procurement_access,
-    internalContact: user.internalContact ?? "",
-  };
+  const form = basicForm ?? { storeId: user.storeId ?? "", status: user.status ?? "active", has_procurement_access: !!user.has_procurement_access, internalContact: user.internalContact ?? "" };
 
   function saveBasic() {
-    updateFranchisee.mutate({
-      userId,
-      storeId: form.storeId || undefined,
-      status: form.status,
-      has_procurement_access: form.has_procurement_access,
-      internalContact: form.internalContact || undefined,
-    });
+    updateFranchisee.mutate({ userId, storeId: form.storeId || undefined, status: form.status, has_procurement_access: form.has_procurement_access, internalContact: form.internalContact || undefined });
   }
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -137,15 +92,7 @@ function FranchiseeDetailDialog({
           const res = await uploadImage.mutateAsync({ fileName: file.name, fileData, contentType: file.type });
           fileUrl = res.url;
         }
-        contractUpload.mutate({
-          userId,
-          fileUrl,
-          fileName: file.name,
-          contractType: contractForm.contractType,
-          signedAt: contractForm.signedAt || undefined,
-          expiresAt: contractForm.expiresAt || undefined,
-          note: contractForm.note || undefined,
-        });
+        contractUpload.mutate({ userId, fileUrl, fileName: file.name, contractType: contractForm.contractType, signedAt: contractForm.signedAt || undefined, expiresAt: contractForm.expiresAt || undefined, note: contractForm.note || undefined });
       } catch (err: any) {
         toast.error(err.message || "上傳失敗");
       }
@@ -157,14 +104,7 @@ function FranchiseeDetailDialog({
   function addPayment(e: React.FormEvent) {
     e.preventDefault();
     if (!paymentForm.amount) { toast.error("請填金額"); return; }
-    paymentUpsert.mutate({
-      userId,
-      paymentDate: paymentForm.paymentDate,
-      amount: Number(paymentForm.amount),
-      direction: paymentForm.direction,
-      category: paymentForm.category,
-      note: paymentForm.note || undefined,
-    });
+    paymentUpsert.mutate({ userId, paymentDate: paymentForm.paymentDate, amount: Number(paymentForm.amount), direction: paymentForm.direction, category: paymentForm.category, note: paymentForm.note || undefined });
   }
 
   const isUploading = uploadPdf.isPending || uploadImage.isPending || contractUpload.isPending;
@@ -172,20 +112,21 @@ function FranchiseeDetailDialog({
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{user.name} — 加盟主管理</DialogTitle>
-        </DialogHeader>
+        <DialogHeader><DialogTitle>{user.name} — 加盟主管理</DialogTitle></DialogHeader>
 
-        <Tabs defaultValue="basic">
-          <TabsList className="mb-4">
-            <TabsTrigger value="basic">基本資料</TabsTrigger>
-            <TabsTrigger value="contracts">合約管理</TabsTrigger>
-            <TabsTrigger value="payments">帳款往來</TabsTrigger>
-          </TabsList>
+        {/* Inner tab switcher */}
+        <div style={{ display: "flex", overflow: "hidden", borderRadius: 8, border: "1px solid var(--os-border)", background: "var(--os-surface)", width: "fit-content", marginBottom: 16 }}>
+          {TABS.map(t => (
+            <button key={t.key} onClick={() => setInnerTab(t.key)} style={{ padding: "7px 16px", fontSize: 13, fontWeight: innerTab === t.key ? 600 : 400, background: innerTab === t.key ? "var(--os-amber)" : "transparent", color: innerTab === t.key ? "#fff" : "var(--os-text-2)", border: "none", cursor: "pointer" }}>
+              {t.label}
+            </button>
+          ))}
+        </div>
 
-          {/* ── 基本資料 ── */}
-          <TabsContent value="basic" className="space-y-4">
-            <div className="grid grid-cols-2 gap-3 text-sm text-gray-600 pb-3 border-b">
+        {/* 基本資料 */}
+        {innerTab === "basic" && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 pb-3" style={{ borderBottom: "1px solid var(--os-border-2)", fontSize: 13, color: "var(--os-text-2)" }}>
               <div>Email：{user.email ?? "-"}</div>
               <div>電話：{user.phone ?? "-"}</div>
               <div>建立：{fmtDate(user.createdAt)}</div>
@@ -193,26 +134,18 @@ function FranchiseeDetailDialog({
             </div>
             <div className="space-y-3">
               <div>
-                <label className="text-sm font-medium text-gray-700">綁定門市</label>
-                <Select
-                  value={form.storeId || "__none"}
-                  onValueChange={v => setBasicForm({ ...form, storeId: v === "__none" ? "" : v })}
-                >
+                <label style={{ fontSize: 13, fontWeight: 500, color: "var(--os-text-2)" }}>綁定門市</label>
+                <Select value={form.storeId || "__none"} onValueChange={v => setBasicForm({ ...form, storeId: v === "__none" ? "" : v })}>
                   <SelectTrigger className="mt-1"><SelectValue placeholder="未綁定" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none">未綁定</SelectItem>
-                    {(stores.data ?? []).map((s: any) => (
-                      <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
-                    ))}
+                    {(stores.data ?? []).map((s: any) => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700">帳號狀態</label>
-                <Select
-                  value={form.status}
-                  onValueChange={v => setBasicForm({ ...form, status: v })}
-                >
+                <label style={{ fontSize: 13, fontWeight: 500, color: "var(--os-text-2)" }}>帳號狀態</label>
+                <Select value={form.status} onValueChange={v => setBasicForm({ ...form, status: v })}>
                   <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="active">啟用</SelectItem>
@@ -221,146 +154,95 @@ function FranchiseeDetailDialog({
                 </Select>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700">內部聯絡備註</label>
-                <Input
-                  value={form.internalContact}
-                  onChange={e => setBasicForm({ ...form, internalContact: e.target.value })}
-                  className="mt-1"
-                />
+                <label style={{ fontSize: 13, fontWeight: 500, color: "var(--os-text-2)" }}>內部聯絡備註</label>
+                <Input value={form.internalContact} onChange={e => setBasicForm({ ...form, internalContact: e.target.value })} className="mt-1" />
               </div>
               <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="procAccess"
-                  checked={form.has_procurement_access}
-                  onChange={e => setBasicForm({ ...form, has_procurement_access: e.target.checked })}
-                />
-                <label htmlFor="procAccess" className="text-sm text-gray-700">開放採購成本存取</label>
+                <input type="checkbox" id="procAccess" checked={form.has_procurement_access} onChange={e => setBasicForm({ ...form, has_procurement_access: e.target.checked })} />
+                <label htmlFor="procAccess" style={{ fontSize: 13, color: "var(--os-text-2)" }}>開放採購成本存取</label>
               </div>
               <div className="flex justify-end">
-                <Button onClick={saveBasic} disabled={updateFranchisee.isPending}>
+                <Button style={amberBtn} onClick={saveBasic} disabled={updateFranchisee.isPending}>
                   {updateFranchisee.isPending ? "儲存中..." : "儲存"}
                 </Button>
               </div>
             </div>
-          </TabsContent>
+          </div>
+        )}
 
-          {/* ── 合約管理 ── */}
-          <TabsContent value="contracts" className="space-y-4">
-            {/* 上傳表單 */}
-            <div className="border rounded-lg p-4 space-y-3 bg-gray-50">
-              <p className="text-sm font-medium text-gray-700">上傳合約</p>
+        {/* 合約管理 */}
+        {innerTab === "contracts" && (
+          <div className="space-y-4">
+            <div style={formAreaSt} className="space-y-3">
+              <p style={{ fontSize: 13, fontWeight: 600, color: "var(--os-text-1)" }}>上傳合約</p>
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-gray-600">合約類型</label>
-                  <Input
-                    value={contractForm.contractType}
-                    onChange={e => setContractForm(p => ({ ...p, contractType: e.target.value }))}
-                    className="mt-1 h-8 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-600">簽約日期</label>
-                  <Input
-                    type="date"
-                    value={contractForm.signedAt}
-                    onChange={e => setContractForm(p => ({ ...p, signedAt: e.target.value }))}
-                    className="mt-1 h-8 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-600">到期日</label>
-                  <Input
-                    type="date"
-                    value={contractForm.expiresAt}
-                    onChange={e => setContractForm(p => ({ ...p, expiresAt: e.target.value }))}
-                    className="mt-1 h-8 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-600">備註</label>
-                  <Input
-                    value={contractForm.note}
-                    onChange={e => setContractForm(p => ({ ...p, note: e.target.value }))}
-                    className="mt-1 h-8 text-sm"
-                  />
-                </div>
+                {[
+                  { label: "合約類型", key: "contractType", type: "text" },
+                  { label: "簽約日期", key: "signedAt",     type: "date" },
+                  { label: "到期日",   key: "expiresAt",    type: "date" },
+                  { label: "備註",     key: "note",         type: "text" },
+                ].map(f => (
+                  <div key={f.key}>
+                    <label style={{ fontSize: 12, color: "var(--os-text-3)" }}>{f.label}</label>
+                    <input type={f.type} value={(contractForm as any)[f.key]}
+                      onChange={e => setContractForm(p => ({ ...p, [f.key]: e.target.value }))}
+                      style={{ ...inputSt, marginTop: 4, height: 32 }} />
+                  </div>
+                ))}
               </div>
               <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={handleFileUpload} />
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={isUploading}
-                onClick={() => fileInputRef.current?.click()}
-              >
+              <Button size="sm" variant="outline" disabled={isUploading} onClick={() => fileInputRef.current?.click()}>
                 {isUploading ? "上傳中..." : "選擇檔案並上傳"}
               </Button>
             </div>
 
-            {/* 合約列表 */}
             {(contracts as any[]).length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-4">尚無合約記錄</p>
+              <p style={{ fontSize: 13, color: "var(--os-text-3)", textAlign: "center", padding: "16px 0" }}>尚無合約記錄</p>
             ) : (
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b">
-                  <tr>
-                    {["合約類型", "簽約日", "到期日", "備註", "上傳者", ""].map(h => (
-                      <th key={h} className="px-3 py-2 text-left font-medium text-gray-600">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {(contracts as any[]).map((c: any) => (
-                    <tr key={c.id}>
-                      <td className="px-3 py-2 text-gray-900">{c.contractType}</td>
-                      <td className="px-3 py-2 text-gray-600">{fmtDate(c.signedAt)}</td>
-                      <td className="px-3 py-2 text-gray-600">{fmtDate(c.expiresAt)}</td>
-                      <td className="px-3 py-2 text-gray-500 text-xs max-w-[120px] truncate">{c.note ?? "-"}</td>
-                      <td className="px-3 py-2 text-gray-400 text-xs">{c.uploadedBy}</td>
-                      <td className="px-3 py-2">
-                        <a href={c.fileUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-xs">
-                          檢視
-                        </a>
-                      </td>
+              <div style={panelSt}>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr style={{ background: "var(--os-surface-2)", borderBottom: "1px solid var(--os-border)" }}>
+                      {["合約類型","簽約日","到期日","備註","上傳者",""].map(h => <th key={h} className="px-3 py-2 text-left" style={thSt}>{h}</th>)}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {(contracts as any[]).map((c: any) => (
+                      <tr key={c.id} style={{ borderTop: "1px solid var(--os-border-2)" }}>
+                        <td className="px-3 py-2" style={{ color: "var(--os-text-1)" }}>{c.contractType}</td>
+                        <td className="px-3 py-2" style={{ color: "var(--os-text-2)" }}>{fmtDate(c.signedAt)}</td>
+                        <td className="px-3 py-2" style={{ color: "var(--os-text-2)" }}>{fmtDate(c.expiresAt)}</td>
+                        <td className="px-3 py-2 text-xs max-w-[120px] truncate" style={{ color: "var(--os-text-3)" }}>{c.note ?? "-"}</td>
+                        <td className="px-3 py-2 text-xs" style={{ color: "var(--os-text-3)" }}>{c.uploadedBy}</td>
+                        <td className="px-3 py-2">
+                          <a href={c.fileUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: "var(--os-info)" }}>檢視</a>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
-          </TabsContent>
+          </div>
+        )}
 
-          {/* ── 帳款往來 ── */}
-          <TabsContent value="payments" className="space-y-4">
-            {/* 新增表單 */}
-            <form onSubmit={addPayment} className="border rounded-lg p-4 space-y-3 bg-gray-50">
-              <p className="text-sm font-medium text-gray-700">新增帳款</p>
+        {/* 帳款往來 */}
+        {innerTab === "payments" && (
+          <div className="space-y-4">
+            <form onSubmit={addPayment} style={formAreaSt} className="space-y-3">
+              <p style={{ fontSize: 13, fontWeight: 600, color: "var(--os-text-1)" }}>新增帳款</p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-gray-600">日期</label>
-                  <Input
-                    type="date"
-                    value={paymentForm.paymentDate}
-                    onChange={e => setPaymentForm(p => ({ ...p, paymentDate: e.target.value }))}
-                    className="mt-1 h-8 text-sm"
-                  />
+                  <label style={{ fontSize: 12, color: "var(--os-text-3)" }}>日期</label>
+                  <input type="date" value={paymentForm.paymentDate} onChange={e => setPaymentForm(p => ({ ...p, paymentDate: e.target.value }))} style={{ ...inputSt, marginTop: 4, height: 32 }} />
                 </div>
                 <div>
-                  <label className="text-xs text-gray-600">金額</label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={paymentForm.amount}
-                    onChange={e => setPaymentForm(p => ({ ...p, amount: e.target.value }))}
-                    className="mt-1 h-8 text-sm"
-                    placeholder="0"
-                  />
+                  <label style={{ fontSize: 12, color: "var(--os-text-3)" }}>金額</label>
+                  <input type="number" step="0.01" value={paymentForm.amount} placeholder="0" onChange={e => setPaymentForm(p => ({ ...p, amount: e.target.value }))} style={{ ...inputSt, marginTop: 4, height: 32 }} />
                 </div>
                 <div>
-                  <label className="text-xs text-gray-600">類型</label>
-                  <Select
-                    value={paymentForm.direction}
-                    onValueChange={v => setPaymentForm(p => ({ ...p, direction: v as any }))}
-                  >
+                  <label style={{ fontSize: 12, color: "var(--os-text-3)" }}>類型</label>
+                  <Select value={paymentForm.direction} onValueChange={v => setPaymentForm(p => ({ ...p, direction: v as any }))}>
                     <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="receivable">應收</SelectItem>
@@ -369,163 +251,140 @@ function FranchiseeDetailDialog({
                   </Select>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-600">類別</label>
-                  <Input
-                    value={paymentForm.category}
-                    onChange={e => setPaymentForm(p => ({ ...p, category: e.target.value }))}
-                    className="mt-1 h-8 text-sm"
-                  />
+                  <label style={{ fontSize: 12, color: "var(--os-text-3)" }}>類別</label>
+                  <input value={paymentForm.category} onChange={e => setPaymentForm(p => ({ ...p, category: e.target.value }))} style={{ ...inputSt, marginTop: 4, height: 32 }} />
                 </div>
               </div>
               <div>
-                <label className="text-xs text-gray-600">備註</label>
-                <Input
-                  value={paymentForm.note}
-                  onChange={e => setPaymentForm(p => ({ ...p, note: e.target.value }))}
-                  className="mt-1 h-8 text-sm"
-                />
+                <label style={{ fontSize: 12, color: "var(--os-text-3)" }}>備註</label>
+                <input value={paymentForm.note} onChange={e => setPaymentForm(p => ({ ...p, note: e.target.value }))} style={{ ...inputSt, marginTop: 4, height: 32 }} />
               </div>
               <div className="flex justify-end">
-                <Button type="submit" size="sm" disabled={paymentUpsert.isPending}>
+                <Button type="submit" size="sm" style={amberBtn} disabled={paymentUpsert.isPending}>
                   {paymentUpsert.isPending ? "新增中..." : "新增"}
                 </Button>
               </div>
             </form>
 
-            {/* 帳款列表 */}
             {(payments as any[]).length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-4">尚無帳款紀錄</p>
+              <p style={{ fontSize: 13, color: "var(--os-text-3)", textAlign: "center", padding: "16px 0" }}>尚無帳款紀錄</p>
             ) : (
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b">
-                  <tr>
-                    {["日期", "金額", "類型", "類別", "備註"].map(h => (
-                      <th key={h} className="px-3 py-2 text-left font-medium text-gray-600">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {(payments as any[]).map((p: any) => (
-                    <tr key={p.id}>
-                      <td className="px-3 py-2 text-gray-600">{fmtDate(p.paymentDate)}</td>
-                      <td className="px-3 py-2 font-semibold text-gray-900">{fmtAmount(p.amount)}</td>
-                      <td className="px-3 py-2">
-                        <Badge className={p.direction === "receivable" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}>
-                          {p.direction === "receivable" ? "應收" : "已付"}
-                        </Badge>
-                      </td>
-                      <td className="px-3 py-2 text-gray-600">{p.category}</td>
-                      <td className="px-3 py-2 text-gray-500 text-xs">{p.note ?? "-"}</td>
+              <div style={panelSt}>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr style={{ background: "var(--os-surface-2)", borderBottom: "1px solid var(--os-border)" }}>
+                      {["日期","金額","類型","類別","備註"].map(h => <th key={h} className="px-3 py-2 text-left" style={thSt}>{h}</th>)}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {(payments as any[]).map((p: any) => (
+                      <tr key={p.id} style={{ borderTop: "1px solid var(--os-border-2)" }}
+                        onMouseEnter={e => (e.currentTarget.style.background = "var(--os-amber-soft)")}
+                        onMouseLeave={e => (e.currentTarget.style.background = "")}>
+                        <td className="px-3 py-2" style={{ color: "var(--os-text-2)" }}>{fmtDate(p.paymentDate)}</td>
+                        <td className="px-3 py-2 font-semibold" style={{ color: "var(--os-text-1)" }}>{fmtAmount(p.amount)}</td>
+                        <td className="px-3 py-2">
+                          <span style={{ fontSize: 12, padding: "1px 8px", borderRadius: 4, fontWeight: 500, color: p.direction === "receivable" ? "var(--os-info)" : "var(--os-success)", background: p.direction === "receivable" ? "var(--os-info-bg)" : "var(--os-success-bg)" }}>
+                            {p.direction === "receivable" ? "應收" : "已付"}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2" style={{ color: "var(--os-text-2)" }}>{p.category}</td>
+                        <td className="px-3 py-2 text-xs" style={{ color: "var(--os-text-3)" }}>{p.note ?? "-"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
-          </TabsContent>
-        </Tabs>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
-
 export default function Franchisees() {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
-
   const franchisees = trpc.franchisee.franchiseeList.useQuery();
   const list = franchisees.data ?? [];
 
   return (
     <AdminDashboardLayout>
-      <div className="p-4 md:p-6 space-y-4 max-w-7xl mx-auto">
-        <h1 className="text-2xl font-bold text-gray-900">加盟主管理</h1>
+      <div style={{ background: "var(--os-bg)", minHeight: "100vh", padding: 20 }} className="space-y-5">
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--os-text-1)", margin: 0 }}>加盟主管理</h1>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">加盟主清單</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {franchisees.isLoading ? (
-              <div className="p-6 text-center text-gray-400 text-sm">載入中...</div>
-            ) : list.length === 0 ? (
-              <div className="p-6 text-center text-gray-400 text-sm">
-                尚無加盟主資料。請至「加盟詢問」頁點擊「轉為正式加盟主」建立帳號。
-              </div>
-            ) : (
-              <>
-                {/* 桌面版 */}
-                <div className="hidden md:block overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-50 border-b">
-                      <tr>
-                        {["姓名", "門市", "電話", "Email", "狀態", "最後登入", ""].map(h => (
-                          <th key={h} className="px-4 py-2.5 text-left font-medium text-gray-600">{h}</th>
-                        ))}
+        <div style={{ background: "var(--os-surface)", border: "1px solid var(--os-border)", borderRadius: 10, overflow: "hidden" }}>
+          <div style={{ borderBottom: "1px solid var(--os-border)", padding: "12px 16px" }}>
+            <p style={{ fontSize: 14, fontWeight: 600, color: "var(--os-text-1)" }}>加盟主清單</p>
+          </div>
+          {franchisees.isLoading ? (
+            <div style={{ padding: "32px 0", textAlign: "center", color: "var(--os-text-3)", fontSize: 13 }}>載入中...</div>
+          ) : list.length === 0 ? (
+            <div style={{ padding: "32px 0", textAlign: "center", color: "var(--os-text-3)", fontSize: 13 }}>
+              尚無加盟主資料。請至「加盟詢問」頁點擊「轉為正式加盟主」建立帳號。
+            </div>
+          ) : (
+            <>
+              {/* 桌面版 */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr style={{ background: "var(--os-surface-2)", borderBottom: "1px solid var(--os-border)" }}>
+                      {["姓名","門市","電話","Email","狀態","最後登入",""].map(h => <th key={h} className="px-4 py-2.5 text-left" style={thSt}>{h}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {list.map((u: any) => (
+                      <tr key={u.id} style={{ borderTop: "1px solid var(--os-border-2)" }}
+                        onMouseEnter={e => (e.currentTarget.style.background = "var(--os-amber-soft)")}
+                        onMouseLeave={e => (e.currentTarget.style.background = "")}>
+                        <td className="px-4 py-2.5 font-medium" style={{ color: "var(--os-text-1)" }}>{u.name}</td>
+                        <td className="px-4 py-2.5" style={{ color: "var(--os-text-2)" }}>{u.storeName ?? "-"}</td>
+                        <td className="px-4 py-2.5" style={{ color: "var(--os-text-2)" }}>{u.phone ?? "-"}</td>
+                        <td className="px-4 py-2.5 text-xs" style={{ color: "var(--os-text-3)" }}>{u.email ?? "-"}</td>
+                        <td className="px-4 py-2.5">
+                          <span style={{ fontSize: 12, padding: "1px 8px", borderRadius: 4, fontWeight: 500, color: u.status === "active" ? "var(--os-success)" : "var(--os-text-3)", background: u.status === "active" ? "var(--os-success-bg)" : "var(--os-surface-2)" }}>
+                            {u.status === "active" ? "啟用" : "停用"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5 text-xs" style={{ color: "var(--os-text-3)" }}>{fmtDate(u.last_login_at)}</td>
+                        <td className="px-4 py-2.5">
+                          <Button size="sm" variant="ghost" className="h-7 text-xs px-2" onClick={() => setSelectedUserId(u.id)}>管理</Button>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {list.map((u: any) => (
-                        <tr key={u.id} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-4 py-2.5 font-medium text-gray-900">{u.name}</td>
-                          <td className="px-4 py-2.5 text-gray-600">{u.storeName ?? "-"}</td>
-                          <td className="px-4 py-2.5 text-gray-600">{u.phone ?? "-"}</td>
-                          <td className="px-4 py-2.5 text-gray-500 text-xs">{u.email ?? "-"}</td>
-                          <td className="px-4 py-2.5">
-                            <Badge className={u.status === "active" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}>
-                              {u.status === "active" ? "啟用" : "停用"}
-                            </Badge>
-                          </td>
-                          <td className="px-4 py-2.5 text-gray-400 text-xs">{fmtDate(u.last_login_at)}</td>
-                          <td className="px-4 py-2.5">
-                            <Button size="sm" variant="ghost" className="h-7 text-xs px-2"
-                              onClick={() => setSelectedUserId(u.id)}>
-                              管理
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
-                {/* 手機版 */}
-                <div className="md:hidden divide-y divide-gray-100">
-                  {list.map((u: any) => (
-                    <div key={u.id} className="p-4 space-y-2">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <span className="font-medium text-gray-900">{u.name}</span>
-                          {u.storeName && (
-                            <span className="ml-2 text-xs text-gray-500">{u.storeName}</span>
-                          )}
-                        </div>
-                        <Badge className={u.status === "active" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}>
-                          {u.status === "active" ? "啟用" : "停用"}
-                        </Badge>
+              {/* 手機版 */}
+              <div className="md:hidden">
+                {list.map((u: any) => (
+                  <div key={u.id} style={{ borderTop: "1px solid var(--os-border-2)", padding: "12px 16px" }} className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span style={{ fontWeight: 600, color: "var(--os-text-1)" }}>{u.name}</span>
+                        {u.storeName && <span style={{ marginLeft: 8, fontSize: 12, color: "var(--os-text-3)" }}>{u.storeName}</span>}
                       </div>
-                      <div className="text-xs text-gray-500">
-                        {u.phone && <span>{u.phone} · </span>}
-                        {u.email && <span>{u.email}</span>}
-                      </div>
-                      <Button size="sm" variant="ghost" className="h-7 text-xs px-2"
-                        onClick={() => setSelectedUserId(u.id)}>
-                        管理
-                      </Button>
+                      <span style={{ fontSize: 12, padding: "1px 8px", borderRadius: 4, fontWeight: 500, color: u.status === "active" ? "var(--os-success)" : "var(--os-text-3)", background: u.status === "active" ? "var(--os-success-bg)" : "var(--os-surface-2)" }}>
+                        {u.status === "active" ? "啟用" : "停用"}
+                      </span>
                     </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+                    <div style={{ fontSize: 12, color: "var(--os-text-3)" }}>
+                      {u.phone && <span>{u.phone} · </span>}
+                      {u.email && <span>{u.email}</span>}
+                    </div>
+                    <Button size="sm" variant="ghost" className="h-7 text-xs px-2" onClick={() => setSelectedUserId(u.id)}>管理</Button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {selectedUserId !== null && (
-        <FranchiseeDetailDialog
-          userId={selectedUserId}
-          onClose={() => setSelectedUserId(null)}
-        />
+        <FranchiseeDetailDialog userId={selectedUserId} onClose={() => setSelectedUserId(null)} />
       )}
     </AdminDashboardLayout>
   );
