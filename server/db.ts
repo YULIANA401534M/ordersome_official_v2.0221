@@ -19,6 +19,25 @@ import { ENV } from './_core/env';
 
 let _db: any = null;
 
+// TiDB does not support LIMIT/OFFSET as parameterized placeholders (LIMIT ?).
+// drizzle-orm 0.44.x emits numbers as params, so we intercept pool.query()
+// and inline any trailing integer params into the SQL string before sending.
+function inlineLimitOffsetParams(sql: string, params: unknown[]): [string, unknown[]] {
+  // Walk params from right to left; inline consecutive trailing integers into SQL
+  let s = sql;
+  const remaining = [...params];
+  while (remaining.length > 0) {
+    const last = remaining[remaining.length - 1];
+    if (typeof last !== 'number' || !Number.isInteger(last)) break;
+    // Replace the last '?' in s with the integer literal
+    const idx = s.lastIndexOf('?');
+    if (idx === -1) break;
+    s = s.slice(0, idx) + String(last) + s.slice(idx + 1);
+    remaining.pop();
+  }
+  return [s, remaining];
+}
+
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
@@ -33,10 +52,31 @@ export async function getDb() {
         ssl: { rejectUnauthorized: true },
         waitForConnections: true,
         connectionLimit: 10,
-        // TiDB does not support LIMIT as a prepared statement parameter;
-        // disabling prepare forces mysql2 to send plain text queries instead.
-        prepare: false,
       });
+
+      // Patch pool.query to inline integer params (LIMIT/OFFSET) before sending to TiDB.
+      // TiDB rejects `LIMIT ?` with "Incorrect arguments to LIMIT".
+      const origQuery = pool.query.bind(pool);
+      (pool as any).query = function (queryOrConfig: any, params?: unknown[], cb?: any) {
+        if (params && Array.isArray(params) && params.length > 0) {
+          const sqlStr = typeof queryOrConfig === 'string' ? queryOrConfig : queryOrConfig?.sql;
+          if (typeof sqlStr === 'string') {
+            const [patchedSql, patchedParams] = inlineLimitOffsetParams(sqlStr, params);
+            if (typeof queryOrConfig === 'string') {
+              return cb !== undefined
+                ? origQuery(patchedSql, patchedParams, cb)
+                : origQuery(patchedSql, patchedParams);
+            } else {
+              const patchedConfig = { ...queryOrConfig, sql: patchedSql };
+              return cb !== undefined
+                ? origQuery(patchedConfig, patchedParams, cb)
+                : origQuery(patchedConfig, patchedParams);
+            }
+          }
+        }
+        return cb !== undefined ? origQuery(queryOrConfig, params, cb) : origQuery(queryOrConfig, params);
+      };
+
       _db = drizzle(pool);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
