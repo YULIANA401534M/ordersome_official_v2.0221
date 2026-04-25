@@ -2,6 +2,7 @@ import AdminDashboardLayout from "@/components/AdminDashboardLayout";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { Building2, Plus, Pencil, Loader2 } from "lucide-react";
 import { useState } from "react";
@@ -71,10 +72,9 @@ export default function AdminTenants() {
             <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--os-text-1)", margin: 0 }}>租戶管理</h1>
             <p style={{ fontSize: 13, color: "var(--os-text-3)", marginTop: 2 }}>管理多租戶架構中的所有品牌租戶</p>
           </div>
-          <button onClick={() => setCreateOpen(true)}
-            style={{ display: "flex", alignItems: "center", gap: 6, ...amberBtn }}>
+          <Button onClick={() => setCreateOpen(true)} className="gap-1.5 text-white" style={{ background: "var(--os-amber)", color: "#fff" }}>
             <Plus style={{ width: 16, height: 16 }} />新增租戶
-          </button>
+          </Button>
         </div>
 
         {/* Tenant List */}
@@ -167,10 +167,10 @@ export default function AdminTenants() {
             </div>
           </div>
           <DialogFooter>
-            <button onClick={() => setCreateOpen(false)} style={{ padding: "8px 16px", border: "1px solid var(--os-border)", borderRadius: 8, background: "var(--os-surface)", color: "var(--os-text-2)", fontSize: 13, cursor: "pointer" }}>取消</button>
-            <button onClick={handleCreate} disabled={createMutation.isPending} style={{ ...amberBtn, display: "flex", alignItems: "center", gap: 6, opacity: createMutation.isPending ? 0.6 : 1 }}>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>取消</Button>
+            <Button onClick={handleCreate} disabled={createMutation.isPending} className="gap-1.5 text-white" style={{ background: "var(--os-amber)" }}>
               {createMutation.isPending && <Loader2 style={{ width: 14, height: 14 }} className="animate-spin" />}建立
-            </button>
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -209,10 +209,10 @@ export default function AdminTenants() {
             </div>
           )}
           <DialogFooter>
-            <button onClick={() => setEditOpen(false)} style={{ padding: "8px 16px", border: "1px solid var(--os-border)", borderRadius: 8, background: "var(--os-surface)", color: "var(--os-text-2)", fontSize: 13, cursor: "pointer" }}>取消</button>
-            <button onClick={handleUpdate} disabled={updateMutation.isPending} style={{ ...amberBtn, display: "flex", alignItems: "center", gap: 6, opacity: updateMutation.isPending ? 0.6 : 1 }}>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>取消</Button>
+            <Button onClick={handleUpdate} disabled={updateMutation.isPending} className="gap-1.5 text-white" style={{ background: "var(--os-amber)" }}>
               {updateMutation.isPending && <Loader2 style={{ width: 14, height: 14 }} className="animate-spin" />}儲存
-            </button>
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

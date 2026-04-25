@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { trpc } from "../../lib/trpc";
-import { Shield, Search, X, Check, ToggleRight } from "lucide-react";
+import { Shield, Search, Check, ToggleRight } from "lucide-react";
 import AdminDashboardLayout from "@/components/AdminDashboardLayout";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "../../_core/hooks/useAuth";
 
 const AVAILABLE_PERMISSIONS = [
@@ -271,49 +273,43 @@ export default function AdminPermissions() {
       </div>
 
       {/* Edit Permissions Modal */}
-      {editingUser && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 16 }}>
-          <div style={{ background: "var(--os-surface)", borderRadius: 12, maxWidth: 560, width: "100%", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
-            <div style={{ padding: "20px 24px", borderBottom: "1px solid var(--os-border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div>
-                <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--os-text-1)", margin: 0 }}>編輯系統權限</h2>
-                <p style={{ fontSize: 12, color: "var(--os-text-3)", marginTop: 4 }}>{editingUser.name} ({editingUser.email})</p>
-              </div>
-              <button onClick={() => setEditingUser(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--os-text-3)" }}><X style={{ width: 20, height: 20 }} /></button>
-            </div>
-            <div style={{ padding: 24 }} className="space-y-3">
-              {AVAILABLE_PERMISSIONS.map((permission) => {
-                const active = selectedPermissions.includes(permission.id);
-                return (
-                  <div key={permission.id}
-                    onClick={() => handleTogglePermission(permission.id)}
-                    style={{
-                      display: "flex", alignItems: "flex-start", gap: 12, padding: "12px 14px",
-                      border: "1px solid", borderColor: active ? "var(--os-amber)" : "var(--os-border)",
-                      borderRadius: 8, cursor: "pointer", background: active ? "var(--os-amber-soft)" : "var(--os-surface-2)",
-                      transition: "all 0.15s",
-                    }}>
-                    <div style={{ width: 20, height: 20, borderRadius: 4, border: "2px solid", flexShrink: 0, marginTop: 1, display: "flex", alignItems: "center", justifyContent: "center", borderColor: active ? "var(--os-amber)" : "var(--os-border)", background: active ? "var(--os-amber)" : "transparent" }}>
-                      {active && <Check style={{ width: 13, height: 13, color: "#fff" }} />}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--os-text-1)" }}>{permission.label}</div>
-                      <div style={{ fontSize: 12, color: "var(--os-text-3)", marginTop: 2 }}>{permission.description}</div>
-                    </div>
+      <Dialog open={!!editingUser} onOpenChange={v => { if (!v) setEditingUser(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle style={{ color: "var(--os-text-1)" }}>編輯系統權限</DialogTitle>
+            {editingUser && <p style={{ fontSize: 12, color: "var(--os-text-3)", marginTop: 2 }}>{editingUser.name} ({editingUser.email})</p>}
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            {AVAILABLE_PERMISSIONS.map((permission) => {
+              const active = selectedPermissions.includes(permission.id);
+              return (
+                <div key={permission.id}
+                  onClick={() => handleTogglePermission(permission.id)}
+                  style={{
+                    display: "flex", alignItems: "flex-start", gap: 12, padding: "12px 14px",
+                    border: "1px solid", borderColor: active ? "var(--os-amber)" : "var(--os-border)",
+                    borderRadius: 8, cursor: "pointer", background: active ? "var(--os-amber-soft)" : "var(--os-surface-2)",
+                    transition: "all 0.15s",
+                  }}>
+                  <div style={{ width: 20, height: 20, borderRadius: 4, border: "2px solid", flexShrink: 0, marginTop: 1, display: "flex", alignItems: "center", justifyContent: "center", borderColor: active ? "var(--os-amber)" : "var(--os-border)", background: active ? "var(--os-amber)" : "transparent" }}>
+                    {active && <Check style={{ width: 13, height: 13, color: "#fff" }} />}
                   </div>
-                );
-              })}
-            </div>
-            <div style={{ padding: "16px 24px", borderTop: "1px solid var(--os-border)", display: "flex", justifyContent: "flex-end", gap: 10 }}>
-              <button onClick={() => setEditingUser(null)} style={{ padding: "8px 20px", border: "1px solid var(--os-border)", borderRadius: 8, background: "var(--os-surface)", color: "var(--os-text-2)", fontSize: 13, cursor: "pointer" }}>取消</button>
-              <button onClick={handleSavePermissions} disabled={updateUserMutation.isPending}
-                style={{ padding: "8px 20px", borderRadius: 8, border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer", background: "var(--os-amber)", color: "#fff", opacity: updateUserMutation.isPending ? 0.6 : 1 }}>
-                {updateUserMutation.isPending ? "儲存中..." : "儲存"}
-              </button>
-            </div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--os-text-1)" }}>{permission.label}</div>
+                    <div style={{ fontSize: 12, color: "var(--os-text-3)", marginTop: 2 }}>{permission.description}</div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </div>
-      )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingUser(null)}>取消</Button>
+            <Button style={{ background: "var(--os-amber)", color: "#fff" }} onClick={handleSavePermissions} disabled={updateUserMutation.isPending}>
+              {updateUserMutation.isPending ? "儲存中..." : "儲存"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminDashboardLayout>
   );
 }

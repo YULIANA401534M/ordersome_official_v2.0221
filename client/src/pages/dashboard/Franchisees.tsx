@@ -3,8 +3,10 @@ import AdminDashboardLayout from "@/components/AdminDashboardLayout";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 
 function fmtDate(v: string | null | undefined) {
@@ -33,7 +35,7 @@ function FranchiseeDetailDialog({ userId, onClose }: { userId: number; onClose: 
   const detail = trpc.franchisee.franchiseeDetail.useQuery({ userId });
   const stores = trpc.store.listAll.useQuery();
 
-  const [innerTab, setInnerTab] = useState<"basic" | "contracts" | "payments">("basic");
+  const [innerTab, setInnerTab] = useState("basic");
   const [basicForm, setBasicForm] = useState<any>(null);
   const [paymentForm, setPaymentForm] = useState({ paymentDate: new Date().toISOString().slice(0, 10), amount: "", direction: "receivable" as "receivable" | "paid", category: "週結帳款", note: "" });
   const [contractForm, setContractForm] = useState({ contractType: "加盟合約", signedAt: "", expiresAt: "", note: "" });
@@ -60,7 +62,7 @@ function FranchiseeDetailDialog({ userId, onClose }: { userId: number; onClose: 
   if (detail.isLoading) {
     return (
       <Dialog open onOpenChange={onClose}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="!max-w-3xl p-0 gap-0">
           <div style={{ padding: 32, textAlign: "center", color: "var(--os-text-3)", fontSize: 13 }}>載入中...</div>
         </DialogContent>
       </Dialog>
@@ -111,193 +113,207 @@ function FranchiseeDetailDialog({ userId, onClose }: { userId: number; onClose: 
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>{user.name} — 加盟主管理</DialogTitle></DialogHeader>
+      <DialogContent className="!max-w-3xl p-0 gap-0 max-h-[90vh]">
+        <div className="flex flex-col h-full max-h-[90vh]">
+          <DialogHeader className="px-6 py-4 shrink-0" style={{ borderBottom: "1px solid var(--os-border)" }}>
+            <DialogTitle style={{ color: "var(--os-text-1)" }}>{user.name} — 加盟主管理</DialogTitle>
+          </DialogHeader>
 
-        {/* Inner tab switcher */}
-        <div style={{ display: "flex", overflow: "hidden", borderRadius: 8, border: "1px solid var(--os-border)", background: "var(--os-surface)", width: "fit-content", marginBottom: 16 }}>
-          {TABS.map(t => (
-            <button key={t.key} onClick={() => setInnerTab(t.key)} style={{ padding: "7px 16px", fontSize: 13, fontWeight: innerTab === t.key ? 600 : 400, background: innerTab === t.key ? "var(--os-amber)" : "transparent", color: innerTab === t.key ? "#fff" : "var(--os-text-2)", border: "none", cursor: "pointer" }}>
-              {t.label}
-            </button>
-          ))}
-        </div>
+          <ScrollArea className="flex-1 min-h-0 w-full">
+            <div className="px-6 py-4 space-y-4">
+              <Tabs value={innerTab} onValueChange={setInnerTab}>
+                <TabsList style={{ background: "var(--os-surface-2)", border: "1px solid var(--os-border)", padding: 3 }}>
+                  {TABS.map(t => (
+                    <TabsTrigger key={t.key} value={t.key}
+                      className="data-[state=active]:bg-[--os-surface] data-[state=active]:text-[--os-text-1] data-[state=inactive]:text-[--os-text-3] text-sm">
+                      {t.label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
 
-        {/* 基本資料 */}
-        {innerTab === "basic" && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3 pb-3" style={{ borderBottom: "1px solid var(--os-border-2)", fontSize: 13, color: "var(--os-text-2)" }}>
-              <div>Email：{user.email ?? "-"}</div>
-              <div>電話：{user.phone ?? "-"}</div>
-              <div>建立：{fmtDate(user.createdAt)}</div>
-              <div>最後登入：{fmtDate(user.last_login_at)}</div>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label style={{ fontSize: 13, fontWeight: 500, color: "var(--os-text-2)" }}>綁定門市</label>
-                <Select value={form.storeId || "__none"} onValueChange={v => setBasicForm({ ...form, storeId: v === "__none" ? "" : v })}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="未綁定" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none">未綁定</SelectItem>
-                    {(stores.data ?? []).map((s: any) => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label style={{ fontSize: 13, fontWeight: 500, color: "var(--os-text-2)" }}>帳號狀態</label>
-                <Select value={form.status} onValueChange={v => setBasicForm({ ...form, status: v })}>
-                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">啟用</SelectItem>
-                    <SelectItem value="suspended">停用</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label style={{ fontSize: 13, fontWeight: 500, color: "var(--os-text-2)" }}>內部聯絡備註</label>
-                <Input value={form.internalContact} onChange={e => setBasicForm({ ...form, internalContact: e.target.value })} className="mt-1" />
-              </div>
-              <div className="flex items-center gap-2">
-                <input type="checkbox" id="procAccess" checked={form.has_procurement_access} onChange={e => setBasicForm({ ...form, has_procurement_access: e.target.checked })} />
-                <label htmlFor="procAccess" style={{ fontSize: 13, color: "var(--os-text-2)" }}>開放採購成本存取</label>
-              </div>
-              <div className="flex justify-end">
-                <Button style={amberBtn} onClick={saveBasic} disabled={updateFranchisee.isPending}>
-                  {updateFranchisee.isPending ? "儲存中..." : "儲存"}
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 合約管理 */}
-        {innerTab === "contracts" && (
-          <div className="space-y-4">
-            <div style={formAreaSt} className="space-y-3">
-              <p style={{ fontSize: 13, fontWeight: 600, color: "var(--os-text-1)" }}>上傳合約</p>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { label: "合約類型", key: "contractType", type: "text" },
-                  { label: "簽約日期", key: "signedAt",     type: "date" },
-                  { label: "到期日",   key: "expiresAt",    type: "date" },
-                  { label: "備註",     key: "note",         type: "text" },
-                ].map(f => (
-                  <div key={f.key}>
-                    <label style={{ fontSize: 12, color: "var(--os-text-3)" }}>{f.label}</label>
-                    <input type={f.type} value={(contractForm as any)[f.key]}
-                      onChange={e => setContractForm(p => ({ ...p, [f.key]: e.target.value }))}
-                      style={{ ...inputSt, marginTop: 4, height: 32 }} />
+                {/* 基本資料 */}
+                <TabsContent value="basic" className="mt-4">
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3 pb-3" style={{ borderBottom: "1px solid var(--os-border-2)", fontSize: 13, color: "var(--os-text-2)" }}>
+                      <div>Email：{user.email ?? "-"}</div>
+                      <div>電話：{user.phone ?? "-"}</div>
+                      <div>建立：{fmtDate(user.createdAt)}</div>
+                      <div>最後登入：{fmtDate(user.last_login_at)}</div>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <label style={{ fontSize: 13, fontWeight: 500, color: "var(--os-text-2)" }}>綁定門市</label>
+                        <Select value={form.storeId || "__none"} onValueChange={v => setBasicForm({ ...form, storeId: v === "__none" ? "" : v })}>
+                          <SelectTrigger className="mt-1"><SelectValue placeholder="未綁定" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none">未綁定</SelectItem>
+                            {(stores.data ?? []).map((s: any) => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 13, fontWeight: 500, color: "var(--os-text-2)" }}>帳號狀態</label>
+                        <Select value={form.status} onValueChange={v => setBasicForm({ ...form, status: v })}>
+                          <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="active">啟用</SelectItem>
+                            <SelectItem value="suspended">停用</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 13, fontWeight: 500, color: "var(--os-text-2)" }}>內部聯絡備註</label>
+                        <Input value={form.internalContact} onChange={e => setBasicForm({ ...form, internalContact: e.target.value })} className="mt-1" />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input type="checkbox" id="procAccess" checked={form.has_procurement_access} onChange={e => setBasicForm({ ...form, has_procurement_access: e.target.checked })} />
+                        <label htmlFor="procAccess" style={{ fontSize: 13, color: "var(--os-text-2)" }}>開放採購成本存取</label>
+                      </div>
+                    </div>
                   </div>
-                ))}
-              </div>
-              <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={handleFileUpload} />
-              <Button size="sm" variant="outline" disabled={isUploading} onClick={() => fileInputRef.current?.click()}>
-                {isUploading ? "上傳中..." : "選擇檔案並上傳"}
-              </Button>
+                </TabsContent>
+
+                {/* 合約管理 */}
+                <TabsContent value="contracts" className="mt-4">
+                  <div className="space-y-4">
+                    <div style={formAreaSt} className="space-y-3">
+                      <p style={{ fontSize: 13, fontWeight: 600, color: "var(--os-text-1)" }}>上傳合約</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        {[
+                          { label: "合約類型", key: "contractType", type: "text" },
+                          { label: "簽約日期", key: "signedAt",     type: "date" },
+                          { label: "到期日",   key: "expiresAt",    type: "date" },
+                          { label: "備註",     key: "note",         type: "text" },
+                        ].map(f => (
+                          <div key={f.key}>
+                            <label style={{ fontSize: 12, color: "var(--os-text-3)" }}>{f.label}</label>
+                            <input type={f.type} value={(contractForm as any)[f.key]}
+                              onChange={e => setContractForm(p => ({ ...p, [f.key]: e.target.value }))}
+                              style={{ ...inputSt, marginTop: 4, height: 32 }} />
+                          </div>
+                        ))}
+                      </div>
+                      <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={handleFileUpload} />
+                      <Button size="sm" variant="outline" disabled={isUploading} onClick={() => fileInputRef.current?.click()}>
+                        {isUploading ? "上傳中..." : "選擇檔案並上傳"}
+                      </Button>
+                    </div>
+
+                    {(contracts as any[]).length === 0 ? (
+                      <p style={{ fontSize: 13, color: "var(--os-text-3)", textAlign: "center", padding: "16px 0" }}>尚無合約記錄</p>
+                    ) : (
+                      <div style={panelSt}>
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr style={{ background: "var(--os-surface-2)", borderBottom: "1px solid var(--os-border)" }}>
+                              {["合約類型","簽約日","到期日","備註","上傳者",""].map(h => <th key={h} className="px-3 py-2 text-left" style={thSt}>{h}</th>)}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(contracts as any[]).map((c: any) => (
+                              <tr key={c.id} style={{ borderTop: "1px solid var(--os-border-2)" }}>
+                                <td className="px-3 py-2" style={{ color: "var(--os-text-1)" }}>{c.contractType}</td>
+                                <td className="px-3 py-2" style={{ color: "var(--os-text-2)" }}>{fmtDate(c.signedAt)}</td>
+                                <td className="px-3 py-2" style={{ color: "var(--os-text-2)" }}>{fmtDate(c.expiresAt)}</td>
+                                <td className="px-3 py-2 text-xs max-w-[120px] truncate" style={{ color: "var(--os-text-3)" }}>{c.note ?? "-"}</td>
+                                <td className="px-3 py-2 text-xs" style={{ color: "var(--os-text-3)" }}>{c.uploadedBy}</td>
+                                <td className="px-3 py-2">
+                                  <a href={c.fileUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: "var(--os-info)" }}>檢視</a>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+
+                {/* 帳款往來 */}
+                <TabsContent value="payments" className="mt-4">
+                  <div className="space-y-4">
+                    <form onSubmit={addPayment} style={formAreaSt} className="space-y-3">
+                      <p style={{ fontSize: 13, fontWeight: 600, color: "var(--os-text-1)" }}>新增帳款</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label style={{ fontSize: 12, color: "var(--os-text-3)" }}>日期</label>
+                          <input type="date" value={paymentForm.paymentDate} onChange={e => setPaymentForm(p => ({ ...p, paymentDate: e.target.value }))} style={{ ...inputSt, marginTop: 4, height: 32 }} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 12, color: "var(--os-text-3)" }}>金額</label>
+                          <input type="number" step="0.01" value={paymentForm.amount} placeholder="0" onChange={e => setPaymentForm(p => ({ ...p, amount: e.target.value }))} style={{ ...inputSt, marginTop: 4, height: 32 }} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 12, color: "var(--os-text-3)" }}>類型</label>
+                          <Select value={paymentForm.direction} onValueChange={v => setPaymentForm(p => ({ ...p, direction: v as any }))}>
+                            <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="receivable">應收</SelectItem>
+                              <SelectItem value="paid">已付</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 12, color: "var(--os-text-3)" }}>類別</label>
+                          <input value={paymentForm.category} onChange={e => setPaymentForm(p => ({ ...p, category: e.target.value }))} style={{ ...inputSt, marginTop: 4, height: 32 }} />
+                        </div>
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 12, color: "var(--os-text-3)" }}>備註</label>
+                        <input value={paymentForm.note} onChange={e => setPaymentForm(p => ({ ...p, note: e.target.value }))} style={{ ...inputSt, marginTop: 4, height: 32 }} />
+                      </div>
+                      <div className="flex justify-end">
+                        <Button type="submit" size="sm" style={amberBtn} disabled={paymentUpsert.isPending}>
+                          {paymentUpsert.isPending ? "新增中..." : "新增"}
+                        </Button>
+                      </div>
+                    </form>
+
+                    {(payments as any[]).length === 0 ? (
+                      <p style={{ fontSize: 13, color: "var(--os-text-3)", textAlign: "center", padding: "16px 0" }}>尚無帳款紀錄</p>
+                    ) : (
+                      <div style={panelSt}>
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr style={{ background: "var(--os-surface-2)", borderBottom: "1px solid var(--os-border)" }}>
+                              {["日期","金額","類型","類別","備註"].map(h => <th key={h} className="px-3 py-2 text-left" style={thSt}>{h}</th>)}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(payments as any[]).map((p: any) => (
+                              <tr key={p.id} style={{ borderTop: "1px solid var(--os-border-2)" }}
+                                onMouseEnter={e => (e.currentTarget.style.background = "var(--os-amber-soft)")}
+                                onMouseLeave={e => (e.currentTarget.style.background = "")}>
+                                <td className="px-3 py-2" style={{ color: "var(--os-text-2)" }}>{fmtDate(p.paymentDate)}</td>
+                                <td className="px-3 py-2 font-semibold" style={{ color: "var(--os-text-1)" }}>{fmtAmount(p.amount)}</td>
+                                <td className="px-3 py-2">
+                                  <span style={{ fontSize: 12, padding: "1px 8px", borderRadius: 4, fontWeight: 500, color: p.direction === "receivable" ? "var(--os-info)" : "var(--os-success)", background: p.direction === "receivable" ? "var(--os-info-bg)" : "var(--os-success-bg)" }}>
+                                    {p.direction === "receivable" ? "應收" : "已付"}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2" style={{ color: "var(--os-text-2)" }}>{p.category}</td>
+                                <td className="px-3 py-2 text-xs" style={{ color: "var(--os-text-3)" }}>{p.note ?? "-"}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+              </Tabs>
             </div>
+          </ScrollArea>
 
-            {(contracts as any[]).length === 0 ? (
-              <p style={{ fontSize: 13, color: "var(--os-text-3)", textAlign: "center", padding: "16px 0" }}>尚無合約記錄</p>
-            ) : (
-              <div style={panelSt}>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr style={{ background: "var(--os-surface-2)", borderBottom: "1px solid var(--os-border)" }}>
-                      {["合約類型","簽約日","到期日","備註","上傳者",""].map(h => <th key={h} className="px-3 py-2 text-left" style={thSt}>{h}</th>)}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(contracts as any[]).map((c: any) => (
-                      <tr key={c.id} style={{ borderTop: "1px solid var(--os-border-2)" }}>
-                        <td className="px-3 py-2" style={{ color: "var(--os-text-1)" }}>{c.contractType}</td>
-                        <td className="px-3 py-2" style={{ color: "var(--os-text-2)" }}>{fmtDate(c.signedAt)}</td>
-                        <td className="px-3 py-2" style={{ color: "var(--os-text-2)" }}>{fmtDate(c.expiresAt)}</td>
-                        <td className="px-3 py-2 text-xs max-w-[120px] truncate" style={{ color: "var(--os-text-3)" }}>{c.note ?? "-"}</td>
-                        <td className="px-3 py-2 text-xs" style={{ color: "var(--os-text-3)" }}>{c.uploadedBy}</td>
-                        <td className="px-3 py-2">
-                          <a href={c.fileUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: "var(--os-info)" }}>檢視</a>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+          <DialogFooter className="px-6 py-3 shrink-0" style={{ borderTop: "1px solid var(--os-border)" }}>
+            {innerTab === "basic" && (
+              <Button style={amberBtn} onClick={saveBasic} disabled={updateFranchisee.isPending}>
+                {updateFranchisee.isPending ? "儲存中..." : "儲存"}
+              </Button>
             )}
-          </div>
-        )}
-
-        {/* 帳款往來 */}
-        {innerTab === "payments" && (
-          <div className="space-y-4">
-            <form onSubmit={addPayment} style={formAreaSt} className="space-y-3">
-              <p style={{ fontSize: 13, fontWeight: 600, color: "var(--os-text-1)" }}>新增帳款</p>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label style={{ fontSize: 12, color: "var(--os-text-3)" }}>日期</label>
-                  <input type="date" value={paymentForm.paymentDate} onChange={e => setPaymentForm(p => ({ ...p, paymentDate: e.target.value }))} style={{ ...inputSt, marginTop: 4, height: 32 }} />
-                </div>
-                <div>
-                  <label style={{ fontSize: 12, color: "var(--os-text-3)" }}>金額</label>
-                  <input type="number" step="0.01" value={paymentForm.amount} placeholder="0" onChange={e => setPaymentForm(p => ({ ...p, amount: e.target.value }))} style={{ ...inputSt, marginTop: 4, height: 32 }} />
-                </div>
-                <div>
-                  <label style={{ fontSize: 12, color: "var(--os-text-3)" }}>類型</label>
-                  <Select value={paymentForm.direction} onValueChange={v => setPaymentForm(p => ({ ...p, direction: v as any }))}>
-                    <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="receivable">應收</SelectItem>
-                      <SelectItem value="paid">已付</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label style={{ fontSize: 12, color: "var(--os-text-3)" }}>類別</label>
-                  <input value={paymentForm.category} onChange={e => setPaymentForm(p => ({ ...p, category: e.target.value }))} style={{ ...inputSt, marginTop: 4, height: 32 }} />
-                </div>
-              </div>
-              <div>
-                <label style={{ fontSize: 12, color: "var(--os-text-3)" }}>備註</label>
-                <input value={paymentForm.note} onChange={e => setPaymentForm(p => ({ ...p, note: e.target.value }))} style={{ ...inputSt, marginTop: 4, height: 32 }} />
-              </div>
-              <div className="flex justify-end">
-                <Button type="submit" size="sm" style={amberBtn} disabled={paymentUpsert.isPending}>
-                  {paymentUpsert.isPending ? "新增中..." : "新增"}
-                </Button>
-              </div>
-            </form>
-
-            {(payments as any[]).length === 0 ? (
-              <p style={{ fontSize: 13, color: "var(--os-text-3)", textAlign: "center", padding: "16px 0" }}>尚無帳款紀錄</p>
-            ) : (
-              <div style={panelSt}>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr style={{ background: "var(--os-surface-2)", borderBottom: "1px solid var(--os-border)" }}>
-                      {["日期","金額","類型","類別","備註"].map(h => <th key={h} className="px-3 py-2 text-left" style={thSt}>{h}</th>)}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(payments as any[]).map((p: any) => (
-                      <tr key={p.id} style={{ borderTop: "1px solid var(--os-border-2)" }}
-                        onMouseEnter={e => (e.currentTarget.style.background = "var(--os-amber-soft)")}
-                        onMouseLeave={e => (e.currentTarget.style.background = "")}>
-                        <td className="px-3 py-2" style={{ color: "var(--os-text-2)" }}>{fmtDate(p.paymentDate)}</td>
-                        <td className="px-3 py-2 font-semibold" style={{ color: "var(--os-text-1)" }}>{fmtAmount(p.amount)}</td>
-                        <td className="px-3 py-2">
-                          <span style={{ fontSize: 12, padding: "1px 8px", borderRadius: 4, fontWeight: 500, color: p.direction === "receivable" ? "var(--os-info)" : "var(--os-success)", background: p.direction === "receivable" ? "var(--os-info-bg)" : "var(--os-success-bg)" }}>
-                            {p.direction === "receivable" ? "應收" : "已付"}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2" style={{ color: "var(--os-text-2)" }}>{p.category}</td>
-                        <td className="px-3 py-2 text-xs" style={{ color: "var(--os-text-3)" }}>{p.note ?? "-"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
+            <Button variant="outline" onClick={onClose}>關閉</Button>
+          </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );

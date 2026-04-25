@@ -2,9 +2,12 @@ import { useState } from "react";
 import { trpc } from "../../lib/trpc";
 import {
   Users, Shield, Mail, Phone, Building2, Edit2, RefreshCw,
-  Search, Filter, BarChart3, TrendingUp, UserPlus, Trash2, X, ShoppingCart, Clock,
+  Search, Filter, BarChart3, TrendingUp, UserPlus, Trash2, ShoppingCart, Clock,
 } from "lucide-react";
 import AdminDashboardLayout from "@/components/AdminDashboardLayout";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "../../_core/hooks/useAuth";
 
 type UserRole = "super_admin" | "manager" | "franchisee" | "staff" | "store_manager" | "customer" | "driver" | "portal_customer";
@@ -208,10 +211,9 @@ export default function AdminUsers() {
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             {isSuperAdmin && (
-              <button onClick={() => setCreatingUser(true)}
-                style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, ...amberBtn }}>
+              <Button onClick={() => setCreatingUser(true)} className="gap-1.5 text-white" style={amberBtn}>
                 <UserPlus style={{ width: 15, height: 15 }} />新增用戶
-              </button>
+              </Button>
             )}
             <a href="/dashboard/admin/permissions"
               style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, fontSize: 13, fontWeight: 600, background: "var(--os-info-bg)", color: "var(--os-info)", textDecoration: "none" }}>
@@ -386,166 +388,166 @@ export default function AdminUsers() {
       </div>
 
       {/* Edit Modal */}
-      {editingUser && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 16 }}>
-          <div style={{ background: "var(--os-surface)", borderRadius: 12, padding: 28, maxWidth: 560, width: "100%", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-              <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--os-text-1)", display: "flex", alignItems: "center", gap: 8, margin: 0 }}>
-                <Shield style={{ width: 18, height: 18, color: "var(--os-amber)" }} />編輯用戶：{editingUser.name || editingUser.email}
-              </h2>
-              <button onClick={() => setEditingUser(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--os-text-3)" }}><X style={{ width: 20, height: 20 }} /></button>
-            </div>
-
-            <div className="space-y-4">
-              {[
-                { label: "姓名", key: "name", type: "text" },
-                { label: "Email", key: "email", type: "email", readOnly: true },
-                { label: "電話", key: "phone", type: "tel", placeholder: "0912-345-678" },
-              ].map(f => (
-                <div key={f.key}>
-                  <label style={labelSt}>{f.label}</label>
-                  <input type={f.type} value={(editingUser as any)[f.key] || ""} readOnly={f.readOnly}
-                    placeholder={(f as any).placeholder}
-                    onChange={!f.readOnly ? (e) => setEditingUser({ ...editingUser, [f.key]: e.target.value }) : undefined}
-                    style={{ ...inputSt, background: f.readOnly ? "var(--os-surface-2)" : "var(--os-surface)", color: f.readOnly ? "var(--os-text-3)" : "var(--os-text-1)", cursor: f.readOnly ? "not-allowed" : "text" }} />
-                </div>
-              ))}
-
-              <div>
-                <label style={labelSt}>角色</label>
-                <select value={editingUser.role} onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value as UserRole })} style={inputSt}>
-                  {EDITABLE_ROLES.map((key) => <option key={key} value={key}>{ROLE_LABELS[key]}</option>)}
-                </select>
-              </div>
-
-              {(editingUser.role === "franchisee" || editingUser.role === "staff" || editingUser.role === "store_manager") && (
-                <div>
-                  <label style={labelSt}><Building2 style={{ width: 13, height: 13, display: "inline", marginRight: 4 }} />所屬門市編號</label>
-                  <input type="text" value={editingUser.storeId || ""} onChange={(e) => setEditingUser({ ...editingUser, storeId: e.target.value })} placeholder="例如：TC001（留空表示不指定）" style={inputSt} />
-                </div>
-              )}
-
-              {(editingUser.role === "manager" || editingUser.role === "super_admin") && (
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "var(--os-amber-soft)", borderRadius: 8 }}>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--os-text-1)", display: "flex", alignItems: "center", gap: 6 }}>
-                      <ShoppingCart style={{ width: 14, height: 14, color: "var(--os-amber-text)" }} />採購存取權
+      <Dialog open={!!editingUser} onOpenChange={v => { if (!v) setEditingUser(null); }}>
+        <DialogContent className="!max-w-lg p-0 gap-0 max-h-[90vh]">
+          <div className="flex flex-col h-full max-h-[90vh]">
+            <DialogHeader className="px-6 py-4 shrink-0" style={{ borderBottom: "1px solid var(--os-border)" }}>
+              <DialogTitle style={{ color: "var(--os-text-1)", display: "flex", alignItems: "center", gap: 8 }}>
+                <Shield style={{ width: 18, height: 18, color: "var(--os-amber)" }} />編輯用戶：{editingUser?.name || editingUser?.email}
+              </DialogTitle>
+            </DialogHeader>
+            <ScrollArea className="flex-1 min-h-0 w-full">
+              <div className="px-6 py-4 space-y-4">
+                {editingUser && <>
+                  {[
+                    { label: "姓名", key: "name", type: "text" },
+                    { label: "Email", key: "email", type: "email", readOnly: true },
+                    { label: "電話", key: "phone", type: "tel", placeholder: "0912-345-678" },
+                  ].map(f => (
+                    <div key={f.key}>
+                      <label style={labelSt}>{f.label}</label>
+                      <input type={f.type} value={(editingUser as any)[f.key] || ""} readOnly={f.readOnly}
+                        placeholder={(f as any).placeholder}
+                        onChange={!f.readOnly ? (e) => setEditingUser({ ...editingUser, [f.key]: e.target.value }) : undefined}
+                        style={{ ...inputSt, background: f.readOnly ? "var(--os-surface-2)" : "var(--os-surface)", color: f.readOnly ? "var(--os-text-3)" : "var(--os-text-1)", cursor: f.readOnly ? "not-allowed" : "text" }} />
                     </div>
-                    <div style={{ fontSize: 11, color: "var(--os-text-3)", marginTop: 2 }}>開啟後可進入叫貨管理模組</div>
-                  </div>
-                  <Toggle checked={!!editingUser.has_procurement_access} onChange={(v) => setEditingUser({ ...editingUser, has_procurement_access: v })} />
-                </div>
-              )}
-
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "var(--os-surface-2)", borderRadius: 8, border: "1px solid var(--os-border)" }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--os-text-1)" }}>帳號狀態</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ fontSize: 12, color: "var(--os-text-3)" }}>{editingUser.status === "active" ? "啟用中" : "已停用"}</span>
-                  <Toggle checked={editingUser.status === "active"} onChange={(v) => setEditingUser({ ...editingUser, status: v ? "active" : "suspended" })} />
-                </div>
-              </div>
-
-              {editingUser.passwordHash && (
-                <button type="button" onClick={() => handleResetPassword(editingUser.id)} disabled={resetPasswordMutation.isPending}
-                  style={{ width: "100%", padding: "8px 0", border: "1px solid var(--os-border)", borderRadius: 8, background: "var(--os-surface)", color: "var(--os-warning)", fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                  <RefreshCw style={{ width: 14, height: 14 }} />重設密碼（重設為 YuLian888!）
-                </button>
-              )}
-
-              <div>
-                <p style={{ fontSize: 13, fontWeight: 600, color: "var(--os-text-1)", marginBottom: 10 }}>系統細粒權限</p>
-                <div className="space-y-2">
-                  {PERMISSIONS.map((perm) => (
-                    <label key={perm.key} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-                      <input type="checkbox"
-                        checked={editingUser.permissions?.includes(perm.key) || false}
-                        onChange={(e) => {
-                          const cur = editingUser.permissions || [];
-                          const next = e.target.checked ? [...cur, perm.key] : cur.filter((p: string) => p !== perm.key);
-                          setEditingUser({ ...editingUser, permissions: next });
-                        }}
-                        style={{ width: 15, height: 15, accentColor: "var(--os-amber)" }} />
-                      <span style={{ fontSize: 13, color: "var(--os-text-1)" }}>{perm.label}</span>
-                    </label>
                   ))}
-                </div>
-              </div>
 
-              {editingUser.role === "franchisee" && (
-                <div style={{ border: "1px solid var(--os-amber-soft)", borderRadius: 8, padding: "14px 16px", background: "var(--os-amber-soft)" }}>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: "var(--os-amber-text)", marginBottom: 12 }}>加盟主功能開關</p>
-                  <div className="space-y-3">
-                    {FRANCHISEE_FEATURES.map((feat) => (
-                      <div key={feat.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                        <span style={{ fontSize: 13, color: "var(--os-text-1)" }}>{feat.label}</span>
-                        <Toggle
-                          checked={!!(loadedFlags ? (loadedFlags as any)[feat.key] : franchiseeFlags[feat.key])}
-                          onChange={(v) => setFranchiseeFlags((prev) => ({ ...prev, [feat.key]: v }))}
-                        />
-                      </div>
-                    ))}
+                  <div>
+                    <label style={labelSt}>角色</label>
+                    <select value={editingUser.role} onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value as UserRole })} style={inputSt}>
+                      {EDITABLE_ROLES.map((key) => <option key={key} value={key}>{ROLE_LABELS[key]}</option>)}
+                    </select>
                   </div>
-                </div>
-              )}
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, paddingTop: 4 }}>
-                <button onClick={() => setEditingUser(null)} style={{ padding: "8px 20px", border: "1px solid var(--os-border)", borderRadius: 8, background: "var(--os-surface)", color: "var(--os-text-2)", fontSize: 13, cursor: "pointer" }}>取消</button>
-                <button onClick={handleUpdateUser} disabled={updateUserMutation.isPending || setFlagMutation.isPending}
-                  style={{ padding: "8px 20px", borderRadius: 8, border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer", opacity: (updateUserMutation.isPending || setFlagMutation.isPending) ? 0.6 : 1, ...amberBtn }}>
-                  {updateUserMutation.isPending ? "儲存中..." : "儲存變更"}
-                </button>
+                  {(editingUser.role === "franchisee" || editingUser.role === "staff" || editingUser.role === "store_manager") && (
+                    <div>
+                      <label style={labelSt}><Building2 style={{ width: 13, height: 13, display: "inline", marginRight: 4 }} />所屬門市編號</label>
+                      <input type="text" value={editingUser.storeId || ""} onChange={(e) => setEditingUser({ ...editingUser, storeId: e.target.value })} placeholder="例如：TC001（留空表示不指定）" style={inputSt} />
+                    </div>
+                  )}
+
+                  {(editingUser.role === "manager" || editingUser.role === "super_admin") && (
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "var(--os-amber-soft)", borderRadius: 8 }}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--os-text-1)", display: "flex", alignItems: "center", gap: 6 }}>
+                          <ShoppingCart style={{ width: 14, height: 14, color: "var(--os-amber-text)" }} />採購存取權
+                        </div>
+                        <div style={{ fontSize: 11, color: "var(--os-text-3)", marginTop: 2 }}>開啟後可進入叫貨管理模組</div>
+                      </div>
+                      <Toggle checked={!!editingUser.has_procurement_access} onChange={(v) => setEditingUser({ ...editingUser, has_procurement_access: v })} />
+                    </div>
+                  )}
+
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "var(--os-surface-2)", borderRadius: 8, border: "1px solid var(--os-border)" }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--os-text-1)" }}>帳號狀態</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontSize: 12, color: "var(--os-text-3)" }}>{editingUser.status === "active" ? "啟用中" : "已停用"}</span>
+                      <Toggle checked={editingUser.status === "active"} onChange={(v) => setEditingUser({ ...editingUser, status: v ? "active" : "suspended" })} />
+                    </div>
+                  </div>
+
+                  {editingUser.passwordHash && (
+                    <Button type="button" variant="outline" className="w-full gap-1.5 text-xs" style={{ color: "var(--os-warning)" }}
+                      onClick={() => handleResetPassword(editingUser.id)} disabled={resetPasswordMutation.isPending}>
+                      <RefreshCw style={{ width: 14, height: 14 }} />重設密碼（重設為 YuLian888!）
+                    </Button>
+                  )}
+
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: "var(--os-text-1)", marginBottom: 10 }}>系統細粒權限</p>
+                    <div className="space-y-2">
+                      {PERMISSIONS.map((perm) => (
+                        <label key={perm.key} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                          <input type="checkbox"
+                            checked={editingUser.permissions?.includes(perm.key) || false}
+                            onChange={(e) => {
+                              const cur = editingUser.permissions || [];
+                              const next = e.target.checked ? [...cur, perm.key] : cur.filter((p: string) => p !== perm.key);
+                              setEditingUser({ ...editingUser, permissions: next });
+                            }}
+                            style={{ width: 15, height: 15, accentColor: "var(--os-amber)" }} />
+                          <span style={{ fontSize: 13, color: "var(--os-text-1)" }}>{perm.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {editingUser.role === "franchisee" && (
+                    <div style={{ border: "1px solid var(--os-amber-soft)", borderRadius: 8, padding: "14px 16px", background: "var(--os-amber-soft)" }}>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: "var(--os-amber-text)", marginBottom: 12 }}>加盟主功能開關</p>
+                      <div className="space-y-3">
+                        {FRANCHISEE_FEATURES.map((feat) => (
+                          <div key={feat.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                            <span style={{ fontSize: 13, color: "var(--os-text-1)" }}>{feat.label}</span>
+                            <Toggle
+                              checked={!!(loadedFlags ? (loadedFlags as any)[feat.key] : franchiseeFlags[feat.key])}
+                              onChange={(v) => setFranchiseeFlags((prev) => ({ ...prev, [feat.key]: v }))}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>}
               </div>
-            </div>
+            </ScrollArea>
+            <DialogFooter className="px-6 py-3 shrink-0" style={{ borderTop: "1px solid var(--os-border)" }}>
+              <Button variant="outline" onClick={() => setEditingUser(null)}>取消</Button>
+              <Button style={amberBtn} className="text-white" onClick={handleUpdateUser} disabled={updateUserMutation.isPending || setFlagMutation.isPending}>
+                {updateUserMutation.isPending ? "儲存中..." : "儲存變更"}
+              </Button>
+            </DialogFooter>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* Create User Modal */}
-      {creatingUser && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 16 }}>
-          <div style={{ background: "var(--os-surface)", borderRadius: 12, maxWidth: 480, width: "100%", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
-            <div style={{ padding: "20px 24px", borderBottom: "1px solid var(--os-border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--os-text-1)", margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+      <Dialog open={creatingUser} onOpenChange={v => { if (!v) setCreatingUser(false); }}>
+        <DialogContent className="!max-w-md p-0 gap-0 max-h-[90vh]">
+          <div className="flex flex-col h-full max-h-[90vh]">
+            <DialogHeader className="px-6 py-4 shrink-0" style={{ borderBottom: "1px solid var(--os-border)" }}>
+              <DialogTitle style={{ color: "var(--os-text-1)", display: "flex", alignItems: "center", gap: 8 }}>
                 <UserPlus style={{ width: 18, height: 18, color: "var(--os-amber)" }} />新增用戶
-              </h2>
-              <button onClick={() => setCreatingUser(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--os-text-3)" }}><X style={{ width: 20, height: 20 }} /></button>
-            </div>
-            <div style={{ padding: 24 }} className="space-y-4">
-              {[
-                { label: "Email *", key: "email", type: "email", placeholder: "user@example.com" },
-                { label: "姓名 *",  key: "name",  type: "text",  placeholder: "請輸入姓名" },
-                { label: "密碼 *",  key: "pwd",   type: "password", placeholder: "至少 6 個字元" },
-                { label: "電話",    key: "phone", type: "tel",  placeholder: "0912-345-678" },
-              ].map(f => (
-                <div key={f.key}>
-                  <label style={labelSt}>{f.label}</label>
-                  <input type={f.type} value={(newUserData as any)[f.key]} placeholder={f.placeholder}
-                    onChange={(e) => setNewUserData({ ...newUserData, [f.key]: e.target.value })} style={inputSt} />
-                </div>
-              ))}
-              <div>
-                <label style={labelSt}>角色</label>
-                <select value={newUserData.role} onChange={(e) => setNewUserData({ ...newUserData, role: e.target.value as UserRole })} style={inputSt}>
-                  {EDITABLE_ROLES.map((key) => <option key={key} value={key}>{ROLE_LABELS[key]}</option>)}
-                </select>
-              </div>
-              {(newUserData.role === "franchisee" || newUserData.role === "staff" || newUserData.role === "store_manager") && (
+              </DialogTitle>
+            </DialogHeader>
+            <ScrollArea className="flex-1 min-h-0 w-full">
+              <div className="px-6 py-4 space-y-4">
+                {[
+                  { label: "Email *", key: "email", type: "email", placeholder: "user@example.com" },
+                  { label: "姓名 *",  key: "name",  type: "text",  placeholder: "請輸入姓名" },
+                  { label: "密碼 *",  key: "pwd",   type: "password", placeholder: "至少 6 個字元" },
+                  { label: "電話",    key: "phone", type: "tel",  placeholder: "0912-345-678" },
+                ].map(f => (
+                  <div key={f.key}>
+                    <label style={labelSt}>{f.label}</label>
+                    <input type={f.type} value={(newUserData as any)[f.key]} placeholder={f.placeholder}
+                      onChange={(e) => setNewUserData({ ...newUserData, [f.key]: e.target.value })} style={inputSt} />
+                  </div>
+                ))}
                 <div>
-                  <label style={labelSt}><Building2 style={{ width: 13, height: 13, display: "inline", marginRight: 4 }} />所屬門市編號</label>
-                  <input type="text" value={newUserData.storeId} onChange={(e) => setNewUserData({ ...newUserData, storeId: e.target.value })} placeholder="例如：TC001" style={inputSt} />
+                  <label style={labelSt}>角色</label>
+                  <select value={newUserData.role} onChange={(e) => setNewUserData({ ...newUserData, role: e.target.value as UserRole })} style={inputSt}>
+                    {EDITABLE_ROLES.map((key) => <option key={key} value={key}>{ROLE_LABELS[key]}</option>)}
+                  </select>
                 </div>
-              )}
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, paddingTop: 4 }}>
-                <button onClick={() => setCreatingUser(false)} style={{ padding: "8px 20px", border: "1px solid var(--os-border)", borderRadius: 8, background: "var(--os-surface)", color: "var(--os-text-2)", fontSize: 13, cursor: "pointer" }}>取消</button>
-                <button onClick={handleCreateUser} disabled={createUserMutation.isPending}
-                  style={{ padding: "8px 20px", borderRadius: 8, border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer", opacity: createUserMutation.isPending ? 0.6 : 1, ...amberBtn }}>
-                  {createUserMutation.isPending ? "建立中..." : "建立用戶"}
-                </button>
+                {(newUserData.role === "franchisee" || newUserData.role === "staff" || newUserData.role === "store_manager") && (
+                  <div>
+                    <label style={labelSt}><Building2 style={{ width: 13, height: 13, display: "inline", marginRight: 4 }} />所屬門市編號</label>
+                    <input type="text" value={newUserData.storeId} onChange={(e) => setNewUserData({ ...newUserData, storeId: e.target.value })} placeholder="例如：TC001" style={inputSt} />
+                  </div>
+                )}
               </div>
-            </div>
+            </ScrollArea>
+            <DialogFooter className="px-6 py-3 shrink-0" style={{ borderTop: "1px solid var(--os-border)" }}>
+              <Button variant="outline" onClick={() => setCreatingUser(false)}>取消</Button>
+              <Button style={amberBtn} className="text-white" onClick={handleCreateUser} disabled={createUserMutation.isPending}>
+                {createUserMutation.isPending ? "建立中..." : "建立用戶"}
+              </Button>
+            </DialogFooter>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </AdminDashboardLayout>
   );
 }

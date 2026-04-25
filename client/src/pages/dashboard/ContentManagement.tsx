@@ -3,6 +3,7 @@ import { trpc } from "../../lib/trpc";
 import { FileText, Plus, Edit2, Trash2, Eye, Calendar, User } from "lucide-react";
 import { useLocation } from "wouter";
 import AdminDashboardLayout from "@/components/AdminDashboardLayout";
+import { Button } from "@/components/ui/button";
 
 type PostStatus = "draft" | "published";
 
@@ -58,9 +59,9 @@ export default function ContentManagement() {
             </h1>
             <p style={{ fontSize: 13, color: "var(--os-text-3)", marginTop: 2 }}>管理網站新聞文章和部落格內容</p>
           </div>
-          <button onClick={() => setLocation("/dashboard/content/new")} style={amberBtn}>
+          <Button onClick={() => setLocation("/dashboard/content/new")} className="gap-1.5 text-white" style={{ background: "var(--os-amber)" }}>
             <Plus style={{ width: 16, height: 16 }} />建立新文章
-          </button>
+          </Button>
         </div>
 
         {/* Category Filter */}
@@ -167,9 +168,9 @@ export default function ContentManagement() {
             <FileText style={{ width: 48, height: 48, color: "var(--os-text-3)", margin: "0 auto 12px", opacity: 0.4 }} />
             <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--os-text-1)", marginBottom: 6 }}>尚無文章</h3>
             <p style={{ fontSize: 13, color: "var(--os-text-3)", marginBottom: 20 }}>開始建立您的第一篇文章吧！</p>
-            <button onClick={() => setLocation("/dashboard/content/new")} style={amberBtn}>
+            <Button onClick={() => setLocation("/dashboard/content/new")} className="gap-1.5 text-white" style={{ background: "var(--os-amber)" }}>
               <Plus style={{ width: 16, height: 16 }} />建立新文章
-            </button>
+            </Button>
           </div>
         )}
       </div>
