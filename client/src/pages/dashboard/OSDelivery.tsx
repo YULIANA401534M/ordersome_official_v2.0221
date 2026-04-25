@@ -6,6 +6,7 @@ import AdminDashboardLayout from "@/components/AdminDashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -123,20 +124,25 @@ export default function OSDelivery() {
           )}
         </div>
 
-        {/* 月統計 KPI */}
+        {/* 月統計摘要 */}
         {(stats as any[]).length > 0 && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {[
-              { label: "本月總單數",    value: (stats as any[]).reduce((s: number, r: any) => s + Number(r.deliveryCount), 0).toString(), color: "var(--os-amber-text)" },
-              { label: "已簽收金額",    value: `$${totalSignedAmount.toLocaleString()}`, color: "var(--os-success)" },
-              { label: "門市數",        value: (stats as any[]).length.toString(),          color: "var(--os-info)" },
-              { label: "待簽收金額",    value: `$${(stats as any[]).reduce((s: number, r: any) => s + Number(r.pendingAmount), 0).toLocaleString()}`, color: "var(--os-danger)" },
-            ].map(c => (
-              <div key={c.label} style={{ ...cardSt, padding: "14px 18px" }}>
-                <p style={{ fontSize: 12, color: "var(--os-text-3)", marginBottom: 6 }}>{c.label}</p>
-                <p style={{ fontSize: 24, fontWeight: 700, color: c.color, margin: 0 }}>{c.value}</p>
-              </div>
-            ))}
+          <div className="flex flex-wrap gap-x-6 gap-y-2 px-1 py-2" style={{ borderBottom: '1px solid var(--os-border)' }}>
+            <span style={{ fontSize: 13, color: 'var(--os-text-2)' }}>
+              本月總單 <strong style={{ color: 'var(--os-amber-text)', fontVariantNumeric: 'tabular-nums' }}>
+                {(stats as any[]).reduce((s: number, r: any) => s + Number(r.deliveryCount), 0)}
+              </strong> 張
+            </span>
+            <span style={{ fontSize: 13, color: 'var(--os-text-2)' }}>
+              門市 <strong style={{ color: 'var(--os-text-1)', fontVariantNumeric: 'tabular-nums' }}>{(stats as any[]).length}</strong> 間
+            </span>
+            <span style={{ fontSize: 13, color: 'var(--os-text-2)' }}>
+              已簽收 <strong style={{ color: 'var(--os-success)', fontVariantNumeric: 'tabular-nums' }}>${totalSignedAmount.toLocaleString()}</strong>
+            </span>
+            <span style={{ fontSize: 13, color: 'var(--os-text-2)' }}>
+              待簽收 <strong style={{ color: 'var(--os-danger)', fontVariantNumeric: 'tabular-nums' }}>
+                ${(stats as any[]).reduce((s: number, r: any) => s + Number(r.pendingAmount), 0).toLocaleString()}
+              </strong>
+            </span>
           </div>
         )}
 
@@ -317,9 +323,13 @@ function CreateFromProcurementDialog({
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>從叫貨單建立派車單</DialogTitle></DialogHeader>
-        <div className="space-y-4 py-2">
+      <DialogContent className="!max-w-lg p-0 gap-0 max-h-[88vh]">
+        <div className="flex flex-col h-full max-h-[88vh]">
+          <DialogHeader className="shrink-0 px-6 py-4" style={{ borderBottom: '1px solid var(--os-border)' }}>
+            <DialogTitle>從叫貨單建立派車單</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="flex-1 min-h-0 w-full">
+        <div className="space-y-4 px-6 py-4">
           <div>
             <Label>選擇叫貨單（B類・已確認/已到貨）</Label>
             <Select value={selectedOrderId?.toString() ?? "none"} onValueChange={v => setSelectedOrderId(v === "none" ? undefined : Number(v))}>
@@ -375,14 +385,16 @@ function CreateFromProcurementDialog({
             </div>
           )}
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>取消</Button>
-          <Button style={{ background: "var(--os-amber)", color: "#fff" }}
-            disabled={!selectedOrderId || !driverName.trim() || createFromProcurement.isPending}
-            onClick={handleSubmit}>
-            {createFromProcurement.isPending ? "建立中..." : "建立派車單"}
-          </Button>
-        </DialogFooter>
+          </ScrollArea>
+          <DialogFooter className="shrink-0 px-6 py-3" style={{ borderTop: '1px solid var(--os-border)' }}>
+            <Button variant="outline" onClick={onClose}>取消</Button>
+            <Button style={{ background: "var(--os-amber)", color: "#fff" }}
+              disabled={!selectedOrderId || !driverName.trim() || createFromProcurement.isPending}
+              onClick={handleSubmit}>
+              {createFromProcurement.isPending ? "建立中..." : "建立派車單"}
+            </Button>
+          </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -449,68 +461,76 @@ function CreateDeliveryDialog({ stores, onClose, onSuccess }: { stores: any[]; o
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>手動新增派車單</DialogTitle></DialogHeader>
-        <div className="space-y-3 py-2">
-          <div className="grid grid-cols-2 gap-2">
-            <div><Label>出車日期</Label>
-              <Input type="date" value={form.deliveryDate} onChange={e => setForm(f => ({ ...f, deliveryDate: e.target.value }))} />
-            </div>
-            <div><Label>司機</Label>
-              <Input placeholder="選填" value={form.driverName} onChange={e => setForm(f => ({ ...f, driverName: e.target.value }))} />
-            </div>
-          </div>
-          <div>
-            <Label>目的門市</Label>
-            <Select value={form.toStoreId} onValueChange={v => setForm(f => ({ ...f, toStoreId: v }))}>
-              <SelectTrigger><SelectValue placeholder="選擇門市" /></SelectTrigger>
-              <SelectContent>
-                {stores.map((s: any) => <SelectItem key={s.id} value={s.id.toString()}>{s.name.replace("來點什麼 ", "")}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label>關聯叫貨單（選填）</Label>
-            <Select value={selectedProcurementId?.toString() ?? "none"} onValueChange={v => setSelectedProcurementId(v === "none" ? undefined : Number(v))}>
-              <SelectTrigger><SelectValue placeholder="不關聯叫貨單" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">不關聯</SelectItem>
-                {(confirmedOrders as any[]).map((o: any) => (
-                  <SelectItem key={o.id} value={o.id.toString()}>
-                    {o.orderNo} · {o.stores ?? ""}（{o.orderDate}）
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <Label>品項明細</Label>
-              <Button size="sm" variant="outline" onClick={addItem}>+新增</Button>
-            </div>
-            <div className="space-y-2">
-              {items.map((item, idx) => (
-                <div key={idx} className="grid grid-cols-12 gap-1 items-center">
-                  <Input className="col-span-4 h-7 text-xs" placeholder="品名*" value={item.productName} onChange={e => updateItem(idx, "productName", e.target.value)} />
-                  <Input className="col-span-3 h-7 text-xs" placeholder="數量" type="number" value={item.quantity} onChange={e => updateItem(idx, "quantity", e.target.value)} />
-                  <Input className="col-span-2 h-7 text-xs" placeholder="單位" value={item.unit} onChange={e => updateItem(idx, "unit", e.target.value)} />
-                  <Input className="col-span-2 h-7 text-xs" placeholder="批價" value={item.batchPrice} onChange={e => updateItem(idx, "batchPrice", e.target.value)} />
-                  <button className="col-span-1 text-xs" style={{ color: "var(--os-danger)" }} onClick={() => removeItem(idx)}>✕</button>
+      <DialogContent className="!max-w-lg p-0 gap-0 max-h-[88vh]">
+        <div className="flex flex-col h-full max-h-[88vh]">
+          <DialogHeader className="shrink-0 px-6 py-4" style={{ borderBottom: '1px solid var(--os-border)' }}>
+            <DialogTitle>手動新增派車單</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="flex-1 min-h-0 w-full">
+            <div className="space-y-3 px-6 py-4">
+              <div className="grid grid-cols-2 gap-2">
+                <div><Label>出車日期</Label>
+                  <Input type="date" value={form.deliveryDate} onChange={e => setForm(f => ({ ...f, deliveryDate: e.target.value }))} />
                 </div>
-              ))}
+                <div><Label>司機</Label>
+                  <Input placeholder="選填" value={form.driverName} onChange={e => setForm(f => ({ ...f, driverName: e.target.value }))} />
+                </div>
+              </div>
+              <div>
+                <Label>目的門市</Label>
+                <Select value={form.toStoreId} onValueChange={v => setForm(f => ({ ...f, toStoreId: v }))}>
+                  <SelectTrigger><SelectValue placeholder="選擇門市" /></SelectTrigger>
+                  <SelectContent>
+                    {stores.map((s: any) => <SelectItem key={s.id} value={s.id.toString()}>{s.name.replace("來點什麼 ", "")}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>關聯叫貨單（選填）</Label>
+                <Select value={selectedProcurementId?.toString() ?? "none"} onValueChange={v => setSelectedProcurementId(v === "none" ? undefined : Number(v))}>
+                  <SelectTrigger><SelectValue placeholder="不關聯叫貨單" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">不關聯</SelectItem>
+                    {(confirmedOrders as any[]).map((o: any) => (
+                      <SelectItem key={o.id} value={o.id.toString()}>
+                        {o.orderNo} · {o.stores ?? ""}（{o.orderDate}）
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label>品項明細</Label>
+                  <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={addItem}>
+                    <span style={{ fontSize: 14, lineHeight: 1 }}>+</span> 新增
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {items.map((item, idx) => (
+                    <div key={idx} className="grid grid-cols-12 gap-1 items-center">
+                      <Input className="col-span-4 h-7 text-xs" placeholder="品名*" value={item.productName} onChange={e => updateItem(idx, "productName", e.target.value)} />
+                      <Input className="col-span-3 h-7 text-xs" placeholder="數量" type="number" value={item.quantity} onChange={e => updateItem(idx, "quantity", e.target.value)} />
+                      <Input className="col-span-2 h-7 text-xs" placeholder="單位" value={item.unit} onChange={e => updateItem(idx, "unit", e.target.value)} />
+                      <Input className="col-span-2 h-7 text-xs" placeholder="批價" value={item.batchPrice} onChange={e => updateItem(idx, "batchPrice", e.target.value)} />
+                      <Button variant="ghost" size="sm" className="col-span-1 h-7 w-7 p-0" style={{ color: "var(--os-danger)" }} onClick={() => removeItem(idx)}>✕</Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <Label>備註</Label>
+                <Input placeholder="選填" value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} />
+              </div>
             </div>
-          </div>
-          <div>
-            <Label>備註</Label>
-            <Input placeholder="選填" value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} />
-          </div>
+          </ScrollArea>
+          <DialogFooter className="shrink-0 px-6 py-3" style={{ borderTop: '1px solid var(--os-border)' }}>
+            <Button variant="outline" onClick={onClose}>取消</Button>
+            <Button style={{ background: "var(--os-amber)", color: "#fff" }} disabled={createOrder.isPending} onClick={handleSubmit}>
+              {createOrder.isPending ? "建立中..." : "建立派車單"}
+            </Button>
+          </DialogFooter>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>取消</Button>
-          <Button style={{ background: "var(--os-amber)", color: "#fff" }} disabled={createOrder.isPending} onClick={handleSubmit}>
-            {createOrder.isPending ? "建立中..." : "建立派車單"}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

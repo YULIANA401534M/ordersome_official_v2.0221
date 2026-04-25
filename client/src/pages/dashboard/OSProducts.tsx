@@ -2,10 +2,11 @@ import { useState } from "react";
 import AdminDashboardLayout from "@/components/AdminDashboardLayout";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -20,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { AlertTriangle, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 // ── helpers ─────────────────────────────────────────────────────────────────
@@ -283,93 +285,97 @@ function ProductDialog({
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{product ? "編輯品項" : "新增品項"}</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={submit} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block mb-1" style={labelStyle}>品名 *</label>
-              <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required />
-            </div>
-            <div>
-              <label className="block mb-1" style={labelStyle}>品類</label>
-              <Select value={form.category} onValueChange={v => setForm(p => ({ ...p, category: v }))}>
-                <SelectTrigger><SelectValue placeholder="選擇品類" /></SelectTrigger>
-                <SelectContent>
-                  {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block mb-1" style={labelStyle}>供應商</label>
-              <Select value={form.supplierId || "__none"} onValueChange={v => setForm(p => ({ ...p, supplierId: v === "__none" ? "" : v }))}>
-                <SelectTrigger><SelectValue placeholder="未指定" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none">未指定</SelectItem>
-                  {suppliers.map((s: any) => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="block mb-1" style={labelStyle}>整包單位（packUnit）</label>
-              <Input value={form.packUnit} onChange={e => setForm(p => ({ ...p, packUnit: e.target.value }))} placeholder="包/箱/條" />
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="block mb-1" style={labelStyle}>最小單位數量</label>
-              <Input type="number" step="0.01" value={form.unitQty} onChange={e => setForm(p => ({ ...p, unitQty: e.target.value }))} />
-            </div>
-            <div>
-              <label className="block mb-1" style={labelStyle}>最小單位名稱</label>
-              <Input value={form.unitName} onChange={e => setForm(p => ({ ...p, unitName: e.target.value }))} placeholder="片/克/毫升" />
-            </div>
-            <div>
-              <label className="block mb-1" style={labelStyle}>單位成本（/最小）</label>
-              <Input type="number" step="0.0001" value={form.unitCost} onChange={e => setForm(p => ({ ...p, unitCost: e.target.value }))} />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block mb-1" style={labelStyle}>整包進貨成本（packCost）</label>
-              <Input type="number" step="0.01" value={form.packCost} onChange={e => setForm(p => ({ ...p, packCost: e.target.value }))} />
-            </div>
-            <div>
-              <label className="block mb-1" style={labelStyle}>批售價（batchPrice）</label>
-              <Input type="number" step="0.0001" value={form.batchPrice} onChange={e => setForm(p => ({ ...p, batchPrice: e.target.value }))} />
-            </div>
-          </div>
-          <div>
-            <label className="block mb-1" style={labelStyle}>
-              別名（aliases）<span className="font-normal ml-1 text-xs" style={{ color: 'var(--os-text-3)' }}>每行一個，如大買原始品名</span>
-            </label>
-            <textarea
-              className="w-full rounded-md border px-3 py-2 text-sm min-h-[60px] resize-y"
-              style={{ borderColor: 'var(--os-border)', background: 'var(--os-surface)', color: 'var(--os-text-1)' }}
-              value={form.aliasesText}
-              onChange={e => setForm(p => ({ ...p, aliasesText: e.target.value }))}
-              placeholder={"廣弘-漢拿辣白菜豬耳10片\n另一個別名"}
-            />
-          </div>
-          <div>
-            <label className="block mb-1" style={labelStyle}>備註</label>
-            <Input value={form.note} onChange={e => setForm(p => ({ ...p, note: e.target.value }))} />
-          </div>
-          <div className="flex items-center gap-2">
-            <input type="checkbox" id="pIsActive" checked={form.isActive} onChange={e => setForm(p => ({ ...p, isActive: e.target.checked }))} />
-            <label htmlFor="pIsActive" style={labelStyle}>啟用</label>
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="ghost" onClick={onClose}>取消</Button>
-            <Button type="submit" disabled={upsert.isPending} className="text-white" style={{ background: 'var(--os-amber)' }}>
-              {upsert.isPending ? "儲存中..." : "儲存"}
-            </Button>
-          </div>
-        </form>
+      <DialogContent className="!max-w-lg p-0 gap-0 max-h-[90vh]">
+        <div className="flex flex-col h-full max-h-[90vh]">
+          <DialogHeader className="px-6 pt-5 pb-4 shrink-0" style={{ borderBottom: '1px solid var(--os-border)' }}>
+            <DialogTitle style={{ color: 'var(--os-text-1)' }}>{product ? "編輯品項" : "新增品項"}</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="flex-1 min-h-0 w-full">
+            <form onSubmit={submit} className="px-6 py-4 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block mb-1" style={labelStyle}>品名 *</label>
+                  <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required />
+                </div>
+                <div>
+                  <label className="block mb-1" style={labelStyle}>品類</label>
+                  <Select value={form.category} onValueChange={v => setForm(p => ({ ...p, category: v }))}>
+                    <SelectTrigger><SelectValue placeholder="選擇品類" /></SelectTrigger>
+                    <SelectContent>
+                      {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block mb-1" style={labelStyle}>供應商</label>
+                  <Select value={form.supplierId || "__none"} onValueChange={v => setForm(p => ({ ...p, supplierId: v === "__none" ? "" : v }))}>
+                    <SelectTrigger><SelectValue placeholder="未指定" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none">未指定</SelectItem>
+                      {suppliers.map((s: any) => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="block mb-1" style={labelStyle}>整包單位（packUnit）</label>
+                  <Input value={form.packUnit} onChange={e => setForm(p => ({ ...p, packUnit: e.target.value }))} placeholder="包/箱/條" />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block mb-1" style={labelStyle}>最小單位數量</label>
+                  <Input type="number" step="0.01" value={form.unitQty} onChange={e => setForm(p => ({ ...p, unitQty: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="block mb-1" style={labelStyle}>最小單位名稱</label>
+                  <Input value={form.unitName} onChange={e => setForm(p => ({ ...p, unitName: e.target.value }))} placeholder="片/克/毫升" />
+                </div>
+                <div>
+                  <label className="block mb-1" style={labelStyle}>單位成本（/最小）</label>
+                  <Input type="number" step="0.0001" value={form.unitCost} onChange={e => setForm(p => ({ ...p, unitCost: e.target.value }))} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block mb-1" style={labelStyle}>整包進貨成本（packCost）</label>
+                  <Input type="number" step="0.01" value={form.packCost} onChange={e => setForm(p => ({ ...p, packCost: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="block mb-1" style={labelStyle}>批售價（batchPrice）</label>
+                  <Input type="number" step="0.0001" value={form.batchPrice} onChange={e => setForm(p => ({ ...p, batchPrice: e.target.value }))} />
+                </div>
+              </div>
+              <div>
+                <label className="block mb-1" style={labelStyle}>
+                  別名（aliases）<span className="font-normal ml-1 text-xs" style={{ color: 'var(--os-text-3)' }}>每行一個，如大買原始品名</span>
+                </label>
+                <textarea
+                  className="w-full rounded-md border px-3 py-2 text-sm min-h-[60px] resize-y"
+                  style={{ borderColor: 'var(--os-border)', background: 'var(--os-surface)', color: 'var(--os-text-1)' }}
+                  value={form.aliasesText}
+                  onChange={e => setForm(p => ({ ...p, aliasesText: e.target.value }))}
+                  placeholder={"廣弘-漢拿辣白菜豬耳10片\n另一個別名"}
+                />
+              </div>
+              <div>
+                <label className="block mb-1" style={labelStyle}>備註</label>
+                <Input value={form.note} onChange={e => setForm(p => ({ ...p, note: e.target.value }))} />
+              </div>
+              <div className="flex items-center gap-2">
+                <input type="checkbox" id="pIsActive" checked={form.isActive} onChange={e => setForm(p => ({ ...p, isActive: e.target.checked }))} />
+                <label htmlFor="pIsActive" style={labelStyle}>啟用</label>
+              </div>
+              <div className="flex justify-end gap-2 pb-2">
+                <Button type="button" variant="ghost" onClick={onClose}>取消</Button>
+                <Button type="submit" disabled={upsert.isPending} className="text-white" style={{ background: 'var(--os-amber)' }}>
+                  {upsert.isPending ? "儲存中..." : "儲存"}
+                </Button>
+              </div>
+            </form>
+          </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -498,112 +504,115 @@ function MenuItemDialog({
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{item ? "編輯菜單品項" : "新增菜單品項"}</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={submit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block mb-1" style={labelStyle}>品項名稱 *</label>
-              <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required />
-            </div>
-            <div>
-              <label className="block mb-1" style={labelStyle}>分類 *</label>
-              <Input value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))} required placeholder="來點什麼 / 來點蛋餅 / ..." />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block mb-1" style={labelStyle}>主食描述</label>
-              <Input value={form.mainIngredient} onChange={e => setForm(p => ({ ...p, mainIngredient: e.target.value }))} placeholder="黃金薯餅(3個)" />
-            </div>
-            <div>
-              <label className="block mb-1" style={labelStyle}>供餐方式</label>
-              <Select value={form.servingType} onValueChange={v => setForm(p => ({ ...p, servingType: v as any }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="both">內用＋外帶</SelectItem>
-                  <SelectItem value="dine_in_only">僅內用</SelectItem>
-                  <SelectItem value="takeout_only">僅外帶</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="block mb-1" style={labelStyle}>原始售價</label>
-              <Input type="number" step="0.01" value={form.basePrice} onChange={e => setForm(p => ({ ...p, basePrice: e.target.value }))} />
-            </div>
-            <div>
-              <label className="block mb-1" style={labelStyle}>最新售價</label>
-              <Input type="number" step="0.01" value={form.currentPrice} onChange={e => setForm(p => ({ ...p, currentPrice: e.target.value }))} />
-            </div>
-            <div>
-              <label className="block mb-1" style={labelStyle}>平台售價</label>
-              <Input type="number" step="0.01" value={form.platformPrice} onChange={e => setForm(p => ({ ...p, platformPrice: e.target.value }))} />
-            </div>
-          </div>
-          <div>
-            <label className="block mb-1" style={labelStyle}>備註</label>
-            <Input value={form.note} onChange={e => setForm(p => ({ ...p, note: e.target.value }))} />
-          </div>
-          <div className="flex items-center gap-2">
-            <input type="checkbox" id="miIsActive" checked={form.isActive} onChange={e => setForm(p => ({ ...p, isActive: e.target.checked }))} />
-            <label htmlFor="miIsActive" style={labelStyle}>啟用</label>
-          </div>
+      <DialogContent className="!max-w-2xl p-0 gap-0 max-h-[90vh]">
+        <div className="flex flex-col h-full max-h-[90vh]">
+          <DialogHeader className="px-6 pt-5 pb-4 shrink-0" style={{ borderBottom: '1px solid var(--os-border)' }}>
+            <DialogTitle style={{ color: 'var(--os-text-1)' }}>{item ? "編輯菜單品項" : "新增菜單品項"}</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="flex-1 min-h-0 w-full">
+            <form onSubmit={submit} className="px-6 py-4 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block mb-1" style={labelStyle}>品項名稱 *</label>
+                  <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required />
+                </div>
+                <div>
+                  <label className="block mb-1" style={labelStyle}>分類 *</label>
+                  <Input value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))} required placeholder="來點什麼 / 來點蛋餅 / ..." />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block mb-1" style={labelStyle}>主食描述</label>
+                  <Input value={form.mainIngredient} onChange={e => setForm(p => ({ ...p, mainIngredient: e.target.value }))} placeholder="黃金薯餅(3個)" />
+                </div>
+                <div>
+                  <label className="block mb-1" style={labelStyle}>供餐方式</label>
+                  <Select value={form.servingType} onValueChange={v => setForm(p => ({ ...p, servingType: v as any }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="both">內用＋外帶</SelectItem>
+                      <SelectItem value="dine_in_only">僅內用</SelectItem>
+                      <SelectItem value="takeout_only">僅外帶</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block mb-1" style={labelStyle}>原始售價</label>
+                  <Input type="number" step="0.01" value={form.basePrice} onChange={e => setForm(p => ({ ...p, basePrice: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="block mb-1" style={labelStyle}>最新售價</label>
+                  <Input type="number" step="0.01" value={form.currentPrice} onChange={e => setForm(p => ({ ...p, currentPrice: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="block mb-1" style={labelStyle}>平台售價</label>
+                  <Input type="number" step="0.01" value={form.platformPrice} onChange={e => setForm(p => ({ ...p, platformPrice: e.target.value }))} />
+                </div>
+              </div>
+              <div>
+                <label className="block mb-1" style={labelStyle}>備註</label>
+                <Input value={form.note} onChange={e => setForm(p => ({ ...p, note: e.target.value }))} />
+              </div>
+              <div className="flex items-center gap-2">
+                <input type="checkbox" id="miIsActive" checked={form.isActive} onChange={e => setForm(p => ({ ...p, isActive: e.target.checked }))} />
+                <label htmlFor="miIsActive" style={labelStyle}>啟用</label>
+              </div>
 
-          {/* 食材清單 */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium" style={{ color: 'var(--os-text-2)' }}>食材清單</span>
-              <Button type="button" size="sm" variant="outline" className="h-7 text-xs"
-                onClick={() => setRows(prev => [...prev, emptyIngRow(prev.length)])}>
-                + 新增食材
-              </Button>
-            </div>
-            <div className="space-y-2">
-              {rows.map((row, i) => (
-                <div key={i} className="grid grid-cols-[1fr_1fr_80px_80px_80px_28px] gap-1.5 items-center">
-                  <Select
-                    value={row.productId ? String(row.productId) : "__manual"}
-                    onValueChange={v => pickProduct(i, v)}
-                  >
-                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="選原物料" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__manual">手動輸入</SelectItem>
-                      {products.map((p: any) => (
-                        <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Input className="h-8 text-xs" placeholder="食材名稱" value={row.ingredientName} onChange={e => setRow(i, { ingredientName: e.target.value })} />
-                  <Input className="h-8 text-xs" type="number" step="0.0001" placeholder="用量" value={row.quantity} onChange={e => setRow(i, { quantity: e.target.value })} />
-                  <Input className="h-8 text-xs" placeholder="單位" value={row.unit} onChange={e => setRow(i, { unit: e.target.value })} />
-                  <Select value={row.ingredientType} onValueChange={v => setRow(i, { ingredientType: v as any })}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ingredient">食材</SelectItem>
-                      <SelectItem value="packaging">包材</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button type="button" size="sm" variant="ghost" className="h-7 w-7 p-0"
-                    style={{ color: 'var(--os-danger)' }}
-                    onClick={() => setRows(prev => prev.filter((_, idx) => idx !== i))}>
-                    ×
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-semibold" style={{ color: 'var(--os-text-2)' }}>食材清單</span>
+                  <Button type="button" size="sm" variant="outline" className="h-7 text-xs gap-1"
+                    onClick={() => setRows(prev => [...prev, emptyIngRow(prev.length)])}>
+                    <Plus size={12} />新增食材
                   </Button>
                 </div>
-              ))}
-            </div>
-          </div>
+                <div className="space-y-2">
+                  {rows.map((row, i) => (
+                    <div key={i} className="grid grid-cols-[1fr_1fr_80px_80px_80px_28px] gap-1.5 items-center">
+                      <Select
+                        value={row.productId ? String(row.productId) : "__manual"}
+                        onValueChange={v => pickProduct(i, v)}
+                      >
+                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="選原物料" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__manual">手動輸入</SelectItem>
+                          {products.map((p: any) => (
+                            <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Input className="h-8 text-xs" placeholder="食材名稱" value={row.ingredientName} onChange={e => setRow(i, { ingredientName: e.target.value })} />
+                      <Input className="h-8 text-xs" type="number" step="0.0001" placeholder="用量" value={row.quantity} onChange={e => setRow(i, { quantity: e.target.value })} />
+                      <Input className="h-8 text-xs" placeholder="單位" value={row.unit} onChange={e => setRow(i, { unit: e.target.value })} />
+                      <Select value={row.ingredientType} onValueChange={v => setRow(i, { ingredientType: v as any })}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ingredient">食材</SelectItem>
+                          <SelectItem value="packaging">包材</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button type="button" size="sm" variant="ghost" className="h-7 w-7 p-0"
+                        style={{ color: 'var(--os-danger)' }}
+                        onClick={() => setRows(prev => prev.filter((_, idx) => idx !== i))}>
+                        ×
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="ghost" onClick={onClose}>取消</Button>
-            <Button type="submit" disabled={isPending} className="text-white" style={{ background: 'var(--os-amber)' }}>
-              {isPending ? "儲存中..." : "儲存"}
-            </Button>
-          </div>
-        </form>
+              <div className="flex justify-end gap-2 pb-2">
+                <Button type="button" variant="ghost" onClick={onClose}>取消</Button>
+                <Button type="submit" disabled={isPending} className="text-white" style={{ background: 'var(--os-amber)' }}>
+                  {isPending ? "儲存中..." : "儲存"}
+                </Button>
+              </div>
+            </form>
+          </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -771,84 +780,88 @@ function OemProductDialog({
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{item ? "編輯 OEM 品項" : "新增 OEM 品項"}</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={submit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block mb-1" style={labelStyle}>品項名稱 *</label>
-              <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required />
-            </div>
-            <div>
-              <label className="block mb-1" style={labelStyle}>單位</label>
-              <Input value={form.unit} onChange={e => setForm(p => ({ ...p, unit: e.target.value }))} />
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="block mb-1" style={labelStyle}>代工費/單位</label>
-              <Input type="number" step="0.0001" value={form.processingFee} onChange={e => setForm(p => ({ ...p, processingFee: e.target.value }))} />
-            </div>
-            <div>
-              <label className="block mb-1" style={labelStyle}>包材費</label>
-              <Input type="number" step="0.0001" value={form.packagingCost} onChange={e => setForm(p => ({ ...p, packagingCost: e.target.value }))} />
-            </div>
-            <div>
-              <label className="block mb-1" style={labelStyle}>批價</label>
-              <Input type="number" step="0.0001" value={form.batchPrice} onChange={e => setForm(p => ({ ...p, batchPrice: e.target.value }))} />
-            </div>
-          </div>
-          <div>
-            <label className="block mb-1" style={labelStyle}>備註</label>
-            <Input value={form.note} onChange={e => setForm(p => ({ ...p, note: e.target.value }))} />
-          </div>
-          <div className="flex items-center gap-2">
-            <input type="checkbox" id="oemIsActive" checked={form.isActive} onChange={e => setForm(p => ({ ...p, isActive: e.target.checked }))} />
-            <label htmlFor="oemIsActive" style={labelStyle}>啟用</label>
-          </div>
+      <DialogContent className="!max-w-2xl p-0 gap-0 max-h-[90vh]">
+        <div className="flex flex-col h-full max-h-[90vh]">
+          <DialogHeader className="px-6 pt-5 pb-4 shrink-0" style={{ borderBottom: '1px solid var(--os-border)' }}>
+            <DialogTitle style={{ color: 'var(--os-text-1)' }}>{item ? "編輯 OEM 品項" : "新增 OEM 品項"}</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="flex-1 min-h-0 w-full">
+            <form onSubmit={submit} className="px-6 py-4 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block mb-1" style={labelStyle}>品項名稱 *</label>
+                  <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required />
+                </div>
+                <div>
+                  <label className="block mb-1" style={labelStyle}>單位</label>
+                  <Input value={form.unit} onChange={e => setForm(p => ({ ...p, unit: e.target.value }))} />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block mb-1" style={labelStyle}>代工費/單位</label>
+                  <Input type="number" step="0.0001" value={form.processingFee} onChange={e => setForm(p => ({ ...p, processingFee: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="block mb-1" style={labelStyle}>包材費</label>
+                  <Input type="number" step="0.0001" value={form.packagingCost} onChange={e => setForm(p => ({ ...p, packagingCost: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="block mb-1" style={labelStyle}>批價</label>
+                  <Input type="number" step="0.0001" value={form.batchPrice} onChange={e => setForm(p => ({ ...p, batchPrice: e.target.value }))} />
+                </div>
+              </div>
+              <div>
+                <label className="block mb-1" style={labelStyle}>備註</label>
+                <Input value={form.note} onChange={e => setForm(p => ({ ...p, note: e.target.value }))} />
+              </div>
+              <div className="flex items-center gap-2">
+                <input type="checkbox" id="oemIsActive" checked={form.isActive} onChange={e => setForm(p => ({ ...p, isActive: e.target.checked }))} />
+                <label htmlFor="oemIsActive" style={labelStyle}>啟用</label>
+              </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium" style={{ color: 'var(--os-text-2)' }}>原料清單</span>
-              <Button type="button" size="sm" variant="outline" className="h-7 text-xs"
-                onClick={() => setRows(prev => [...prev, emptyOemRow(prev.length)])}>
-                + 新增原料
-              </Button>
-            </div>
-            <div className="space-y-2">
-              {rows.map((row, i) => (
-                <div key={i} className="grid grid-cols-[1fr_1fr_80px_80px_28px] gap-1.5 items-center">
-                  <Select value={row.productId ? String(row.productId) : "__manual"} onValueChange={v => pickProduct(i, v)}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="選原物料" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__manual">手動輸入</SelectItem>
-                      {products.map((p: any) => (
-                        <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Input className="h-8 text-xs" placeholder="原料名稱" value={row.ingredientName} onChange={e => setRow(i, { ingredientName: e.target.value })} />
-                  <Input className="h-8 text-xs" type="number" step="0.0001" placeholder="用量" value={row.quantity} onChange={e => setRow(i, { quantity: e.target.value })} />
-                  <Input className="h-8 text-xs" placeholder="單位" value={row.unit} onChange={e => setRow(i, { unit: e.target.value })} />
-                  <Button type="button" size="sm" variant="ghost" className="h-7 w-7 p-0"
-                    style={{ color: 'var(--os-danger)' }}
-                    onClick={() => setRows(prev => prev.filter((_, idx) => idx !== i))}>
-                    ×
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-semibold" style={{ color: 'var(--os-text-2)' }}>原料清單</span>
+                  <Button type="button" size="sm" variant="outline" className="h-7 text-xs gap-1"
+                    onClick={() => setRows(prev => [...prev, emptyOemRow(prev.length)])}>
+                    <Plus size={12} />新增原料
                   </Button>
                 </div>
-              ))}
-            </div>
-          </div>
+                <div className="space-y-2">
+                  {rows.map((row, i) => (
+                    <div key={i} className="grid grid-cols-[1fr_1fr_80px_80px_28px] gap-1.5 items-center">
+                      <Select value={row.productId ? String(row.productId) : "__manual"} onValueChange={v => pickProduct(i, v)}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="選原物料" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__manual">手動輸入</SelectItem>
+                          {products.map((p: any) => (
+                            <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Input className="h-8 text-xs" placeholder="原料名稱" value={row.ingredientName} onChange={e => setRow(i, { ingredientName: e.target.value })} />
+                      <Input className="h-8 text-xs" type="number" step="0.0001" placeholder="用量" value={row.quantity} onChange={e => setRow(i, { quantity: e.target.value })} />
+                      <Input className="h-8 text-xs" placeholder="單位" value={row.unit} onChange={e => setRow(i, { unit: e.target.value })} />
+                      <Button type="button" size="sm" variant="ghost" className="h-7 w-7 p-0"
+                        style={{ color: 'var(--os-danger)' }}
+                        onClick={() => setRows(prev => prev.filter((_, idx) => idx !== i))}>
+                        ×
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="ghost" onClick={onClose}>取消</Button>
-            <Button type="submit" disabled={isPending} className="text-white" style={{ background: 'var(--os-amber)' }}>
-              {isPending ? "儲存中..." : "儲存"}
-            </Button>
-          </div>
-        </form>
+              <div className="flex justify-end gap-2 pb-2">
+                <Button type="button" variant="ghost" onClick={onClose}>取消</Button>
+                <Button type="submit" disabled={isPending} className="text-white" style={{ background: 'var(--os-amber)' }}>
+                  {isPending ? "儲存中..." : "儲存"}
+                </Button>
+              </div>
+            </form>
+          </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -923,57 +936,76 @@ export default function OSProducts() {
 
   return (
     <AdminDashboardLayout>
-      <div className="space-y-5 max-w-7xl mx-auto">
-        <div>
-          <h1 className="text-xl font-semibold" style={{ color: 'var(--os-text-1)' }}>品項成本管理</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--os-text-3)' }}>管理進貨品項、成本與供應商</p>
+      <div className="space-y-6 max-w-7xl mx-auto">
+        <div className="flex items-end justify-between">
+          <div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--os-text-1)' }}>品項成本管理</h1>
+            <p className="text-sm mt-1" style={{ color: 'var(--os-text-3)' }}>管理進貨品項、成本與供應商</p>
+          </div>
         </div>
 
         <Tabs defaultValue="products">
-          <TabsList>
-            <TabsTrigger value="products">品項成本</TabsTrigger>
-            <TabsTrigger value="suppliers">供應商管理</TabsTrigger>
-            <TabsTrigger value="menu">菜單品項成本</TabsTrigger>
-            {hasCostAccess && <TabsTrigger value="oem">OEM 品項</TabsTrigger>}
+          <TabsList style={{ background: 'var(--os-surface-2)', border: '1px solid var(--os-border)', padding: '3px' }}>
+            <TabsTrigger value="products"
+              style={{ fontSize: 13 }}
+              className="data-[state=active]:bg-[--os-surface] data-[state=active]:text-[--os-text-1] data-[state=inactive]:text-[--os-text-3]">
+              品項成本
+            </TabsTrigger>
+            <TabsTrigger value="suppliers"
+              style={{ fontSize: 13 }}
+              className="data-[state=active]:bg-[--os-surface] data-[state=active]:text-[--os-text-1] data-[state=inactive]:text-[--os-text-3]">
+              供應商管理
+            </TabsTrigger>
+            <TabsTrigger value="menu"
+              style={{ fontSize: 13 }}
+              className="data-[state=active]:bg-[--os-surface] data-[state=active]:text-[--os-text-1] data-[state=inactive]:text-[--os-text-3]">
+              菜單品項成本
+            </TabsTrigger>
+            {hasCostAccess && (
+              <TabsTrigger value="oem"
+                style={{ fontSize: 13 }}
+                className="data-[state=active]:bg-[--os-surface] data-[state=active]:text-[--os-text-1] data-[state=inactive]:text-[--os-text-3]">
+                OEM 品項
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* ── 品項成本 Tab ── */}
           <TabsContent value="products" className="space-y-3 mt-4">
             <Card style={{ background: 'var(--os-surface)', border: '1px solid var(--os-border)' }}>
-              <CardHeader className="pb-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <CardTitle className="text-base font-semibold" style={{ color: 'var(--os-text-1)' }}>品項清單</CardTitle>
-                  <div className="ml-auto flex flex-wrap gap-2 items-center">
-                    <Select value={filterSupplier || "__all"} onValueChange={v => { setFilterSupplier(v === "__all" ? "" : v); setCostPage(1); }}>
-                      <SelectTrigger className="w-36 h-8 text-sm"><SelectValue placeholder="全部廠商" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__all">全部廠商</SelectItem>
-                        {supplierList.map((s: any) => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Select value={filterCategory || "__all"} onValueChange={v => { setFilterCategory(v === "__all" ? "" : v); setCostPage(1); }}>
-                      <SelectTrigger className="w-32 h-8 text-sm"><SelectValue placeholder="全部品類" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__all">全部品類</SelectItem>
-                        {categories.map((c: any) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <button
-                      className="text-xs px-3 py-1 rounded border h-8 transition-colors"
-                      style={filterNeedsReview
-                        ? { background: 'var(--os-amber-soft)', borderColor: 'var(--os-amber)', color: 'var(--os-amber-text)' }
-                        : { borderColor: 'var(--os-border)', color: 'var(--os-text-2)' }}
-                      onClick={() => { setFilterNeedsReview(v => !v); setCostPage(1); }}
-                    >
-                      ⚠ 只看待確認（{needsReviewCount}）
-                    </button>
-                    <Button size="sm" className="h-8 text-white" style={{ background: 'var(--os-amber)' }}
-                      onClick={() => { setEditProduct(null); setShowProductDialog(true); }}>
-                      + 新增品項
-                    </Button>
-                  </div>
+              <div className="flex flex-wrap items-center gap-2 px-5 py-4" style={{ borderBottom: '1px solid var(--os-border)' }}>
+                <span className="text-sm font-semibold" style={{ color: 'var(--os-text-1)' }}>品項清單</span>
+                <div className="ml-auto flex flex-wrap gap-2 items-center">
+                  <Select value={filterSupplier || "__all"} onValueChange={v => { setFilterSupplier(v === "__all" ? "" : v); setCostPage(1); }}>
+                    <SelectTrigger className="w-36 h-8 text-sm"><SelectValue placeholder="全部廠商" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__all">全部廠商</SelectItem>
+                      {supplierList.map((s: any) => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Select value={filterCategory || "__all"} onValueChange={v => { setFilterCategory(v === "__all" ? "" : v); setCostPage(1); }}>
+                    <SelectTrigger className="w-32 h-8 text-sm"><SelectValue placeholder="全部品類" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__all">全部品類</SelectItem>
+                      {categories.map((c: any) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <button
+                    className="inline-flex items-center gap-1.5 text-xs px-3 py-1 rounded border h-8 transition-colors"
+                    style={filterNeedsReview
+                      ? { background: 'var(--os-amber-soft)', borderColor: 'var(--os-amber)', color: 'var(--os-amber-text)' }
+                      : { borderColor: 'var(--os-border)', color: 'var(--os-text-2)' }}
+                    onClick={() => { setFilterNeedsReview(v => !v); setCostPage(1); }}
+                  >
+                    <AlertTriangle size={12} />
+                    只看待確認（{needsReviewCount}）
+                  </button>
+                  <Button size="sm" className="h-8 text-white gap-1" style={{ background: 'var(--os-amber)' }}
+                    onClick={() => { setEditProduct(null); setShowProductDialog(true); }}>
+                    <Plus size={14} />新增品項
+                  </Button>
                 </div>
-              </CardHeader>
+              </div>
               <CardContent className="p-0">
                 {products.isLoading ? (
                   <div className="p-6 text-center text-sm" style={{ color: 'var(--os-text-3)' }}>載入中...</div>
@@ -1081,23 +1113,21 @@ export default function OSProducts() {
                       })}
                     </div>
                     {costTotalPages > 1 && (
-                      <div className="flex items-center justify-between px-4 py-3" style={{ borderTop: '1px solid var(--os-border)' }}>
+                      <div className="flex items-center justify-between px-5 py-3" style={{ borderTop: '1px solid var(--os-border)' }}>
                         <span className="text-xs" style={{ color: 'var(--os-text-3)' }}>
                           第 {costPage} / {costTotalPages} 頁，共 {productList.length} 筆
                         </span>
                         <div className="flex gap-1">
-                          <button
-                            className="px-2 py-1 text-xs rounded disabled:opacity-40"
-                            style={{ border: '1px solid var(--os-border)', color: 'var(--os-text-2)' }}
+                          <Button variant="outline" size="sm" className="h-7 px-2 gap-1 text-xs"
                             disabled={costPage === 1}
-                            onClick={() => setCostPage(p => p - 1)}
-                          >上一頁</button>
-                          <button
-                            className="px-2 py-1 text-xs rounded disabled:opacity-40"
-                            style={{ border: '1px solid var(--os-border)', color: 'var(--os-text-2)' }}
+                            onClick={() => setCostPage(p => p - 1)}>
+                            <ChevronLeft size={13} />上一頁
+                          </Button>
+                          <Button variant="outline" size="sm" className="h-7 px-2 gap-1 text-xs"
                             disabled={costPage === costTotalPages}
-                            onClick={() => setCostPage(p => p + 1)}
-                          >下一頁</button>
+                            onClick={() => setCostPage(p => p + 1)}>
+                            下一頁<ChevronRight size={13} />
+                          </Button>
                         </div>
                       </div>
                     )}
@@ -1110,15 +1140,13 @@ export default function OSProducts() {
           {/* ── 供應商 Tab ── */}
           <TabsContent value="suppliers" className="mt-4">
             <Card style={{ background: 'var(--os-surface)', border: '1px solid var(--os-border)' }}>
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-3">
-                  <CardTitle className="text-base font-semibold" style={{ color: 'var(--os-text-1)' }}>供應商清單</CardTitle>
-                  <Button size="sm" className="h-8 ml-auto text-white" style={{ background: 'var(--os-amber)' }}
-                    onClick={() => { setEditSupplier(null); setShowSupplierDialog(true); }}>
-                    + 新增供應商
-                  </Button>
-                </div>
-              </CardHeader>
+              <div className="flex items-center gap-3 px-5 py-4" style={{ borderBottom: '1px solid var(--os-border)' }}>
+                <span className="text-sm font-semibold" style={{ color: 'var(--os-text-1)' }}>供應商清單</span>
+                <Button size="sm" className="h-8 ml-auto text-white gap-1" style={{ background: 'var(--os-amber)' }}
+                  onClick={() => { setEditSupplier(null); setShowSupplierDialog(true); }}>
+                  <Plus size={14} />新增供應商
+                </Button>
+              </div>
               <CardContent className="p-0">
                 {suppliers.isLoading ? (
                   <div className="p-6 text-center text-sm" style={{ color: 'var(--os-text-3)' }}>載入中...</div>
@@ -1210,28 +1238,26 @@ export default function OSProducts() {
           {/* ── 菜單品項成本 Tab ── */}
           <TabsContent value="menu" className="space-y-3 mt-4">
             <Card style={{ background: 'var(--os-surface)', border: '1px solid var(--os-border)' }}>
-              <CardHeader className="pb-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <CardTitle className="text-base font-semibold" style={{ color: 'var(--os-text-1)' }}>菜單品項</CardTitle>
-                  <div className="ml-auto flex flex-wrap gap-2 items-center">
-                    <Select value={menuCategory || "__all"} onValueChange={v => setMenuCategory(v === "__all" ? "" : v)}>
-                      <SelectTrigger className="w-40 h-8 text-sm"><SelectValue placeholder="全部分類" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__all">全部分類</SelectItem>
-                        {(menuCategories.data ?? []).map((c: string) => (
-                          <SelectItem key={c} value={c}>{c}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {hasCostAccess && (
-                      <Button size="sm" className="h-8 text-white" style={{ background: 'var(--os-amber)' }}
-                        onClick={() => { setEditMenuItem(null); setShowMenuDialog(true); }}>
-                        + 新增品項
-                      </Button>
-                    )}
-                  </div>
+              <div className="flex flex-wrap items-center gap-2 px-5 py-4" style={{ borderBottom: '1px solid var(--os-border)' }}>
+                <span className="text-sm font-semibold" style={{ color: 'var(--os-text-1)' }}>菜單品項</span>
+                <div className="ml-auto flex flex-wrap gap-2 items-center">
+                  <Select value={menuCategory || "__all"} onValueChange={v => setMenuCategory(v === "__all" ? "" : v)}>
+                    <SelectTrigger className="w-40 h-8 text-sm"><SelectValue placeholder="全部分類" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__all">全部分類</SelectItem>
+                      {(menuCategories.data ?? []).map((c: string) => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {hasCostAccess && (
+                    <Button size="sm" className="h-8 text-white gap-1" style={{ background: 'var(--os-amber)' }}
+                      onClick={() => { setEditMenuItem(null); setShowMenuDialog(true); }}>
+                      <Plus size={14} />新增品項
+                    </Button>
+                  )}
                 </div>
-              </CardHeader>
+              </div>
               <CardContent className="p-0">
                 {menuItems.isLoading ? (
                   <div className="p-6 text-center text-sm" style={{ color: 'var(--os-text-3)' }}>載入中...</div>
@@ -1357,15 +1383,13 @@ export default function OSProducts() {
           {hasCostAccess && (
             <TabsContent value="oem" className="space-y-3 mt-4">
               <Card style={{ background: 'var(--os-surface)', border: '1px solid var(--os-border)' }}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2">
-                    <CardTitle className="text-base font-semibold" style={{ color: 'var(--os-text-1)' }}>OEM 品項</CardTitle>
-                    <Button size="sm" className="h-8 ml-auto text-white" style={{ background: 'var(--os-amber)' }}
-                      onClick={() => { setEditOemItem(null); setShowOemDialog(true); }}>
-                      + 新增 OEM 品項
-                    </Button>
-                  </div>
-                </CardHeader>
+                <div className="flex items-center gap-2 px-5 py-4" style={{ borderBottom: '1px solid var(--os-border)' }}>
+                  <span className="text-sm font-semibold" style={{ color: 'var(--os-text-1)' }}>OEM 品項</span>
+                  <Button size="sm" className="h-8 ml-auto text-white gap-1" style={{ background: 'var(--os-amber)' }}
+                    onClick={() => { setEditOemItem(null); setShowOemDialog(true); }}>
+                    <Plus size={14} />新增 OEM 品項
+                  </Button>
+                </div>
                 <CardContent className="p-0">
                   {oemItems.isLoading ? (
                     <div className="p-6 text-center text-sm" style={{ color: 'var(--os-text-3)' }}>載入中...</div>

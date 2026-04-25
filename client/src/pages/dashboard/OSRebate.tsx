@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Calculator, CheckCircle, CreditCard, TrendingDown } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const now = new Date();
 const DEFAULT_MONTH_STR = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -132,156 +133,152 @@ export default function OSRebate() {
             <p style={{ fontSize: 12, color: "var(--os-text-3)" }}>計算後伯享/韓濟需人工輸入金額</p>
           </div>
 
-          {/* Tab switcher */}
-          <div style={{ display: "flex", overflow: "hidden", borderRadius: 10, border: "1px solid var(--os-border)", background: "var(--os-surface)", width: "fit-content" }}>
-            {TABS.map(t => (
-              <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
-                style={{
-                  padding: "8px 20px", fontSize: 13,
-                  fontWeight: tab === t.key ? 600 : 400,
-                  background: tab === t.key ? "var(--os-amber)" : "transparent",
-                  color: tab === t.key ? "#fff" : "var(--os-text-2)",
-                  border: "none", cursor: "pointer", transition: "background 0.15s",
-                }}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
+          {/* Tabs */}
+          <Tabs value={tab} onValueChange={v => setTab(v as typeof tab)}>
+            <TabsList style={{ background: "var(--os-surface-2)", border: "1px solid var(--os-border)", padding: 3 }}>
+              {TABS.map(t => (
+                <TabsTrigger
+                  key={t.key}
+                  value={t.key}
+                  className="data-[state=active]:bg-[--os-surface] data-[state=active]:text-[--os-text-1] data-[state=inactive]:text-[--os-text-3] text-sm"
+                >
+                  {t.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
 
-          {/* ── 退佣管理 ── */}
-          {tab === "rebate" && (
-            <div style={panelSt}>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr style={{ background: "var(--os-surface-2)", borderBottom: "1px solid var(--os-border)" }}>
-                    {["廠商","退佣類型","本月採購","退佣金額","手續費","淨退佣","狀態","操作"].map((h, i) => (
-                      <th key={h} className={i < 2 ? "px-4 py-3 text-left" : "px-4 py-3 text-right"} style={{ ...thSt, textAlign: i === 6 || i === 7 ? "center" : undefined }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {loadingRebates ? loadingRow(8) :
-                   (rebates as any[]).length === 0 ? emptyRow(8, <Calculator style={{ width: 36, height: 36, opacity: 0.25 }} />, "尚無退佣記錄，請先點「計算本月退佣」") :
-                   (rebates as any[]).map((r: any) => {
-                    const sc = REBATE_STATUS_CONFIG[r.status] ?? REBATE_STATUS_CONFIG.calculated;
-                    const needsManual = (r.rebateType === "offset" || r.rebateType === "fixed_diff") && Number(r.rebateAmount) === 0;
-                    return (
-                      <tr key={r.id}
-                        style={{ borderTop: "1px solid var(--os-border-2)", background: needsManual ? "var(--os-warning-bg)" : "" }}
-                        onMouseEnter={e => trHover(e, true)} onMouseLeave={e => trHover(e, false)}>
-                        <td className="px-4 py-3 font-medium" style={{ color: "var(--os-text-1)" }}>{r.supplierName}</td>
-                        <td className="px-4 py-3 text-xs" style={{ color: "var(--os-text-3)" }}>
-                          {REBATE_TYPE_LABEL[r.rebateType] ?? r.rebateType}
-                          {needsManual && <span style={{ marginLeft: 6, color: "var(--os-warning)", fontWeight: 600 }}>⚠ 需輸入金額</span>}
-                        </td>
-                        <td className="px-4 py-3 text-right">$ {formatAmount(r.baseAmount)}</td>
-                        <td className="px-4 py-3 text-right" style={{ color: "var(--os-success)" }}>$ {formatAmount(r.rebateAmount)}</td>
-                        <td className="px-4 py-3 text-right text-xs" style={{ color: "var(--os-text-3)" }}>
-                          {Number(r.handlingFee) > 0 ? `- $ ${formatAmount(r.handlingFee)}` : "—"}
-                        </td>
-                        <td className="px-4 py-3 text-right font-semibold" style={{ color: "var(--os-success)" }}>$ {formatAmount(r.netRebate)}</td>
-                        <td className="px-4 py-3 text-center">
-                          <span style={{ ...sc, display: "inline-block", borderRadius: 4, padding: "1px 8px", fontSize: 12, fontWeight: 500, color: sc.color, background: sc.bg }}>
-                            {sc.label}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {r.status !== "received" && r.status !== "offset" && (
-                            <Button size="sm" variant="outline" className="text-xs gap-1"
-                              onClick={() => {
-                                setReceivedDialog({ open: true, id: r.id, supplierName: r.supplierName, rebateAmount: Number(r.rebateAmount) });
-                                setReceivedDate(now.toISOString().slice(0, 10));
-                                setReceivedBankRef("");
-                                setReceivedManualAmt(String(Math.round(Number(r.rebateAmount))));
-                              }}>
-                              <CheckCircle className="w-3.5 h-3.5" /> 確認收款
-                            </Button>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                {(rebates as any[]).length > 0 && (
-                  <tfoot>
-                    <tr style={{ background: "var(--os-success-bg)", borderTop: "2px solid var(--os-border)" }}>
-                      <td colSpan={5} className="px-4 py-3 font-semibold" style={{ color: "var(--os-text-1)" }}>本月淨退佣合計</td>
-                      <td className="px-4 py-3 text-right font-bold text-base" style={{ color: "var(--os-success)" }}>$ {formatAmount(totalRebate)}</td>
-                      <td colSpan={2} />
+            {/* ── 退佣管理 ── */}
+            <TabsContent value="rebate" className="mt-3">
+              <div style={panelSt}>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr style={{ background: "var(--os-surface-2)", borderBottom: "1px solid var(--os-border)" }}>
+                      {["廠商","退佣類型","本月採購","退佣金額","手續費","淨退佣","狀態","操作"].map((h, i) => (
+                        <th key={h} className={i < 2 ? "px-4 py-3 text-left" : "px-4 py-3 text-right"} style={{ ...thSt, textAlign: i === 6 || i === 7 ? "center" : undefined }}>{h}</th>
+                      ))}
                     </tr>
-                  </tfoot>
-                )}
-              </table>
-            </div>
-          )}
+                  </thead>
+                  <tbody>
+                    {loadingRebates ? loadingRow(8) :
+                     (rebates as any[]).length === 0 ? emptyRow(8, <Calculator style={{ width: 36, height: 36, opacity: 0.25 }} />, "尚無退佣記錄，請先點「計算本月退佣」") :
+                     (rebates as any[]).map((r: any) => {
+                      const sc = REBATE_STATUS_CONFIG[r.status] ?? REBATE_STATUS_CONFIG.calculated;
+                      const needsManual = (r.rebateType === "offset" || r.rebateType === "fixed_diff") && Number(r.rebateAmount) === 0;
+                      return (
+                        <tr key={r.id}
+                          style={{ borderTop: "1px solid var(--os-border-2)", background: needsManual ? "var(--os-warning-bg)" : "" }}
+                          onMouseEnter={e => trHover(e, true)} onMouseLeave={e => trHover(e, false)}>
+                          <td className="px-4 py-3 font-medium" style={{ color: "var(--os-text-1)" }}>{r.supplierName}</td>
+                          <td className="px-4 py-3 text-xs" style={{ color: "var(--os-text-3)" }}>
+                            {REBATE_TYPE_LABEL[r.rebateType] ?? r.rebateType}
+                            {needsManual && <span style={{ marginLeft: 6, color: "var(--os-warning)", fontWeight: 600 }}>⚠ 需輸入金額</span>}
+                          </td>
+                          <td className="px-4 py-3 text-right">$ {formatAmount(r.baseAmount)}</td>
+                          <td className="px-4 py-3 text-right" style={{ color: "var(--os-success)" }}>$ {formatAmount(r.rebateAmount)}</td>
+                          <td className="px-4 py-3 text-right text-xs" style={{ color: "var(--os-text-3)" }}>
+                            {Number(r.handlingFee) > 0 ? `- $ ${formatAmount(r.handlingFee)}` : "—"}
+                          </td>
+                          <td className="px-4 py-3 text-right font-semibold" style={{ color: "var(--os-success)" }}>$ {formatAmount(r.netRebate)}</td>
+                          <td className="px-4 py-3 text-center">
+                            <span style={{ display: "inline-block", borderRadius: 4, padding: "1px 8px", fontSize: 12, fontWeight: 500, color: sc.color, background: sc.bg }}>
+                              {sc.label}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {r.status !== "received" && r.status !== "offset" && (
+                              <Button size="sm" variant="outline" className="text-xs gap-1"
+                                onClick={() => {
+                                  setReceivedDialog({ open: true, id: r.id, supplierName: r.supplierName, rebateAmount: Number(r.rebateAmount) });
+                                  setReceivedDate(now.toISOString().slice(0, 10));
+                                  setReceivedBankRef("");
+                                  setReceivedManualAmt(String(Math.round(Number(r.rebateAmount))));
+                                }}>
+                                <CheckCircle className="w-3.5 h-3.5" /> 確認收款
+                              </Button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  {(rebates as any[]).length > 0 && (
+                    <tfoot>
+                      <tr style={{ background: "var(--os-success-bg)", borderTop: "2px solid var(--os-border)" }}>
+                        <td colSpan={5} className="px-4 py-3 font-semibold" style={{ color: "var(--os-text-1)" }}>本月淨退佣合計</td>
+                        <td className="px-4 py-3 text-right font-bold text-base" style={{ color: "var(--os-success)" }}>$ {formatAmount(totalRebate)}</td>
+                        <td colSpan={2} />
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              </div>
+            </TabsContent>
 
-          {/* ── 應付帳款 ── */}
-          {tab === "payable" && (
-            <div style={panelSt}>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr style={{ background: "var(--os-surface-2)", borderBottom: "1px solid var(--os-border)" }}>
-                    {["廠商","月結總額","退佣抵扣","實際應付","已付","狀態","操作"].map((h, i) => (
-                      <th key={h} className={i === 0 ? "px-4 py-3 text-left" : "px-4 py-3 text-right"} style={{ ...thSt, textAlign: i === 5 || i === 6 ? "center" : undefined }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {loadingPayables ? loadingRow(7) :
-                   (payables as any[]).length === 0 ? emptyRow(7, <CreditCard style={{ width: 36, height: 36, opacity: 0.25 }} />, "尚無應付帳款記錄（叫貨單確認收貨後自動產生）") :
-                   (payables as any[]).map((p: any) => {
-                    const sc = PAYABLE_STATUS_CONFIG[p.status] ?? PAYABLE_STATUS_CONFIG.pending;
-                    return (
-                      <tr key={p.id} style={{ borderTop: "1px solid var(--os-border-2)" }}
-                        onMouseEnter={e => trHover(e, true)} onMouseLeave={e => trHover(e, false)}>
-                        <td className="px-4 py-3 font-medium" style={{ color: "var(--os-text-1)" }}>{p.supplierName}</td>
-                        <td className="px-4 py-3 text-right">$ {formatAmount(p.totalAmount)}</td>
-                        <td className="px-4 py-3 text-right" style={{ color: "var(--os-success)" }}>
-                          {Number(p.rebateAmount) > 0 ? `- $ ${formatAmount(p.rebateAmount)}` : "—"}
-                        </td>
-                        <td className="px-4 py-3 text-right font-semibold" style={{ color: "var(--os-text-1)" }}>$ {formatAmount(p.netPayable)}</td>
-                        <td className="px-4 py-3 text-right" style={{ color: "var(--os-text-3)" }}>
-                          {Number(p.paidAmount) > 0 ? `$ ${formatAmount(p.paidAmount)}` : "—"}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <span style={{ display: "inline-block", borderRadius: 4, padding: "1px 8px", fontSize: 12, fontWeight: 500, color: sc.color, background: sc.bg }}>
-                            {sc.label}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {p.status !== "paid" && (
-                            <Button size="sm" variant="outline" className="text-xs gap-1"
-                              onClick={() => {
-                                setPaidDialog({ open: true, id: p.id, supplierName: p.supplierName, netPayable: Number(p.netPayable) });
-                                setPaidDate(now.toISOString().slice(0, 10));
-                                setPaidAmount(String(Math.round(Number(p.netPayable))));
-                                setPaidBankRef("");
-                              }}>
-                              <CreditCard className="w-3.5 h-3.5" /> 標記已付
-                            </Button>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                {(payables as any[]).length > 0 && (
-                  <tfoot>
-                    <tr style={{ background: "var(--os-amber-soft)", borderTop: "2px solid var(--os-border)" }}>
-                      <td colSpan={3} className="px-4 py-3 font-semibold" style={{ color: "var(--os-text-1)" }}>本月合計</td>
-                      <td className="px-4 py-3 text-right font-bold text-base" style={{ color: "var(--os-text-1)" }}>$ {formatAmount(totalPayable)}</td>
-                      <td className="px-4 py-3 text-right text-sm" style={{ color: "var(--os-text-3)" }}>已付 $ {formatAmount(totalPaid)}</td>
-                      <td />
-                      <td className="px-4 py-3 text-right font-bold" style={{ color: "var(--os-danger)" }}>未付 $ {formatAmount(totalPayable - totalPaid)}</td>
+            {/* ── 應付帳款 ── */}
+            <TabsContent value="payable" className="mt-3">
+              <div style={panelSt}>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr style={{ background: "var(--os-surface-2)", borderBottom: "1px solid var(--os-border)" }}>
+                      {["廠商","月結總額","退佣抵扣","實際應付","已付","狀態","操作"].map((h, i) => (
+                        <th key={h} className={i === 0 ? "px-4 py-3 text-left" : "px-4 py-3 text-right"} style={{ ...thSt, textAlign: i === 5 || i === 6 ? "center" : undefined }}>{h}</th>
+                      ))}
                     </tr>
-                  </tfoot>
-                )}
-              </table>
-            </div>
-          )}
+                  </thead>
+                  <tbody>
+                    {loadingPayables ? loadingRow(7) :
+                     (payables as any[]).length === 0 ? emptyRow(7, <CreditCard style={{ width: 36, height: 36, opacity: 0.25 }} />, "尚無應付帳款記錄（叫貨單確認收貨後自動產生）") :
+                     (payables as any[]).map((p: any) => {
+                      const sc = PAYABLE_STATUS_CONFIG[p.status] ?? PAYABLE_STATUS_CONFIG.pending;
+                      return (
+                        <tr key={p.id} style={{ borderTop: "1px solid var(--os-border-2)" }}
+                          onMouseEnter={e => trHover(e, true)} onMouseLeave={e => trHover(e, false)}>
+                          <td className="px-4 py-3 font-medium" style={{ color: "var(--os-text-1)" }}>{p.supplierName}</td>
+                          <td className="px-4 py-3 text-right">$ {formatAmount(p.totalAmount)}</td>
+                          <td className="px-4 py-3 text-right" style={{ color: "var(--os-success)" }}>
+                            {Number(p.rebateAmount) > 0 ? `- $ ${formatAmount(p.rebateAmount)}` : "—"}
+                          </td>
+                          <td className="px-4 py-3 text-right font-semibold" style={{ color: "var(--os-text-1)" }}>$ {formatAmount(p.netPayable)}</td>
+                          <td className="px-4 py-3 text-right" style={{ color: "var(--os-text-3)" }}>
+                            {Number(p.paidAmount) > 0 ? `$ ${formatAmount(p.paidAmount)}` : "—"}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span style={{ display: "inline-block", borderRadius: 4, padding: "1px 8px", fontSize: 12, fontWeight: 500, color: sc.color, background: sc.bg }}>
+                              {sc.label}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {p.status !== "paid" && (
+                              <Button size="sm" variant="outline" className="text-xs gap-1"
+                                onClick={() => {
+                                  setPaidDialog({ open: true, id: p.id, supplierName: p.supplierName, netPayable: Number(p.netPayable) });
+                                  setPaidDate(now.toISOString().slice(0, 10));
+                                  setPaidAmount(String(Math.round(Number(p.netPayable))));
+                                  setPaidBankRef("");
+                                }}>
+                                <CreditCard className="w-3.5 h-3.5" /> 標記已付
+                              </Button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  {(payables as any[]).length > 0 && (
+                    <tfoot>
+                      <tr style={{ background: "var(--os-amber-soft)", borderTop: "2px solid var(--os-border)" }}>
+                        <td colSpan={3} className="px-4 py-3 font-semibold" style={{ color: "var(--os-text-1)" }}>本月合計</td>
+                        <td className="px-4 py-3 text-right font-bold text-base" style={{ color: "var(--os-text-1)" }}>$ {formatAmount(totalPayable)}</td>
+                        <td className="px-4 py-3 text-right text-sm" style={{ color: "var(--os-text-3)" }}>已付 $ {formatAmount(totalPaid)}</td>
+                        <td />
+                        <td className="px-4 py-3 text-right font-bold" style={{ color: "var(--os-danger)" }}>未付 $ {formatAmount(totalPayable - totalPaid)}</td>
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
 

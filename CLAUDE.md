@@ -1,5 +1,21 @@
 # CLAUDE.md — OrderSome 專案主腦
 
+## 2026-04-26 business-logic handoff entry
+
+When the next brain needs to understand Dayone, Yulian, or OrderSome from real-world operations instead of only code, start here:
+
+- `docs/dayone-real-world-business-flow-2026-04-26.md`
+- `docs/business-logic-reverse-prompt-2026-04-26.md`
+- `docs/yulian-ordersome-wanwansia-business-map-2026-04-26.md`
+- `docs/backoffice-access-map-2026-04-26.md`
+
+Current decision: keep the reverse prompt as repo documentation for now, not a global Codex skill. It is still project-specific and should evolve with `CLAUDE.md`. Consider extracting it into a skill only after it proves stable across Dayone, Yulian ERP, OrderSome CRM, BOM, finance, and store operations.
+
+Yulian / OrderSome / BowlHero handoff note: use a recency-first reading strategy. Do not try to read every historical Drive asset up front. Start from the latest edited folders/files, then backtrack only when a number, store, supplier, recipe, or workflow needs proof. For BowlHero / 碗碗俠 specifically, the latest user-confirmed sources as of 2026-04-26 are `C:\Users\barmy\Downloads\碗碗俠_試菜SOP記錄表_完整版_v2_20260424.xlsx` and `C:\Users\barmy\Downloads\碗碗俠_公司設立流程與開幕前準備_20260423.xlsx`; if they conflict with older planning PDFs, prefer these two files. 南屯林新店正確地址為「台中市南屯區惠中路三段54號」；舊表若出現「大墩十一街453號」視為舊資料。
+
+Backoffice access refactor note: shared role/tenant/module constants live in `shared/access-control.ts`; core tRPC admin/superAdmin/franchisee/content guards use those helpers; Dayone routers use centralized guards from `server/routers/dayone/procedures.ts`. `server/routers/dayone/modules.ts` intentionally remains on generic core admin/superAdmin procedures because it serves both OrderSome tenant module toggles and Dayone module toggles. Second pass also removed OrderSome/Yulian local middleware from `server/routers.ts`, `ai-writer.ts`, `content.ts`, `franchiseePayment.ts`, `osProducts.ts`, `sop.ts`, `storage.ts`, and `tenant.ts`. `AdminDashboardLayout.tsx` now uses shared access helpers for role/tenant/permissions/cost access. Run `node scripts/audit-access-control.mjs` before continuing permission work; the next target is the route/module/permission matrix and cleaner user-management UI. Verified after this pass: `pnpm run build` passed on 2026-04-26.
+
+
 ### Dayone 真資料閉環交接（2026-04-25 v6.21 / app v1.1.0）
 
 **這輪已完成**

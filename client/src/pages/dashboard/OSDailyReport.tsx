@@ -3,6 +3,7 @@ import AdminDashboardLayout from "@/components/AdminDashboardLayout";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -618,36 +619,28 @@ function MonthlyOverviewTab() {
 }
 
 export default function OSDailyReport() {
-  const [tab, setTab] = useState<"input" | "monthly">("input");
-
   return (
     <AdminDashboardLayout>
-      <div className="mx-auto max-w-5xl space-y-4">
+      <div className="mx-auto max-w-5xl space-y-6">
         <div>
-          <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--os-text-1)', margin: 0 }}>每日日報</h1>
-          <p style={{ marginTop: 4, fontSize: 13, color: 'var(--os-text-3)' }}>可直接選擇結算日期，預設就是今天。</p>
+          <h1 className="text-xl font-semibold" style={{ color: 'var(--os-text-1)' }}>每日日報</h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--os-text-3)' }}>可直接選擇結算日期，預設就是今天。</p>
         </div>
 
-        {/* Tab switcher */}
-        <div style={{ display: 'flex', overflow: 'hidden', borderRadius: 10, border: '1px solid var(--os-border)', background: 'var(--os-surface)' }}>
-          {([["input", "日報填寫"], ["monthly", "月報總覽"]] as const).map(([key, label]) => (
-            <button
-              key={key}
-              type="button"
-              style={{
-                flex: 1, padding: '10px 0', fontSize: 14, fontWeight: 500,
-                border: 'none', cursor: 'pointer', transition: 'background 0.15s, color 0.15s',
-                background: tab === key ? 'var(--os-amber)' : 'transparent',
-                color: tab === key ? '#fff' : 'var(--os-text-2)',
-              }}
-              onClick={() => setTab(key)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {tab === "input" ? <DailyInputTab /> : <MonthlyOverviewTab />}
+        <Tabs defaultValue="input">
+          <TabsList style={{ background: 'var(--os-surface-2)', border: '1px solid var(--os-border)', padding: '3px' }}>
+            <TabsTrigger value="input" style={{ fontSize: 13 }}
+              className="data-[state=active]:bg-[--os-surface] data-[state=active]:text-[--os-text-1] data-[state=inactive]:text-[--os-text-3]">
+              日報填寫
+            </TabsTrigger>
+            <TabsTrigger value="monthly" style={{ fontSize: 13 }}
+              className="data-[state=active]:bg-[--os-surface] data-[state=active]:text-[--os-text-1] data-[state=inactive]:text-[--os-text-3]">
+              月報總覽
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="input" className="mt-4"><DailyInputTab /></TabsContent>
+          <TabsContent value="monthly" className="mt-4"><MonthlyOverviewTab /></TabsContent>
+        </Tabs>
       </div>
     </AdminDashboardLayout>
   );

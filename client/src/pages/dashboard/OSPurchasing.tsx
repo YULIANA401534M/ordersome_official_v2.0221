@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import {
@@ -628,7 +629,7 @@ export default function OSPurchasing() {
             onChange={e => setFilterStartDate(e.target.value)}
             className="h-8 text-sm w-36"
           />
-          <span className="text-gray-600 text-sm">—</span>
+          <span className="text-sm" style={{ color: 'var(--os-text-3)' }}>—</span>
           <Input
             type="date"
             value={filterEndDate}
@@ -744,19 +745,20 @@ export default function OSPurchasing() {
           </div>
         </div>
 
-        {/* KPI 卡片（月份範圍） */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {[
-            { label: "本月叫貨", value: kpi.total, icon: ShoppingCart, color: "#b45309" },
-            { label: "待處理", value: kpi.pending, icon: ShoppingCart, color: "var(--os-text-3)" },
-            { label: "已傳送", value: kpi.sent, icon: Send, color: "var(--os-info)" },
-            { label: "已到貨", value: kpi.received, icon: CheckCircle, color: "var(--os-success)" },
-          ].map(card => (
-            <div key={card.label} style={{ background: "var(--os-surface)", border: "1px solid var(--os-border)", borderRadius: 10, padding: 16 }}>
-              <p style={{ fontSize: 12, color: "var(--os-text-3)", marginBottom: 4 }}>{card.label}</p>
-              <p style={{ fontSize: 28, fontWeight: 700, color: card.color, margin: 0 }}>{card.value}</p>
-            </div>
-          ))}
+        {/* 本月摘要 */}
+        <div className="flex flex-wrap gap-x-6 gap-y-2 px-1 py-2" style={{ borderBottom: '1px solid var(--os-border)' }}>
+          <span style={{ fontSize: 13, color: 'var(--os-text-2)' }}>
+            本月叫貨 <strong style={{ color: 'var(--os-amber-text)', fontVariantNumeric: 'tabular-nums' }}>{kpi.total}</strong> 張
+          </span>
+          <span style={{ fontSize: 13, color: 'var(--os-text-2)' }}>
+            待處理 <strong style={{ color: 'var(--os-text-1)', fontVariantNumeric: 'tabular-nums' }}>{kpi.pending}</strong>
+          </span>
+          <span style={{ fontSize: 13, color: 'var(--os-text-2)' }}>
+            已傳送 <strong style={{ color: 'var(--os-info)', fontVariantNumeric: 'tabular-nums' }}>{kpi.sent}</strong>
+          </span>
+          <span style={{ fontSize: 13, color: 'var(--os-text-2)' }}>
+            已到貨 <strong style={{ color: 'var(--os-success)', fontVariantNumeric: 'tabular-nums' }}>{kpi.received}</strong>
+          </span>
         </div>
 
         {/* 叫貨單列表 */}
@@ -777,10 +779,10 @@ export default function OSPurchasing() {
                   }
                 }}
               />
-              <span className="text-xs text-gray-500">
+              <span className="text-xs" style={{ color: 'var(--os-text-3)' }}>
                 全選（待處理 + 已傳送，共 {selectableOrders.length} 張）
               </span>
-              <span className="text-xs text-stone-400 ml-1">僅限待處理及已傳送</span>
+              <span className="text-xs ml-1" style={{ color: 'var(--os-text-3)' }}>僅限待處理及已傳送</span>
             </div>
           )}
           {(orders as any[]).length === 0 ? (
@@ -819,20 +821,20 @@ export default function OSPurchasing() {
                       <div className="w-4 flex-shrink-0" />
                     )}
 
-                    <span className="text-sm font-mono text-gray-600 w-36 truncate">{order.orderNo}</span>
-                    <span className="text-sm text-gray-700 w-24">{order.orderDate?.slice(0, 10)}</span>
+                    <span className="text-sm font-mono w-36 truncate" style={{ color: 'var(--os-text-3)' }}>{order.orderNo}</span>
+                    <span className="text-sm w-24" style={{ color: 'var(--os-text-2)' }}>{order.orderDate?.slice(0, 10)}</span>
                     <Badge style={{ color: sc.color, background: sc.bg, border: "none" }} className="text-xs">{sc.label}</Badge>
                     <span className="text-xs flex-1 truncate">
-                      <span className="font-semibold text-gray-800">
+                      <span className="font-semibold" style={{ color: 'var(--os-text-1)' }}>
                         {order.suppliers?.split(",").slice(0, 3).join("、")}
                       </span>
                       {order.stores && (
-                        <span className="ml-2 text-gray-500">
+                        <span className="ml-2" style={{ color: 'var(--os-text-3)' }}>
                           ｜{order.stores?.split(",").slice(0, 2).join("、")}
                         </span>
                       )}
                     </span>
-                    <span className="text-xs text-gray-600">{order.itemCount} 項</span>
+                    <span className="text-xs" style={{ color: 'var(--os-text-3)' }}>{order.itemCount} 項</span>
                     <span className={`text-xs ${totalAmt > 0 ? "text-amber-700 font-medium" : "text-amber-600"}`}>
                       {amtDisplay}
                     </span>
@@ -845,7 +847,7 @@ export default function OSPurchasing() {
                     {order.sourceType === "manual" && (
                       <span className="text-xs px-1.5 py-0.5 rounded bg-gray-200 text-gray-700 font-medium">手動</span>
                     )}
-                    {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-600" /> : <ChevronDown className="w-4 h-4 text-gray-600" />}
+                    {isExpanded ? <ChevronUp className="w-4 h-4" style={{ color: 'var(--os-text-3)' }} /> : <ChevronDown className="w-4 h-4" style={{ color: 'var(--os-text-3)' }} />}
                   </div>
 
                   {isExpanded && (
@@ -869,23 +871,24 @@ export default function OSPurchasing() {
                           <tbody>
                             {(detail?.items ?? []).map((item: any, i: number) => (
                               <tr key={i} style={{ borderTop: "1px solid var(--os-border-2)" }} onMouseEnter={e => (e.currentTarget.style.background = "var(--os-amber-soft)")} onMouseLeave={e => (e.currentTarget.style.background = "")}>
-                                <td className="py-1 pr-3 text-gray-700">{item.supplierName}</td>
-                                <td className="py-1 pr-3 text-gray-700">{item.storeName}</td>
-                                <td className="py-1 pr-3 font-medium">{item.productName}</td>
-                                <td className="py-1 pr-3 text-right">{item.quantity}</td>
-                                <td className="py-1 pr-3 text-gray-600">{item.unit}</td>
-                                <td className="py-1 pr-3 text-gray-600">{item.temperature}</td>
-                                <td className="py-1 pr-3 text-right text-gray-600">
+                                <td className="py-1 pr-3" style={{ color: 'var(--os-text-2)' }}>{item.supplierName}</td>
+                                <td className="py-1 pr-3" style={{ color: 'var(--os-text-2)' }}>{item.storeName}</td>
+                                <td className="py-1 pr-3 font-medium" style={{ color: 'var(--os-text-1)' }}>{item.productName}</td>
+                                <td className="py-1 pr-3 text-right" style={{ color: 'var(--os-text-1)' }}>{item.quantity}</td>
+                                <td className="py-1 pr-3" style={{ color: 'var(--os-text-3)' }}>{item.unit}</td>
+                                <td className="py-1 pr-3" style={{ color: 'var(--os-text-3)' }}>{item.temperature}</td>
+                                <td className="py-1 pr-3 text-right" style={{ color: 'var(--os-text-3)' }}>
                                   {Number(item.unitPrice) > 0 ? `$${Number(item.unitPrice).toLocaleString()}` : "—"}
                                 </td>
-                                <td className="py-1 pr-3 text-right text-gray-600">
+                                <td className="py-1 pr-3 text-right" style={{ color: 'var(--os-text-3)' }}>
                                   {Number(item.amount) > 0 ? `$${Number(item.amount).toLocaleString()}` : "—"}
                                 </td>
                                 {canEdit && (
                                   <td className="py-1">
                                     <Button
                                       size="sm" variant="ghost"
-                                      className="h-6 w-6 p-0 text-gray-600 hover:text-amber-700"
+                                      className="h-6 w-6 p-0"
+                                      style={{ color: 'var(--os-text-3)' }}
                                       onClick={() => {
                                         setEditItemTarget(item);
                                         setEditItemField({
@@ -929,7 +932,7 @@ export default function OSPurchasing() {
                       )}
 
                       {order.note && (
-                        <p className="text-xs text-gray-600">備註：{order.note}</p>
+                        <p className="text-xs" style={{ color: 'var(--os-text-3)' }}>備註：{order.note}</p>
                       )}
 
                       {/* 操作按鈕 */}
@@ -949,7 +952,7 @@ export default function OSPurchasing() {
                                 {next.label}
                               </Button>
                               {next.hint && (
-                                <span className="text-xs text-gray-600">{next.hint}</span>
+                                <span className="text-xs" style={{ color: 'var(--os-text-3)' }}>{next.hint}</span>
                               )}
                             </div>
                           )}
@@ -1022,7 +1025,7 @@ export default function OSPurchasing() {
           <DialogHeader>
             <DialogTitle>批量刪除確認</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-gray-600 py-2">
+          <p className="text-sm py-2" style={{ color: 'var(--os-text-2)' }}>
             確定要刪除選取的 {selectedIds.size} 張叫貨單（僅限待處理及已傳送）？此操作無法復原。
           </p>
           <div>
@@ -1053,7 +1056,7 @@ export default function OSPurchasing() {
           <DialogHeader>
             <DialogTitle>確認刪除</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-gray-600 py-2">確定要永久刪除此叫貨單？此操作無法復原。</p>
+          <p className="text-sm py-2" style={{ color: 'var(--os-text-2)' }}>確定要永久刪除此叫貨單？此操作無法復原。</p>
           <div>
             <Label className="text-sm">刪除原因（必填，永久保存）</Label>
             <textarea
@@ -1082,7 +1085,7 @@ export default function OSPurchasing() {
           <DialogHeader>
             <DialogTitle>作廢叫貨單</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-gray-600 py-2">作廢後狀態改為「已取消」，記錄保留不刪除。</p>
+          <p className="text-sm py-2" style={{ color: 'var(--os-text-2)' }}>作廢後狀態改為「已取消」，記錄保留不刪除。</p>
           <div>
             <Label className="text-sm">作廢原因（必填，永久保存）</Label>
             <textarea
@@ -1268,73 +1271,78 @@ export default function OSPurchasing() {
 
       {/* 新增叫貨單 Dialog */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>新增叫貨單</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <Label className="text-xs">叫貨日期</Label>
-                <Input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} className="mt-1" />
-              </div>
-              <div className="flex-1">
-                <Label className="text-xs">備註</Label>
-                <Input value={newNote} onChange={e => setNewNote(e.target.value)} placeholder="選填" className="mt-1" />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <Label className="text-xs">品項明細</Label>
-                <Button size="sm" variant="outline" onClick={handleAddItem} className="h-7 text-xs gap-1">
-                  <Plus className="w-3 h-3" /> 新增一列
-                </Button>
-              </div>
-              <div className="space-y-2">
-                {newItems.map((item, idx) => (
-                  <div key={idx} style={{ background: "var(--os-surface-2)", borderRadius: 8, padding: 8 }} className="grid grid-cols-7 gap-1 items-end">
-                    <div className="col-span-2">
-                      {idx === 0 && <p className="text-xs text-gray-600 mb-1">廠商 *</p>}
-                      <Input value={item.supplierName} onChange={e => handleItemChange(idx, "supplierName", e.target.value)} placeholder="廠商名稱" className="h-8 text-xs" />
-                    </div>
-                    <div>
-                      {idx === 0 && <p className="text-xs text-gray-600 mb-1">門市</p>}
-                      <Input value={item.storeName} onChange={e => handleItemChange(idx, "storeName", e.target.value)} placeholder="門市" className="h-8 text-xs" />
-                    </div>
-                    <div className="col-span-2">
-                      {idx === 0 && <p className="text-xs text-gray-600 mb-1">品項 *</p>}
-                      <Input value={item.productName} onChange={e => handleItemChange(idx, "productName", e.target.value)} placeholder="品項名稱" className="h-8 text-xs" />
-                    </div>
-                    <div>
-                      {idx === 0 && <p className="text-xs text-gray-600 mb-1">數量</p>}
-                      <Input type="number" value={item.quantity} onChange={e => handleItemChange(idx, "quantity", e.target.value)} className="h-8 text-xs" />
-                    </div>
-                    <div className="flex items-end gap-1">
-                      <div className="flex-1">
-                        {idx === 0 && <p className="text-xs text-gray-600 mb-1">單位</p>}
-                        <Input value={item.unit} onChange={e => handleItemChange(idx, "unit", e.target.value)} placeholder="箱" className="h-8 text-xs" />
-                      </div>
-                      <Button
-                        variant="ghost" size="sm"
-                        className="h-8 w-8 p-0 text-red-400 hover:text-red-600 hover:bg-red-50 flex-shrink-0"
-                        onClick={() => handleRemoveItem(idx)}
-                        disabled={newItems.length === 1}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
+        <DialogContent className="!max-w-3xl p-0 gap-0 max-h-[90vh]">
+          <div className="flex flex-col h-full max-h-[90vh]">
+            <DialogHeader className="shrink-0 px-6 py-4" style={{ borderBottom: '1px solid var(--os-border)' }}>
+              <DialogTitle>新增叫貨單</DialogTitle>
+            </DialogHeader>
+            <ScrollArea className="flex-1 min-h-0 w-full">
+              <div className="space-y-4 px-6 py-4">
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <Label className="text-xs">叫貨日期</Label>
+                    <Input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} className="mt-1" />
                   </div>
-                ))}
+                  <div className="flex-1">
+                    <Label className="text-xs">備註</Label>
+                    <Input value={newNote} onChange={e => setNewNote(e.target.value)} placeholder="選填" className="mt-1" />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="text-xs">品項明細</Label>
+                    <Button size="sm" variant="outline" onClick={handleAddItem} className="h-7 text-xs gap-1">
+                      <Plus className="w-3 h-3" /> 新增一列
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    {newItems.map((item, idx) => (
+                      <div key={idx} style={{ background: "var(--os-surface-2)", borderRadius: 8, padding: 8 }} className="grid grid-cols-7 gap-1 items-end">
+                        <div className="col-span-2">
+                          {idx === 0 && <p className="text-xs mb-1" style={{ color: 'var(--os-text-3)' }}>廠商 *</p>}
+                          <Input value={item.supplierName} onChange={e => handleItemChange(idx, "supplierName", e.target.value)} placeholder="廠商名稱" className="h-8 text-xs" />
+                        </div>
+                        <div>
+                          {idx === 0 && <p className="text-xs mb-1" style={{ color: 'var(--os-text-3)' }}>門市</p>}
+                          <Input value={item.storeName} onChange={e => handleItemChange(idx, "storeName", e.target.value)} placeholder="門市" className="h-8 text-xs" />
+                        </div>
+                        <div className="col-span-2">
+                          {idx === 0 && <p className="text-xs mb-1" style={{ color: 'var(--os-text-3)' }}>品項 *</p>}
+                          <Input value={item.productName} onChange={e => handleItemChange(idx, "productName", e.target.value)} placeholder="品項名稱" className="h-8 text-xs" />
+                        </div>
+                        <div>
+                          {idx === 0 && <p className="text-xs mb-1" style={{ color: 'var(--os-text-3)' }}>數量</p>}
+                          <Input type="number" value={item.quantity} onChange={e => handleItemChange(idx, "quantity", e.target.value)} className="h-8 text-xs" />
+                        </div>
+                        <div className="flex items-end gap-1">
+                          <div className="flex-1">
+                            {idx === 0 && <p className="text-xs mb-1" style={{ color: 'var(--os-text-3)' }}>單位</p>}
+                            <Input value={item.unit} onChange={e => handleItemChange(idx, "unit", e.target.value)} placeholder="箱" className="h-8 text-xs" />
+                          </div>
+                          <Button
+                            variant="ghost" size="sm"
+                            className="h-8 w-8 p-0 flex-shrink-0"
+                            style={{ color: 'var(--os-danger)' }}
+                            onClick={() => handleRemoveItem(idx)}
+                            disabled={newItems.length === 1}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
+            </ScrollArea>
+            <DialogFooter className="shrink-0 px-6 py-3" style={{ borderTop: '1px solid var(--os-border)' }}>
+              <Button variant="outline" onClick={() => setShowCreate(false)}>取消</Button>
+              <Button onClick={handleCreate} disabled={createMutation.isPending} style={{ background: "var(--os-amber)" }}>
+                {createMutation.isPending ? "建立中…" : "建立叫貨單"}
+              </Button>
+            </DialogFooter>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreate(false)}>取消</Button>
-            <Button onClick={handleCreate} disabled={createMutation.isPending} style={{ background: "var(--os-amber)" }}>
-              {createMutation.isPending ? "建立中…" : "建立叫貨單"}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -1345,12 +1353,12 @@ export default function OSPurchasing() {
             <DialogTitle>LINE 推播給廠商</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
-            <p className="text-sm text-gray-500">以下廠商將收到此叫貨單的 LINE 推播：</p>
+            <p className="text-sm" style={{ color: 'var(--os-text-3)' }}>以下廠商將收到此叫貨單的 LINE 推播：</p>
             {(supplierGroups as any[]).map((g: any, i: number) => (
               <div key={i} style={{ background: "var(--os-surface-2)", borderRadius: 8, padding: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div>
                   <p className="text-sm font-medium">{g.supplierName}</p>
-                  <p className="text-xs text-gray-600">{g.itemCount} 項品項</p>
+                  <p className="text-xs" style={{ color: 'var(--os-text-3)' }}>{g.itemCount} 項品項</p>
                 </div>
                 {g.lineGroupId ? (
                   <Badge style={{ color: "var(--os-success)", background: "var(--os-success-bg)", border: "none" }} className="text-xs">
@@ -1389,12 +1397,14 @@ export default function OSPurchasing() {
 
       {/* 手動補單 Dialog */}
       <Dialog open={showImport} onOpenChange={setShowImport}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>手動補單</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <p className="text-xs text-gray-600">用於補登大麥系統遺漏的叫貨紀錄，單號不可與現有訂單重複。</p>
+        <DialogContent className="!max-w-3xl p-0 gap-0 max-h-[90vh]">
+          <div className="flex flex-col h-full max-h-[90vh]">
+            <DialogHeader className="shrink-0 px-6 py-4" style={{ borderBottom: '1px solid var(--os-border)' }}>
+              <DialogTitle>手動補單</DialogTitle>
+            </DialogHeader>
+            <ScrollArea className="flex-1 min-h-0 w-full">
+          <div className="space-y-4 px-6 py-4">
+            <p className="text-xs" style={{ color: 'var(--os-text-3)' }}>用於補登大麥系統遺漏的叫貨紀錄，單號不可與現有訂單重複。</p>
             <div className="flex gap-4">
               <div className="flex-1">
                 <Label className="text-xs">叫貨日期</Label>
@@ -1417,7 +1427,7 @@ export default function OSPurchasing() {
                 {importItems.map((item, idx) => (
                   <div key={idx} style={{ background: "var(--os-surface-2)", borderRadius: 8, padding: 8 }} className="grid grid-cols-8 gap-1 items-end">
                     <div className="col-span-2">
-                      {idx === 0 && <p className="text-xs text-gray-600 mb-1">廠商 *</p>}
+                      {idx === 0 && <p className="text-xs mb-1" style={{ color: 'var(--os-text-3)' }}>廠商 *</p>}
                       <Select value={item.supplierName} onValueChange={v => setImportItems(items => items.map((it, i) => i === idx ? { ...it, supplierName: v } : it))}>
                         <SelectTrigger className="h-8 text-xs">
                           <SelectValue placeholder="選廠商" />
@@ -1430,19 +1440,19 @@ export default function OSPurchasing() {
                       </Select>
                     </div>
                     <div>
-                      {idx === 0 && <p className="text-xs text-gray-600 mb-1">門市</p>}
+                      {idx === 0 && <p className="text-xs mb-1" style={{ color: 'var(--os-text-3)' }}>門市</p>}
                       <Input value={item.storeName} onChange={e => setImportItems(items => items.map((it, i) => i === idx ? { ...it, storeName: e.target.value } : it))} placeholder="門市" className="h-8 text-xs" />
                     </div>
                     <div className="col-span-2">
-                      {idx === 0 && <p className="text-xs text-gray-600 mb-1">品項 *</p>}
+                      {idx === 0 && <p className="text-xs mb-1" style={{ color: 'var(--os-text-3)' }}>品項 *</p>}
                       <Input value={item.productName} onChange={e => setImportItems(items => items.map((it, i) => i === idx ? { ...it, productName: e.target.value } : it))} placeholder="品項名稱" className="h-8 text-xs" />
                     </div>
                     <div>
-                      {idx === 0 && <p className="text-xs text-gray-600 mb-1">數量</p>}
+                      {idx === 0 && <p className="text-xs mb-1" style={{ color: 'var(--os-text-3)' }}>數量</p>}
                       <Input type="number" value={item.quantity} onChange={e => setImportItems(items => items.map((it, i) => i === idx ? { ...it, quantity: Number(e.target.value) } : it))} className="h-8 text-xs" />
                     </div>
                     <div>
-                      {idx === 0 && <p className="text-xs text-gray-600 mb-1">溫層</p>}
+                      {idx === 0 && <p className="text-xs mb-1" style={{ color: 'var(--os-text-3)' }}>溫層</p>}
                       <Select value={item.temperature} onValueChange={v => setImportItems(items => items.map((it, i) => i === idx ? { ...it, temperature: v as any } : it))}>
                         <SelectTrigger className="h-8 text-xs">
                           <SelectValue />
@@ -1455,7 +1465,7 @@ export default function OSPurchasing() {
                       </Select>
                     </div>
                     <div className="flex items-end">
-                      {idx === 0 && <p className="text-xs text-gray-600 mb-1 invisible">刪</p>}
+                      {idx === 0 && <p className="text-xs mb-1 invisible" style={{ color: 'var(--os-text-3)' }}>刪</p>}
                       <Button
                         variant="ghost" size="sm"
                         className="h-8 w-8 p-0 text-red-400 hover:text-red-600 hover:bg-red-50"
@@ -1470,12 +1480,14 @@ export default function OSPurchasing() {
               </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowImport(false)}>取消</Button>
-            <Button onClick={handleImport} disabled={importMutation.isPending} style={{ background: "var(--os-amber)" }}>
-              {importMutation.isPending ? "匯入中…" : "確認補單"}
-            </Button>
-          </DialogFooter>
+            </ScrollArea>
+            <DialogFooter className="shrink-0 px-6 py-3" style={{ borderTop: '1px solid var(--os-border)' }}>
+              <Button variant="outline" onClick={() => setShowImport(false)}>取消</Button>
+              <Button onClick={handleImport} disabled={importMutation.isPending} style={{ background: "var(--os-amber)" }}>
+                {importMutation.isPending ? "匯入中…" : "確認補單"}
+              </Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -1491,7 +1503,7 @@ export default function OSPurchasing() {
                 <div key={sl.id} style={{ background: "var(--os-surface-2)", borderRadius: 8, padding: 12, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <div>
                     <p className="font-medium">{sl.supplierName}</p>
-                    <p className="text-xs text-gray-600 font-mono truncate w-40">{sl.lineGroupId || "—"}</p>
+                    <p className="text-xs font-mono truncate w-40" style={{ color: 'var(--os-text-3)' }}>{sl.lineGroupId || "—"}</p>
                   </div>
                   <Badge style={{ color: sl.isActive ? "var(--os-success)" : "var(--os-text-3)", background: sl.isActive ? "var(--os-success-bg)" : "var(--os-surface-2)", border: "none" }} className="text-xs">
                     {sl.isActive ? "啟用" : "停用"}
@@ -1499,11 +1511,11 @@ export default function OSPurchasing() {
                 </div>
               ))}
               {(supplierLines as any[]).length === 0 && (
-                <p className="text-sm text-gray-600 text-center py-3">尚無廠商 LINE 設定</p>
+                <p className="text-sm text-center py-3" style={{ color: 'var(--os-text-3)' }}>尚無廠商 LINE 設定</p>
               )}
             </div>
-            <div className="border-t pt-3 space-y-2">
-              <p className="text-xs text-gray-500 font-medium">新增 / 更新廠商</p>
+            <div className="pt-3 space-y-2" style={{ borderTop: '1px solid var(--os-border)' }}>
+              <p className="text-xs font-medium" style={{ color: 'var(--os-text-3)' }}>新增 / 更新廠商</p>
               <Input value={lineConfigName} onChange={e => setLineConfigName(e.target.value)} placeholder="廠商名稱" className="h-8 text-sm" />
               <Input value={lineConfigGroupId} onChange={e => setLineConfigGroupId(e.target.value)} placeholder="LINE Group ID" className="h-8 text-sm font-mono" />
             </div>

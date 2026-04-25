@@ -3,6 +3,7 @@ import AdminDashboardLayout from "@/components/AdminDashboardLayout";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -18,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Plus } from "lucide-react";
 import { toast } from "sonner";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -309,65 +311,69 @@ function PushLineDialog({ orderId, orderDate, onClose, onSuccess }: {
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>彙整並推播 LINE — {orderDate}</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-3">
-          {allGroups.map((g: any) => (
-            <div
-              key={g.supplierName}
-              style={{
-                border: `1px solid ${g.lineGroupId ? 'var(--os-border)' : 'var(--os-border-2)'}`,
-                borderRadius: 8,
-                padding: 12,
-                background: g.lineGroupId ? 'var(--os-surface)' : 'var(--os-surface-2)',
-                opacity: g.lineGroupId ? 1 : 0.6,
-              }}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={selected[g.supplierName] !== false && !!g.lineGroupId}
-                    disabled={!g.lineGroupId}
-                    onChange={e => setSelected(s => ({ ...s, [g.supplierName]: e.target.checked }))}
-                  />
-                  <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--os-text-1)' }}>{g.supplierName}</span>
-                  <span style={{ fontSize: 12, color: 'var(--os-text-3)' }}>({g.itemCount} 品項)</span>
+      <DialogContent className="!max-w-2xl p-0 gap-0 max-h-[90vh]">
+        <div className="flex flex-col h-full max-h-[90vh]">
+          <DialogHeader className="px-6 pt-5 pb-4 shrink-0" style={{ borderBottom: '1px solid var(--os-border)' }}>
+            <DialogTitle style={{ color: 'var(--os-text-1)' }}>彙整並推播 LINE — {orderDate}</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="flex-1 min-h-0 w-full">
+            <div className="space-y-3 px-6 py-4">
+              {allGroups.map((g: any) => (
+                <div
+                  key={g.supplierName}
+                  style={{
+                    border: `1px solid ${g.lineGroupId ? 'var(--os-border)' : 'var(--os-border-2)'}`,
+                    borderRadius: 8,
+                    padding: 12,
+                    background: g.lineGroupId ? 'var(--os-surface)' : 'var(--os-surface-2)',
+                    opacity: g.lineGroupId ? 1 : 0.6,
+                  }}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={selected[g.supplierName] !== false && !!g.lineGroupId}
+                        disabled={!g.lineGroupId}
+                        onChange={e => setSelected(s => ({ ...s, [g.supplierName]: e.target.checked }))}
+                      />
+                      <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--os-text-1)' }}>{g.supplierName}</span>
+                      <span style={{ fontSize: 12, color: 'var(--os-text-3)' }}>({g.itemCount} 品項)</span>
+                    </div>
+                    {g.lineGroupId
+                      ? <span style={{ fontSize: 12, color: 'var(--os-success)' }}>LINE 已設定</span>
+                      : <span style={{ fontSize: 12, color: 'var(--os-danger)' }}>LINE 未設定</span>}
+                  </div>
+                  <pre
+                    style={{
+                      fontSize: 12,
+                      background: 'var(--os-bg)',
+                      border: '1px solid var(--os-border)',
+                      borderRadius: 6,
+                      padding: '8px 10px',
+                      whiteSpace: 'pre-wrap',
+                      fontFamily: 'inherit',
+                      color: 'var(--os-text-1)',
+                    }}
+                  >
+                    {`【來點什麼採購訂單】\n日期：${orderDate}\n\n${g.itemList}\n\n請確認並回覆收到，謝謝！`}
+                  </pre>
                 </div>
-                {g.lineGroupId
-                  ? <span style={{ fontSize: 12, color: 'var(--os-success)' }}>LINE 已設定</span>
-                  : <span style={{ fontSize: 12, color: 'var(--os-danger)' }}>LINE 未設定</span>}
-              </div>
-              <pre
-                style={{
-                  fontSize: 12,
-                  background: 'var(--os-bg)',
-                  border: '1px solid var(--os-border)',
-                  borderRadius: 6,
-                  padding: '8px 10px',
-                  whiteSpace: 'pre-wrap',
-                  fontFamily: 'inherit',
-                  color: 'var(--os-text-1)',
-                }}
-              >
-                {`【來點什麼採購訂單】\n日期：${orderDate}\n\n${g.itemList}\n\n請確認並回覆收到，謝謝！`}
-              </pre>
+              ))}
             </div>
-          ))}
+          </ScrollArea>
+          <DialogFooter className="px-6 py-4 shrink-0" style={{ borderTop: '1px solid var(--os-border)' }}>
+            <Button variant="outline" onClick={onClose}>取消</Button>
+            <Button
+              className="text-white"
+              style={{ background: 'var(--os-amber)' }}
+              onClick={handlePush}
+              disabled={pushMutation.isPending}
+            >
+              {pushMutation.isPending ? '推播中...' : '確認推播'}
+            </Button>
+          </DialogFooter>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>取消</Button>
-          <Button
-            className="text-white"
-            style={{ background: 'var(--os-amber)' }}
-            onClick={handlePush}
-            disabled={pushMutation.isPending}
-          >
-            {pushMutation.isPending ? '推播中...' : '確認推播'}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -502,7 +508,7 @@ function CreateOrderTab() {
       </div>
 
       <div className="flex justify-between">
-        <Button variant="outline" size="sm" onClick={addRow}>＋ 新增品項</Button>
+        <Button variant="outline" size="sm" className="gap-1" onClick={addRow}><Plus size={13} />新增品項</Button>
         <Button
           className="text-white"
           style={{ background: 'var(--os-amber)' }}
@@ -663,60 +669,53 @@ function SupplierLineDialog({ supplier, onClose, onSuccess }: {
 
 // ── 主頁面 ───────────────────────────────────────────────────────────────────
 
+const tabPanelSt: React.CSSProperties = {
+  background: 'var(--os-surface)',
+  border: '1px solid var(--os-border)',
+  borderRadius: 12,
+  padding: '20px 24px',
+};
+const panelTitleSt: React.CSSProperties = {
+  fontSize: 14, fontWeight: 600, color: 'var(--os-text-1)', marginBottom: 16,
+  paddingBottom: 12, borderBottom: '1px solid var(--os-border)',
+};
+
 export default function OSProcurement() {
   return (
     <AdminDashboardLayout>
-      <div style={{ maxWidth: 1120, margin: '0 auto' }}>
-        <div style={{ marginBottom: 24 }}>
-          <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--os-text-1)', margin: 0 }}>叫貨管理</h1>
-          <p style={{ fontSize: 13, color: 'var(--os-text-3)', marginTop: 4 }}>採購訂單管理、LINE 推播廠商</p>
+      <div className="max-w-5xl mx-auto space-y-6">
+        <div>
+          <h1 className="text-xl font-semibold" style={{ color: 'var(--os-text-1)' }}>叫貨管理</h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--os-text-3)' }}>採購訂單管理、LINE 推播廠商</p>
         </div>
 
         <Tabs defaultValue="list">
-          <TabsList style={{ marginBottom: 16 }}>
-            <TabsTrigger value="list">叫貨單列表</TabsTrigger>
-            <TabsTrigger value="create">新建叫貨單</TabsTrigger>
-            <TabsTrigger value="suppliers">廠商 LINE 設定</TabsTrigger>
+          <TabsList style={{ background: 'var(--os-surface-2)', border: '1px solid var(--os-border)', padding: '3px' }}>
+            {(["list", "create", "suppliers"] as const).map((v, i) => (
+              <TabsTrigger key={v} value={v} style={{ fontSize: 13 }}
+                className="data-[state=active]:bg-[--os-surface] data-[state=active]:text-[--os-text-1] data-[state=inactive]:text-[--os-text-3]">
+                {["叫貨單列表", "新建叫貨單", "廠商 LINE 設定"][i]}
+              </TabsTrigger>
+            ))}
           </TabsList>
 
-          <TabsContent value="list">
-            <div
-              style={{
-                background: 'var(--os-surface)',
-                border: '1px solid var(--os-border)',
-                borderRadius: 10,
-                padding: '16px 20px',
-              }}
-            >
-              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--os-text-1)', marginBottom: 16 }}>叫貨單列表</div>
+          <TabsContent value="list" className="mt-4">
+            <div style={tabPanelSt}>
+              <div style={panelTitleSt}>叫貨單列表</div>
               <OrderListTab />
             </div>
           </TabsContent>
 
-          <TabsContent value="create">
-            <div
-              style={{
-                background: 'var(--os-surface)',
-                border: '1px solid var(--os-border)',
-                borderRadius: 10,
-                padding: '16px 20px',
-              }}
-            >
-              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--os-text-1)', marginBottom: 16 }}>新建叫貨單</div>
+          <TabsContent value="create" className="mt-4">
+            <div style={tabPanelSt}>
+              <div style={panelTitleSt}>新建叫貨單</div>
               <CreateOrderTab />
             </div>
           </TabsContent>
 
-          <TabsContent value="suppliers">
-            <div
-              style={{
-                background: 'var(--os-surface)',
-                border: '1px solid var(--os-border)',
-                borderRadius: 10,
-                padding: '16px 20px',
-              }}
-            >
-              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--os-text-1)', marginBottom: 16 }}>廠商 LINE 設定</div>
+          <TabsContent value="suppliers" className="mt-4">
+            <div style={tabPanelSt}>
+              <div style={panelTitleSt}>廠商 LINE 設定</div>
               <SupplierLineTab />
             </div>
           </TabsContent>

@@ -4,6 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -273,21 +274,29 @@ export default function OSInventory() {
           )}
         </div>
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {[
-            { label: '總品項數', value: (items as InventoryItem[]).length, color: 'var(--os-text-1)' },
-            { label: '缺貨品項數', value: outOfStock, color: 'var(--os-danger)' },
-            { label: '低庫存品項數', value: lowStock, color: 'var(--os-warning)' },
-          ].map(({ label, value, color }) => (
-            <div
-              key={label}
-              style={{ background: 'var(--os-surface)', border: '1px solid var(--os-border)', borderRadius: 10, padding: '16px 20px' }}
-            >
-              <p style={{ fontSize: 12, color: 'var(--os-text-3)', marginBottom: 6 }}>{label}</p>
-              <p style={{ fontSize: 28, fontWeight: 700, color, margin: 0 }}>{value}</p>
-            </div>
-          ))}
+        {/* Summary strip */}
+        <div className="flex flex-wrap gap-x-6 gap-y-2 px-1 py-2" style={{ borderBottom: '1px solid var(--os-border-2)' }}>
+          <span style={{ fontSize: 13, color: 'var(--os-text-3)' }}>
+            共 <strong style={{ color: 'var(--os-text-1)', fontVariantNumeric: 'tabular-nums' }}>{(items as InventoryItem[]).length}</strong> 品項
+          </span>
+          <span style={{ fontSize: 13, color: 'var(--os-text-3)' }}>
+            缺貨 <strong style={{ color: 'var(--os-danger)', fontVariantNumeric: 'tabular-nums' }}>{outOfStock}</strong> 筆
+          </span>
+          <span style={{ fontSize: 13, color: 'var(--os-text-3)' }}>
+            低庫存 <strong style={{ color: 'var(--os-amber-text)', fontVariantNumeric: 'tabular-nums' }}>{lowStock}</strong> 筆
+          </span>
+          {valueStats && (
+            <>
+              <span style={{ color: 'var(--os-border)', alignSelf: 'center' }}>|</span>
+              <span style={{ fontSize: 13, color: 'var(--os-text-3)' }}>
+                庫存資產 <strong style={{ color: 'var(--os-text-1)', fontVariantNumeric: 'tabular-nums' }}>${Math.round(valueStats.totalValue).toLocaleString()}</strong>
+              </span>
+              <span style={{ fontSize: 13, color: 'var(--os-text-3)' }}>
+                B類 <strong style={{ color: 'var(--os-amber-text)', fontVariantNumeric: 'tabular-nums' }}>${Math.round(valueStats.bValue).toLocaleString()}</strong>
+                <span style={{ fontSize: 11, marginLeft: 4 }}>({valueStats.bCount} 項)</span>
+              </span>
+            </>
+          )}
         </div>
 
         {/* Table */}
@@ -399,23 +408,19 @@ export default function OSInventory() {
           </table>
           {totalPages > 1 && (
             <div
-              className="flex items-center justify-between px-4 py-3"
+              className="flex items-center justify-between px-5 py-3"
               style={{ borderTop: '1px solid var(--os-border)' }}
             >
               <span style={{ fontSize: 12, color: 'var(--os-text-3)' }}>
                 第 {currentPage} / {totalPages} 頁，共 {(items as InventoryItem[]).length} 筆
               </span>
               <div className="flex gap-1">
-                <button
-                  style={{ padding: '2px 8px', fontSize: 12, border: '1px solid var(--os-border)', borderRadius: 4, color: 'var(--os-text-2)' }}
+                <Button variant="outline" size="sm" className="h-7 px-2 text-xs"
                   disabled={currentPage === 1}
-                  onClick={() => setCurrentPage(p => p - 1)}
-                >上一頁</button>
-                <button
-                  style={{ padding: '2px 8px', fontSize: 12, border: '1px solid var(--os-border)', borderRadius: 4, color: 'var(--os-text-2)' }}
+                  onClick={() => setCurrentPage(p => p - 1)}>上一頁</Button>
+                <Button variant="outline" size="sm" className="h-7 px-2 text-xs"
                   disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage(p => p + 1)}
-                >下一頁</button>
+                  onClick={() => setCurrentPage(p => p + 1)}>下一頁</Button>
               </div>
             </div>
           )}
@@ -563,83 +568,89 @@ export default function OSInventory() {
 
       {/* Batch Count Dialog */}
       <Dialog open={batchDialog} onOpenChange={o => { if (!o) setBatchDialog(false); }}>
-        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>批次盤點</DialogTitle>
-          </DialogHeader>
-          {batchDone !== null ? (
-            <div className="py-8 text-center font-semibold text-lg" style={{ color: 'var(--os-success)' }}>
-              已完成 {batchDone} 筆盤點
-            </div>
-          ) : (
-            <div className="space-y-4 py-2">
-              <div className="space-y-3">
-                {(items as InventoryItem[]).filter(i => selectedIds.has(i.id)).map(item => (
-                  <div
-                    key={item.id}
-                    className="flex items-center gap-3"
-                    style={{ border: '1px solid var(--os-border)', borderRadius: 8, padding: 12 }}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate" style={{ color: 'var(--os-text-1)' }}>{item.productName}</p>
-                      <p style={{ fontSize: 12, color: 'var(--os-text-3)' }}>
-                        目前庫存：{Math.round(Number(item.currentQty)).toLocaleString()} {item.unit}
-                      </p>
-                    </div>
-                    <Input
-                      type="number"
-                      className="w-28 text-right"
-                      value={batchQtys[item.id] ?? ""}
-                      onChange={e => setBatchQtys(prev => ({ ...prev, [item.id]: e.target.value }))}
-                      placeholder="盤點數量"
-                    />
+        <DialogContent className="!max-w-lg p-0 gap-0 max-h-[90vh]">
+          <div className="flex flex-col h-full max-h-[90vh]">
+            <DialogHeader className="px-6 pt-5 pb-4 shrink-0" style={{ borderBottom: '1px solid var(--os-border)' }}>
+              <DialogTitle style={{ color: 'var(--os-text-1)' }}>批次盤點</DialogTitle>
+            </DialogHeader>
+            <ScrollArea className="flex-1 min-h-0 w-full">
+              <div className="px-6 py-4">
+                {batchDone !== null ? (
+                  <div className="py-8 text-center font-semibold text-lg" style={{ color: 'var(--os-success)' }}>
+                    已完成 {batchDone} 筆盤點
                   </div>
-                ))}
+                ) : (
+                  <div className="space-y-4">
+                    <div className="space-y-3">
+                      {(items as InventoryItem[]).filter(i => selectedIds.has(i.id)).map(item => (
+                        <div
+                          key={item.id}
+                          className="flex items-center gap-3"
+                          style={{ border: '1px solid var(--os-border)', borderRadius: 8, padding: 12 }}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate" style={{ color: 'var(--os-text-1)' }}>{item.productName}</p>
+                            <p style={{ fontSize: 12, color: 'var(--os-text-3)' }}>
+                              目前庫存：{Math.round(Number(item.currentQty)).toLocaleString()} {item.unit}
+                            </p>
+                          </div>
+                          <Input
+                            type="number"
+                            className="w-28 text-right"
+                            value={batchQtys[item.id] ?? ""}
+                            onChange={e => setBatchQtys(prev => ({ ...prev, [item.id]: e.target.value }))}
+                            placeholder="盤點數量"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <div>
+                      <Label>備註（選填，所有品項共用）</Label>
+                      <textarea
+                        className="w-full rounded-md p-2 text-sm mt-1 min-h-[60px] resize-none focus:outline-none"
+                        style={{ border: '1px solid var(--os-border)' }}
+                        value={batchNote}
+                        onChange={e => setBatchNote(e.target.value)}
+                        placeholder="例：2026-03-31 盤點"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
-              <div>
-                <Label>備註（選填，所有品項共用）</Label>
-                <textarea
-                  className="w-full rounded-md p-2 text-sm mt-1 min-h-[60px] resize-none focus:outline-none"
-                  style={{ border: '1px solid var(--os-border)' }}
-                  value={batchNote}
-                  onChange={e => setBatchNote(e.target.value)}
-                  placeholder="例：2026-03-31 盤點"
-                />
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setBatchDialog(false)}>
-              {batchDone !== null ? "關閉" : "取消"}
-            </Button>
-            {batchDone === null && (
-              <Button
-                className="text-white"
-                style={amberBtn}
-                disabled={countMut.isPending}
-                onClick={async () => {
-                  const selected = (items as InventoryItem[]).filter(i => selectedIds.has(i.id));
-                  let doneCount = 0;
-                  for (const item of selected) {
-                    const qtyStr = batchQtys[item.id];
-                    if (qtyStr === undefined || qtyStr === "") continue;
-                    try {
-                      await countMut.mutateAsync({ id: item.id, countQty: Number(qtyStr), note: batchNote.trim() || undefined });
-                      doneCount++;
-                    } catch {
-                      // 繼續下一筆
-                    }
-                  }
-                  setBatchDone(doneCount);
-                  refetch();
-                  setBatchMode(false);
-                  setSelectedIds(new Set());
-                }}
-              >
-                {countMut.isPending ? "盤點中…" : "確認盤點"}
+            </ScrollArea>
+            <DialogFooter className="px-6 py-4 shrink-0" style={{ borderTop: '1px solid var(--os-border)' }}>
+              <Button variant="outline" onClick={() => setBatchDialog(false)}>
+                {batchDone !== null ? "關閉" : "取消"}
               </Button>
-            )}
-          </DialogFooter>
+              {batchDone === null && (
+                <Button
+                  className="text-white"
+                  style={amberBtn}
+                  disabled={countMut.isPending}
+                  onClick={async () => {
+                    const selected = (items as InventoryItem[]).filter(i => selectedIds.has(i.id));
+                    let doneCount = 0;
+                    for (const item of selected) {
+                      const qtyStr = batchQtys[item.id];
+                      if (qtyStr === undefined || qtyStr === "") continue;
+                      try {
+                        await countMut.mutateAsync({ id: item.id, countQty: Number(qtyStr), note: batchNote.trim() || undefined });
+                        doneCount++;
+                      } catch {
+                        // 繼續下一筆
+                      }
+                    }
+                    setBatchDone(doneCount);
+                    refetch();
+                    setBatchMode(false);
+                    setSelectedIds(new Set());
+                  }}
+                >
+                  {countMut.isPending ? "盤點中…" : "確認盤點"}
+                </Button>
+              )}
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Upload, Plus, RefreshCw, FileSpreadsheet } from "lucide-react";
 import * as XLSX from "xlsx";
@@ -258,12 +259,9 @@ export default function OSAccounting() {
     <div className="flex items-center gap-1">
       <Input type="month" value={month} onChange={e => setMonth(e.target.value)} className="h-8 text-sm w-36" />
       {month && (
-        <button
-          onClick={() => setMonth("")}
-          style={{ fontSize: 12, padding: "3px 8px", borderRadius: 4, border: "1px solid var(--os-border)", color: "var(--os-text-2)", background: "none", cursor: "pointer" }}
-        >
+        <Button variant="outline" size="sm" className="h-7 text-xs px-2" onClick={() => setMonth("")}>
           全部
-        </button>
+        </Button>
       )}
     </div>
   );
@@ -285,47 +283,35 @@ export default function OSAccounting() {
   return (
     <AdminDashboardLayout>
       <div style={{ background: "var(--os-bg)", minHeight: "100vh", padding: 16 }} className="space-y-4">
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--os-text-1)", margin: 0 }}>帳務管理</h1>
-
-        {/* KPI */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {[
-            { label: "本月應付總額", value: fmtAmt(kpiTotalPayable), color: "var(--os-amber-text)" },
-            { label: "本月已付",     value: fmtAmt(kpiPaid),         color: "var(--os-success)" },
-            { label: "待付款項",     value: fmtAmt(kpiPending),      color: "var(--os-danger)" },
-          ].map(c => (
-            <div key={c.label} style={{ background: "var(--os-surface)", border: "1px solid var(--os-border)", borderRadius: 10, padding: "14px 18px" }}>
-              <p style={{ fontSize: 12, color: "var(--os-text-3)", marginBottom: 6 }}>{c.label}</p>
-              <p style={{ fontSize: 24, fontWeight: 700, color: c.color, margin: 0 }}>{c.value}</p>
-            </div>
-          ))}
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pb-3" style={{ borderBottom: '1px solid var(--os-border)' }}>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--os-text-1)", margin: 0 }}>帳務管理</h1>
+          <span style={{ fontSize: 13, color: "var(--os-text-2)" }}>
+            本月應付 <strong style={{ color: "var(--os-amber-text)", fontVariantNumeric: "tabular-nums" }}>{fmtAmt(kpiTotalPayable)}</strong>
+          </span>
+          <span style={{ fontSize: 13, color: "var(--os-text-2)" }}>
+            已付 <strong style={{ color: "var(--os-success)", fontVariantNumeric: "tabular-nums" }}>{fmtAmt(kpiPaid)}</strong>
+          </span>
+          <span style={{ fontSize: 13, color: "var(--os-text-2)" }}>
+            待付 <strong style={{ color: "var(--os-danger)", fontVariantNumeric: "tabular-nums" }}>{fmtAmt(kpiPending)}</strong>
+          </span>
         </div>
 
-        {/* Tab switcher */}
-        <div style={{ display: "flex", overflow: "hidden", borderRadius: 10, border: "1px solid var(--os-border)", background: "var(--os-surface)", width: "fit-content" }}>
-          {TABS.map(t => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              style={{
-                padding: "8px 16px",
-                fontSize: 13,
-                fontWeight: tab === t.key ? 600 : 400,
-                background: tab === t.key ? "var(--os-amber)" : "transparent",
-                color: tab === t.key ? "#fff" : "var(--os-text-2)",
-                border: "none",
-                cursor: "pointer",
-                transition: "background 0.15s",
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+        <Tabs value={tab} onValueChange={setTab}>
+          <TabsList style={{ background: "var(--os-surface-2)", border: "1px solid var(--os-border)", padding: 3 }}>
+            {TABS.map(t => (
+              <TabsTrigger
+                key={t.key}
+                value={t.key}
+                className="data-[state=active]:bg-[--os-surface] data-[state=active]:text-[--os-text-1] data-[state=inactive]:text-[--os-text-3] text-sm"
+              >
+                {t.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
 
         {/* ── Tab: 應付帳款 ─────────────────────────────────── */}
-        {tab === "payables" && (
-          <div className="space-y-3">
+        <TabsContent value="payables">
+          <div className="space-y-3 mt-3">
             <div className="flex flex-wrap items-center gap-2">
               <MonthInput />
               <Select value={payFilterStatus} onValueChange={setPayFilterStatus}>
@@ -393,11 +379,11 @@ export default function OSAccounting() {
               </table>
             </div>
           </div>
-        )}
+        </TabsContent>
 
         {/* ── Tab: 銀行明細對帳 ─────────────────────────────── */}
-        {tab === "bank" && (
-          <div className="space-y-3">
+        <TabsContent value="bank">
+          <div className="space-y-3 mt-3">
             <div className="flex flex-wrap items-center gap-2">
               <MonthInput />
               <Select value={bankFilterStatus} onValueChange={setBankFilterStatus}>
@@ -480,11 +466,11 @@ export default function OSAccounting() {
               </table>
             </div>
           </div>
-        )}
+        </TabsContent>
 
         {/* ── Tab: 退佣管理 ─────────────────────────────────── */}
-        {tab === "rebate" && (
-          <div className="space-y-3">
+        <TabsContent value="rebate">
+          <div className="space-y-3 mt-3">
             <div className="flex flex-wrap items-center gap-2">
               <MonthInput />
               <div className="ml-auto">
@@ -543,11 +529,11 @@ export default function OSAccounting() {
               </table>
             </div>
           </div>
-        )}
+        </TabsContent>
 
         {/* ── Tab: 提貨調貨 ─────────────────────────────────── */}
-        {tab === "transfer" && (
-          <div className="space-y-3">
+        <TabsContent value="transfer">
+          <div className="space-y-3 mt-3">
             <div className="flex flex-wrap items-center gap-2">
               <MonthInput />
               <div className="ml-auto flex gap-2">
@@ -620,7 +606,8 @@ export default function OSAccounting() {
               </table>
             </div>
           </div>
-        )}
+        </TabsContent>
+        </Tabs>
       </div>
 
       {/* ═══ 登記付款 Dialog ══════════════════════════════════ */}

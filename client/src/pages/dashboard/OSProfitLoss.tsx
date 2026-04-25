@@ -109,44 +109,28 @@ export default function OSProfitLoss() {
           </div>
         ) : (
           <>
-            {/* KPI cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {[
-                {
-                  label: "本月營收",
-                  value: `$${fmt(data.totalSales)}`,
-                  sub: `來客 ${fmt(data.guestTotal)} 人 · 均消 $${fmt(data.avgTicket)}`,
-                  color: 'var(--os-text-1)',
-                },
-                {
-                  label: "營業利益",
-                  value: canSeeCost ? `$${fmt(data.operatingProfit)}` : "---",
-                  sub: `毛利 ${mask(data.grossProfit)}`,
-                  color: canSeeCost
-                    ? (data.operatingProfit >= 0 ? 'var(--os-success)' : 'var(--os-danger)')
-                    : 'var(--os-text-3)',
-                },
-                {
-                  label: "利潤率",
-                  value: canSeeCost ? (profitRate * 100).toFixed(1) + "%" : "---",
-                  sub: data.isCostEstimated ? "成本估算35%（無採購資料）" : "採購成本實際數字",
-                  color: canSeeCost
-                    ? (profitRate >= 0 ? 'var(--os-success)' : 'var(--os-danger)')
-                    : 'var(--os-text-3)',
-                },
-                {
-                  label: "退佣收入",
-                  value: canSeeCost ? `$${fmt(data.rebateIncome)}` : "---",
-                  sub: "廣弘÷1.12差額等",
-                  color: 'var(--os-success)',
-                },
-              ].map(k => (
-                <div key={k.label} style={panelSt}>
-                  <p style={{ fontSize: 12, color: 'var(--os-text-3)', marginBottom: 6 }}>{k.label}</p>
-                  <p style={{ fontSize: 22, fontWeight: 700, color: k.color, margin: 0 }}>{k.value}</p>
-                  <p style={{ fontSize: 11, color: 'var(--os-text-3)', marginTop: 4 }}>{k.sub}</p>
-                </div>
-              ))}
+            {/* Summary strip */}
+            <div className="flex flex-wrap gap-x-6 gap-y-2 px-1 py-3" style={{ borderBottom: '1px solid var(--os-border)' }}>
+              <span style={{ fontSize: 13, color: 'var(--os-text-2)' }}>
+                本月營收 <strong style={{ color: 'var(--os-text-1)', fontVariantNumeric: 'tabular-nums' }}>${fmt(data.totalSales)}</strong>
+              </span>
+              <span style={{ fontSize: 13, color: 'var(--os-text-2)' }}>
+                來客 <strong style={{ color: 'var(--os-text-1)', fontVariantNumeric: 'tabular-nums' }}>{fmt(data.guestTotal)}</strong> 人
+              </span>
+              <span style={{ fontSize: 13, color: 'var(--os-text-2)' }}>
+                均消 <strong style={{ color: 'var(--os-text-1)', fontVariantNumeric: 'tabular-nums' }}>${fmt(data.avgTicket)}</strong>
+              </span>
+              {canSeeCost && (
+                <>
+                  <span style={{ fontSize: 13, color: 'var(--os-text-2)' }}>
+                    營業利益 <strong style={{ color: data.operatingProfit >= 0 ? 'var(--os-success)' : 'var(--os-danger)', fontVariantNumeric: 'tabular-nums' }}>${fmt(data.operatingProfit)}</strong>
+                  </span>
+                  <span style={{ fontSize: 13, color: 'var(--os-text-2)' }}>
+                    利潤率 <strong style={{ color: profitRate >= 0 ? 'var(--os-success)' : 'var(--os-danger)' }}>{(profitRate * 100).toFixed(1)}%</strong>
+                    {data.isCostEstimated && <span style={{ fontSize: 11, color: 'var(--os-text-3)', marginLeft: 4 }}>（估算）</span>}
+                  </span>
+                </>
+              )}
             </div>
 
             {/* Daily trend chart */}

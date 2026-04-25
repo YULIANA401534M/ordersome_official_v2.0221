@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
-import { User, FileText, CreditCard, Settings2, ChevronDown, ChevronUp, Phone, Mail } from "lucide-react";
+import { User, FileText, CreditCard, Settings2, ChevronDown, ChevronUp, Phone, Mail, Plus } from "lucide-react";
 
 const FEATURE_KEY_LABELS: Record<string, string> = {
   daily_report_readonly: "日報查閱",
@@ -74,8 +74,8 @@ export default function OSCustomers() {
             <p style={{ fontSize: 13, color: "var(--os-text-3)", marginTop: 2 }}>共 {franchisees.length} 位加盟主</p>
           </div>
           {isSuperAdmin && (
-            <Button onClick={() => setShowCreateDialog(true)} className="text-white" style={amberBtn}>
-              + 新增加盟主
+            <Button onClick={() => setShowCreateDialog(true)} className="text-white gap-1.5" style={amberBtn}>
+              <Plus className="w-4 h-4" /> 新增加盟主
             </Button>
           )}
         </div>
