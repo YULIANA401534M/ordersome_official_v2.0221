@@ -1,7 +1,7 @@
 # CLAUDE.md — OrderSome 專案主腦
 
 
-### 前端官網改版進度快照（2026-04-25 v6.01）
+### 前端官網改版進度快照（2026-04-25 v6.02）
 
 **設計規範（品牌系列）**
 - 色彩全用 OKLCH：暖黃 oklch(0.75 0.18 70)，奶白背景 oklch(0.97 0.02 85)，深色文字 oklch(0.18 0.02 60)
@@ -227,12 +227,13 @@ Hero 圖片規則：
 
 ## 已知 Bug 與修法（給 Claude 看）
 
-**TiDB + drizzle-orm LIMIT 問題（v6.01 已修）**
+**TiDB + drizzle-orm LIMIT 問題（v6.02 真正修好）**
 - 症狀：登入頁出現 "Incorrect arguments to LIMIT" / "Failed query: select ... LIMIT ?" 錯誤
-- 原因：drizzle-orm 0.44.x 把 LIMIT 改成 prepared statement 參數（`LIMIT ?`），TiDB 不支援
-- 修法：`server/db.ts` 的 `createPool` 加 `prepare: false`，讓 mysql2 走 plain text query
-- 已修 commit：e48a659
-- **注意**：之後 npm install / 升套件若又出現同樣錯誤，先查 drizzle-orm 版本是否又變，再看這個設定有沒有被覆蓋
+- 原因：drizzle-orm 0.44.x 把 LIMIT/OFFSET 數字當成 `?` params 傳給 mysql2 `query()`，TiDB 不支援 `LIMIT ?` 參數化語法
+- **錯誤修法（v6.01）**：`createPool` 加 `prepare: false` — 對 `query()` 路徑無效，只影響 `execute()` 路徑
+- **正確修法（v6.02）**：在 `server/db.ts` 的 `getDb()` 中 patch `pool.query` 攔截器，把結尾的純整數 params inline 進 SQL 字串（`LIMIT ?` → `LIMIT 1`）再送給 TiDB
+- 已修 commit：6942480
+- **注意**：升級 drizzle-orm / mysql2 後若再出現，確認 `inlineLimitOffsetParams` 邏輯在 `db.ts` 仍存在即可
 
 **時區問題（v5.77 已修）**
 - Railway 部署的 Node.js 時區是 UTC
