@@ -64,6 +64,7 @@ export const appRouter = router({
         pwd: z.string().min(6),
       }))
       .mutation(async ({ ctx, input }) => {
+        try {
         const user = await db.getUserByEmailWithPassword(input.email);
         if (!user || !user.passwordHash) {
           throw new TRPCError({ code: 'UNAUTHORIZED', message: '電子郵件或密碼錯誤' });
@@ -94,6 +95,14 @@ export const appRouter = router({
         });
         
         return { success: true, user: { id: user.id, name: user.name, email: user.email, role: user.role, tenantId: user.tenantId } };
+        } catch (error) {
+          if (error instanceof TRPCError) throw error;
+          console.error("[auth.loginWithPassword] failed", error);
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: '資料庫連線異常，請稍後再試',
+          });
+        }
       }),
     updateProfile: protectedProcedure
       .input(z.object({
