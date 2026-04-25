@@ -27,7 +27,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { MoreHorizontal } from "lucide-react";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -44,14 +43,40 @@ type InventoryItem = {
   lastCountDate: string | null;
 };
 
+const thSt: React.CSSProperties = {
+  color: 'var(--os-text-3)',
+  fontSize: 11,
+  fontWeight: 700,
+  textTransform: 'uppercase',
+  letterSpacing: '0.06em',
+};
+
 function StatusBadge({ item }: { item: InventoryItem }) {
   const cur = Number(item.currentQty);
   const safe = Number(item.safetyQty);
-  if (cur === 0) return <Badge className="bg-red-500 text-white">缺貨</Badge>;
-  if (safe > 0 && cur < safe) return <Badge className="bg-orange-500 text-white">低庫存</Badge>;
-  if (safe === 0) return <Badge className="bg-gray-400 text-white">未設警戒</Badge>;
-  return <Badge className="bg-green-500 text-white">正常</Badge>;
+  let style: React.CSSProperties;
+  let label: string;
+  if (cur === 0) {
+    style = { background: 'var(--os-danger-bg)', color: 'var(--os-danger)' };
+    label = '缺貨';
+  } else if (safe > 0 && cur < safe) {
+    style = { background: 'var(--os-warning-bg)', color: 'var(--os-warning)' };
+    label = '低庫存';
+  } else if (safe === 0) {
+    style = { background: 'var(--os-surface-2)', color: 'var(--os-text-3)' };
+    label = '未設警戒';
+  } else {
+    style = { background: 'var(--os-success-bg)', color: 'var(--os-success)' };
+    label = '正常';
+  }
+  return (
+    <span style={{ ...style, display: 'inline-flex', alignItems: 'center', padding: '1px 8px', borderRadius: 4, fontSize: 12, fontWeight: 500 }}>
+      {label}
+    </span>
+  );
 }
+
+const amberBtn: React.CSSProperties = { background: 'var(--os-amber)', color: '#fff' };
 
 export default function OSInventory() {
   const { user } = useAuth();
@@ -70,7 +95,6 @@ export default function OSInventory() {
   const [deleteTarget, setDeleteTarget] = useState<InventoryItem | null>(null);
   const [deleteReason, setDeleteReason] = useState("");
 
-  // 批次盤點
   const [batchMode, setBatchMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [batchDialog, setBatchDialog] = useState(false);
@@ -117,13 +141,8 @@ export default function OSInventory() {
   );
 
   const categories = Array.from(new Set((items as InventoryItem[]).map(i => i.category).filter(Boolean)));
-
   const totalPages = Math.ceil((items as InventoryItem[]).length / PAGE_SIZE);
-  const pagedItems = (items as InventoryItem[]).slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE
-  );
-
+  const pagedItems = (items as InventoryItem[]).slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   const outOfStock = (items as InventoryItem[]).filter(i => Number(i.currentQty) === 0).length;
   const lowStock = (items as InventoryItem[]).filter(i => Number(i.safetyQty) > 0 && Number(i.currentQty) > 0 && Number(i.currentQty) < Number(i.safetyQty)).length;
 
@@ -149,10 +168,14 @@ export default function OSInventory() {
 
   return (
     <AdminDashboardLayout>
-      <div className="p-6 space-y-6">
+      <div style={{ maxWidth: 1200, margin: '0 auto' }} className="space-y-5">
+
         {/* Header */}
         <div className="flex flex-wrap items-center gap-4 justify-between">
-          <h1 className="text-2xl font-bold text-[#1c1917]">庫存管理</h1>
+          <div>
+            <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--os-text-1)', margin: 0 }}>庫存管理</h1>
+            <p style={{ fontSize: 13, color: 'var(--os-text-3)', marginTop: 4 }}>庫存查詢、盤點調整、品項管理</p>
+          </div>
           <div className="flex gap-2">
             {batchMode ? (
               <>
@@ -168,7 +191,8 @@ export default function OSInventory() {
                     setBatchDialog(true);
                   }}
                   disabled={selectedIds.size === 0}
-                  className="bg-amber-700 hover:bg-amber-800 text-white disabled:opacity-50"
+                  className="text-white disabled:opacity-50"
+                  style={amberBtn}
                 >
                   盤點已選取（{selectedIds.size}筆）
                 </Button>
@@ -181,7 +205,7 @@ export default function OSInventory() {
                 <Button variant="outline" onClick={() => { setBatchMode(true); setSelectedIds(new Set()); }}>
                   批次盤點
                 </Button>
-                <Button onClick={() => setAddDialog(true)} className="bg-amber-700 hover:bg-amber-800 text-white">
+                <Button className="text-white" style={amberBtn} onClick={() => setAddDialog(true)}>
                   新增品項
                 </Button>
               </>
@@ -190,72 +214,87 @@ export default function OSInventory() {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap gap-3 items-center bg-white rounded-lg p-4 shadow-sm">
+        <div
+          className="flex flex-wrap gap-3 items-center"
+          style={{
+            background: 'var(--os-surface)',
+            border: '1px solid var(--os-border)',
+            borderRadius: 8,
+            padding: '12px 16px',
+          }}
+        >
           <div className="flex items-center gap-2">
-            <Label className="text-sm">廠商</Label>
+            <Label style={{ fontSize: 13, color: 'var(--os-text-2)' }}>廠商</Label>
             <Select value={filterSupplier} onValueChange={v => { setFilterSupplier(v); setCurrentPage(1); }}>
-              <SelectTrigger className="w-36">
-                <SelectValue />
-              </SelectTrigger>
+              <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">全部廠商</SelectItem>
-                {yulianSuppliers.map(s => (
-                  <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>
-                ))}
+                {yulianSuppliers.map(s => <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           <div className="flex items-center gap-2">
-            <Label className="text-sm">分類</Label>
+            <Label style={{ fontSize: 13, color: 'var(--os-text-2)' }}>分類</Label>
             <Select value={filterCategory} onValueChange={v => { setFilterCategory(v); setCurrentPage(1); }}>
-              <SelectTrigger className="w-36">
-                <SelectValue />
-              </SelectTrigger>
+              <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">全部分類</SelectItem>
-                {categories.map(c => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
-                ))}
+                {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           <div className="flex items-center gap-2">
-            <Checkbox
-              id="below-safety"
-              checked={belowSafety}
-              onCheckedChange={v => { setBelowSafety(!!v); setCurrentPage(1); }}
-            />
-            <Label htmlFor="below-safety" className="text-sm cursor-pointer">只看低於警戒</Label>
+            <Checkbox id="below-safety" checked={belowSafety} onCheckedChange={v => { setBelowSafety(!!v); setCurrentPage(1); }} />
+            <Label htmlFor="below-safety" style={{ fontSize: 13, color: 'var(--os-text-2)', cursor: 'pointer' }}>只看低於警戒</Label>
           </div>
         </div>
 
         {/* Stats row */}
-        <div className="flex gap-4 px-1 py-2 text-sm text-stone-500">
-          <span>共 <strong className="text-stone-800">{(items as InventoryItem[]).length}</strong> 筆</span>
-          <span>缺貨 <strong className="text-red-600">{outOfStock}</strong> 筆</span>
-          <span>低庫存 <strong className="text-amber-600">{lowStock}</strong> 筆</span>
+        <div className="flex flex-wrap gap-5 px-1">
+          <span style={{ fontSize: 13, color: 'var(--os-text-3)' }}>
+            共 <strong style={{ color: 'var(--os-text-1)' }}>{(items as InventoryItem[]).length}</strong> 筆
+          </span>
+          <span style={{ fontSize: 13, color: 'var(--os-text-3)' }}>
+            缺貨 <strong style={{ color: 'var(--os-danger)' }}>{outOfStock}</strong> 筆
+          </span>
+          <span style={{ fontSize: 13, color: 'var(--os-text-3)' }}>
+            低庫存 <strong style={{ color: 'var(--os-warning)' }}>{lowStock}</strong> 筆
+          </span>
+          {valueStats && (
+            <>
+              <span style={{ color: 'var(--os-border)' }}>|</span>
+              <span style={{ fontSize: 13, color: 'var(--os-text-3)' }}>
+                庫存總資產 <strong style={{ color: 'var(--os-text-1)' }}>${Math.round(valueStats.totalValue).toLocaleString()}</strong>
+              </span>
+              <span style={{ fontSize: 13, color: 'var(--os-text-3)' }}>
+                B類自配 <strong style={{ color: 'var(--os-amber-text)' }}>${Math.round(valueStats.bValue).toLocaleString()}</strong>（{valueStats.bCount} 品項）
+              </span>
+            </>
+          )}
         </div>
-        {valueStats && (
-          <div className="flex gap-4 px-1 py-1 text-sm text-stone-500 border-t border-stone-100 mt-1 pt-2">
-            <span>庫存總資產 <strong className="text-stone-800">
-              ${Math.round(valueStats.totalValue).toLocaleString()}
-            </strong></span>
-            <span className="text-stone-300">|</span>
-            <span>B類自配 <strong className="text-amber-700">
-              ${Math.round(valueStats.bValue).toLocaleString()}
-            </strong>（{valueStats.bCount} 品項）</span>
-            <span className="text-stone-300">|</span>
-            <span>其他資產 <strong className="text-stone-600">
-              ${Math.round(valueStats.totalValue - valueStats.bValue).toLocaleString()}
-            </strong></span>
-          </div>
-        )}
+
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {[
+            { label: '總品項數', value: (items as InventoryItem[]).length, color: 'var(--os-text-1)' },
+            { label: '缺貨品項數', value: outOfStock, color: 'var(--os-danger)' },
+            { label: '低庫存品項數', value: lowStock, color: 'var(--os-warning)' },
+          ].map(({ label, value, color }) => (
+            <div
+              key={label}
+              style={{ background: 'var(--os-surface)', border: '1px solid var(--os-border)', borderRadius: 10, padding: '16px 20px' }}
+            >
+              <p style={{ fontSize: 12, color: 'var(--os-text-3)', marginBottom: 6 }}>{label}</p>
+              <p style={{ fontSize: 28, fontWeight: 700, color, margin: 0 }}>{value}</p>
+            </div>
+          ))}
+        </div>
 
         {/* Table */}
-        <div className="bg-white rounded-lg shadow-sm overflow-auto">
+        <div style={{ background: 'var(--os-surface)', border: '1px solid var(--os-border)', borderRadius: 10, overflow: 'auto' }}>
           <table className="w-full text-sm">
-            <thead className="bg-stone-50 border-b">
-              <tr>
+            <thead>
+              <tr style={{ background: 'var(--os-surface-2)', borderBottom: '1px solid var(--os-border)' }}>
                 {batchMode && (
                   <th className="px-4 py-3 w-10">
                     <Checkbox
@@ -268,20 +307,33 @@ export default function OSInventory() {
                   </th>
                 )}
                 {["廠商", "品項名稱", "分類", "目前庫存", "庫存金額", "安全庫存", "狀態", "最後修改", "操作"].map(h => (
-                  <th key={h} className="px-4 py-3 text-left font-semibold text-stone-600 whitespace-nowrap">{h}</th>
+                  <th key={h} className="px-4 py-3 text-left whitespace-nowrap" style={thSt}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {(items as InventoryItem[]).length === 0 ? (
                 <tr>
-                  <td colSpan={batchMode ? 10 : 9} className="px-4 py-12 text-center text-stone-400">
+                  <td colSpan={batchMode ? 10 : 9} className="px-4 py-12 text-center" style={{ color: 'var(--os-text-3)' }}>
                     尚無庫存品項，請點「新增品項」開始建立
                   </td>
                 </tr>
               ) : (
                 pagedItems.map(item => (
-                  <tr key={item.id} className={`border-b hover:bg-stone-50 transition-colors ${batchMode && selectedIds.has(item.id) ? "bg-amber-50" : ""}`}>
+                  <tr
+                    key={item.id}
+                    style={{
+                      borderTop: '1px solid var(--os-border-2)',
+                      background: batchMode && selectedIds.has(item.id) ? 'var(--os-amber-soft)' : '',
+                    }}
+                    onMouseEnter={e => {
+                      if (!(batchMode && selectedIds.has(item.id)))
+                        e.currentTarget.style.background = 'var(--os-amber-soft)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = batchMode && selectedIds.has(item.id) ? 'var(--os-amber-soft)' : '';
+                    }}
+                  >
                     {batchMode && (
                       <td className="px-4 py-3">
                         <Checkbox
@@ -294,25 +346,25 @@ export default function OSInventory() {
                         />
                       </td>
                     )}
-                    <td className="px-4 py-3 whitespace-nowrap">{item.supplierName}</td>
-                    <td className="px-4 py-3">{item.productName}</td>
-                    <td className="px-4 py-3 text-stone-500 whitespace-nowrap">{item.category || "未分類"}</td>
-                    <td className="px-4 py-3 font-medium">{Math.round(Number(item.currentQty)).toLocaleString()} {item.unit}</td>
-                    <td className="px-4 py-3 text-right text-stone-500 text-xs">
-                      {(item as any).itemValue > 0
-                        ? `$${Math.round((item as any).itemValue).toLocaleString()}`
-                        : "-"}
+                    <td className="px-4 py-3 whitespace-nowrap" style={{ color: 'var(--os-text-2)' }}>{item.supplierName}</td>
+                    <td className="px-4 py-3" style={{ color: 'var(--os-text-1)', fontWeight: 500 }}>{item.productName}</td>
+                    <td className="px-4 py-3 whitespace-nowrap" style={{ color: 'var(--os-text-3)' }}>{item.category || "未分類"}</td>
+                    <td className="px-4 py-3 font-medium" style={{ color: 'var(--os-text-1)' }}>
+                      {Math.round(Number(item.currentQty)).toLocaleString()} {item.unit}
                     </td>
-                    <td className="px-4 py-3 text-stone-500">
+                    <td className="px-4 py-3 text-right" style={{ color: 'var(--os-amber-text)', fontSize: 13 }}>
+                      {(item as any).itemValue > 0 ? `$${Math.round((item as any).itemValue).toLocaleString()}` : "-"}
+                    </td>
+                    <td className="px-4 py-3" style={{ color: 'var(--os-text-3)' }}>
                       {Number(item.safetyQty) === 0 ? "-" : `${Math.round(Number(item.safetyQty)).toLocaleString()} ${item.unit}`}
                     </td>
                     <td className="px-4 py-3"><StatusBadge item={item} /></td>
-                    <td className="px-4 py-3 text-stone-400 text-xs whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap" style={{ color: 'var(--os-text-3)', fontSize: 12 }}>
                       {(item as any).updatedAt
                         ? new Date((item as any).updatedAt).toLocaleString("zh-TW", {
-                            year:"numeric", month:"2-digit", day:"2-digit",
-                            hour:"2-digit", minute:"2-digit", hour12:false
-                          }).replace(/\//g,"-")
+                            year: "numeric", month: "2-digit", day: "2-digit",
+                            hour: "2-digit", minute: "2-digit", hour12: false,
+                          }).replace(/\//g, "-")
                         : "-"}
                     </td>
                     <td className="px-4 py-3">
@@ -330,7 +382,7 @@ export default function OSInventory() {
                             <>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
-                                className="text-red-600"
+                                style={{ color: 'var(--os-danger)' }}
                                 onClick={() => setDeleteTarget(item)}
                               >
                                 刪除品項
@@ -346,46 +398,27 @@ export default function OSInventory() {
             </tbody>
           </table>
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-stone-200">
-              <span className="text-xs text-stone-500">
+            <div
+              className="flex items-center justify-between px-4 py-3"
+              style={{ borderTop: '1px solid var(--os-border)' }}
+            >
+              <span style={{ fontSize: 12, color: 'var(--os-text-3)' }}>
                 第 {currentPage} / {totalPages} 頁，共 {(items as InventoryItem[]).length} 筆
               </span>
               <div className="flex gap-1">
                 <button
-                  className="px-2 py-1 text-xs border border-stone-300 rounded disabled:opacity-40"
+                  style={{ padding: '2px 8px', fontSize: 12, border: '1px solid var(--os-border)', borderRadius: 4, color: 'var(--os-text-2)' }}
                   disabled={currentPage === 1}
                   onClick={() => setCurrentPage(p => p - 1)}
                 >上一頁</button>
                 <button
-                  className="px-2 py-1 text-xs border border-stone-300 rounded disabled:opacity-40"
+                  style={{ padding: '2px 8px', fontSize: 12, border: '1px solid var(--os-border)', borderRadius: 4, color: 'var(--os-text-2)' }}
                   disabled={currentPage === totalPages}
                   onClick={() => setCurrentPage(p => p + 1)}
                 >下一頁</button>
               </div>
             </div>
           )}
-        </div>
-
-        {/* KPI Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white rounded-lg shadow-sm p-5">
-            <p className="text-sm text-stone-500">總品項數</p>
-            <p className="text-3xl font-bold text-[#1c1917] mt-1" style={{ fontFamily: 'jf-kamabit' }}>
-              {(items as InventoryItem[]).length}
-            </p>
-          </div>
-          <div className="bg-white rounded-lg shadow-sm p-5">
-            <p className="text-sm text-stone-500">缺貨品項數</p>
-            <p className="text-3xl font-bold text-red-600 mt-1" style={{ fontFamily: 'jf-kamabit' }}>
-              {outOfStock}
-            </p>
-          </div>
-          <div className="bg-white rounded-lg shadow-sm p-5">
-            <p className="text-sm text-stone-500">低庫存品項數</p>
-            <p className="text-3xl font-bold text-orange-500 mt-1" style={{ fontFamily: 'jf-kamabit' }}>
-              {lowStock}
-            </p>
-          </div>
         </div>
       </div>
 
@@ -398,17 +431,13 @@ export default function OSInventory() {
           <div className="space-y-4 py-2">
             <div>
               <Label>新的庫存數量</Label>
-              <Input
-                type="number"
-                value={adjustQty}
-                onChange={e => setAdjustQty(e.target.value)}
-                className="mt-1"
-              />
+              <Input type="number" value={adjustQty} onChange={e => setAdjustQty(e.target.value)} className="mt-1" />
             </div>
             <div>
               <Label>調整原因（必填）</Label>
               <textarea
-                className="w-full border rounded-md p-2 text-sm mt-1 min-h-[72px] resize-none focus:outline-none focus:ring-1 focus:ring-amber-500"
+                className="w-full border rounded-md p-2 text-sm mt-1 min-h-[72px] resize-none focus:outline-none focus:ring-1"
+                style={{ borderColor: 'var(--os-border)' }}
                 value={adjustNote}
                 onChange={e => setAdjustNote(e.target.value)}
                 placeholder="請說明調整原因"
@@ -418,12 +447,13 @@ export default function OSInventory() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setAdjustDialog({ open: false })}>取消</Button>
             <Button
+              className="text-white"
+              style={amberBtn}
               onClick={() => {
                 if (!adjustDialog.item) return;
                 adjustMut.mutate({ id: adjustDialog.item.id, newQty: Number(adjustQty), note: adjustNote });
               }}
               disabled={adjustMut.isPending || !adjustNote.trim()}
-              className="bg-amber-700 hover:bg-amber-800 text-white"
             >
               {adjustMut.isPending ? "儲存中…" : "儲存"}
             </Button>
@@ -452,12 +482,13 @@ export default function OSInventory() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setSafetyDialog({ open: false })}>取消</Button>
             <Button
+              className="text-white"
+              style={amberBtn}
               onClick={() => {
                 if (!safetyDialog.item) return;
                 safetyMut.mutate({ id: safetyDialog.item.id, safetyQty: Number(safetyQtyInput) });
               }}
               disabled={safetyMut.isPending || Number(safetyQtyInput) < 0}
-              className="bg-amber-700 hover:bg-amber-800 text-white"
             >
               {safetyMut.isPending ? "儲存中…" : "儲存"}
             </Button>
@@ -475,13 +506,9 @@ export default function OSInventory() {
             <div>
               <Label>廠商</Label>
               <Select value={newSupplier} onValueChange={setNewSupplier}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {yulianSuppliers.map(s => (
-                    <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>
-                  ))}
+                  {yulianSuppliers.map(s => <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -513,6 +540,8 @@ export default function OSInventory() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddDialog(false)}>取消</Button>
             <Button
+              className="text-white"
+              style={amberBtn}
               onClick={() => {
                 if (!newProduct.trim()) return;
                 addMut.mutate({
@@ -525,7 +554,6 @@ export default function OSInventory() {
                 });
               }}
               disabled={addMut.isPending || !newProduct.trim()}
-              className="bg-amber-700 hover:bg-amber-800 text-white"
             >
               {addMut.isPending ? "新增中…" : "新增"}
             </Button>
@@ -540,17 +568,23 @@ export default function OSInventory() {
             <DialogTitle>批次盤點</DialogTitle>
           </DialogHeader>
           {batchDone !== null ? (
-            <div className="py-8 text-center text-green-600 font-semibold text-lg">
+            <div className="py-8 text-center font-semibold text-lg" style={{ color: 'var(--os-success)' }}>
               已完成 {batchDone} 筆盤點
             </div>
           ) : (
             <div className="space-y-4 py-2">
               <div className="space-y-3">
                 {(items as InventoryItem[]).filter(i => selectedIds.has(i.id)).map(item => (
-                  <div key={item.id} className="flex items-center gap-3 border rounded-md p-3">
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-3"
+                    style={{ border: '1px solid var(--os-border)', borderRadius: 8, padding: 12 }}
+                  >
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{item.productName}</p>
-                      <p className="text-xs text-stone-400">目前庫存：{Math.round(Number(item.currentQty)).toLocaleString()} {item.unit}</p>
+                      <p className="font-medium text-sm truncate" style={{ color: 'var(--os-text-1)' }}>{item.productName}</p>
+                      <p style={{ fontSize: 12, color: 'var(--os-text-3)' }}>
+                        目前庫存：{Math.round(Number(item.currentQty)).toLocaleString()} {item.unit}
+                      </p>
                     </div>
                     <Input
                       type="number"
@@ -565,7 +599,8 @@ export default function OSInventory() {
               <div>
                 <Label>備註（選填，所有品項共用）</Label>
                 <textarea
-                  className="w-full border rounded-md p-2 text-sm mt-1 min-h-[60px] resize-none focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  className="w-full rounded-md p-2 text-sm mt-1 min-h-[60px] resize-none focus:outline-none"
+                  style={{ border: '1px solid var(--os-border)' }}
                   value={batchNote}
                   onChange={e => setBatchNote(e.target.value)}
                   placeholder="例：2026-03-31 盤點"
@@ -579,7 +614,8 @@ export default function OSInventory() {
             </Button>
             {batchDone === null && (
               <Button
-                className="bg-amber-700 hover:bg-amber-800 text-white"
+                className="text-white"
+                style={amberBtn}
                 disabled={countMut.isPending}
                 onClick={async () => {
                   const selected = (items as InventoryItem[]).filter(i => selectedIds.has(i.id));
@@ -588,11 +624,7 @@ export default function OSInventory() {
                     const qtyStr = batchQtys[item.id];
                     if (qtyStr === undefined || qtyStr === "") continue;
                     try {
-                      await countMut.mutateAsync({
-                        id: item.id,
-                        countQty: Number(qtyStr),
-                        note: batchNote.trim() || undefined,
-                      });
+                      await countMut.mutateAsync({ id: item.id, countQty: Number(qtyStr), note: batchNote.trim() || undefined });
                       doneCount++;
                     } catch {
                       // 繼續下一筆
@@ -618,35 +650,37 @@ export default function OSInventory() {
             <DialogTitle>庫存異動記錄 — {historyDialog.item?.productName}</DialogTitle>
             <DialogDescription>近 10 筆異動記錄</DialogDescription>
           </DialogHeader>
-          <div className="overflow-x-auto">
+          <div style={{ overflowX: 'auto' }}>
             <table className="w-full text-sm">
-              <thead className="bg-stone-50 border-b">
-                <tr>
+              <thead>
+                <tr style={{ background: 'var(--os-surface-2)', borderBottom: '1px solid var(--os-border)' }}>
                   {["時間", "類型", "變動數量", "變動前", "變動後", "來源", "備註"].map(h => (
-                    <th key={h} className="px-3 py-2 text-left font-semibold text-stone-600 whitespace-nowrap">{h}</th>
+                    <th key={h} className="px-3 py-2 text-left whitespace-nowrap" style={thSt}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {(historyRows as any[]).length === 0 ? (
-                  <tr><td colSpan={7} className="px-3 py-8 text-center text-stone-400">尚無異動記錄</td></tr>
+                  <tr><td colSpan={7} className="px-3 py-8 text-center" style={{ color: 'var(--os-text-3)' }}>尚無異動記錄</td></tr>
                 ) : (historyRows as any[]).map((r: any, i: number) => {
                   const typeMap: Record<string, string> = { in: "入庫", out: "出庫", adjust: "手動調整", count: "盤點" };
                   const qty = Math.round(Number(r.qty));
                   return (
-                    <tr key={i} className="border-b hover:bg-stone-50">
-                      <td className="px-3 py-2 text-xs text-stone-500 whitespace-nowrap">
-                        {new Date(r.createdAt).toLocaleString("zh-TW",{
-                          month:"2-digit", day:"2-digit",
-                          hour:"2-digit", minute:"2-digit", hour12:false
-                        })}
+                    <tr key={i} style={{ borderTop: '1px solid var(--os-border-2)' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--os-amber-soft)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = '')}
+                    >
+                      <td className="px-3 py-2 whitespace-nowrap" style={{ color: 'var(--os-text-3)', fontSize: 12 }}>
+                        {new Date(r.createdAt).toLocaleString("zh-TW", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false })}
                       </td>
-                      <td className="px-3 py-2 whitespace-nowrap">{typeMap[r.changeType] ?? r.changeType}</td>
-                      <td className="px-3 py-2 text-right font-medium">{qty > 0 ? `+${qty.toLocaleString()}` : qty.toLocaleString()}</td>
-                      <td className="px-3 py-2 text-right text-stone-500">{Math.round(Number(r.qtyBefore)).toLocaleString()}</td>
-                      <td className="px-3 py-2 text-right text-stone-500">{Math.round(Number(r.qtyAfter)).toLocaleString()}</td>
-                      <td className="px-3 py-2 text-xs text-stone-400">{r.refType ?? "-"}{r.refId ? ` #${r.refId}` : ""}</td>
-                      <td className="px-3 py-2 text-xs text-stone-400 max-w-[160px] truncate">{r.note ?? "-"}</td>
+                      <td className="px-3 py-2 whitespace-nowrap" style={{ color: 'var(--os-text-1)' }}>{typeMap[r.changeType] ?? r.changeType}</td>
+                      <td className="px-3 py-2 text-right font-medium" style={{ color: qty > 0 ? 'var(--os-success)' : 'var(--os-danger)' }}>
+                        {qty > 0 ? `+${qty.toLocaleString()}` : qty.toLocaleString()}
+                      </td>
+                      <td className="px-3 py-2 text-right" style={{ color: 'var(--os-text-3)' }}>{Math.round(Number(r.qtyBefore)).toLocaleString()}</td>
+                      <td className="px-3 py-2 text-right" style={{ color: 'var(--os-text-2)' }}>{Math.round(Number(r.qtyAfter)).toLocaleString()}</td>
+                      <td className="px-3 py-2" style={{ color: 'var(--os-text-3)', fontSize: 12 }}>{r.refType ?? "-"}{r.refId ? ` #${r.refId}` : ""}</td>
+                      <td className="px-3 py-2 max-w-[160px] truncate" style={{ color: 'var(--os-text-3)', fontSize: 12 }}>{r.note ?? "-"}</td>
                     </tr>
                   );
                 })}
@@ -663,14 +697,18 @@ export default function OSInventory() {
       <Dialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) { setDeleteTarget(null); setDeleteReason(""); } }}>
         <DialogContent>
           <DialogHeader><DialogTitle>刪除庫存品項</DialogTitle></DialogHeader>
-          <p className="text-sm text-stone-600">確定刪除「{deleteTarget?.productName}」？此操作會寫入稽核記錄，無法復原。</p>
+          <p style={{ fontSize: 13, color: 'var(--os-text-2)' }}>
+            確定刪除「{deleteTarget?.productName}」？此操作會寫入稽核記錄，無法復原。
+          </p>
           <Label>刪除原因（必填）</Label>
           <Textarea value={deleteReason} onChange={e => setDeleteReason(e.target.value)} placeholder="請說明刪除原因" />
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteTarget(null)}>取消</Button>
-            <Button variant="destructive"
+            <Button
+              variant="destructive"
               disabled={!deleteReason.trim() || deleteMut.isPending}
-              onClick={() => deleteTarget && deleteMut.mutate({ id: deleteTarget.id, reason: deleteReason })}>
+              onClick={() => deleteTarget && deleteMut.mutate({ id: deleteTarget.id, reason: deleteReason })}
+            >
               確認刪除
             </Button>
           </DialogFooter>
