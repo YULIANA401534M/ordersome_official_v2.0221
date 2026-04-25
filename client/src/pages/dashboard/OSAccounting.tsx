@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Upload, Plus, RefreshCw, FileSpreadsheet } from "lucide-react";
@@ -22,32 +21,42 @@ function nowMonth() {
 }
 
 const PAYABLE_BADGE: Record<string, { label: string; color: string; bg: string }> = {
-  pending:  { label: "待付款", color: "#6b7280", bg: "#f3f4f6" },
-  partial:  { label: "部分付", color: "#c2410c", bg: "#ffedd5" },
-  paid:     { label: "已付清", color: "#15803d", bg: "#dcfce7" },
-  overdue:  { label: "逾期",   color: "#dc2626", bg: "#fef2f2" },
+  pending:  { label: "待付款", color: "var(--os-text-2)",   bg: "var(--os-surface-2)" },
+  partial:  { label: "部分付", color: "var(--os-warning)",  bg: "var(--os-warning-bg)" },
+  paid:     { label: "已付清", color: "var(--os-success)",  bg: "var(--os-success-bg)" },
+  overdue:  { label: "逾期",   color: "var(--os-danger)",   bg: "var(--os-danger-bg)" },
 };
 const REBATE_BADGE: Record<string, { label: string; color: string; bg: string }> = {
-  pending:  { label: "待收",    color: "#6b7280", bg: "#f3f4f6" },
-  received: { label: "已入帳",  color: "#15803d", bg: "#dcfce7" },
-  offset:   { label: "已抵貨款", color: "#1d4ed8", bg: "#dbeafe" },
+  pending:  { label: "待收",    color: "var(--os-text-2)",  bg: "var(--os-surface-2)" },
+  received: { label: "已入帳",  color: "var(--os-success)", bg: "var(--os-success-bg)" },
+  offset:   { label: "已抵貨款", color: "var(--os-info)",   bg: "var(--os-info-bg)" },
 };
 
 function StatusBadge({ cfg, value }: { cfg: Record<string, { label: string; color: string; bg: string }>; value: string }) {
-  const c = cfg[value] ?? { label: value, color: "#6b7280", bg: "#f3f4f6" };
+  const c = cfg[value] ?? { label: value, color: "var(--os-text-2)", bg: "var(--os-surface-2)" };
   return (
-    <span className="inline-block rounded px-2 py-0.5 text-xs font-medium" style={{ color: c.color, background: c.bg }}>
+    <span style={{ color: c.color, background: c.bg, display: "inline-block", borderRadius: 4, padding: "1px 8px", fontSize: 12, fontWeight: 500 }}>
       {c.label}
     </span>
   );
 }
+
+const thSt: React.CSSProperties = { color: "var(--os-text-3)", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" };
+const panelSt: React.CSSProperties = { background: "var(--os-surface)", border: "1px solid var(--os-border)", borderRadius: 10, overflow: "hidden" };
+const amberBtn: React.CSSProperties = { background: "var(--os-amber)", color: "#fff" };
+
+const TABS = [
+  { key: "payables", label: "應付帳款" },
+  { key: "bank",     label: "銀行明細對帳" },
+  { key: "rebate",   label: "退佣管理" },
+  { key: "transfer", label: "提貨調貨" },
+] as const;
 
 export default function OSAccounting() {
   const [, navigate] = useLocation();
   const [tab, setTab] = useState("payables");
   const [month, setMonth] = useState("");
 
-  // Tab1
   const [payFilterStatus, setPayFilterStatus] = useState("all");
   const [showPayDialog, setShowPayDialog] = useState(false);
   const [payTarget, setPayTarget] = useState<any>(null);
@@ -55,7 +64,6 @@ export default function OSAccounting() {
   const [payBankRef, setPayBankRef] = useState("");
   const [payNote, setPayNote] = useState("");
 
-  // Tab1 手動新增
   const [showCreatePayable, setShowCreatePayable] = useState(false);
   const [cpSupplier, setCpSupplier] = useState("");
   const [cpMonth, setCpMonth] = useState(nowMonth());
@@ -63,7 +71,6 @@ export default function OSAccounting() {
   const [cpDueDate, setCpDueDate] = useState("");
   const [cpNote, setCpNote] = useState("");
 
-  // Tab2
   const [bankFilterStatus, setBankFilterStatus] = useState("all");
   const [showBankImport, setShowBankImport] = useState(false);
   const [bankBatchName, setBankBatchName] = useState("");
@@ -73,13 +80,11 @@ export default function OSAccounting() {
   const [matchType, setMatchType] = useState("payable");
   const bankFileRef = useRef<HTMLInputElement>(null);
 
-  // Tab3
   const [showRebateEdit, setShowRebateEdit] = useState(false);
   const [rebateTarget, setRebateTarget] = useState<any>(null);
   const [rebateManualAmt, setRebateManualAmt] = useState("");
   const [rebateBankRef, setRebateBankRef] = useState("");
 
-  // Tab4
   const [showNewTransfer, setShowNewTransfer] = useState(false);
   const [transferDate, setTransferDate] = useState(new Date().toISOString().slice(0, 10));
   const [transferStore, setTransferStore] = useState("");
@@ -251,46 +256,76 @@ export default function OSAccounting() {
 
   const MonthInput = () => (
     <div className="flex items-center gap-1">
-      <Input type="month" value={month} onChange={e => setMonth(e.target.value)}
-        className="h-8 text-sm w-36" />
+      <Input type="month" value={month} onChange={e => setMonth(e.target.value)} className="h-8 text-sm w-36" />
       {month && (
-        <button className="text-xs px-2 py-1 rounded border border-stone-300 hover:bg-stone-100 text-stone-600"
-          onClick={() => setMonth("")}>
+        <button
+          onClick={() => setMonth("")}
+          style={{ fontSize: 12, padding: "3px 8px", borderRadius: 4, border: "1px solid var(--os-border)", color: "var(--os-text-2)", background: "none", cursor: "pointer" }}
+        >
           全部
         </button>
       )}
     </div>
   );
 
+  const emptyRow = (cols: number, msg: string) => (
+    <tr><td colSpan={cols} style={{ textAlign: "center", color: "var(--os-text-3)", padding: "40px 0", fontSize: 13 }}>{msg}</td></tr>
+  );
+
+  function trHover(e: React.MouseEvent<HTMLTableRowElement>, enter: boolean) {
+    e.currentTarget.style.background = enter ? "var(--os-amber-soft)" : "";
+  }
+
+  const transferStatusBadge = (status: string) => {
+    if (status === "billed") return { label: "已開帳", color: "var(--os-info)",    bg: "var(--os-info-bg)" };
+    if (status === "void")   return { label: "已作廢", color: "var(--os-text-3)",  bg: "var(--os-surface-2)" };
+    return                          { label: "待結算", color: "var(--os-text-2)",  bg: "var(--os-surface-2)" };
+  };
+
   return (
     <AdminDashboardLayout>
-      <div className="p-4 space-y-4" style={{ background: "#f7f6f3", minHeight: "100vh" }}>
-        <h1 className="text-xl font-bold text-gray-800">帳務管理</h1>
+      <div style={{ background: "var(--os-bg)", minHeight: "100vh", padding: 16 }} className="space-y-4">
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--os-text-1)", margin: 0 }}>帳務管理</h1>
 
         {/* KPI */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
-            { label: "本月應付總額", value: fmtAmt(kpiTotalPayable), color: "#b45309" },
-            { label: "本月已付",     value: fmtAmt(kpiPaid),         color: "#15803d" },
-            { label: "待付款項",     value: fmtAmt(kpiPending),      color: "#dc2626" },
+            { label: "本月應付總額", value: fmtAmt(kpiTotalPayable), color: "var(--os-amber-text)" },
+            { label: "本月已付",     value: fmtAmt(kpiPaid),         color: "var(--os-success)" },
+            { label: "待付款項",     value: fmtAmt(kpiPending),      color: "var(--os-danger)" },
           ].map(c => (
-            <div key={c.label} className="bg-white rounded-xl p-4 shadow-sm">
-              <p className="text-xs text-gray-500 mb-1">{c.label}</p>
-              <p className="font-kamabit text-2xl font-bold" style={{ color: c.color }}>{c.value}</p>
+            <div key={c.label} style={{ background: "var(--os-surface)", border: "1px solid var(--os-border)", borderRadius: 10, padding: "14px 18px" }}>
+              <p style={{ fontSize: 12, color: "var(--os-text-3)", marginBottom: 6 }}>{c.label}</p>
+              <p style={{ fontSize: 24, fontWeight: 700, color: c.color, margin: 0 }}>{c.value}</p>
             </div>
           ))}
         </div>
 
-        <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="w-full sm:w-auto">
-            <TabsTrigger value="payables">應付帳款</TabsTrigger>
-            <TabsTrigger value="bank">銀行明細對帳</TabsTrigger>
-            <TabsTrigger value="rebate">退佣管理</TabsTrigger>
-            <TabsTrigger value="transfer">提貨調貨</TabsTrigger>
-          </TabsList>
+        {/* Tab switcher */}
+        <div style={{ display: "flex", overflow: "hidden", borderRadius: 10, border: "1px solid var(--os-border)", background: "var(--os-surface)", width: "fit-content" }}>
+          {TABS.map(t => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              style={{
+                padding: "8px 16px",
+                fontSize: 13,
+                fontWeight: tab === t.key ? 600 : 400,
+                background: tab === t.key ? "var(--os-amber)" : "transparent",
+                color: tab === t.key ? "#fff" : "var(--os-text-2)",
+                border: "none",
+                cursor: "pointer",
+                transition: "background 0.15s",
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
 
-          {/* ── Tab1 應付帳款 ─────────────────────────────────── */}
-          <TabsContent value="payables" className="space-y-3 mt-3">
+        {/* ── Tab: 應付帳款 ─────────────────────────────────── */}
+        {tab === "payables" && (
+          <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <MonthInput />
               <Select value={payFilterStatus} onValueChange={setPayFilterStatus}>
@@ -314,33 +349,30 @@ export default function OSAccounting() {
                 </Button>
               </div>
             </div>
-            <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
+            <div style={{ ...panelSt }}>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b text-xs text-gray-500 bg-gray-50">
-                    <th className="text-left p-3">廠商</th><th className="text-left p-3">月份</th>
-                    <th className="text-right p-3">應付金額</th><th className="text-right p-3">退佣抵扣</th>
-                    <th className="text-right p-3">實際應付</th><th className="text-right p-3">已付</th>
-                    <th className="text-center p-3">狀態</th><th className="text-left p-3">預計付款日</th>
-                    <th className="text-left p-3">銀行摘要</th><th className="text-center p-3">操作</th>
+                  <tr style={{ background: "var(--os-surface-2)", borderBottom: "1px solid var(--os-border)" }}>
+                    {["廠商","月份","應付金額","退佣抵扣","實際應付","已付","狀態","預計付款日","銀行摘要","操作"].map((h, i) => (
+                      <th key={h} className={i < 2 || i >= 7 ? "text-left p-3" : "text-right p-3"} style={{ ...thSt, textAlign: i === 6 ? "center" : i === 9 ? "center" : undefined }}>
+                        {h}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {(payables as any[]).length === 0 ? (
-                    <tr><td colSpan={10} className="text-center text-gray-400 py-10">
-                      本月尚無應付帳款，請先點擊「自動匯總本月帳款」
-                    </td></tr>
-                  ) : (payables as any[]).map((p: any) => (
-                    <tr key={p.id} className="border-b hover:bg-gray-50">
-                      <td className="p-3 font-medium">{p.supplierName}</td>
-                      <td className="p-3 text-gray-500">{p.month}</td>
+                  {(payables as any[]).length === 0 ? emptyRow(10, "本月尚無應付帳款，請先點擊「自動匯總本月帳款」") : (payables as any[]).map((p: any) => (
+                    <tr key={p.id} style={{ borderTop: "1px solid var(--os-border-2)" }}
+                      onMouseEnter={e => trHover(e, true)} onMouseLeave={e => trHover(e, false)}>
+                      <td className="p-3 font-medium" style={{ color: "var(--os-text-1)" }}>{p.supplierName}</td>
+                      <td className="p-3" style={{ color: "var(--os-text-3)" }}>{p.month}</td>
                       <td className="p-3 text-right">{fmtAmt(p.totalAmount)}</td>
-                      <td className="p-3 text-right text-green-600">{Number(p.rebateAmount) > 0 ? fmtAmt(p.rebateAmount) : "-"}</td>
+                      <td className="p-3 text-right" style={{ color: "var(--os-success)" }}>{Number(p.rebateAmount) > 0 ? fmtAmt(p.rebateAmount) : "-"}</td>
                       <td className="p-3 text-right font-medium">{fmtAmt(p.netPayable)}</td>
                       <td className="p-3 text-right">{fmtAmt(p.paidAmount)}</td>
                       <td className="p-3 text-center"><StatusBadge cfg={PAYABLE_BADGE} value={p.status} /></td>
-                      <td className="p-3 text-xs text-gray-500">{p.dueDate ?? "-"}</td>
-                      <td className="p-3 text-xs text-gray-500 max-w-[120px] truncate">{p.bankRef ?? "-"}</td>
+                      <td className="p-3 text-xs" style={{ color: "var(--os-text-3)" }}>{p.dueDate ?? "-"}</td>
+                      <td className="p-3 text-xs max-w-[120px] truncate" style={{ color: "var(--os-text-3)" }}>{p.bankRef ?? "-"}</td>
                       <td className="p-3 text-center">
                         <div className="flex gap-1 justify-center">
                           {p.status !== "paid" && (
@@ -360,10 +392,12 @@ export default function OSAccounting() {
                 </tbody>
               </table>
             </div>
-          </TabsContent>
+          </div>
+        )}
 
-          {/* ── Tab2 銀行明細對帳 ─────────────────────────────── */}
-          <TabsContent value="bank" className="space-y-3 mt-3">
+        {/* ── Tab: 銀行明細對帳 ─────────────────────────────── */}
+        {tab === "bank" && (
+          <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <MonthInput />
               <Select value={bankFilterStatus} onValueChange={setBankFilterStatus}>
@@ -386,14 +420,13 @@ export default function OSAccounting() {
                 </Button>
               </div>
             </div>
-            <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
+            <div style={{ ...panelSt }}>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b text-xs text-gray-500 bg-gray-50">
-                    <th className="text-left p-3">日期</th><th className="text-left p-3">摘要</th>
-                    <th className="text-right p-3">支出</th><th className="text-right p-3">收入</th>
-                    <th className="text-right p-3">餘額</th><th className="text-center p-3">對帳狀態</th>
-                    <th className="text-center p-3">操作</th>
+                  <tr style={{ background: "var(--os-surface-2)", borderBottom: "1px solid var(--os-border)" }}>
+                    {["日期","摘要","支出","收入","餘額","對帳狀態","操作"].map((h, i) => (
+                      <th key={h} className={i < 2 ? "text-left p-3" : "text-right p-3"} style={{ ...thSt, textAlign: i === 5 || i === 6 ? "center" : undefined }}>{h}</th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
@@ -405,31 +438,30 @@ export default function OSAccounting() {
                       if (bankFilterStatus === "confirmed") return !!tx.confirmedBy;
                       return true;
                     });
-                    if (filtered.length === 0) return (
-                      <tr><td colSpan={7} className="text-center text-gray-400 py-10">
-                        {(bankTxs as any[]).length === 0 ? "本月尚無銀行明細，請先匯入" : "無符合篩選條件的資料"}
-                      </td></tr>
+                    if (filtered.length === 0) return emptyRow(7,
+                      (bankTxs as any[]).length === 0 ? "本月尚無銀行明細，請先匯入" : "無符合篩選條件的資料"
                     );
                     return filtered.map((tx: any) => {
                       const isConfirmed = !!tx.confirmedBy;
                       const hasSuggestion = tx.matchedType && tx.matchedType !== "unmatched" && !isConfirmed;
                       return (
-                        <tr key={tx.id} className="border-b hover:bg-gray-50">
-                          <td className="p-3 text-xs text-gray-500">{tx.transactionDate}</td>
+                        <tr key={tx.id} style={{ borderTop: "1px solid var(--os-border-2)" }}
+                          onMouseEnter={e => trHover(e, true)} onMouseLeave={e => trHover(e, false)}>
+                          <td className="p-3 text-xs" style={{ color: "var(--os-text-3)" }}>{tx.transactionDate}</td>
                           <td className="p-3 text-xs max-w-[200px]">
-                            <div>{tx.summary}</div>
-                            {tx.note1 && <div className="text-gray-400">{tx.note1}</div>}
+                            <div style={{ color: "var(--os-text-1)" }}>{tx.summary}</div>
+                            {tx.note1 && <div style={{ color: "var(--os-text-3)" }}>{tx.note1}</div>}
                           </td>
-                          <td className="p-3 text-right text-red-600">{Number(tx.debit) > 0 ? fmtAmt(tx.debit) : "-"}</td>
-                          <td className="p-3 text-right text-green-600">{Number(tx.credit) > 0 ? fmtAmt(tx.credit) : "-"}</td>
-                          <td className="p-3 text-right text-xs text-gray-400">{Number(tx.balance) > 0 ? fmtAmt(tx.balance) : "-"}</td>
+                          <td className="p-3 text-right" style={{ color: "var(--os-danger)" }}>{Number(tx.debit) > 0 ? fmtAmt(tx.debit) : "-"}</td>
+                          <td className="p-3 text-right" style={{ color: "var(--os-success)" }}>{Number(tx.credit) > 0 ? fmtAmt(tx.credit) : "-"}</td>
+                          <td className="p-3 text-right text-xs" style={{ color: "var(--os-text-3)" }}>{Number(tx.balance) > 0 ? fmtAmt(tx.balance) : "-"}</td>
                           <td className="p-3 text-center">
                             {isConfirmed ? (
-                              <span className="text-xs px-2 py-0.5 rounded bg-green-100 text-green-700">已確認</span>
+                              <span style={{ fontSize: 12, padding: "1px 8px", borderRadius: 4, background: "var(--os-success-bg)", color: "var(--os-success)" }}>已確認</span>
                             ) : hasSuggestion ? (
-                              <span className="text-xs px-2 py-0.5 rounded bg-yellow-100 text-yellow-700">系統建議（{tx.matchScore ?? "?"}%）</span>
+                              <span style={{ fontSize: 12, padding: "1px 8px", borderRadius: 4, background: "var(--os-warning-bg)", color: "var(--os-warning)" }}>系統建議（{tx.matchScore ?? "?"}%）</span>
                             ) : (
-                              <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-500">未對帳</span>
+                              <span style={{ fontSize: 12, padding: "1px 8px", borderRadius: 4, background: "var(--os-surface-2)", color: "var(--os-text-3)" }}>未對帳</span>
                             )}
                           </td>
                           <td className="p-3 text-center">
@@ -447,10 +479,12 @@ export default function OSAccounting() {
                 </tbody>
               </table>
             </div>
-          </TabsContent>
+          </div>
+        )}
 
-          {/* ── Tab3 退佣管理 ─────────────────────────────────── */}
-          <TabsContent value="rebate" className="space-y-3 mt-3">
+        {/* ── Tab: 退佣管理 ─────────────────────────────────── */}
+        {tab === "rebate" && (
+          <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <MonthInput />
               <div className="ml-auto">
@@ -466,49 +500,40 @@ export default function OSAccounting() {
                 { name: "伯享", rule: "差價退佣（人工輸入）" },
                 { name: "韓濟", rule: "差價退佣，直接抵貨款" },
               ].map(r => (
-                <div key={r.name} className="bg-white rounded-xl p-3 shadow-sm">
-                  <p className="font-medium text-sm text-gray-700 mb-1">{r.name}</p>
-                  <p className="text-xs text-gray-500">{r.rule}</p>
+                <div key={r.name} style={{ background: "var(--os-surface)", border: "1px solid var(--os-border)", borderRadius: 10, padding: "12px 16px" }}>
+                  <p style={{ fontWeight: 600, fontSize: 13, color: "var(--os-text-1)", marginBottom: 4 }}>{r.name}</p>
+                  <p style={{ fontSize: 12, color: "var(--os-text-3)" }}>{r.rule}</p>
                 </div>
               ))}
             </div>
-            <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
+            <div style={{ ...panelSt }}>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b text-xs text-gray-500 bg-gray-50">
-                    <th className="text-left p-3">廠商</th><th className="text-left p-3">月份</th>
-                    <th className="text-left p-3">計算方式</th><th className="text-right p-3">基準金額</th>
-                    <th className="text-right p-3">退佣金額</th><th className="text-right p-3">手續費</th>
-                    <th className="text-right p-3">實收退佣</th><th className="text-center p-3">狀態</th>
-                    <th className="text-center p-3">操作</th>
+                  <tr style={{ background: "var(--os-surface-2)", borderBottom: "1px solid var(--os-border)" }}>
+                    {["廠商","月份","計算方式","基準金額","退佣金額","手續費","實收退佣","狀態","操作"].map((h, i) => (
+                      <th key={h} className={i < 3 ? "text-left p-3" : "text-right p-3"} style={{ ...thSt, textAlign: i === 7 || i === 8 ? "center" : undefined }}>{h}</th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {(rebates as any[]).length === 0 ? (
-                    <tr><td colSpan={9} className="text-center text-gray-400 py-10">
-                      本月尚無退佣資料，請先點擊「計算本月退佣」
-                    </td></tr>
-                  ) : (rebates as any[]).map((r: any) => (
-                    <tr key={r.id} className="border-b hover:bg-gray-50">
-                      <td className="p-3 font-medium">{r.supplierName}</td>
-                      <td className="p-3 text-gray-500">{r.month}</td>
-                      <td className="p-3 text-xs text-gray-500">
+                  {(rebates as any[]).length === 0 ? emptyRow(9, "本月尚無退佣資料，請先點擊「計算本月退佣」") : (rebates as any[]).map((r: any) => (
+                    <tr key={r.id} style={{ borderTop: "1px solid var(--os-border-2)" }}
+                      onMouseEnter={e => trHover(e, true)} onMouseLeave={e => trHover(e, false)}>
+                      <td className="p-3 font-medium" style={{ color: "var(--os-text-1)" }}>{r.supplierName}</td>
+                      <td className="p-3" style={{ color: "var(--os-text-3)" }}>{r.month}</td>
+                      <td className="p-3 text-xs" style={{ color: "var(--os-text-3)" }}>
                         {r.rebateType === "percentage" ? "百分比（÷1.12）" : r.rebateType === "offset" ? "抵貨款" : "人工輸入"}
                       </td>
                       <td className="p-3 text-right">{fmtAmt(r.baseAmount)}</td>
                       <td className="p-3 text-right">{fmtAmt(r.rebateAmount)}</td>
-                      <td className="p-3 text-right text-gray-400">{Number(r.handlingFee) > 0 ? fmtAmt(r.handlingFee) : "-"}</td>
+                      <td className="p-3 text-right" style={{ color: "var(--os-text-3)" }}>{Number(r.handlingFee) > 0 ? fmtAmt(r.handlingFee) : "-"}</td>
                       <td className="p-3 text-right font-medium">{fmtAmt(r.netRebate)}</td>
                       <td className="p-3 text-center"><StatusBadge cfg={REBATE_BADGE} value={r.status ?? "pending"} /></td>
-                      <td className="p-3 text-center space-x-1">
+                      <td className="p-3 text-center">
                         {(r.rebateType === "manual" || r.rebateType === "offset" || r.status === "pending") && (
                           <Button size="sm" variant="outline" className="h-7 text-xs"
                             onClick={() => { setRebateTarget(r); setRebateManualAmt(String(r.rebateAmount ?? "")); setRebateBankRef(r.bankRef ?? ""); setShowRebateEdit(true); }}>
-                            {r.rebateType === "manual"
-                              ? "人工輸入金額"
-                              : r.rebateType === "offset"
-                              ? "登記抵貨款"
-                              : "登記收款"}
+                            {r.rebateType === "manual" ? "人工輸入金額" : r.rebateType === "offset" ? "登記抵貨款" : "登記收款"}
                           </Button>
                         )}
                       </td>
@@ -517,10 +542,12 @@ export default function OSAccounting() {
                 </tbody>
               </table>
             </div>
-          </TabsContent>
+          </div>
+        )}
 
-          {/* ── Tab4 提貨調貨 ─────────────────────────────────── */}
-          <TabsContent value="transfer" className="space-y-3 mt-3">
+        {/* ── Tab: 提貨調貨 ─────────────────────────────────── */}
+        {tab === "transfer" && (
+          <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <MonthInput />
               <div className="ml-auto flex gap-2">
@@ -532,7 +559,7 @@ export default function OSAccounting() {
                   onClick={() => { setTransferDate(new Date().toISOString().slice(0, 10)); setShowNewTransfer(true); }}>
                   <Plus className="w-3.5 h-3.5" /> 新增一筆
                 </Button>
-                <Button size="sm" className="h-8 text-xs" style={{ background: "#b45309" }}
+                <Button size="sm" className="h-8 text-xs text-white" style={amberBtn}
                   onClick={() => setShowBillConfirm(true)}>
                   月底結算開帳
                 </Button>
@@ -544,57 +571,56 @@ export default function OSAccounting() {
               return (
                 <div className="flex flex-wrap gap-2">
                   {Array.from(storeMap.entries()).map(([s, amt]) => (
-                    <div key={s} className="bg-white rounded-lg px-3 py-2 shadow-sm text-sm">
-                      <span className="text-gray-500">{s}：</span>
-                      <span className="font-medium text-orange-700">{fmtAmt(amt)}</span>
+                    <div key={s} style={{ background: "var(--os-surface)", border: "1px solid var(--os-border)", borderRadius: 8, padding: "6px 12px", fontSize: 13 }}>
+                      <span style={{ color: "var(--os-text-3)" }}>{s}：</span>
+                      <span style={{ fontWeight: 600, color: "var(--os-amber-text)" }}>{fmtAmt(amt)}</span>
                     </div>
                   ))}
                 </div>
               );
             })()}
-            <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
+            <div style={{ ...panelSt }}>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b text-xs text-gray-500 bg-gray-50">
-                    <th className="text-left p-3">日期</th><th className="text-left p-3">收貨門市</th>
-                    <th className="text-left p-3">品名</th><th className="text-right p-3">數量</th>
-                    <th className="text-left p-3">單位</th><th className="text-right p-3">單價</th>
-                    <th className="text-right p-3">小計</th><th className="text-center p-3">狀態</th>
-                    <th className="text-center p-3">操作</th>
+                  <tr style={{ background: "var(--os-surface-2)", borderBottom: "1px solid var(--os-border)" }}>
+                    {["日期","收貨門市","品名","數量","單位","單價","小計","狀態","操作"].map((h, i) => (
+                      <th key={h} className={i < 2 || i === 4 ? "text-left p-3" : "text-right p-3"} style={{ ...thSt, textAlign: i === 7 || i === 8 ? "center" : undefined }}>{h}</th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {(transfers as any[]).length === 0 ? (
-                    <tr><td colSpan={9} className="text-center text-gray-400 py-10">本月尚無提貨調貨記錄</td></tr>
-                  ) : (transfers as any[]).map((t: any) => (
-                    <tr key={t.id} className="border-b hover:bg-gray-50">
-                      <td className="p-3 text-xs text-gray-500">{t.transferDate}</td>
-                      <td className="p-3">{t.toStore}</td>
-                      <td className="p-3">{t.productName}</td>
-                      <td className="p-3 text-right">{t.quantity}</td>
-                      <td className="p-3 text-gray-500">{t.unit}</td>
-                      <td className="p-3 text-right">{fmtAmt(t.unitPrice)}</td>
-                      <td className="p-3 text-right font-medium">{fmtAmt(t.amount)}</td>
-                      <td className="p-3 text-center">
-                        <span className={`text-xs px-2 py-0.5 rounded ${t.status === "billed" ? "bg-blue-100 text-blue-700" : t.status === "void" ? "bg-gray-100 text-gray-400" : "bg-gray-100 text-gray-600"}`}>
-                          {t.status === "billed" ? "已開帳" : t.status === "void" ? "已作廢" : "待結算"}
-                        </span>
-                      </td>
-                      <td className="p-3 text-center">
-                        {t.status === "pending" && (
-                          <Button size="sm" variant="outline" className="h-7 text-xs text-red-600 border-red-300"
-                            onClick={() => { if (confirm("確認作廢？")) voidTransfer.mutate({ id: t.id }); }}>
-                            作廢
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  {(transfers as any[]).length === 0 ? emptyRow(9, "本月尚無提貨調貨記錄") : (transfers as any[]).map((t: any) => {
+                    const bs = transferStatusBadge(t.status);
+                    return (
+                      <tr key={t.id} style={{ borderTop: "1px solid var(--os-border-2)" }}
+                        onMouseEnter={e => trHover(e, true)} onMouseLeave={e => trHover(e, false)}>
+                        <td className="p-3 text-xs" style={{ color: "var(--os-text-3)" }}>{t.transferDate}</td>
+                        <td className="p-3" style={{ color: "var(--os-text-1)" }}>{t.toStore}</td>
+                        <td className="p-3">{t.productName}</td>
+                        <td className="p-3 text-right">{t.quantity}</td>
+                        <td className="p-3" style={{ color: "var(--os-text-3)" }}>{t.unit}</td>
+                        <td className="p-3 text-right">{fmtAmt(t.unitPrice)}</td>
+                        <td className="p-3 text-right font-medium">{fmtAmt(t.amount)}</td>
+                        <td className="p-3 text-center">
+                          <span style={{ fontSize: 12, padding: "1px 8px", borderRadius: 4, background: bs.bg, color: bs.color }}>{bs.label}</span>
+                        </td>
+                        <td className="p-3 text-center">
+                          {t.status === "pending" && (
+                            <Button size="sm" variant="outline" className="h-7 text-xs"
+                              style={{ color: "var(--os-danger)", borderColor: "var(--os-danger-bg)" }}
+                              onClick={() => { if (confirm("確認作廢？")) voidTransfer.mutate({ id: t.id }); }}>
+                              作廢
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
-          </TabsContent>
-        </Tabs>
+          </div>
+        )}
       </div>
 
       {/* ═══ 登記付款 Dialog ══════════════════════════════════ */}
@@ -603,10 +629,10 @@ export default function OSAccounting() {
           <DialogHeader><DialogTitle>登記付款</DialogTitle></DialogHeader>
           {payTarget && (
             <div className="space-y-3 py-2">
-              <div className="bg-gray-50 rounded-lg p-2 text-sm">
-                <span className="text-gray-500">廠商：</span><strong>{payTarget.supplierName}</strong>
-                <span className="ml-4 text-gray-500">待付：</span>
-                <strong className="text-red-600">{fmtAmt(Number(payTarget.netPayable ?? payTarget.totalAmount) - Number(payTarget.paidAmount ?? 0))}</strong>
+              <div style={{ background: "var(--os-surface-2)", borderRadius: 8, padding: "8px 12px", fontSize: 13 }}>
+                <span style={{ color: "var(--os-text-3)" }}>廠商：</span><strong style={{ color: "var(--os-text-1)" }}>{payTarget.supplierName}</strong>
+                <span style={{ marginLeft: 16, color: "var(--os-text-3)" }}>待付：</span>
+                <strong style={{ color: "var(--os-danger)" }}>{fmtAmt(Number(payTarget.netPayable ?? payTarget.totalAmount) - Number(payTarget.paidAmount ?? 0))}</strong>
               </div>
               <div>
                 <Label className="text-xs">付款金額 *</Label>
@@ -624,7 +650,7 @@ export default function OSAccounting() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowPayDialog(false)}>取消</Button>
-            <Button style={{ background: "#b45309" }} disabled={!payAmt || markPaid.isPending}
+            <Button style={amberBtn} disabled={!payAmt || markPaid.isPending}
               onClick={() => {
                 if (!payTarget) return;
                 try { markPaid.mutate({ id: payTarget.id, paidAmount: Number(payAmt), bankRef: payBankRef || undefined, note: payNote || undefined }); }
@@ -639,14 +665,16 @@ export default function OSAccounting() {
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>匯入銀行明細 Excel</DialogTitle></DialogHeader>
           <div className="space-y-3 py-2">
-            <label className="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-orange-400 transition-colors">
-              <Upload className="w-5 h-5 text-gray-400 mb-1" />
-              <span className="text-sm text-gray-500">點擊選擇 .xlsx 銀行明細</span>
+            <label style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: "100%", height: 80, border: "2px dashed var(--os-border)", borderRadius: 10, cursor: "pointer" }}
+              onMouseEnter={e => (e.currentTarget.style.borderColor = "var(--os-amber)")}
+              onMouseLeave={e => (e.currentTarget.style.borderColor = "var(--os-border)")}>
+              <Upload style={{ width: 20, height: 20, color: "var(--os-text-3)", marginBottom: 4 }} />
+              <span style={{ fontSize: 13, color: "var(--os-text-3)" }}>點擊選擇 .xlsx 銀行明細</span>
               <input ref={bankFileRef} type="file" accept=".xlsx,.xls" className="hidden"
                 onChange={e => { const f = e.target.files?.[0]; if (f) parseBankExcel(f); }} />
             </label>
             {bankPreview.length > 0 && (
-              <div className="bg-gray-50 rounded-lg p-2 text-sm text-gray-600">
+              <div style={{ background: "var(--os-surface-2)", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "var(--os-text-2)" }}>
                 已解析 <strong>{bankPreview.length}</strong> 筆｜日期：{bankPreview[0]?.transactionDate} ～ {bankPreview[bankPreview.length - 1]?.transactionDate}
               </div>
             )}
@@ -657,7 +685,7 @@ export default function OSAccounting() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setShowBankImport(false); setBankPreview([]); }}>取消</Button>
-            <Button style={{ background: "#b45309" }} disabled={bankPreview.length === 0 || !bankBatchName || importBank.isPending}
+            <Button style={amberBtn} disabled={bankPreview.length === 0 || !bankBatchName || importBank.isPending}
               onClick={() => {
                 try { importBank.mutate({ importBatch: bankBatchName, rows: bankPreview }); }
                 catch (e: any) { toast.error(e.message); }
@@ -672,10 +700,10 @@ export default function OSAccounting() {
           <DialogHeader><DialogTitle>對帳確認</DialogTitle></DialogHeader>
           {matchTarget && (
             <div className="space-y-3 py-2">
-              <div className="bg-gray-50 rounded-lg p-2 text-sm">
-                <div><span className="text-gray-500">日期：</span>{matchTarget.transactionDate}</div>
-                <div><span className="text-gray-500">摘要：</span>{matchTarget.summary}</div>
-                <div><span className="text-gray-500">金額：</span>
+              <div style={{ background: "var(--os-surface-2)", borderRadius: 8, padding: "8px 12px", fontSize: 13 }}>
+                <div><span style={{ color: "var(--os-text-3)" }}>日期：</span>{matchTarget.transactionDate}</div>
+                <div><span style={{ color: "var(--os-text-3)" }}>摘要：</span>{matchTarget.summary}</div>
+                <div><span style={{ color: "var(--os-text-3)" }}>金額：</span>
                   {Number(matchTarget.debit) > 0 ? `支出 ${fmtAmt(matchTarget.debit)}` : `收入 ${fmtAmt(matchTarget.credit)}`}
                 </div>
               </div>
@@ -697,7 +725,7 @@ export default function OSAccounting() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowConfirmMatch(false)}>取消</Button>
-            <Button style={{ background: "#b45309" }} disabled={confirmMatchMut.isPending}
+            <Button style={amberBtn} disabled={confirmMatchMut.isPending}
               onClick={() => {
                 if (!matchTarget) return;
                 try { confirmMatchMut.mutate({ transactionId: matchTarget.id, matchedType: matchType as any, matchedId: matchTarget.matchedId ?? undefined }); }
@@ -725,7 +753,7 @@ export default function OSAccounting() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowRebateEdit(false)}>取消</Button>
-            <Button style={{ background: "#b45309" }} disabled={!rebateManualAmt || updateRebate.isPending}
+            <Button style={amberBtn} disabled={!rebateManualAmt || updateRebate.isPending}
               onClick={() => {
                 if (!rebateTarget) return;
                 try { updateRebate.mutate({ id: rebateTarget.id, rebateAmount: Number(rebateManualAmt), bankRef: rebateBankRef || undefined, status: "received" }); }
@@ -766,7 +794,7 @@ export default function OSAccounting() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowNewTransfer(false)}>取消</Button>
-            <Button style={{ background: "#b45309" }} disabled={!transferDate || !transferStore || !transferProduct || createTransfer.isPending}
+            <Button style={amberBtn} disabled={!transferDate || !transferStore || !transferProduct || createTransfer.isPending}
               onClick={() => {
                 try { createTransfer.mutate({ transferDate, toStore: transferStore, productName: transferProduct, quantity: transferQty, unit: transferUnit, unitPrice: transferPrice, note: transferNote || undefined }); }
                 catch (e: any) { toast.error(e.message); }
@@ -780,19 +808,23 @@ export default function OSAccounting() {
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>匯入提貨調貨明細 Excel</DialogTitle></DialogHeader>
           <div className="space-y-3 py-2">
-            <label className="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-orange-400 transition-colors">
-              <Upload className="w-5 h-5 text-gray-400 mb-1" />
-              <span className="text-sm text-gray-500">點擊選擇 .xlsx 提貨調貨明細</span>
+            <label style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: "100%", height: 80, border: "2px dashed var(--os-border)", borderRadius: 10, cursor: "pointer" }}
+              onMouseEnter={e => (e.currentTarget.style.borderColor = "var(--os-amber)")}
+              onMouseLeave={e => (e.currentTarget.style.borderColor = "var(--os-border)")}>
+              <Upload style={{ width: 20, height: 20, color: "var(--os-text-3)", marginBottom: 4 }} />
+              <span style={{ fontSize: 13, color: "var(--os-text-3)" }}>點擊選擇 .xlsx 提貨調貨明細</span>
               <input type="file" accept=".xlsx,.xls" className="hidden"
                 onChange={e => { const f = e.target.files?.[0]; if (f) parseTransferExcel(f); }} />
             </label>
             {transferPreview.length > 0 && (
-              <div className="bg-gray-50 rounded-lg p-2 text-sm text-gray-600">已解析 <strong>{transferPreview.length}</strong> 筆</div>
+              <div style={{ background: "var(--os-surface-2)", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "var(--os-text-2)" }}>
+                已解析 <strong>{transferPreview.length}</strong> 筆
+              </div>
             )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setShowTransferImport(false); setTransferPreview([]); }}>取消</Button>
-            <Button style={{ background: "#b45309" }} disabled={transferPreview.length === 0 || importTransfersMut.isPending}
+            <Button style={amberBtn} disabled={transferPreview.length === 0 || importTransfersMut.isPending}
               onClick={() => {
                 try { importTransfersMut.mutate({ month, rows: transferPreview }); }
                 catch (e: any) { toast.error(e.message); }
@@ -805,13 +837,13 @@ export default function OSAccounting() {
       <Dialog open={showBillConfirm} onOpenChange={setShowBillConfirm}>
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>月底結算開帳</DialogTitle></DialogHeader>
-          <p className="text-sm text-gray-600 py-2">
+          <p style={{ fontSize: 13, color: "var(--os-text-2)", padding: "8px 0" }}>
             確認要將本月（{month}）所有「待結算」的提貨調貨開立帳款嗎？<br />
             開帳後可至「加盟主帳款」頁面確認。
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowBillConfirm(false)}>取消</Button>
-            <Button style={{ background: "#b45309" }} disabled={billTransfers.isPending || !month}
+            <Button style={amberBtn} disabled={billTransfers.isPending || !month}
               onClick={() => {
                 try { billTransfers.mutate({ month }); }
                 catch (e: any) { toast.error(e.message); }
@@ -851,7 +883,7 @@ export default function OSAccounting() {
             <div>
               <Label>備註（選填）</Label>
               <textarea
-                className="w-full border rounded-md p-2 text-sm mt-1 min-h-[72px] resize-none focus:outline-none focus:ring-1 focus:ring-amber-500"
+                style={{ width: "100%", border: "1px solid var(--os-border)", borderRadius: 6, padding: 8, fontSize: 13, minHeight: 72, resize: "none", background: "var(--os-surface)", color: "var(--os-text-1)", outline: "none" }}
                 value={cpNote}
                 onChange={e => setCpNote(e.target.value)}
               />
@@ -874,7 +906,7 @@ export default function OSAccounting() {
                 });
               }}
               disabled={createPayable.isPending}
-              className="bg-amber-700 hover:bg-amber-800 text-white"
+              style={amberBtn}
             >
               {createPayable.isPending ? "新增中…" : "新增"}
             </Button>
