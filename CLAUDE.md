@@ -1,6 +1,6 @@
 # CLAUDE.md — OrderSome 專案主腦
 
-### Dayone 真資料閉環交接（2026-04-25 v6.12 / app v1.1.0）
+### Dayone 真資料閉環交接（2026-04-25 v6.19 / app v1.1.0）
 
 **這輪已完成**
 - 已直接連線 TiDB `ordersome`，確認 Dayone 租戶為 `tenantId=90004 / dayone-eggs`
@@ -63,18 +63,18 @@
 | 優先 | 頁面 | 路由 | 狀態 |
 |------|------|------|------|
 | 1 | AdminDashboardLayout.tsx | （全域 Shell） | done（v6.05 Warm Paper 暖色側邊欄+OKLCH token） |
-| 2 | OSProducts.tsx | /dashboard/products | pending |
-| 3 | OSProcurement.tsx | /dashboard/procurement | pending |
-| 4 | OSInventory.tsx | /dashboard/inventory | pending |
-| 5 | OSDailyReport.tsx | /dashboard/daily-report | pending |
-| 6 | OSProfitLoss.tsx | /dashboard/profit-loss | pending |
-| 7 | OSPurchasing.tsx | /dashboard/purchasing | pending |
-| 8 | OSAccounting.tsx | /dashboard/accounting | pending |
-| 9 | OSRebate.tsx | /dashboard/rebate | pending |
-| 10 | OSDelivery.tsx | /dashboard/delivery | pending |
-| 11 | OSCustomers.tsx | /dashboard/customers | pending |
-| 12 | FranchiseDashboard / Franchisees / FranchiseInquiries | /dashboard/franchise* | pending |
-| 13 | AdminUsers / AdminPermissions / AdminTenants | /dashboard/admin-* | pending |
+| 2 | OSProducts.tsx | /dashboard/products | done（v6.08） |
+| 3 | OSProcurement.tsx | /dashboard/procurement | done（v6.09） |
+| 4 | OSInventory.tsx | /dashboard/inventory | done（v6.10） |
+| 5 | OSDailyReport.tsx | /dashboard/daily-report | done（v6.11） |
+| 6 | OSProfitLoss.tsx | /dashboard/profit-loss | done（v6.12） |
+| 7 | OSPurchasing.tsx | /dashboard/purchasing | done（v6.13） |
+| 8 | OSAccounting.tsx | /dashboard/accounting | done（v6.14） |
+| 9 | OSRebate.tsx | /dashboard/rebate | done（v6.15） |
+| 10 | OSDelivery.tsx | /dashboard/delivery | done（v6.16） |
+| 11 | OSCustomers.tsx | /dashboard/customers | done（v6.17） |
+| 12 | FranchiseDashboard / Franchisees / FranchiseInquiries | /dashboard/franchise* | done（v6.18） |
+| 13 | AdminUsers / AdminPermissions / AdminTenants / AdminSopPermissions | /dashboard/admin-* | done（v6.19） |
 | 14 | ContentManagement / ContentEditor / AIWriter | /dashboard/content* | pending |
 | 15 | SOPKnowledgeBase / DailyChecklist / EquipmentRepairs / OSScheduling | 其餘 | pending |
 
