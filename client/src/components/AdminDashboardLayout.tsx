@@ -169,16 +169,32 @@ export default function AdminDashboardLayout({
   const { loading, user, logout } = useAuth();
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({
-    "商城管理": true,
-    "內容管理": true,
-    "人員管理": true,
-    "加盟管理": true,
-    "Super Admin": true,
-    "來點什麼": true,
-    "大永蛋品 ERP": true,
-    "其他": true,
-  });
+  // 根據當前路由自動展開對應群組，其他收合
+  const getInitialCollapsed = (loc: string): Record<string, boolean> => {
+    const ecommercePaths = ["/dashboard/admin/ecommerce", "/dashboard/admin/products", "/dashboard/admin/categories", "/dashboard/admin/orders"];
+    const contentPaths   = ["/dashboard/content", "/dashboard/ai-writer"];
+    const userPaths      = ["/dashboard/admin/users", "/dashboard/admin/permissions", "/dashboard/admin/sop-permissions"];
+    const franchisePaths = ["/dashboard/franchise-inquiries", "/dashboard/franchisees", "/dashboard/franchisee-payments"];
+    const systemPaths    = ["/super-admin/tenants", "/super-admin/modules"];
+    const osPaths        = ["/dashboard/purchasing", "/dashboard/inventory", "/dashboard/products", "/dashboard/ca-menu",
+                            "/dashboard/delivery", "/dashboard/accounting", "/dashboard/rebate", "/dashboard/profit-loss",
+                            "/dashboard/daily-report", "/dashboard/scheduling", "/dashboard/sop", "/dashboard/repairs", "/dashboard/checklist"];
+    const dyPaths        = ["/dayone", "/dayone/orders", "/dayone/customers", "/dayone/drivers", "/dayone/products",
+                            "/dayone/inventory", "/dayone/purchase", "/dayone/districts", "/dayone/liff-orders",
+                            "/dayone/dispatch", "/dayone/purchase-receipts", "/dayone/ar"];
+    const matchGroup = (paths: string[]) => paths.some(p => loc === p || loc.startsWith(p + "/"));
+    return {
+      "商城管理":    !matchGroup(ecommercePaths),
+      "內容管理":    !matchGroup(contentPaths),
+      "人員管理":    !matchGroup(userPaths),
+      "加盟管理":    !matchGroup(franchisePaths),
+      "Super Admin": !matchGroup(systemPaths),
+      "來點什麼":    !matchGroup(osPaths),
+      "大永蛋品 ERP":!matchGroup(dyPaths),
+      "其他":        loc === "/",
+    };
+  };
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(() => getInitialCollapsed(location));
   const toggleGroup = (label: string) =>
     setCollapsedGroups(prev => ({ ...prev, [label]: !prev[label] }));
   const [isDragMode, setIsDragMode] = useState(false);
