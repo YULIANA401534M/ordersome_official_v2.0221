@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { trpc } from "../../lib/trpc";
-import { Shield, Search, X, Check, ToggleLeft, ToggleRight } from "lucide-react";
+import { Shield, Search, X, Check, ToggleRight } from "lucide-react";
 import AdminDashboardLayout from "@/components/AdminDashboardLayout";
 import { useAuth } from "../../_core/hooks/useAuth";
 
-// Available system permissions
 const AVAILABLE_PERMISSIONS = [
   { id: "view_finance",      label: "查看財務報表",   description: "可查看營收、成本等財務數據" },
   { id: "manage_users",      label: "管理用戶",       description: "可編輯用戶資料、角色、權限" },
@@ -23,24 +22,37 @@ const FRANCHISEE_FEATURES = [
   { key: "contract_documents",    label: "合約文件" },
 ] as const;
 
+const thSt: React.CSSProperties = { padding: "10px 16px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "var(--os-text-3)", textTransform: "uppercase", letterSpacing: "0.06em", background: "var(--os-surface-2)", borderBottom: "1px solid var(--os-border)" };
+const inputSt: React.CSSProperties = { width: "100%", padding: "8px 12px", border: "1px solid var(--os-border)", borderRadius: 8, fontSize: 13, background: "var(--os-surface)", color: "var(--os-text-1)", outline: "none" };
+
 function FlagToggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   return (
-    <button
-      type="button"
-      onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none cursor-pointer ${checked ? "bg-amber-600" : "bg-gray-200"}`}
-    >
-      <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ${checked ? "translate-x-4" : "translate-x-0"}`} />
+    <button type="button" onClick={() => onChange(!checked)}
+      style={{
+        position: "relative", display: "inline-flex", width: 36, height: 20, flexShrink: 0,
+        borderRadius: 10, border: "none", cursor: "pointer",
+        background: checked ? "var(--os-amber)" : "var(--os-surface-2)",
+        transition: "background 0.2s",
+      }}>
+      <span style={{
+        position: "absolute", top: 2, left: checked ? 18 : 2,
+        width: 16, height: 16, borderRadius: "50%", background: "#fff",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.2)", transition: "left 0.2s",
+      }} />
     </button>
   );
 }
+
+const ROLE_DISPLAY: Record<string, string> = {
+  super_admin: "超級管理員", manager: "管理者", franchisee: "加盟主",
+  store_manager: "門市店長", staff: "員工", customer: "一般會員", driver: "司機",
+};
 
 export default function AdminPermissions() {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [editingUser, setEditingUser] = useState<any>(null);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
-  // Track pending flag changes: userId → featureKey → isEnabled
   const [pendingFlags, setPendingFlags] = useState<Record<number, Record<string, boolean>>>({});
 
   const { user: currentUser } = useAuth();
@@ -49,20 +61,13 @@ export default function AdminPermissions() {
   const utils = trpc.useUtils();
   const { data: users, isLoading, refetch } = trpc.admin.listUsers.useQuery();
   const updateUserMutation = trpc.admin.updateUser.useMutation({
-    onSuccess: () => {
-      refetch();
-      utils.auth.me.invalidate();
-      setEditingUser(null);
-    },
+    onSuccess: () => { refetch(); utils.auth.me.invalidate(); setEditingUser(null); },
   });
   const setFlagMutation = trpc.admin.setFranchiseeFlag.useMutation({
     onSuccess: () => { allFlagsQuery.refetch(); },
   });
 
-  // Load all franchisee flags for the quick-edit section
-  const allFlagsQuery = trpc.admin.getAllFranchiseeFlags.useQuery(undefined, {
-    enabled: isSuperAdmin,
-  });
+  const allFlagsQuery = trpc.admin.getAllFranchiseeFlags.useQuery(undefined, { enabled: isSuperAdmin });
 
   const filteredUsers = users?.filter((user) => {
     const matchesSearch =
@@ -105,10 +110,8 @@ export default function AdminPermissions() {
     await setFlagMutation.mutateAsync({ userId, featureKey: featureKey as any, isEnabled: newVal });
   };
 
-  const getFlagValue = (userId: number, featureKey: string, serverFlags: Record<string, boolean>) => {
-    // Pending local state takes priority
-    return pendingFlags[userId]?.[featureKey] ?? serverFlags[featureKey] ?? false;
-  };
+  const getFlagValue = (userId: number, featureKey: string, serverFlags: Record<string, boolean>) =>
+    pendingFlags[userId]?.[featureKey] ?? serverFlags[featureKey] ?? false;
 
   const getPermissionBadges = (permissions: any) => {
     let permissionList: string[] = [];
@@ -118,14 +121,14 @@ export default function AdminPermissions() {
       permissionList = permissions;
     }
     if (permissionList.length === 0) {
-      return <span className="text-gray-400 text-sm">無特殊權限</span>;
+      return <span style={{ fontSize: 12, color: "var(--os-text-3)" }}>無特殊權限</span>;
     }
     return (
-      <div className="flex flex-wrap gap-2">
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
         {permissionList.map((perm) => {
           const permInfo = AVAILABLE_PERMISSIONS.find((p) => p.id === perm);
           return (
-            <span key={perm} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+            <span key={perm} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 4, background: "var(--os-info-bg)", color: "var(--os-info)" }}>
               {permInfo?.label || perm}
             </span>
           );
@@ -137,8 +140,8 @@ export default function AdminPermissions() {
   if (isLoading) {
     return (
       <AdminDashboardLayout>
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <div className="text-gray-600">載入中...</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 400, color: "var(--os-text-3)", fontSize: 14 }}>
+          載入中...
         </div>
       </AdminDashboardLayout>
     );
@@ -146,195 +149,171 @@ export default function AdminPermissions() {
 
   return (
     <AdminDashboardLayout>
-      <div className="py-4">
-        <div className="max-w-7xl mx-auto">
+      <div style={{ background: "var(--os-bg)", minHeight: "100vh", padding: 20 }} className="space-y-5">
 
-          {/* Header */}
-          <div className="mb-8">
-            <div className="flex items-center gap-3 mb-2">
-              <Shield className="h-8 w-8 text-blue-600" />
-              <h1 className="text-3xl font-bold text-gray-900">權限管理</h1>
+        {/* Header */}
+        <div>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--os-text-1)", margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+            <Shield style={{ width: 20, height: 20, color: "var(--os-amber)" }} />權限管理
+          </h1>
+          <p style={{ fontSize: 13, color: "var(--os-text-3)", marginTop: 2 }}>管理所有用戶的細緻權限設定</p>
+        </div>
+
+        {/* Filters */}
+        <div style={{ background: "var(--os-surface)", border: "1px solid var(--os-border)", borderRadius: 10, padding: "14px 16px" }}>
+          <div className="grid md:grid-cols-2 gap-3">
+            <div style={{ position: "relative" }}>
+              <Search style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", width: 15, height: 15, color: "var(--os-text-3)" }} />
+              <input type="text" placeholder="搜尋姓名或 Email..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ ...inputSt, paddingLeft: 34 }} />
             </div>
-            <p className="text-gray-600">管理所有用戶的細緻權限設定</p>
+            <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} style={{ ...inputSt, appearance: "none" }}>
+              <option value="all">所有角色</option>
+              <option value="super_admin">超級管理員</option>
+              <option value="manager">管理者</option>
+              <option value="franchisee">加盟主</option>
+              <option value="store_manager">門市店長</option>
+              <option value="staff">員工</option>
+              <option value="customer">一般會員</option>
+            </select>
           </div>
+        </div>
 
-          {/* Filters */}
-          <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="搜尋姓名或 Email..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+        {/* Users Table */}
+        <div style={{ background: "var(--os-surface)", border: "1px solid var(--os-border)", borderRadius: 10, overflow: "hidden" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                {["用戶", "角色", "系統權限", "操作"].map(h => <th key={h} style={thSt}>{h}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {filteredUsers?.map((user) => (
+                <tr key={user.id}
+                  onMouseEnter={e => (e.currentTarget.style.background = "var(--os-amber-soft)")}
+                  onMouseLeave={e => (e.currentTarget.style.background = "")}
+                  style={{ borderBottom: "1px solid var(--os-border-2)", transition: "background 0.12s" }}>
+                  <td style={{ padding: "12px 16px" }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--os-text-1)" }}>{user.name || "未設定"}</div>
+                    <div style={{ fontSize: 12, color: "var(--os-text-3)" }}>{user.email}</div>
+                  </td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 4, background: "var(--os-surface-2)", color: "var(--os-text-2)", fontWeight: 600 }}>
+                      {ROLE_DISPLAY[user.role] ?? user.role}
+                    </span>
+                  </td>
+                  <td style={{ padding: "12px 16px" }}>{getPermissionBadges(user.permissions)}</td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <button onClick={() => handleEditPermissions(user)}
+                      style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, color: "var(--os-info)" }}>
+                      編輯權限
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Franchisee feature flags (super_admin only) */}
+        {isSuperAdmin && (
+          <div style={{ background: "var(--os-surface)", border: "1px solid var(--os-border)", borderRadius: 10, overflow: "hidden" }}>
+            <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--os-border)", background: "var(--os-amber-soft)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <ToggleRight style={{ width: 18, height: 18, color: "var(--os-amber-text)" }} />
+                <h2 style={{ fontSize: 15, fontWeight: 700, color: "var(--os-text-1)", margin: 0 }}>加盟主個別功能設定</h2>
               </div>
-              <select
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="all">所有角色</option>
-                <option value="super_admin">超級管理員</option>
-                <option value="manager">管理者</option>
-                <option value="franchisee">加盟主</option>
-                <option value="store_manager">門市店長</option>
-                <option value="staff">員工</option>
-                <option value="customer">一般會員</option>
-              </select>
+              <p style={{ fontSize: 12, color: "var(--os-text-3)", marginTop: 4 }}>直接控制每位加盟主可存取的功能模組，變更即時生效</p>
             </div>
-          </div>
 
-          {/* Users Table */}
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden mb-10">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">用戶</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">角色</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">系統權限</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {filteredUsers?.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4">
-                        <div>
-                          <div className="font-medium text-gray-900">{user.name || "未設定"}</div>
-                          <div className="text-sm text-gray-500">{user.email}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full">
-                          {user.role === "super_admin"   && "超級管理員"}
-                          {user.role === "manager"       && "管理者"}
-                          {user.role === "franchisee"    && "加盟主"}
-                          {user.role === "store_manager" && "門市店長"}
-                          {user.role === "staff"         && "員工"}
-                          {user.role === "customer"      && "一般會員"}
-                          {user.role === "driver"        && "司機"}
+            {allFlagsQuery.isLoading ? (
+              <div style={{ padding: "32px 0", textAlign: "center", color: "var(--os-text-3)", fontSize: 13 }}>載入中...</div>
+            ) : allFlagsQuery.data?.length === 0 ? (
+              <div style={{ padding: "32px 0", textAlign: "center", color: "var(--os-text-3)", fontSize: 13 }}>目前沒有加盟主帳號</div>
+            ) : (
+              <div>
+                {allFlagsQuery.data?.map(({ user, flags }: { user: any; flags: any }) => (
+                  <div key={user.id} style={{ padding: "16px 20px", borderBottom: "1px solid var(--os-border-2)" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                      <div style={{ width: 34, height: 34, borderRadius: "50%", background: "var(--os-amber-soft)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <span style={{ color: "var(--os-amber-text)", fontWeight: 700, fontSize: 13 }}>
+                          {(user.name || user.email || "?")[0].toUpperCase()}
                         </span>
-                      </td>
-                      <td className="px-6 py-4">{getPermissionBadges(user.permissions)}</td>
-                      <td className="px-6 py-4">
-                        <button onClick={() => handleEditPermissions(user)} className="text-blue-600 hover:text-blue-800 font-medium text-sm">
-                          編輯權限
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* ── 加盟主個別功能設定（super_admin only） ── */}
-          {isSuperAdmin && (
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200 bg-orange-50">
-                <div className="flex items-center gap-2">
-                  <ToggleRight className="w-5 h-5 text-orange-600" />
-                  <h2 className="text-lg font-bold text-gray-900">加盟主個別功能設定</h2>
-                </div>
-                <p className="text-sm text-gray-500 mt-1">直接控制每位加盟主可存取的功能模組，變更即時生效</p>
-              </div>
-
-              {allFlagsQuery.isLoading ? (
-                <div className="p-8 text-center text-gray-400 text-sm">載入中...</div>
-              ) : allFlagsQuery.data?.length === 0 ? (
-                <div className="p-8 text-center text-gray-400 text-sm">目前沒有加盟主帳號</div>
-              ) : (
-                <div className="divide-y divide-gray-100">
-                  {allFlagsQuery.data?.map(({ user, flags }: { user: any; flags: any }) => (
-                    <div key={user.id} className="px-6 py-4">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <span className="text-orange-700 font-semibold text-sm">
-                            {(user.name || user.email || "?")[0].toUpperCase()}
-                          </span>
-                        </div>
-                        <div>
-                          <div className="text-sm font-semibold text-gray-900">{user.name || "未設定"}</div>
-                          <div className="text-xs text-gray-500">{user.email}{user.storeId ? ` · ${user.storeId}` : ""}</div>
-                        </div>
                       </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-                        {FRANCHISEE_FEATURES.map((feat) => {
-                          const enabled = getFlagValue(user.id, feat.key, flags);
-                          const isSaving = setFlagMutation.isPending;
-                          return (
-                            <div
-                              key={feat.key}
-                              className={`flex flex-col items-center gap-1.5 p-2 rounded-lg border text-center transition ${enabled ? "bg-amber-50 border-amber-200" : "bg-gray-50 border-gray-200"}`}
-                            >
-                              <span className="text-xs text-gray-600 leading-tight">{feat.label}</span>
-                              <FlagToggle
-                                checked={enabled}
-                                onChange={(v) => handleFlagToggle(user.id, feat.key, v)}
-                              />
-                            </div>
-                          );
-                        })}
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--os-text-1)" }}>{user.name || "未設定"}</div>
+                        <div style={{ fontSize: 11, color: "var(--os-text-3)" }}>{user.email}{user.storeId ? ` · ${user.storeId}` : ""}</div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Edit Permissions Modal */}
-          {editingUser && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-              <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900">編輯系統權限</h2>
-                    <p className="text-sm text-gray-600 mt-1">{editingUser.name} ({editingUser.email})</p>
-                  </div>
-                  <button onClick={() => setEditingUser(null)} className="text-gray-400 hover:text-gray-600"><X className="h-6 w-6" /></button>
-                </div>
-                <div className="p-6">
-                  <div className="space-y-4">
-                    {AVAILABLE_PERMISSIONS.map((permission) => (
-                      <div
-                        key={permission.id}
-                        className="flex items-start gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
-                        onClick={() => handleTogglePermission(permission.id)}
-                      >
-                        <div className="flex-shrink-0 mt-1">
-                          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${selectedPermissions.includes(permission.id) ? "bg-blue-600 border-blue-600" : "border-gray-300"}`}>
-                            {selectedPermissions.includes(permission.id) && <Check className="h-4 w-4 text-white" />}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                      {FRANCHISEE_FEATURES.map((feat) => {
+                        const enabled = getFlagValue(user.id, feat.key, flags);
+                        return (
+                          <div key={feat.key} style={{
+                            display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+                            padding: "8px 10px", borderRadius: 8, border: "1px solid",
+                            borderColor: enabled ? "var(--os-amber-soft)" : "var(--os-border)",
+                            background: enabled ? "var(--os-amber-soft)" : "var(--os-surface-2)",
+                            textAlign: "center", transition: "all 0.15s",
+                          }}>
+                            <span style={{ fontSize: 11, color: "var(--os-text-2)", lineHeight: 1.3 }}>{feat.label}</span>
+                            <FlagToggle checked={enabled} onChange={(v) => handleFlagToggle(user.id, feat.key, v)} />
                           </div>
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-medium text-gray-900">{permission.label}</div>
-                          <div className="text-sm text-gray-600">{permission.description}</div>
-                        </div>
-                      </div>
-                    ))}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
-                  <button onClick={() => setEditingUser(null)} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition">取消</button>
-                  <button
-                    onClick={handleSavePermissions}
-                    disabled={updateUserMutation.isPending}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
-                  >
-                    {updateUserMutation.isPending ? "儲存中..." : "儲存"}
-                  </button>
-                </div>
+                ))}
               </div>
-            </div>
-          )}
-
-        </div>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Edit Permissions Modal */}
+      {editingUser && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 16 }}>
+          <div style={{ background: "var(--os-surface)", borderRadius: 12, maxWidth: 560, width: "100%", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
+            <div style={{ padding: "20px 24px", borderBottom: "1px solid var(--os-border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div>
+                <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--os-text-1)", margin: 0 }}>編輯系統權限</h2>
+                <p style={{ fontSize: 12, color: "var(--os-text-3)", marginTop: 4 }}>{editingUser.name} ({editingUser.email})</p>
+              </div>
+              <button onClick={() => setEditingUser(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--os-text-3)" }}><X style={{ width: 20, height: 20 }} /></button>
+            </div>
+            <div style={{ padding: 24 }} className="space-y-3">
+              {AVAILABLE_PERMISSIONS.map((permission) => {
+                const active = selectedPermissions.includes(permission.id);
+                return (
+                  <div key={permission.id}
+                    onClick={() => handleTogglePermission(permission.id)}
+                    style={{
+                      display: "flex", alignItems: "flex-start", gap: 12, padding: "12px 14px",
+                      border: "1px solid", borderColor: active ? "var(--os-amber)" : "var(--os-border)",
+                      borderRadius: 8, cursor: "pointer", background: active ? "var(--os-amber-soft)" : "var(--os-surface-2)",
+                      transition: "all 0.15s",
+                    }}>
+                    <div style={{ width: 20, height: 20, borderRadius: 4, border: "2px solid", flexShrink: 0, marginTop: 1, display: "flex", alignItems: "center", justifyContent: "center", borderColor: active ? "var(--os-amber)" : "var(--os-border)", background: active ? "var(--os-amber)" : "transparent" }}>
+                      {active && <Check style={{ width: 13, height: 13, color: "#fff" }} />}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--os-text-1)" }}>{permission.label}</div>
+                      <div style={{ fontSize: 12, color: "var(--os-text-3)", marginTop: 2 }}>{permission.description}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ padding: "16px 24px", borderTop: "1px solid var(--os-border)", display: "flex", justifyContent: "flex-end", gap: 10 }}>
+              <button onClick={() => setEditingUser(null)} style={{ padding: "8px 20px", border: "1px solid var(--os-border)", borderRadius: 8, background: "var(--os-surface)", color: "var(--os-text-2)", fontSize: 13, cursor: "pointer" }}>取消</button>
+              <button onClick={handleSavePermissions} disabled={updateUserMutation.isPending}
+                style={{ padding: "8px 20px", borderRadius: 8, border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer", background: "var(--os-amber)", color: "#fff", opacity: updateUserMutation.isPending ? 0.6 : 1 }}>
+                {updateUserMutation.isPending ? "儲存中..." : "儲存"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminDashboardLayout>
   );
 }
