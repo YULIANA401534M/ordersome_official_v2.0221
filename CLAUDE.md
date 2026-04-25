@@ -40,6 +40,76 @@
 - 若要擴充規格，優先往多司機、多派車單、跨日月結對帳與更多異常情境測
 
 
+### 後台改版任務（v6.04 起，目前進行中）
+
+**背景**
+使用者確認：宇聯後台 + 大永後台 + 商城，三個系統都需要前端改版。
+這是下一個主要任務階段，優先於後端新功能開發。
+
+**改版方向**
+| 系統 | 風格定位 | 關鍵問題 |
+|------|---------|---------|
+| 宇聯後台 `/dashboard/` | 暖色系、高質感、好閱讀、讓工作變快樂 | 各頁面風格不一致、RWD 跑版、按鈕/輸入框沒有連動、欄位名稱錯誤 |
+| 大永後台 `/dayone/` | 沿用現有深色系但需統一，dispatch 頁是目前最好的參考 | 字型/間距/排版/RWD 問題，各頁面不統一 |
+| 商城 `/shop/` | 貼近品牌暖黃，乾淨購物體驗 | 尚未開始改版 |
+
+**執行策略**
+1. 先用 `/impeccable teach` 建立三套設計規範（宇聯後台 / 大永後台 / 商城），寫入 PRODUCT.md + DESIGN.md
+2. 宇聯後台先改 Layout Shell（`AdminDashboardLayout.tsx`），確立全局 token 後再頁面逐一套用
+3. 大永後台以 `DayoneLayout.tsx` + `/dayone/dispatch` 為基準，對齊其他頁面
+4. 商城最後處理
+
+**宇聯後台頁面改版順序（tRPC 查詢邏輯和 Link href 路由一律不動）**
+| 優先 | 頁面 | 路由 | 狀態 |
+|------|------|------|------|
+| 1 | AdminDashboardLayout.tsx | （全域 Shell） | pending |
+| 2 | OSProducts.tsx | /dashboard/products | pending |
+| 3 | OSProcurement.tsx | /dashboard/procurement | pending |
+| 4 | OSInventory.tsx | /dashboard/inventory | pending |
+| 5 | OSDailyReport.tsx | /dashboard/daily-report | pending |
+| 6 | OSProfitLoss.tsx | /dashboard/profit-loss | pending |
+| 7 | OSPurchasing.tsx | /dashboard/purchasing | pending |
+| 8 | OSAccounting.tsx | /dashboard/accounting | pending |
+| 9 | OSRebate.tsx | /dashboard/rebate | pending |
+| 10 | OSDelivery.tsx | /dashboard/delivery | pending |
+| 11 | OSCustomers.tsx | /dashboard/customers | pending |
+| 12 | FranchiseDashboard / Franchisees / FranchiseInquiries | /dashboard/franchise* | pending |
+| 13 | AdminUsers / AdminPermissions / AdminTenants | /dashboard/admin-* | pending |
+| 14 | ContentManagement / ContentEditor / AIWriter | /dashboard/content* | pending |
+| 15 | SOPKnowledgeBase / DailyChecklist / EquipmentRepairs / OSScheduling | 其餘 | pending |
+
+**大永後台頁面改版順序**
+| 優先 | 頁面 | 路由 | 狀態 |
+|------|------|------|------|
+| 1 | DayoneLayout.tsx | （全域 Shell） | pending |
+| 2 | DayoneDashboard.tsx | /dayone | pending |
+| 3 | DayoneOrders.tsx | /dayone/orders | pending |
+| 4 | DayoneDispatch.tsx | /dayone/dispatch | 參考基準，小調整 |
+| 5 | DayonePurchaseReceipts.tsx | /dayone/purchase-receipts | pending |
+| 6 | DayoneInventoryContent.tsx | /dayone/inventory | pending |
+| 7 | DayoneARContent.tsx | /dayone/ar | pending |
+| 8 | DayoneCustomersContent.tsx | /dayone/customers | pending |
+| 9 | DayonePurchaseContent.tsx | /dayone/purchase | pending |
+| 10 | 其餘 dayone 頁面 | driver/* / portal/* | pending |
+
+**商城頁面改版順序**
+| 優先 | 頁面 | 路由 | 狀態 |
+|------|------|------|------|
+| 1 | ShopHome.tsx | /shop | pending |
+| 2 | ShopCategory.tsx | /shop/category/* | pending |
+| 3 | ProductDetail.tsx | /shop/product/* | pending |
+| 4 | Cart / Checkout / OrderComplete | /shop/cart* | pending |
+
+**設計規則（後台通用，所有頁面必須遵守）**
+- tRPC 查詢邏輯和 Link href 路由一律不動，只改 JSX 結構與樣式
+- 每頁改完必須 `npm run build` 通過再 commit
+- 禁止 gradient text、bounce easing、卡片套卡片、圓角 icon 在標題上方
+- 後台不用 Framer Motion 做頁面進場動畫（太重），只用 CSS transition
+- 色彩全用 OKLCH token，不硬寫 hex / tailwind 顏色名
+- 每頁 commit message 格式：`feat: vX.XX [頁面名] 後台改版 [簡述]`
+
+---
+
 ### 前端官網改版進度快照（2026-04-25 v6.03）
 
 **設計規範（品牌系列）**
