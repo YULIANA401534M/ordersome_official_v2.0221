@@ -489,7 +489,7 @@ function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onCl
                   <RotateCcw className="h-5 w-5 text-amber-600" />
                   <div>
                     <p className="text-sm font-semibold text-stone-900">剩貨回庫</p>
-                    <p className="mt-1 text-xs text-stone-500">司機回來後，將車上剩餘貨量回補庫存。</p>
+                    <p className="mt-1 text-xs text-stone-500">司機回來後先送出回庫待驗，管理端確認後才會正式加回可賣庫存。</p>
                   </div>
                 </div>
 

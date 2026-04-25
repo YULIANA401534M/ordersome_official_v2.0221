@@ -19,6 +19,13 @@ const driverProcedure = protectedProcedure.use(({ ctx, next }) => {
   return next({ ctx });
 });
 
+async function ensureDyDispatchSchema(client: any) {
+  await client.execute(
+    `ALTER TABLE dy_dispatch_items
+     MODIFY COLUMN paymentStatus ENUM('paid','partial','unpaid','monthly','weekly') NOT NULL DEFAULT 'unpaid'`
+  );
+}
+
 function calcDueDate(dispatchDate: string, settlementCycle?: string | null, overdueDays?: number | null) {
   const date = new Date(dispatchDate);
   if (settlementCycle === "weekly") {
@@ -104,6 +111,7 @@ export const dyDispatchRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
       const client = (db as any).$client;
+      await ensureDyDispatchSchema(client);
 
       const [orderRows] = await client.execute(
         `SELECT o.*, c.settlementCycle, c.overdueDays, c.address AS customerAddress,
@@ -112,7 +120,19 @@ export const dyDispatchRouter = router({
          FROM dy_orders o
          JOIN dy_customers c ON o.customerId = c.id
          LEFT JOIN dy_districts dist ON o.districtId = dist.id
-         WHERE o.tenantId=? AND o.deliveryDate=? AND o.status != 'cancelled'
+         WHERE o.tenantId=?
+           AND o.deliveryDate=?
+           AND o.status IN ('pending', 'assigned')
+           AND NOT EXISTS (
+             SELECT 1
+             FROM dy_dispatch_items di
+             JOIN dy_dispatch_orders ddo
+               ON ddo.id = di.dispatchOrderId
+              AND ddo.tenantId = di.tenantId
+             WHERE di.tenantId = o.tenantId
+               AND di.orderId = o.id
+               AND ddo.status IN ('draft', 'printed', 'completed')
+           )
          ORDER BY o.driverId, dist.sortOrder, o.id`,
         [input.tenantId, input.dispatchDate]
       );
@@ -182,6 +202,7 @@ export const dyDispatchRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
       const client = (db as any).$client;
+      await ensureDyDispatchSchema(client);
       const scopedDriverId = await resolveDriverScope(client, input.tenantId, ctx.user.id, ctx.user.role ?? "");
 
       let sql = `SELECT do2.*, d.name AS driverName
@@ -335,7 +356,7 @@ export const dyDispatchRouter = router({
       const scopedDriverId = await resolveDriverScope(client, input.tenantId, ctx.user.id, ctx.user.role ?? "");
 
       const [itemRows] = await client.execute(
-        `SELECT di.*, ddo.dispatchDate, ddo.driverId, o.totalAmount, c.settlementCycle, c.overdueDays
+        `SELECT di.*, ddo.dispatchDate, ddo.driverId, o.status AS orderStatus, o.totalAmount, c.settlementCycle, c.overdueDays
          FROM dy_dispatch_items di
          LEFT JOIN dy_dispatch_orders ddo ON ddo.id = di.dispatchOrderId
          LEFT JOIN dy_orders o ON di.orderId = o.id
@@ -395,7 +416,7 @@ export const dyDispatchRouter = router({
         );
       }
 
-      if (item.orderId) {
+      if (item.orderId && item.orderStatus === "delivered") {
         await upsertReceivable(client, {
           tenantId: input.tenantId,
           orderId: item.orderId,

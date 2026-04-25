@@ -56,6 +56,8 @@ export default function DayoneDashboard() {
   const { data: arOverdue = [] } = trpc.dayone.ar.listReceivables.useQuery({ tenantId: TENANT_ID, page: 1, status: "overdue" });
   const { data: cashReports = [] } = trpc.dayone.ar.listDriverCashReports.useQuery({ tenantId: TENANT_ID, reportDate: today });
   const { data: pendingReceipts = [] } = trpc.dayone.purchaseReceipt.list.useQuery({ tenantId: TENANT_ID, status: "pending" });
+  const { data: signedReceipts = [] } = trpc.dayone.purchaseReceipt.list.useQuery({ tenantId: TENANT_ID, status: "signed" });
+  const { data: pendingReturns = [] } = trpc.dayone.inventory.pendingReturns.useQuery({ tenantId: TENANT_ID });
 
   const todayArSum = (arList as any[])
     .filter((r: any) => (r.createdAt ?? "").startsWith(today))
@@ -63,6 +65,8 @@ export default function DayoneDashboard() {
   const overdueSum = (arOverdue as any[]).reduce((s: number, r: any) => s + Number(r.amount) - Number(r.paidAmount ?? 0), 0);
   const anomalyDrivers = (cashReports as any[]).filter((r: any) => r.status === "anomaly").length;
   const pendingReceiptCount = (pendingReceipts as any[]).length;
+  const signedReceiptCount = (signedReceipts as any[]).length;
+  const pendingReturnCount = (pendingReturns as any[]).length;
 
   return (
     <DayoneLayout>
@@ -103,6 +107,11 @@ export default function DayoneDashboard() {
           <KpiCard icon={Truck} iconWrap="bg-green-100" iconColor="text-green-600" value={(summary as any)?.summary?.deliveredCount ?? 0} label="今日已送達" />
           <KpiCard icon={TrendingUp} iconWrap="bg-amber-100" iconColor="text-amber-600" value={`$${Number((summary as any)?.summary?.totalAmount ?? 0).toLocaleString()}`} label="今日金額" />
           <KpiCard icon={TrendingUp} iconWrap="bg-fuchsia-100" iconColor="text-fuchsia-600" value={`$${totalMonthly.toLocaleString()}`} label={`${month} 月營收`} />
+        </section>
+
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-2">
+          <KpiCard icon={Receipt} iconWrap="bg-sky-100" iconColor="text-sky-600" value={signedReceiptCount} label="待入倉進貨" />
+          <KpiCard icon={Truck} iconWrap="bg-amber-100" iconColor="text-amber-700" value={pendingReturnCount} label="回庫待驗" />
         </section>
 
         <div className="grid gap-6 xl:grid-cols-2">

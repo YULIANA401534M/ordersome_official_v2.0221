@@ -176,6 +176,28 @@ export const dyDriverRouter = router({
          WHERE id=? AND tenantId=? AND driverId=?`,
         [input.cashCollected, input.cashCollected, input.cashCollected, input.cashCollected, input.orderId, input.tenantId, driver.id]
       );
+
+      const [orderRows] = await client.execute(
+        `SELECT o.id, o.customerId, o.deliveryDate, o.status, o.totalAmount, o.paidAmount, c.settlementCycle, c.overdueDays
+         FROM dy_orders o
+         JOIN dy_customers c ON c.id = o.customerId
+         WHERE o.id=? AND o.tenantId=? AND o.driverId=? LIMIT 1`,
+        [input.orderId, input.tenantId, driver.id]
+      );
+      const order = (orderRows as any[])[0];
+      if (order && order.status === "delivered") {
+        await upsertOrderReceivable(client, {
+          tenantId: input.tenantId,
+          orderId: order.id,
+          customerId: order.customerId,
+          deliveryDate: order.deliveryDate,
+          settlementCycle: order.settlementCycle,
+          overdueDays: order.overdueDays,
+          totalAmount: Number(order.totalAmount ?? 0),
+          paidAmount: Number(order.paidAmount ?? 0),
+        });
+      }
+
       return { success: true };
     }),
 

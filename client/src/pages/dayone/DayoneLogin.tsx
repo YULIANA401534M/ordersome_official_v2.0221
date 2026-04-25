@@ -10,13 +10,15 @@ export default function DayoneLogin() {
   const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
   const [, navigate]            = useLocation();
+  const utils = trpc.useUtils();
 
   const loginMutation = trpc.auth.loginWithPassword.useMutation({
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       if ((data.user as any).tenantId !== 90004 && data.user.role !== "super_admin") {
         toast.error("此帳號無法登入大永後台");
         return;
       }
+      await utils.auth.me.invalidate();
       navigate("/dayone");
     },
     onError: (err) => {

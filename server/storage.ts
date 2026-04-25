@@ -9,6 +9,12 @@
  *   R2_PUBLIC_URL_PREFIX — public CDN prefix
  */
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import fs from "fs/promises";
+import path from "path";
+
+function shouldUseLocalFallback() {
+  return process.env.NODE_ENV === "development";
+}
 
 function getR2Config() {
   const accountId = process.env.R2_ACCOUNT_ID ?? "";
@@ -20,6 +26,9 @@ function getR2Config() {
     "https://pub-344b4e8c0e374787a0dd2b2024ee46c6.r2.dev";
 
   if (!accountId || !accessKeyId || !secretAccessKey) {
+    if (shouldUseLocalFallback()) {
+      return null;
+    }
     throw new Error(
       "R2 credentials missing: set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY"
     );
@@ -30,7 +39,11 @@ function getR2Config() {
 let _client: S3Client | null = null;
 function getClient(): S3Client {
   if (_client) return _client;
-  const { accountId, accessKeyId, secretAccessKey } = getR2Config();
+  const config = getR2Config();
+  if (!config) {
+    throw new Error("Local fallback does not use S3 client");
+  }
+  const { accountId, accessKeyId, secretAccessKey } = config;
   _client = new S3Client({
     region: "auto",
     endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
@@ -50,9 +63,19 @@ export async function storagePut(
   data: Buffer | Uint8Array | string,
   contentType = "application/octet-stream"
 ): Promise<{ key: string; url: string }> {
-  const { bucket, publicUrlPrefix } = getR2Config();
+  const config = getR2Config();
   const key = relKey.replace(/^\/+/, "");
   const body = typeof data === "string" ? Buffer.from(data) : (data as Buffer);
+
+  if (!config) {
+    const localRoot = path.resolve(process.cwd(), "public");
+    const localPath = path.resolve(localRoot, key);
+    await fs.mkdir(path.dirname(localPath), { recursive: true });
+    await fs.writeFile(localPath, body);
+    return { key, url: `/${key}` };
+  }
+
+  const { bucket, publicUrlPrefix } = config;
 
   await getClient().send(
     new PutObjectCommand({
@@ -75,8 +98,12 @@ export async function storagePut(
 export async function storageGet(
   relKey: string
 ): Promise<{ key: string; url: string }> {
-  const { publicUrlPrefix } = getR2Config();
+  const config = getR2Config();
   const key = relKey.replace(/^\/+/, "");
+  if (!config) {
+    return { key, url: `/${key}` };
+  }
+  const { publicUrlPrefix } = config;
   const url = `${publicUrlPrefix.replace(/\/+$/, "")}/${key}`;
   return { key, url };
 }

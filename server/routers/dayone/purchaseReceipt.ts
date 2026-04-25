@@ -19,6 +19,13 @@ const driverProcedure = protectedProcedure.use(({ ctx, next }) => {
   return next({ ctx });
 });
 
+async function ensureDyPurchaseReceiptSchema(client: any) {
+  await client.execute(
+    `ALTER TABLE dy_purchase_receipts
+     MODIFY COLUMN status ENUM('pending','signed','warehoused','anomaly') NOT NULL DEFAULT 'pending'`
+  );
+}
+
 export const dyPurchaseReceiptRouter = router({
   // 1. 進貨單列表（管理員）
   list: dyAdminProcedure
@@ -80,6 +87,7 @@ export const dyPurchaseReceiptRouter = router({
       z.object({
         tenantId: z.number(),
         supplierId: z.number(),
+        driverId: z.number().optional(),
         receiptDate: z.string(),
         licensePlate: z.string(),
         batchNo: z.string().optional(),
@@ -98,19 +106,36 @@ export const dyPurchaseReceiptRouter = router({
       const db = await getDb();
       if (!db)
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      const client = (db as any).$client;
+      await ensureDyPurchaseReceiptSchema(client);
 
       const totalQty = input.items.reduce((s, i) => s + i.qty, 0);
       const totalAmount = input.items.reduce((s, i) => s + i.qty * i.unitPrice, 0);
 
       // 取得司機 ID（從 users 表對應）
-      const [userRows] = await (db as any).$client.execute(
-        `SELECT id FROM dy_drivers WHERE tenantId=? ORDER BY id LIMIT 1`,
-        [input.tenantId]
+      const [userRows] = await client.execute(
+        `SELECT id FROM dy_drivers WHERE tenantId=? AND userId=? AND status='active' LIMIT 1`,
+        [input.tenantId, ctx.user.id]
       );
       // 嘗試從 ctx 取 driverId，fallback 查 dy_drivers
-      const driverId = (ctx.user as any).driverId ?? (userRows as any[])[0]?.id ?? 0;
+      let driverId = Number(input.driverId ?? (ctx.user as any).driverId ?? (userRows as any[])[0]?.id ?? 0);
+      if (!driverId && ctx.user.role === "driver") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Driver account is not linked to Dayone" });
+      }
+      if (!driverId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "No active Dayone driver is available for this purchase receipt" });
+      }
+      if (input.driverId) {
+        const [driverCheckRows] = await client.execute(
+          `SELECT id FROM dy_drivers WHERE id=? AND tenantId=? AND status='active' LIMIT 1`,
+          [driverId, input.tenantId]
+        );
+        if (!(driverCheckRows as any[])[0]) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Selected Dayone driver is invalid" });
+        }
+      }
 
-      const [result] = await (db as any).$client.execute(
+      const [result] = await client.execute(
         `INSERT INTO dy_purchase_receipts
          (tenantId, supplierId, driverId, receiptDate, licensePlate, batchNo,
           items, totalQty, totalAmount, anomalyNote, status, createdAt)
@@ -189,8 +214,8 @@ export const dyPurchaseReceiptRouter = router({
         await client.execute(
           `INSERT INTO dy_ap_records
            (tenantId, supplierId, purchaseReceiptId, amount, paidAmount, status, dueDate, createdAt, updatedAt)
-           VALUES (?,?,?,?,0,'unpaid', DATE_ADD(CURDATE(), INTERVAL 30 DAY), NOW(), NOW())`,
-          [input.tenantId, pr.supplierId, input.id, pr.totalAmount]
+           VALUES (?,?,?,?,0,'unpaid', DATE_ADD(DATE(?), INTERVAL 30 DAY), NOW(), NOW())`,
+          [input.tenantId, pr.supplierId, input.id, pr.totalAmount, pr.receiptDate]
         );
       }
 
@@ -214,6 +239,7 @@ export const dyPurchaseReceiptRouter = router({
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
       }
       const client = (db as any).$client;
+      await ensureDyPurchaseReceiptSchema(client);
 
       const [rows] = await client.execute(
         `SELECT * FROM dy_purchase_receipts WHERE id=? AND tenantId=? LIMIT 1`,
@@ -233,10 +259,12 @@ export const dyPurchaseReceiptRouter = router({
         if (qty <= 0) continue;
 
         await client.execute(
-          `INSERT INTO dy_inventory (tenantId, productId, currentQty, updatedAt)
-           VALUES (?,?,?,NOW())
-           ON DUPLICATE KEY UPDATE currentQty = currentQty + VALUES(currentQty), updatedAt=NOW()`,
-          [input.tenantId, item.productId, qty]
+          `INSERT INTO dy_inventory (tenantId, productId, currentQty, safetyQty, unit, updatedAt)
+           SELECT ?, ?, ?, 0, p.unit, NOW()
+           FROM dy_products p
+           WHERE p.id=? AND p.tenantId=?
+           ON DUPLICATE KEY UPDATE currentQty = currentQty + VALUES(currentQty), unit = COALESCE(dy_inventory.unit, VALUES(unit)), updatedAt=NOW()`,
+          [input.tenantId, item.productId, qty, item.productId, input.tenantId]
         );
 
         await client.execute(
@@ -276,6 +304,7 @@ export const dyPurchaseReceiptRouter = router({
       if (!db)
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
       const client = (db as any).$client;
+      await ensureDyPurchaseReceiptSchema(client);
       const [rows] = await client.execute(
         `SELECT status FROM dy_purchase_receipts WHERE id=? AND tenantId=? LIMIT 1`,
         [input.id, input.tenantId]

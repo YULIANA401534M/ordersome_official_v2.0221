@@ -10,6 +10,31 @@ const dyAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
   return next({ ctx });
 });
 
+function normalizeArStatus(amount: number, paidAmount: number) {
+  if (paidAmount >= amount) return "paid";
+  if (paidAmount > 0) return "partial";
+  return "unpaid";
+}
+
+async function syncOrderPaymentFromAr(
+  client: any,
+  payload: {
+    tenantId: number;
+    orderId?: number | null;
+    paidAmount: number;
+    paymentStatus: string;
+  }
+) {
+  if (!payload.orderId) return;
+
+  await client.execute(
+    `UPDATE dy_orders
+     SET paidAmount=?, paymentStatus=?, updatedAt=NOW()
+     WHERE id=? AND tenantId=?`,
+    [payload.paidAmount, payload.paymentStatus, payload.orderId, payload.tenantId]
+  );
+}
+
 export const dyArRouter = router({
   // 1. 應收帳款列表（含自動標記逾期）
   listReceivables: dyAdminProcedure
@@ -71,7 +96,7 @@ export const dyArRouter = router({
       const client = (db as any).$client;
 
       const [rows] = await client.execute(
-        `SELECT amount, paidAmount FROM dy_ar_records WHERE id=? AND tenantId=?`,
+        `SELECT orderId, amount, paidAmount FROM dy_ar_records WHERE id=? AND tenantId=?`,
         [input.id, input.tenantId]
       );
       const record = (rows as any[])[0];
@@ -80,7 +105,7 @@ export const dyArRouter = router({
       const totalAmount = parseFloat(record.amount);
       const currentPaid = parseFloat(record.paidAmount ?? 0);
       const nextPaidAmount = Math.min(totalAmount, currentPaid + input.paidAmount);
-      const newStatus = nextPaidAmount >= totalAmount ? "paid" : "partial";
+      const newStatus = normalizeArStatus(totalAmount, nextPaidAmount);
 
       await client.execute(
         `UPDATE dy_ar_records
@@ -95,6 +120,14 @@ export const dyArRouter = router({
           input.tenantId,
         ]
       );
+
+      await syncOrderPaymentFromAr(client, {
+        tenantId: input.tenantId,
+        orderId: record.orderId == null ? null : Number(record.orderId),
+        paidAmount: nextPaidAmount,
+        paymentStatus: newStatus,
+      });
+
       return { success: true, status: newStatus, paidAmount: nextPaidAmount };
     }),
 

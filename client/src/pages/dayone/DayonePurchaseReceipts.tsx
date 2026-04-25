@@ -928,6 +928,7 @@ function CreateReceiptDialog({
   onSignNeeded: (receiptId: number, meta: ReceiptMeta, items: ReceiptItem[]) => void;
 }) {
   const [supplierId, setSupplierId] = useState("");
+  const [driverId, setDriverId] = useState("");
   const [receiptDate, setReceiptDate] = useState(nowLocalDatetime());
   const [licensePlate, setLicensePlate] = useState("");
   const [batchNo, setBatchNo] = useState("");
@@ -936,6 +937,7 @@ function CreateReceiptDialog({
   const [prices, setPrices] = useState<Record<number, number>>({});
 
   const { data: suppliers = [] } = trpc.dayone.suppliers.list.useQuery({ tenantId: TENANT_ID });
+  const { data: drivers = [] } = trpc.dayone.drivers.list.useQuery({ tenantId: TENANT_ID });
   const { data: products = [] } = trpc.dayone.products.list.useQuery({ tenantId: TENANT_ID });
   const { data: supplierPrices = [] } = trpc.dayone.ap.supplierPriceList.useQuery(
     { tenantId: TENANT_ID, supplierId: Number(supplierId) },
@@ -989,6 +991,11 @@ function CreateReceiptDialog({
       return;
     }
 
+    if (!driverId) {
+      toast.error("請先選擇大永司機");
+      return;
+    }
+
     const items = (products as any[])
       .filter((product: any) => Number(quantities[product.id] ?? 0) > 0)
       .map((product: any) => ({
@@ -1006,6 +1013,7 @@ function CreateReceiptDialog({
     createReceipt.mutate({
       tenantId: TENANT_ID,
       supplierId: Number(supplierId),
+      driverId: driverId ? Number(driverId) : undefined,
       receiptDate,
       licensePlate,
       batchNo: batchNo || undefined,
@@ -1033,6 +1041,22 @@ function CreateReceiptDialog({
                   {suppliers.map((supplier: any) => (
                     <SelectItem key={supplier.id} value={String(supplier.id)}>
                       {supplier.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-stone-700">司機</label>
+              <Select value={driverId} onValueChange={setDriverId}>
+                <SelectTrigger className="rounded-2xl">
+                  <SelectValue placeholder="選擇司機..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {drivers.map((driver: any) => (
+                    <SelectItem key={driver.id} value={String(driver.id)}>
+                      {driver.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

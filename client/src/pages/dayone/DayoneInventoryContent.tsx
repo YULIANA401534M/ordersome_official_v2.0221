@@ -27,16 +27,19 @@ export default function DayoneInventoryContent({ tenantId }: { tenantId: number 
   const { data: products = [] } = trpc.dayone.products.list.useQuery({ tenantId });
   const { data: movements = [] } = trpc.dayone.inventory.movements.useQuery({ tenantId, limit: 20 });
   const { data: pendingReturns = [] } = trpc.dayone.inventory.pendingReturns.useQuery({ tenantId });
+  const { data: signedReceipts = [] } = trpc.dayone.purchaseReceipt.list.useQuery({ tenantId, status: "signed" });
 
   const inventorySummary = useMemo(() => {
     const availableQty = inventory.reduce((sum: number, item: any) => sum + Number(item.currentQty ?? 0), 0);
     const pendingQty = pendingReturns.reduce((sum: number, item: any) => sum + Number(item.qty ?? 0), 0);
+    const inboundQty = signedReceipts.reduce((sum: number, item: any) => sum + Number(item.totalQty ?? 0), 0);
     return {
       availableQty,
       pendingQty,
+      inboundQty,
       lowStockCount: alerts.length,
     };
-  }, [alerts.length, inventory, pendingReturns]);
+  }, [alerts.length, inventory, pendingReturns, signedReceipts]);
 
   const setSafety = trpc.dayone.inventory.setSafety.useMutation({
     onSuccess: () => {
@@ -109,7 +112,7 @@ export default function DayoneInventoryContent({ tenantId }: { tenantId: number 
         </Card>
       )}
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card className="rounded-[24px] border-stone-200/70">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm text-stone-500">可賣庫存總量</CardTitle>
@@ -126,6 +129,15 @@ export default function DayoneInventoryContent({ tenantId }: { tenantId: number 
           <CardContent>
             <p className="text-3xl font-semibold text-amber-800">{inventorySummary.pendingQty}</p>
             <p className="mt-2 text-xs text-amber-700/80">司機已回報，但管理端尚未正式加回可賣庫存。</p>
+          </CardContent>
+        </Card>
+        <Card className="rounded-[24px] border-sky-200 bg-sky-50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-sky-700">待入倉進貨</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-semibold text-sky-800">{inventorySummary.inboundQty}</p>
+            <p className="mt-2 text-xs text-sky-700/80">供應商已簽名、應付已成立，但尚未正式轉為可賣庫存。</p>
           </CardContent>
         </Card>
         <Card className="rounded-[24px] border-orange-200 bg-orange-50">

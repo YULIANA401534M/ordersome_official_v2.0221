@@ -1,5 +1,44 @@
 # CLAUDE.md — OrderSome 專案主腦
 
+### Dayone 真資料閉環交接（2026-04-25 v6.12 / app v1.1.0）
+
+**這輪已完成**
+- 已直接連線 TiDB `ordersome`，確認 Dayone 租戶為 `tenantId=90004 / dayone-eggs`
+- 已用真資料完成進貨 -> 供應商簽收 -> 入倉 -> 派車 -> 列印扣庫 -> 司機收現/送達 -> 回庫待驗 -> 管理確認 -> AP/AR 結清整條閉環
+- 已補齊 `dy_pending_returns` 真表驗證、AP/AR 同步、庫存異動、司機日結與頁面聯動
+- `/dayone/*` 與 `/driver/*` 主要路由已做登入後頁面審查，無新增 console/page error
+
+**這輪修掉的真 bug**
+- `dayone.ar.markPaid` 現在會同步回寫 `dy_orders.paidAmount/paymentStatus`，不再出現 AR 已收清但訂單仍是 partial
+- `dayone.dispatch.generateDispatch` 現在只抓可派車且未進過派車單的訂單，避免同日重複派車把舊單打回 `picked`
+- `driver.recordCashPayment` 與 `dispatch.updateDispatchItem` 不會再對未送達訂單提前建立 AR，避免流程中斷留下髒帳
+- `purchaseReceipt.receiveToWarehouse` 已補 `dy_inventory.unit` 寫入
+- `dy_purchase_receipts.status` 與 `dy_dispatch_items.paymentStatus` 已在路由層補 schema 對齊，避免 TiDB enum 與程式邏輯脫節
+- 本地開發缺 R2 憑證時，`server/storage.ts` 會回退到 `public/` 本地檔案，不阻斷簽名測試
+
+**本輪新增腳本**
+- `scripts/dayone-tidb-live-verify.mjs`
+- `scripts/dayone-live-closure-audit.mjs`
+- `scripts/dayone-live-repair.mjs`
+- `scripts/dayone-ensure-e2e-users.mjs`
+- `scripts/dayone-playwright-smoke.mjs`
+- `scripts/dayone-playwright-route-audit.mjs`
+- `scripts/dayone-e2e-closure-test.mjs`
+
+**已驗證結果**
+- 真資料 E2E 腳本通過，最新保留案例 tag：`E2E-1777121064902`
+- closure audit 乾淨：`signedReceiptsMissingAp=0`、`deliveredOrdersMissingAr=0`、`printedDispatchMissingStockOut=0`、`completedDispatchMissingCashReport=0`、`arRecordsOnUndeliveredOrders=0`
+- `npm run build` 已通過
+
+**目前庫內保留狀態**
+- 已清掉舊的 `E2E-*` 測試殘留，只保留一組最新完整案例，方便下一個大腦對照頁面與 TiDB
+- 不要手動刪除這組案例，除非下一輪要先重建基線
+
+**下一輪若要接著做**
+- 以 `scripts/dayone-e2e-closure-test.mjs` 重跑完整閉環
+- 以 `scripts/dayone-live-closure-audit.mjs` 檢查整庫是否再次出現缺 AP / 缺 AR / 缺庫存異動 / 未送達 AR
+- 若要擴充規格，優先往多司機、多派車單、跨日月結對帳與更多異常情境測
+
 
 ### 前端官網改版進度快照（2026-04-25 v6.02）
 

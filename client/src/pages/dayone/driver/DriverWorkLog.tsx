@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { trpc } from "../../../lib/trpc";
 import DriverLayout from "./DriverLayout";
 import { ClipboardCheck, Clock, CheckCircle, RotateCcw, Package } from "lucide-react";
 import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const TENANT_ID = 90004;
 
@@ -13,6 +14,7 @@ export default function DriverWorkLog() {
   const [endTime, setEndTime] = useState("");
   const [note, setNote] = useState("");
   const [returnQtyByProduct, setReturnQtyByProduct] = useState<Record<number, number>>({});
+  const [selectedDispatchId, setSelectedDispatchId] = useState<string>("");
 
   const { data: workLog } = trpc.dayone.driver.getMyWorkLog.useQuery({
     tenantId: TENANT_ID,
@@ -29,10 +31,10 @@ export default function DriverWorkLog() {
     dispatchDate: today,
   });
 
-  const latestDispatchId = Number(dispatches[0]?.id ?? 0);
+  const activeDispatchId = Number(selectedDispatchId || dispatches[0]?.id || 0);
   const { data: dispatchDetail } = trpc.dayone.dispatch.getDispatchDetail.useQuery(
-    { id: latestDispatchId, tenantId: TENANT_ID },
-    { enabled: !!latestDispatchId }
+    { id: activeDispatchId, tenantId: TENANT_ID },
+    { enabled: !!activeDispatchId }
   );
 
   const submitLog = trpc.dayone.driver.submitWorkLog.useMutation({
@@ -70,6 +72,10 @@ export default function DriverWorkLog() {
     [dispatchDetail?.products, returnQtyByProduct]
   );
 
+  useEffect(() => {
+    setReturnQtyByProduct({});
+  }, [activeDispatchId]);
+
   const hasSubmitted = Boolean(workLog);
 
   return (
@@ -79,7 +85,7 @@ export default function DriverWorkLog() {
           <p className="text-xs uppercase tracking-[0.24em] text-white/50">Closing</p>
           <h2 className="mt-3 font-brand text-[1.7rem] leading-none">收尾不要漏掉</h2>
           <p className="mt-3 text-sm leading-6 text-white/72">
-            先處理剩貨回庫，再提交今天的工作日誌與現金結果。
+                    先回報剩貨待驗，再提交今天的工作日誌與現金結果。
           </p>
         </section>
 
@@ -102,9 +108,27 @@ export default function DriverWorkLog() {
               <RotateCcw className="h-5 w-5 text-amber-600" />
               <div>
                 <h3 className="text-sm font-semibold text-stone-900">司機剩貨回庫</h3>
-                <p className="mt-1 text-xs text-stone-500">只回報車上剩餘品項，送出後會回補庫存。</p>
+                <p className="mt-1 text-xs text-stone-500">只回報車上剩餘品項，送出後會進入回庫待驗，等待管理端確認。</p>
               </div>
             </div>
+
+            {dispatches.length > 1 ? (
+              <div className="mt-4">
+                <label className="mb-1 block text-xs text-stone-500">選擇派車單</label>
+                <Select value={activeDispatchId ? String(activeDispatchId) : ""} onValueChange={setSelectedDispatchId}>
+                  <SelectTrigger className="rounded-2xl">
+                    <SelectValue placeholder="選擇今天要回報的派車單" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {dispatches.map((dispatch: any) => (
+                      <SelectItem key={dispatch.id} value={String(dispatch.id)}>
+                        {`${dispatch.routeCode || "R00"} / ${dispatch.status} / #${dispatch.id}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
 
             <div className="mt-4 space-y-3">
               {returnItems.map((item: any) => (
@@ -138,12 +162,12 @@ export default function DriverWorkLog() {
               className="mt-4 w-full rounded-2xl bg-amber-600 py-3 text-sm font-semibold text-white disabled:opacity-50"
               disabled={
                 returnInventory.isPending ||
-                !latestDispatchId ||
+                !activeDispatchId ||
                 !returnItems.some((item: any) => item.qty > 0)
               }
               onClick={() =>
                 returnInventory.mutate({
-                  dispatchOrderId: latestDispatchId,
+                  dispatchOrderId: activeDispatchId,
                   tenantId: TENANT_ID,
                   note: "Driver return from worklog",
                   items: returnItems

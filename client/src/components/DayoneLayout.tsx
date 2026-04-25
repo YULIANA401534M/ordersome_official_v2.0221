@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useModules } from "@/hooks/useModules";
 import {
@@ -53,6 +53,12 @@ export default function DayoneLayout({ children }: { children: React.ReactNode }
     return has(item.moduleKey);
   });
 
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate("/dayone/login");
+    }
+  }, [loading, navigate, user]);
+
   if (loading) {
     return (
       <div className="dayone-shell min-h-screen flex items-center justify-center">
@@ -62,7 +68,6 @@ export default function DayoneLayout({ children }: { children: React.ReactNode }
   }
 
   if (!user) {
-    navigate("/login");
     return null;
   }
 
