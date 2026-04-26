@@ -49,8 +49,7 @@ export default function DriverWorkLog() {
 
   const returnInventory = trpc.dayone.dispatch.returnInventory.useMutation({
     onSuccess: () => {
-      toast.success("剩貨已送出待驗");
-      setReturnQtyByProduct({});
+      toast.success("剩貨已送出待驗，等管理員確認入庫");
       utils.dayone.dispatch.getDispatchDetail.invalidate();
       utils.dayone.dispatch.listDispatch.invalidate();
       utils.dayone.inventory.pendingReturns.invalidate();
@@ -82,6 +81,12 @@ export default function DriverWorkLog() {
 
   const hasSubmitted = Boolean(workLog);
 
+  // 派車單已進入「待點收」或「已完成」 → 剩貨已回報，鎖定不可再送
+  const activeDispatch = (dispatches as any[]).find((d: any) => d.id === activeDispatchId);
+  const returnLocked =
+    hasSubmitted ||
+    ["pending_handover", "completed"].includes(activeDispatch?.status ?? "");
+
   return (
     <DriverLayout title="剩貨回庫 / 日結">
       <div className="space-y-4">
@@ -109,14 +114,14 @@ export default function DriverWorkLog() {
         {dispatchDetail?.products?.length ? (
           <section className="rounded-[28px] border border-stone-200/70 bg-white p-4 shadow-[0_12px_24px_rgba(120,53,15,0.05)]">
             <div className="flex items-center gap-2">
-              <RotateCcw className="h-5 w-5 text-amber-600" />
+              <RotateCcw className={`h-5 w-5 ${returnLocked ? "text-emerald-600" : "text-amber-600"}`} />
               <div>
                 <h3 className="text-sm font-semibold text-stone-900">司機剩貨回庫</h3>
                 <p className="mt-1 text-xs text-stone-500">只回報車上剩餘品項，送出後會進入回庫待驗，等待管理端確認。</p>
               </div>
             </div>
 
-            {dispatches.length > 1 ? (
+            {dispatches.length > 1 && !returnLocked ? (
               <div className="mt-4">
                 <label className="mb-1 block text-xs text-stone-500">選擇派車單</label>
                 <Select value={activeDispatchId ? String(activeDispatchId) : ""} onValueChange={setSelectedDispatchId}>
@@ -124,7 +129,7 @@ export default function DriverWorkLog() {
                     <SelectValue placeholder="選擇今天要回報的派車單" />
                   </SelectTrigger>
                   <SelectContent>
-                    {dispatches.map((dispatch: any) => {
+                    {(dispatches as any[]).map((dispatch: any) => {
                       const statusLabel: Record<string, string> = {
                         draft: "草稿", printed: "已列印", in_progress: "配送中",
                         pending_handover: "待點收", completed: "已完成",
@@ -140,53 +145,76 @@ export default function DriverWorkLog() {
               </div>
             ) : null}
 
-            <div className="mt-3 rounded-2xl bg-amber-50 border border-amber-100 px-3 py-2.5 text-xs text-amber-700 leading-5">
-              全部送完就填 <strong>0</strong>，車上有剩貨就填剩幾箱（桶）。預設帶出幾箱就填幾箱，按送出後等管理員確認入庫。
-            </div>
-
-            <div className="mt-3 space-y-3">
-              {returnItems.map((item: any) => (
-                <div key={item.productId} className="rounded-2xl border border-stone-200/80 bg-stone-50 px-4 py-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-stone-900">{item.productName}</p>
-                      <p className="mt-1 text-xs text-stone-500">今日帶出 {item.shippedQty} {item.unit || "單位"}　回庫幾{item.unit || "箱"}？</p>
-                    </div>
-                    <input
-                      type="number"
-                      min={0}
-                      max={item.shippedQty}
-                      value={item.qty}
-                      onChange={(event) =>
-                        setReturnQtyByProduct((prev) => ({
-                          ...prev,
-                          [item.productId]: Math.max(0, Math.min(item.shippedQty, Number(event.target.value ?? 0))),
-                        }))
-                      }
-                      className="w-24 rounded-2xl border border-stone-200 bg-white px-3 py-2 text-right text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    />
-                  </div>
+            {returnLocked ? (
+              /* 已送出 → 唯讀確認畫面 */
+              <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-4">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-emerald-600" />
+                  <p className="text-sm font-semibold text-emerald-700">剩貨已回報，等待管理員確認入庫</p>
                 </div>
-              ))}
-            </div>
+                <div className="mt-3 space-y-2">
+                  {returnItems.map((item: any) => (
+                    <div key={item.productId} className="flex items-center justify-between rounded-2xl bg-white px-4 py-2.5 text-sm">
+                      <span className="text-stone-700">{item.productName}</span>
+                      <span className="font-semibold text-stone-900">
+                        帶出 {item.shippedQty}　回庫 {item.qty} {item.unit || "箱"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              /* 尚未送出 → 可填寫 */
+              <>
+                <div className="mt-3 rounded-2xl bg-amber-50 border border-amber-100 px-3 py-2.5 text-xs text-amber-700 leading-5">
+                  全部送完就填 <strong>0</strong>，車上有剩貨就填剩幾箱（桶）。預設帶出幾箱就填幾箱，按送出後等管理員確認入庫。
+                </div>
 
-            <button
-              type="button"
-              className="mt-4 w-full rounded-2xl bg-amber-600 py-3 text-sm font-semibold text-white disabled:opacity-50"
-              disabled={returnInventory.isPending || !activeDispatchId}
-              onClick={() =>
-                returnInventory.mutate({
-                  dispatchOrderId: activeDispatchId,
-                  tenantId: TENANT_ID,
-                  note: "司機回庫回報",
-                  items: returnItems
-                    .filter((item: any) => item.qty > 0)
-                    .map((item: any) => ({ productId: item.productId, qty: item.qty })),
-                })
-              }
-            >
-              {returnInventory.isPending ? "送出中..." : "送出回庫待驗"}
-            </button>
+                <div className="mt-3 space-y-3">
+                  {returnItems.map((item: any) => (
+                    <div key={item.productId} className="rounded-2xl border border-stone-200/80 bg-stone-50 px-4 py-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-stone-900">{item.productName}</p>
+                          <p className="mt-1 text-xs text-stone-500">今日帶出 {item.shippedQty} {item.unit || "單位"}　回庫幾{item.unit || "箱"}？</p>
+                        </div>
+                        <input
+                          type="number"
+                          min={0}
+                          max={item.shippedQty}
+                          value={item.qty}
+                          onChange={(event) =>
+                            setReturnQtyByProduct((prev) => ({
+                              ...prev,
+                              [item.productId]: Math.max(0, Math.min(item.shippedQty, Number(event.target.value ?? 0))),
+                            }))
+                          }
+                          className="w-24 rounded-2xl border border-stone-200 bg-white px-3 py-2 text-right text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  className="mt-4 w-full rounded-2xl bg-amber-600 py-3 text-sm font-semibold text-white disabled:opacity-50"
+                  disabled={returnInventory.isPending || !activeDispatchId}
+                  onClick={() =>
+                    returnInventory.mutate({
+                      dispatchOrderId: activeDispatchId,
+                      tenantId: TENANT_ID,
+                      note: "司機回庫回報",
+                      items: returnItems
+                        .filter((item: any) => item.qty > 0)
+                        .map((item: any) => ({ productId: item.productId, qty: item.qty })),
+                    })
+                  }
+                >
+                  {returnInventory.isPending ? "送出中..." : "送出回庫待驗"}
+                </button>
+              </>
+            )}
           </section>
         ) : (
           <section className="rounded-[28px] border border-dashed border-stone-200 bg-white px-6 py-8 text-center text-stone-400">
