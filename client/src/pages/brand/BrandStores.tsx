@@ -222,7 +222,7 @@ export default function BrandStores() {
         {isLoading && (
           <div
             className="grid gap-4"
-            style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}
+            style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(260px, 100%), 1fr))" }}
           >
             {Array.from({ length: 6 }).map((_, i) => (
               <div
@@ -238,7 +238,7 @@ export default function BrandStores() {
         {!isLoading && (
           <div
             className="grid gap-4"
-            style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}
+            style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(260px, 100%), 1fr))" }}
           >
             {stores?.map((store, index) => {
               const isSelected = selectedStoreId === store.id;

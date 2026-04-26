@@ -43,7 +43,7 @@ function StatusBadge({ cfg, value }: { cfg: Record<string, { label: string; colo
 }
 
 const thSt: React.CSSProperties = { color: "var(--os-text-3)", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" };
-const panelSt: React.CSSProperties = { background: "var(--os-surface)", border: "1px solid var(--os-border)", borderRadius: 10, overflow: "hidden" };
+const panelSt: React.CSSProperties = { background: "var(--os-surface)", border: "1px solid var(--os-border)", borderRadius: 10, overflowX: "auto" };
 const amberBtn: React.CSSProperties = { background: "var(--os-amber)", color: "#fff" };
 
 const TABS = [

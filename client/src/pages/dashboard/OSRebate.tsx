@@ -35,7 +35,7 @@ const PAYABLE_STATUS_CONFIG: Record<string, { label: string; color: string; bg: 
 
 const thSt: React.CSSProperties = { color: "var(--os-text-3)", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" };
 const amberBtn: React.CSSProperties = { background: "var(--os-amber)", color: "#fff" };
-const panelSt: React.CSSProperties = { background: "var(--os-surface)", border: "1px solid var(--os-border)", borderRadius: 10, overflow: "hidden" };
+const panelSt: React.CSSProperties = { background: "var(--os-surface)", border: "1px solid var(--os-border)", borderRadius: 10, overflowX: "auto" };
 const selectSt: React.CSSProperties = { padding: "6px 12px", border: "1px solid var(--os-border)", borderRadius: 8, fontSize: 13, background: "var(--os-surface)", color: "var(--os-text-1)" };
 const inputSt: React.CSSProperties = { width: "100%", padding: "6px 10px", border: "1px solid var(--os-border)", borderRadius: 6, fontSize: 13, background: "var(--os-surface)", color: "var(--os-text-1)", outline: "none" };
 
