@@ -1,6 +1,6 @@
+import React, { useState } from "react";
 import { DayoneLayout, TENANT_ID } from "./DayoneLayout";
 import { trpc } from "@/lib/trpc";
-import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Search, Trash2, CalendarDays, Calendar } from "lucide-react";
+import { Plus, Search, Trash2, CalendarDays, Calendar, ChevronDown, ChevronUp, X } from "lucide-react";
 import { toast } from "sonner";
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
@@ -36,6 +36,7 @@ export default function DayoneOrders() {
   const [search, setSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
   const { user } = useAuth();
   const canDelete = user?.role === "manager" || user?.role === "super_admin";
 
@@ -81,6 +82,53 @@ export default function DayoneOrders() {
   });
 
   const filtered = (orders as any[] ?? []).filter((o: any) => !search || o.customerName?.includes(search) || o.orderNo?.includes(search));
+
+  function MobileOrderItems({ orderId }: { orderId: number }) {
+    const { data, isLoading } = trpc.dayone.orders.getWithItems.useQuery({ id: orderId, tenantId: TENANT_ID });
+    if (isLoading) return <div className="mt-2 px-1 text-xs text-stone-400">載入中...</div>;
+    const items = data?.items ?? [];
+    if (!items.length) return <div className="mt-2 px-1 text-xs text-stone-400">無商品明細</div>;
+    return (
+      <div className="mt-2 rounded-xl border border-amber-100 bg-amber-50/60 px-3 py-2 space-y-1">
+        {items.map((item: any) => (
+          <div key={item.id} className="flex justify-between text-xs">
+            <span className="text-stone-700">{item.productName} × {item.qty}{item.unit || ""}</span>
+            <span className="tabular-nums font-medium text-stone-800">${Number(item.subtotal).toLocaleString()}</span>
+          </div>
+        ))}
+        {data?.note && <p className="pt-1 text-xs text-stone-500 border-t border-amber-100">備註：{data.note}</p>}
+      </div>
+    );
+  }
+
+  function OrderItems({ orderId }: { orderId: number }) {
+    const { data, isLoading } = trpc.dayone.orders.getWithItems.useQuery({ id: orderId, tenantId: TENANT_ID });
+    if (isLoading) return <tr><td colSpan={7} className="px-4 py-2 text-xs text-stone-400">載入中...</td></tr>;
+    const items = data?.items ?? [];
+    if (!items.length) return <tr><td colSpan={7} className="px-4 py-2 text-xs text-stone-400">無商品明細</td></tr>;
+    return (
+      <tr>
+        <td colSpan={7} className="bg-amber-50/60 px-8 py-3">
+          <div className="grid grid-cols-[1fr_60px_72px_80px] gap-x-4 mb-1">
+            {["商品名稱", "數量", "單價", "小計"].map((h) => (
+              <span key={h} className="text-[11px] font-medium text-stone-400">{h}</span>
+            ))}
+          </div>
+          {items.map((item: any) => (
+            <div key={item.id} className="grid grid-cols-[1fr_60px_72px_80px] gap-x-4 py-1 border-b border-amber-100 last:border-0">
+              <span className="text-xs text-stone-700">{item.productName}</span>
+              <span className="text-xs text-stone-600 tabular-nums">{item.qty} {item.unit || ""}</span>
+              <span className="text-xs text-stone-600 tabular-nums text-right">${Number(item.unitPrice).toLocaleString()}</span>
+              <span className="text-xs font-medium text-stone-800 tabular-nums text-right">${Number(item.subtotal).toLocaleString()}</span>
+            </div>
+          ))}
+          {data?.note && (
+            <p className="mt-2 text-xs text-stone-500">備註：{data.note}</p>
+          )}
+        </td>
+      </tr>
+    );
+  }
 
   return (
     <DayoneLayout>
@@ -129,40 +177,63 @@ export default function DayoneOrders() {
                   <Input type="date" value={newOrder.deliveryDate} onChange={(e) => setNewOrder((p) => ({ ...p, deliveryDate: e.target.value }))} />
                 </div>
                 <div>
-                  <Label>商品明細</Label>
-                  {orderItems.map((item, idx) => (
-                    <div key={idx} className="mt-1 flex gap-2">
-                      <Select
-                        value={item.productId}
-                        onValueChange={(v) => {
-                          const prod = (products as any[] ?? []).find((p: any) => String(p.id) === v);
-                          setOrderItems((prev) => prev.map((it, i) => i === idx ? { ...it, productId: v, unitPrice: Number(prod?.defaultPrice ?? 0) } : it));
-                        }}
-                      >
-                        <SelectTrigger className="flex-1"><SelectValue placeholder="商品" /></SelectTrigger>
-                        <SelectContent>
-                          {(products as any[] ?? []).map((p: any) => (
-                            <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Input
-                        type="number"
-                        className="w-20"
-                        placeholder="數量"
-                        value={item.qty}
-                        onChange={(e) => setOrderItems((prev) => prev.map((it, i) => i === idx ? { ...it, qty: Number(e.target.value) } : it))}
-                      />
-                      <Input
-                        type="number"
-                        className="w-24"
-                        placeholder="單價"
-                        value={item.unitPrice}
-                        onChange={(e) => setOrderItems((prev) => prev.map((it, i) => i === idx ? { ...it, unitPrice: Number(e.target.value) } : it))}
-                      />
-                    </div>
-                  ))}
-                  <Button variant="outline" size="sm" className="mt-2" onClick={() => setOrderItems((prev) => [...prev, { productId: "", qty: 1, unitPrice: 0 }])}>
+                  <div className="mb-1 flex items-center justify-between">
+                    <Label>商品明細</Label>
+                    <span className="text-xs text-stone-400">
+                      合計：NT$ {orderItems.reduce((s, i) => s + i.qty * i.unitPrice, 0).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-[1fr_60px_72px_60px_auto] gap-x-1 mb-1">
+                    {["商品", "數量", "單價", "小計", ""].map((h) => (
+                      <span key={h} className="text-[11px] text-stone-400 px-1">{h}</span>
+                    ))}
+                  </div>
+                  {orderItems.map((item, idx) => {
+                    const subtotal = item.qty * item.unitPrice;
+                    return (
+                      <div key={idx} className="mt-1 grid grid-cols-[1fr_60px_72px_60px_auto] items-center gap-x-1">
+                        <Select
+                          value={item.productId}
+                          onValueChange={(v) => {
+                            const prod = (products as any[] ?? []).find((p: any) => String(p.id) === v);
+                            setOrderItems((prev) => prev.map((it, i) => i === idx ? { ...it, productId: v, unitPrice: Number(prod?.defaultPrice ?? 0) } : it));
+                          }}
+                        >
+                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="選商品" /></SelectTrigger>
+                          <SelectContent>
+                            {(products as any[] ?? []).map((p: any) => (
+                              <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          type="number"
+                          className="h-8 text-xs text-center"
+                          min={1}
+                          value={item.qty}
+                          onChange={(e) => setOrderItems((prev) => prev.map((it, i) => i === idx ? { ...it, qty: Number(e.target.value) } : it))}
+                        />
+                        <Input
+                          type="number"
+                          className="h-8 text-xs text-right"
+                          min={0}
+                          value={item.unitPrice}
+                          onChange={(e) => setOrderItems((prev) => prev.map((it, i) => i === idx ? { ...it, unitPrice: Number(e.target.value) } : it))}
+                        />
+                        <span className="text-xs text-stone-600 text-right tabular-nums px-1">
+                          {subtotal > 0 ? subtotal.toLocaleString() : "—"}
+                        </span>
+                        <button
+                          type="button"
+                          className="text-stone-300 hover:text-red-400 px-1"
+                          onClick={() => setOrderItems((prev) => prev.length === 1 ? [{ productId: "", qty: 1, unitPrice: 0 }] : prev.filter((_, i) => i !== idx))}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                  <Button variant="outline" size="sm" className="mt-2 h-7 text-xs" onClick={() => setOrderItems((prev) => [...prev, { productId: "", qty: 1, unitPrice: 0 }])}>
                     + 新增一項
                   </Button>
                 </div>
@@ -269,7 +340,7 @@ export default function DayoneOrders() {
                   <table className="dayone-table w-full text-sm">
                     <thead>
                       <tr>
-                        {["訂單編號", "客戶", "司機", "送貨日期", "金額", "狀態", "操作"].map((h) => (
+                        {["", "訂單編號", "客戶", "司機", "送貨日期", "金額", "狀態", "操作"].map((h) => (
                           <th key={h}>{h}</th>
                         ))}
                       </tr>
@@ -277,39 +348,53 @@ export default function DayoneOrders() {
                     <tbody>
                       {filtered.map((o: any) => {
                         const st = STATUS_MAP[o.status] ?? { label: o.status, color: "bg-gray-100 text-gray-700" };
+                        const isExpanded = expandedId === o.id;
                         return (
-                          <tr key={o.id}>
-                            <td className="font-mono text-xs">{o.orderNo}</td>
-                            <td className="font-medium">{o.customerName}</td>
-                            <td className="text-stone-600">{o.driverName ?? "未指派"}</td>
-                            <td>{o.deliveryDate}</td>
-                            <td className="font-medium">${Number(o.totalAmount).toLocaleString()}</td>
-                            <td>
-                              <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${st.color}`}>{st.label}</span>
-                            </td>
-                            <td>
-                              <div className="flex items-center gap-1">
-                                <Select value={o.status} onValueChange={(v) => updateStatus.mutate({ id: o.id, tenantId: TENANT_ID, status: v as any })}>
-                                  <SelectTrigger className="h-8 w-28 text-xs"><SelectValue /></SelectTrigger>
-                                  <SelectContent>
-                                    {Object.entries(STATUS_MAP).map(([k, v]) => (
-                                      <SelectItem key={k} value={k}>{v.label}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                {canDelete && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 w-8 p-0 text-red-500 hover:bg-red-50 hover:text-red-700"
-                                    onClick={() => setDeleteTarget(o)}
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
+                          <React.Fragment key={o.id}>
+                            <tr className={isExpanded ? "bg-amber-50/40" : ""}>
+                              <td className="w-8">
+                                <button
+                                  type="button"
+                                  className="flex items-center justify-center text-stone-400 hover:text-amber-600 transition-colors"
+                                  onClick={() => setExpandedId(isExpanded ? null : o.id)}
+                                  title="展開明細"
+                                >
+                                  {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                </button>
+                              </td>
+                              <td className="font-mono text-xs">{o.orderNo}</td>
+                              <td className="font-medium">{o.customerName}</td>
+                              <td className={`text-stone-600 ${!o.driverName ? "text-amber-600 font-medium" : ""}`}>{o.driverName ?? "⚠ 未指派"}</td>
+                              <td>{o.deliveryDate}</td>
+                              <td className="font-medium">${Number(o.totalAmount).toLocaleString()}</td>
+                              <td>
+                                <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${st.color}`}>{st.label}</span>
+                              </td>
+                              <td>
+                                <div className="flex items-center gap-1">
+                                  <Select value={o.status} onValueChange={(v) => updateStatus.mutate({ id: o.id, tenantId: TENANT_ID, status: v as any })}>
+                                    <SelectTrigger className="h-8 w-28 text-xs"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      {Object.entries(STATUS_MAP).map(([k, v]) => (
+                                        <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  {canDelete && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-0 text-red-500 hover:bg-red-50 hover:text-red-700"
+                                      onClick={() => setDeleteTarget(o)}
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                            {isExpanded && <OrderItems orderId={o.id} />}
+                          </React.Fragment>
                         );
                       })}
                     </tbody>
@@ -319,13 +404,14 @@ export default function DayoneOrders() {
                 <div className="dayone-mobile-list p-4 md:hidden">
                   {filtered.map((o: any) => {
                     const st = STATUS_MAP[o.status] ?? { label: o.status, color: "bg-gray-100 text-gray-700" };
+                    const isExpanded = expandedId === o.id;
                     return (
                       <article key={o.id} className="dayone-mobile-card p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <div className="font-mono text-[11px] text-stone-400">{o.orderNo}</div>
                             <h2 className="mt-1 text-lg font-semibold text-stone-900">{o.customerName}</h2>
-                            <p className="mt-1 text-sm text-stone-500">{o.driverName ?? "未指派司機"}</p>
+                            <p className={`mt-1 text-sm ${!o.driverName ? "text-amber-600 font-medium" : "text-stone-500"}`}>{o.driverName ?? "⚠ 未指派司機"}</p>
                           </div>
                           <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${st.color}`}>{st.label}</span>
                         </div>
@@ -340,6 +426,19 @@ export default function DayoneOrders() {
                             <div className="font-medium text-stone-800">${Number(o.totalAmount).toLocaleString()}</div>
                           </div>
                         </div>
+
+                        <button
+                          type="button"
+                          className="mt-3 flex w-full items-center justify-between rounded-xl bg-stone-50 px-3 py-2 text-xs text-stone-500 hover:bg-amber-50 hover:text-amber-700 transition-colors"
+                          onClick={() => setExpandedId(isExpanded ? null : o.id)}
+                        >
+                          <span>商品明細</span>
+                          {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                        </button>
+
+                        {isExpanded && (
+                          <MobileOrderItems orderId={o.id} />
+                        )}
 
                         <div className="mt-4 space-y-2">
                           <Label className="text-xs text-stone-500">更新狀態</Label>

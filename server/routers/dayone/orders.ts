@@ -146,6 +146,18 @@ export const dyOrdersRouter = router({
       return { success: true };
     }),
 
+  setDriver: dyAdminProcedure
+    .input(z.object({ id: z.number(), tenantId: z.number(), driverId: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      await (db as any).$client.execute(
+        `UPDATE dy_orders SET driverId=?, updatedAt=NOW() WHERE id=? AND tenantId=?`,
+        [input.driverId, input.id, input.tenantId]
+      );
+      return { success: true };
+    }),
+
   getLiffOrders: dyAdminProcedure.query(async () => {
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });

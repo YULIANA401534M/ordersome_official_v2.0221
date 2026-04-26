@@ -1,6 +1,6 @@
 # CLAUDE.md — OrderSome 專案主腦
 
-> 版本 v6.29｜最後更新：2026-04-26
+> 版本 v6.30｜最後更新：2026-04-26
 
 ---
 
@@ -162,6 +162,11 @@ Hero 圖片規則：
 - 訂單狀態欄文字斷行（v6.29）：`whitespace-nowrap` 加進 badge。
 - 訂單篩選只有單日（v6.29）：加「單日／區間」切換，區間模式顯示起訖日期 input，後端 `orders.list` 補 `dateFrom` / `dateTo` 參數。
 - 所有大永頁面錯誤訊息改中文（v6.29）：dayone/* 與 portal/* 的 `toast.error(e.message)` 全替換為中文說明。
+- 訂單新增表單（v6.30）：商品明細欄加標題列（商品/數量/單價/小計），選商品自動帶入預設價格，即時小計，合計顯示在標頭，可刪除單行。
+- 訂單列表明細展開（v6.30）：每筆訂單左側加 ChevronDown 按鈕，點擊展開顯示商品、數量、單價、小計明細；手機版也支援展開。未指派司機訂單以⚠ 橘色標示。
+- 庫存異動備註中文化（v6.30）：dispatch.ts 的 `Dispatch print for order` 改為「派車單列印扣庫」，inventory.ts 的 `Confirmed truck return` 改為「管理員確認剩貨回庫」，DayoneDispatch.tsx 的 `Admin return` 也改為中文。
+- 派車管理未指派訂單（v6.30）：派車工作台顯示當日未指派司機的 pending 訂單清單（橘色警示），可直接在派車頁面指派司機後再建立派車單；後端新增 `orders.setDriver` mutation。
+- 派車單重新設計（v6.30）：screen view 保留漸層卡片，print-target 改為緊湊表格版（客戶/地址/商品明細/金額/結帳/箱數/實收/簽名欄），有 footer 合計列與備註區塊。
 
 **大永落地驗收條件（需要真人跑過）：**
 1. 建訂單 → 派車 → 列印派車單有內容（v6.28 已修）

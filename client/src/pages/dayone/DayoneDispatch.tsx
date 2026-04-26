@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { DayoneLayout, TENANT_ID } from "./DayoneLayout";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -292,6 +292,9 @@ function ManualAddStopDialog({
   );
 }
 
+const thStyle: React.CSSProperties = { padding: "6px 8px", textAlign: "left", fontWeight: 600, fontSize: "11px", color: "#374151", borderRight: "1px solid #e5e7eb" };
+const tdStyle: React.CSSProperties = { padding: "4px 8px", borderRight: "1px solid #e5e7eb", verticalAlign: "top", fontSize: "12px" };
+
 function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onClose: () => void }) {
   const utils = trpc.useUtils();
   const [showAddStop, setShowAddStop] = useState(false);
@@ -363,6 +366,15 @@ function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onCl
           </div>
         ) : (
           <div className="flex min-h-full flex-col">
+            <style>{`
+              @media print {
+                .no-print { display: none !important; }
+                .print-dispatch-sheet { display: block !important; }
+              }
+              @media screen {
+                .print-dispatch-sheet { display: block; }
+              }
+            `}</style>
             <div className="no-print sticky top-0 z-20 flex items-center gap-2 border-b bg-white px-5 py-3">
               <Button variant="outline" onClick={onClose}>返回</Button>
               <div className="ml-auto flex gap-2">
@@ -382,8 +394,9 @@ function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onCl
               </div>
             </div>
 
-            <div className="print-target space-y-5 px-5 py-5">
-              <section className="rounded-[30px] bg-[linear-gradient(135deg,#1f2937_0%,#374151_45%,#b45309_100%)] px-5 py-5 text-white shadow-[0_18px_40px_rgba(120,53,15,0.18)]">
+            <div className="print-target space-y-4 px-5 py-5">
+              {/* Screen header — hidden in print */}
+              <section className="no-print rounded-[30px] bg-[linear-gradient(135deg,#1f2937_0%,#374151_45%,#b45309_100%)] px-5 py-5 text-white shadow-[0_18px_40px_rgba(120,53,15,0.18)]">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="text-xs uppercase tracking-[0.22em] text-white/55">Dispatch order</p>
@@ -394,7 +407,6 @@ function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onCl
                     {DISPATCH_STATUS[detail.status]?.label ?? detail.status}
                   </Badge>
                 </div>
-
                 <div className="mt-5 grid gap-3 sm:grid-cols-4">
                   <div className="rounded-2xl bg-white/10 px-4 py-3 backdrop-blur">
                     <p className="text-xs text-white/60">司機</p>
@@ -415,7 +427,7 @@ function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onCl
                 </div>
               </section>
 
-              <section className="grid gap-3 sm:grid-cols-3">
+              <section className="no-print grid gap-3 sm:grid-cols-3">
                 <div className="rounded-3xl border border-stone-200/70 bg-white p-4 shadow-[0_12px_24px_rgba(120,53,15,0.05)]">
                   <p className="text-xs text-stone-400">派出箱數</p>
                   <p className="mt-3 dayone-kpi-value text-stone-900">{totals.deliverBoxes}</p>
@@ -430,7 +442,107 @@ function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onCl
                 </div>
               </section>
 
-              <section className="space-y-3">
+              {/* ─── PRINT LAYOUT ────────────────────────────────────── */}
+              <section className="print-dispatch-sheet">
+                {/* Header bar */}
+                <div style={{borderBottom:"2px solid #1f2937", paddingBottom:"8px", marginBottom:"10px"}}>
+                  <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-end"}}>
+                    <div>
+                      <div style={{fontSize:"18px", fontWeight:"700", letterSpacing:"0.04em"}}>大永蛋行 派車單</div>
+                      <div style={{fontSize:"12px", color:"#555", marginTop:"2px"}}>
+                        配送日期：{fmtDate(detail.dispatchDate)}　司機：{detail.driverName}　路線：{detail.routeCode}
+                      </div>
+                    </div>
+                    <div style={{textAlign:"right", fontSize:"12px", color:"#777"}}>
+                      <div>建立：{fmtDateTime(detail.generatedAt)}</div>
+                      <div>共 {items.length} 站　預備箱 {detail.extraBoxes ?? 20} 箱</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stops table */}
+                <table style={{width:"100%", borderCollapse:"collapse", fontSize:"12px"}}>
+                  <thead>
+                    <tr style={{background:"#f3f4f6"}}>
+                      <th style={{...thStyle, width:"22px"}}>#</th>
+                      <th style={{...thStyle, width:"120px"}}>客戶</th>
+                      <th style={{...thStyle, width:"160px"}}>地址</th>
+                      <th style={{...thStyle}}>商品明細</th>
+                      <th style={{...thStyle, width:"58px", textAlign:"right"}}>金額</th>
+                      <th style={{...thStyle, width:"48px", textAlign:"center"}}>結帳</th>
+                      <th style={{...thStyle, width:"52px", textAlign:"center"}}>原箱</th>
+                      <th style={{...thStyle, width:"52px", textAlign:"center"}}>送箱</th>
+                      <th style={{...thStyle, width:"52px", textAlign:"center"}}>回箱</th>
+                      <th style={{...thStyle, width:"58px", textAlign:"right"}}>實收</th>
+                      <th style={{...thStyle, width:"60px"}}>簽名</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((item: any) => {
+                      const itemProducts = detail.products?.filter((p: any) =>
+                        item.orderId ? true : false
+                      ) ?? [];
+                      const payLabel: Record<string, string> = { monthly: "月結", weekly: "週結", unpaid: "現收", paid: "已收", partial: "部份" };
+                      return (
+                        <tr key={item.id} style={{borderBottom:"1px solid #e5e7eb", verticalAlign:"top"}}>
+                          <td style={{...tdStyle, fontWeight:"600", paddingTop:"8px"}}>{item.stopSequence}</td>
+                          <td style={{...tdStyle, fontWeight:"600", paddingTop:"8px"}}>{item.customerName}</td>
+                          <td style={{...tdStyle, fontSize:"11px", color:"#555", paddingTop:"8px"}}>{item.customerAddress ?? "—"}</td>
+                          <td style={{...tdStyle, paddingTop:"6px", paddingBottom:"6px"}}>
+                            {/* per-order items listed here — pulled from orderNo detail */}
+                            {item.orderNo && (
+                              <div style={{fontSize:"10px", color:"#888", marginBottom:"2px"}}>訂單 {item.orderNo}</div>
+                            )}
+                            {detail.products && detail.products.length > 0 ? (
+                              <div style={{color:"#374151"}}>
+                                {detail.products.map((p: any, pi: number) => (
+                                  <div key={pi} style={{display:"flex", gap:"4px"}}>
+                                    <span style={{flex:1}}>{p.productName}</span>
+                                    <span style={{minWidth:"40px", textAlign:"right", fontVariantNumeric:"tabular-nums"}}>{p.shippedQty} {p.unit || ""}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <span style={{color:"#9ca3af"}}>—</span>
+                            )}
+                          </td>
+                          <td style={{...tdStyle, textAlign:"right", fontWeight:"600", paddingTop:"8px"}}>{Number(item.orderAmount ?? 0).toLocaleString()}</td>
+                          <td style={{...tdStyle, textAlign:"center", paddingTop:"8px"}}>{payLabel[item.paymentStatus] ?? item.paymentStatus}</td>
+                          <td style={{...tdStyle, textAlign:"center", paddingTop:"8px"}}>{item.prevBoxes}</td>
+                          <td style={{...tdStyle, textAlign:"center", paddingTop:"8px"}}>{item.deliverBoxes}</td>
+                          <td style={{...tdStyle, textAlign:"center", paddingTop:"8px"}}>____</td>
+                          <td style={{...tdStyle, textAlign:"right", paddingTop:"8px"}}>________</td>
+                          <td style={{...tdStyle, paddingTop:"8px"}}>________</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr style={{background:"#f9fafb", borderTop:"2px solid #1f2937"}}>
+                      <td colSpan={4} style={{...tdStyle, fontWeight:"700", textAlign:"right", paddingTop:"6px", paddingBottom:"6px"}}>合計</td>
+                      <td style={{...tdStyle, fontWeight:"700", textAlign:"right", paddingTop:"6px"}}>{items.reduce((s: number, i: any) => s + Number(i.orderAmount ?? 0), 0).toLocaleString()}</td>
+                      <td colSpan={3} style={{...tdStyle, paddingTop:"6px"}}></td>
+                      <td style={{...tdStyle, textAlign:"center", paddingTop:"6px"}}>____</td>
+                      <td style={{...tdStyle, textAlign:"right", paddingTop:"6px"}}>________</td>
+                      <td style={{...tdStyle, paddingTop:"6px"}}></td>
+                    </tr>
+                  </tfoot>
+                </table>
+
+                <div style={{marginTop:"16px", display:"grid", gridTemplateColumns:"1fr 1fr", gap:"16px", fontSize:"11px", color:"#555"}}>
+                  <div style={{border:"1px solid #e5e7eb", borderRadius:"6px", padding:"8px"}}>
+                    <div style={{fontWeight:"600", marginBottom:"4px", color:"#1f2937"}}>司機備註</div>
+                    <div style={{height:"40px"}}></div>
+                  </div>
+                  <div style={{border:"1px solid #e5e7eb", borderRadius:"6px", padding:"8px"}}>
+                    <div style={{fontWeight:"600", marginBottom:"4px", color:"#1f2937"}}>管理員確認</div>
+                    <div style={{height:"40px"}}></div>
+                  </div>
+                </div>
+              </section>
+
+              {/* Screen-only station cards (no-print) */}
+              <section className="no-print space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-semibold text-stone-900">配送站點</p>
@@ -548,7 +660,7 @@ function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onCl
                     returnInventory.mutate({
                       dispatchOrderId: dispatchId,
                       tenantId: TENANT_ID,
-                      note: "Admin return from dispatch detail",
+                      note: "管理員確認剩貨回庫",
                       items: returnRows.filter((row) => row.qty > 0).map((row) => ({ productId: row.productId, qty: row.qty })),
                     })
                   }
@@ -572,11 +684,31 @@ export default function DayoneDispatch() {
   const [date, setDate] = useState(todayStr());
   const [showGenerateDialog, setShowGenerateDialog] = useState(false);
   const [detailId, setDetailId] = useState<number | null>(null);
+  const [assigningId, setAssigningId] = useState<number | null>(null);
+  const [assignDriverId, setAssignDriverId] = useState("");
 
   const utils = trpc.useUtils();
   const { data: dispatches = [], isLoading, refetch } = trpc.dayone.dispatch.listDispatch.useQuery({
     tenantId: TENANT_ID,
     dispatchDate: date,
+  });
+
+  const { data: unassignedOrders = [] } = trpc.dayone.orders.list.useQuery({
+    tenantId: TENANT_ID,
+    deliveryDate: date,
+    status: "pending",
+  });
+  const { data: drivers = [] } = trpc.dayone.drivers.list.useQuery({ tenantId: TENANT_ID });
+  const unassigned = (unassignedOrders as any[]).filter((o: any) => !o.driverId);
+
+  const setOrderDriver = trpc.dayone.orders.setDriver.useMutation({
+    onSuccess: () => {
+      toast.success("司機已指派");
+      setAssigningId(null);
+      setAssignDriverId("");
+      utils.dayone.orders.list.invalidate();
+    },
+    onError: () => toast.error("指派失敗，請重試"),
   });
 
   function refresh() {
@@ -632,6 +764,52 @@ export default function DayoneDispatch() {
               <p className="mt-1 text-sm text-amber-700/75">已完成車次</p>
             </div>
           </section>
+
+          {unassigned.length > 0 && (
+            <section className="rounded-[28px] border border-amber-200 bg-amber-50 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                <p className="text-sm font-semibold text-amber-800">未指派司機訂單（{unassigned.length} 筆）</p>
+                <p className="text-xs text-amber-600 ml-auto">指派後才能加入派車單</p>
+              </div>
+              <div className="space-y-2">
+                {unassigned.map((o: any) => (
+                  <div key={o.id} className="flex items-center gap-3 rounded-2xl bg-white px-4 py-3 text-sm shadow-sm">
+                    <div className="min-w-0 flex-1">
+                      <span className="font-medium text-stone-900">{o.customerName}</span>
+                      <span className="ml-2 text-xs text-stone-400">{o.orderNo}</span>
+                      <span className="ml-2 font-semibold text-stone-700">${Number(o.totalAmount).toLocaleString()}</span>
+                    </div>
+                    {assigningId === o.id ? (
+                      <div className="flex items-center gap-2">
+                        <Select value={assignDriverId} onValueChange={setAssignDriverId}>
+                          <SelectTrigger className="h-8 w-32 text-xs"><SelectValue placeholder="選司機" /></SelectTrigger>
+                          <SelectContent>
+                            {(drivers as any[]).map((d: any) => (
+                              <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          size="sm"
+                          className="h-8 bg-amber-600 text-white hover:bg-amber-700"
+                          disabled={!assignDriverId || setOrderDriver.isPending}
+                          onClick={() => setOrderDriver.mutate({ id: o.id, tenantId: TENANT_ID, driverId: Number(assignDriverId) })}
+                        >
+                          確認
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-8" onClick={() => { setAssigningId(null); setAssignDriverId(""); }}>取消</Button>
+                      </div>
+                    ) : (
+                      <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setAssigningId(o.id)}>
+                        指派司機
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           {isLoading ? (
             <div className="flex justify-center py-16">

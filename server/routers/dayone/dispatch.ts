@@ -304,7 +304,7 @@ export const dyDispatchRouter = router({
           `INSERT INTO dy_stock_movements
            (tenantId, productId, type, qty, refId, refType, note, createdAt)
            VALUES (?,?,'out',?,?,'dispatch_print',?,NOW())`,
-          [input.tenantId, item.productId, item.qty, input.id, `Dispatch print for order ${item.orderId}`]
+          [input.tenantId, item.productId, item.qty, input.id, `派車單列印扣庫 #${item.orderId}`]
         );
       }
 

@@ -159,7 +159,7 @@ export const dyInventoryRouter = router({
             pendingReturn.productId,
             pendingReturn.qty,
             pendingReturn.dispatchOrderId,
-            input.note?.trim() || pendingReturn.note || `Confirmed truck return for dispatch ${pendingReturn.dispatchOrderId}`,
+            input.note?.trim() || pendingReturn.note || `管理員確認剩貨回庫 (派車單 #${pendingReturn.dispatchOrderId})`,
             ctx.user.id,
           ]
         );
