@@ -266,7 +266,7 @@ function Router() {
       <Route path="/dayone/purchase" component={DayonePurchase} />
       <Route path="/dayone/districts" component={DayoneDistricts} />
       <Route path="/dayone/reports" component={DayoneReports} />
-      <Route path="/dayone/suppliers" component={SupplierList} />
+      <Route path="/dayone/suppliers" component={DayonePurchase} />
       <Route path="/dayone/liff-orders" component={DayoneLiffOrders} />
       <Route path="/dayone/ar" component={DayoneAR} />
       <Route path="/dayone/dispatch" component={DayoneDispatch} />
@@ -280,6 +280,7 @@ function Router() {
       <Route path="/dayone/portal/statement" component={DayonePortalStatement} />
       <Route path="/dayone/portal/account" component={DayonePortalAccount} />
       {/* Driver Mobile Routes */}
+      <Route path="/driver/login" component={DayoneLogin} />
       <Route path="/driver" component={DriverHome} />
       <Route path="/driver/today" component={DriverToday} />
       <Route path="/driver/orders" component={DriverOrders} />

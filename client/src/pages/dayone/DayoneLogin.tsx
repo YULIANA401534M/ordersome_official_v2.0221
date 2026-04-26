@@ -14,15 +14,26 @@ export default function DayoneLogin() {
 
   const loginMutation = trpc.auth.loginWithPassword.useMutation({
     onSuccess: async (data) => {
-      if ((data.user as any).tenantId !== 90004 && data.user.role !== "super_admin") {
-        toast.error("此帳號無法登入大永後台");
+      const user = data.user as any;
+      const isTenantUser = user.tenantId === 90004;
+      const isSuperAdmin = user.role === "super_admin";
+
+      if (!isTenantUser && !isSuperAdmin) {
+        toast.error("此帳號不屬於大永蛋品，請確認帳號");
         return;
       }
+
       await utils.auth.me.invalidate();
-      navigate("/dayone");
+
+      // 司機跳到司機 APP，其他角色進管理後台
+      if (user.role === "driver") {
+        navigate("/driver/today");
+      } else {
+        navigate("/dayone");
+      }
     },
-    onError: (err) => {
-      toast.error(err.message || "登入失敗，請確認帳號密碼");
+    onError: () => {
+      toast.error("帳號或密碼錯誤，請重試");
     },
   });
 
@@ -37,20 +48,18 @@ export default function DayoneLogin() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Logo 區塊 */}
         <div className="flex flex-col items-center mb-8">
           <div className="w-16 h-16 rounded-2xl bg-amber-500 flex items-center justify-center shadow-lg mb-4">
             <Egg className="h-8 w-8 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">大永蛋品</h1>
-          <p className="text-sm text-gray-500 mt-1">ERP 管理後台</p>
+          <p className="text-sm text-gray-500 mt-1">管理後台 ＆ 司機 APP 統一登入</p>
         </div>
 
-        {/* 登入卡片 */}
         <div className="bg-white rounded-2xl shadow-xl p-8 flex flex-col gap-5">
           <div className="flex flex-col gap-1">
             <h2 className="text-lg font-semibold text-gray-800">歡迎回來</h2>
-            <p className="text-sm text-gray-400">請輸入您的帳號密碼登入</p>
+            <p className="text-sm text-gray-400">管理員、員工與司機使用同一個登入頁面，系統會自動跳轉到對應介面。</p>
           </div>
 
           <div className="flex flex-col gap-3">

@@ -9,7 +9,6 @@ import {
   ShoppingCart,
   BarChart3,
   MapPin,
-  Building2,
   LogOut,
   ChevronLeft,
   Smartphone,
@@ -18,26 +17,57 @@ import {
   X,
   UserCog,
   ClipboardCheck,
+  Boxes,
+  ClipboardList,
 } from "lucide-react";
 import { useLocation } from "wouter";
 
-const NAV_ITEM_DEFS = [
-  { icon: LayoutDashboard, label: "總覽", path: "/dayone", moduleKey: null },
-  { icon: ShoppingCart, label: "訂單管理", path: "/dayone/orders", moduleKey: "delivery" },
-  { icon: Users, label: "客戶管理", path: "/dayone/customers", moduleKey: "crm_customers" },
-  { icon: Package, label: "商品管理", path: "/dayone/products", moduleKey: "products" },
-  { icon: LayoutDashboard, label: "庫存管理", path: "/dayone/inventory", moduleKey: "inventory" },
-  { icon: Truck, label: "採購管理", path: "/dayone/purchase", moduleKey: "purchasing" },
-  { icon: Truck, label: "司機管理", path: "/dayone/drivers", moduleKey: "driver_mgmt" },
-  { icon: MapPin, label: "區域管理", path: "/dayone/districts", moduleKey: "districts" },
-  { icon: Building2, label: "供應商", path: "/dayone/suppliers", moduleKey: null },
-  { icon: BarChart3, label: "報表分析", path: "/dayone/reports", moduleKey: null },
-  { icon: UserCog, label: "用戶管理", path: "/dayone/users", moduleKey: null },
-  { icon: Smartphone, label: "LIFF 訂單", path: "/dayone/liff-orders", moduleKey: "liff_orders" },
-  { icon: CreditCard, label: "應收帳款", path: "/dayone/ar", moduleKey: "ar_management" },
-  { icon: ClipboardCheck, label: "派車管理", path: "/dayone/dispatch", moduleKey: "dispatch" },
-  { icon: Package, label: "進貨簽收", path: "/dayone/purchase-receipts", moduleKey: "purchase_receipts" },
+// Groups: null = always show, string = moduleKey guard
+const NAV_GROUPS = [
+  {
+    label: "營運",
+    items: [
+      { icon: LayoutDashboard, label: "總覽", path: "/dayone", moduleKey: null },
+      { icon: ShoppingCart, label: "訂單管理", path: "/dayone/orders", moduleKey: "delivery" },
+      { icon: ClipboardCheck, label: "派車管理", path: "/dayone/dispatch", moduleKey: "dispatch" },
+      { icon: Truck, label: "進貨簽收", path: "/dayone/purchase-receipts", moduleKey: "purchase_receipts" },
+    ],
+  },
+  {
+    label: "商品與庫存",
+    items: [
+      { icon: Package, label: "商品管理", path: "/dayone/products", moduleKey: "products" },
+      { icon: Boxes, label: "庫存管理", path: "/dayone/inventory", moduleKey: "inventory" },
+      { icon: ClipboardList, label: "採購管理", path: "/dayone/purchase", moduleKey: "purchasing" },
+    ],
+  },
+  {
+    label: "客戶與帳務",
+    items: [
+      { icon: Users, label: "客戶管理", path: "/dayone/customers", moduleKey: "crm_customers" },
+      { icon: CreditCard, label: "應收帳款", path: "/dayone/ar", moduleKey: "ar_management" },
+    ],
+  },
+  {
+    label: "人員與設定",
+    items: [
+      { icon: Truck, label: "司機管理", path: "/dayone/drivers", moduleKey: "driver_mgmt" },
+      { icon: MapPin, label: "區域管理", path: "/dayone/districts", moduleKey: "districts" },
+      { icon: UserCog, label: "帳號管理", path: "/dayone/users", moduleKey: null },
+      { icon: BarChart3, label: "報表分析", path: "/dayone/reports", moduleKey: null },
+    ],
+  },
+  {
+    label: "其他",
+    items: [
+      { icon: Smartphone, label: "LIFF 訂單", path: "/dayone/liff-orders", moduleKey: "liff_orders" },
+    ],
+  },
 ] as const;
+
+// Flatten for active detection
+type NavItem = { icon: any; label: string; path: string; moduleKey: string | null };
+const ALL_NAV_ITEMS: NavItem[] = NAV_GROUPS.flatMap((g) => g.items as any);
 
 export default function DayoneLayout({ children }: { children: React.ReactNode }) {
   const { user, logout, loading } = useAuth();
@@ -47,11 +77,11 @@ export default function DayoneLayout({ children }: { children: React.ReactNode }
 
   const isSuperAdmin = user?.role === "super_admin";
 
-  const navItems = NAV_ITEM_DEFS.filter((item) => {
+  function isVisible(moduleKey: string | null) {
     if (isSuperAdmin) return true;
-    if (!item.moduleKey) return true;
-    return has(item.moduleKey);
-  });
+    if (!moduleKey) return true;
+    return has(moduleKey);
+  }
 
   useEffect(() => {
     if (!loading && !user) {
@@ -67,9 +97,7 @@ export default function DayoneLayout({ children }: { children: React.ReactNode }
     );
   }
 
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
 
   const hasAccess = user.role === "super_admin" || user.role === "manager";
   if (!hasAccess) {
@@ -83,25 +111,43 @@ export default function DayoneLayout({ children }: { children: React.ReactNode }
     );
   }
 
-  const activeItem = navItems.find((item) => location === item.path || (item.path !== "/dayone" && location.startsWith(item.path)));
+  const activeItem = ALL_NAV_ITEMS.find(
+    (item) => location === item.path || (item.path !== "/dayone" && location.startsWith(item.path))
+  );
 
   function handleNavClick(path: string) {
     navigate(path);
     setSidebarOpen(false);
   }
 
+  function NavButton({ item }: { item: NavItem }) {
+    const isActive = location === item.path || (item.path !== "/dayone" && location.startsWith(item.path));
+    return (
+      <button
+        onClick={() => handleNavClick(item.path)}
+        className={`w-full rounded-[20px] px-3.5 py-3 text-left text-sm transition-all ${
+          isActive
+            ? "bg-[linear-gradient(135deg,#f59e0b,#d97706)] font-semibold text-white shadow-[0_14px_26px_rgba(180,83,9,0.24)]"
+            : "text-stone-600 hover:bg-white/85 hover:text-stone-900 hover:shadow-[0_10px_18px_rgba(120,53,15,0.05)]"
+        }`}
+      >
+        <span className="flex items-center gap-2.5">
+          <item.icon className="h-4 w-4 shrink-0" />
+          {item.label}
+        </span>
+      </button>
+    );
+  }
+
   return (
     <div className="dayone-shell min-h-screen flex text-stone-900">
       {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-20 bg-black/40 md:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
+        <div className="fixed inset-0 z-20 bg-black/40 md:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
       <aside
         className={`
-          fixed inset-y-0 left-0 z-30 w-[272px] shrink-0 border-r border-amber-100/80
+          fixed inset-y-0 left-0 z-30 w-[260px] shrink-0 border-r border-amber-100/80
           transform flex-col transition-transform duration-200 md:static md:flex
           ${sidebarOpen ? "translate-x-0 flex" : "-translate-x-full hidden md:translate-x-0"}
         `}
@@ -110,58 +156,53 @@ export default function DayoneLayout({ children }: { children: React.ReactNode }
           backdropFilter: "blur(18px)",
         }}
       >
-        <div className="border-b border-amber-100/80 px-5 pb-5 pt-5">
+        {/* Brand header */}
+        <div className="border-b border-amber-100/80 px-4 pb-4 pt-4">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <span className="block text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-700">Dayone Control</span>
-              <span className="mt-2 block font-ui text-[1.4rem] font-extrabold leading-none tracking-[-0.05em] text-stone-950">大永蛋品 ERP</span>
-              <span className="mt-2 block text-xs leading-5 text-stone-500">配送、進貨、帳務與營運資訊整合在同一個管理介面。</span>
+              <span className="block text-[10px] font-semibold uppercase tracking-[0.22em] text-amber-700">Dayone Control</span>
+              <span className="mt-1.5 block font-ui text-[1.3rem] font-extrabold leading-none tracking-[-0.05em] text-stone-950">大永蛋品 ERP</span>
             </div>
-            <button
-              className="rounded-xl p-2 text-gray-400 hover:bg-white hover:text-gray-700 md:hidden"
-              onClick={() => setSidebarOpen(false)}
-            >
+            <button className="rounded-xl p-2 text-gray-400 hover:bg-white hover:text-gray-700 md:hidden" onClick={() => setSidebarOpen(false)}>
               <X className="h-4 w-4" />
             </button>
           </div>
-          <div className="mt-4 flex items-center justify-between rounded-2xl border border-white/80 bg-white/70 px-3 py-3 shadow-[0_10px_22px_rgba(120,53,15,0.06)]">
+          <div className="mt-3 flex items-center justify-between rounded-2xl border border-white/80 bg-white/70 px-3 py-2.5 shadow-[0_10px_22px_rgba(120,53,15,0.06)]">
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-stone-900">{user.name}</p>
-              <p className="mt-1 text-[11px] uppercase tracking-[0.16em] text-stone-400">{isSuperAdmin ? "Super Admin" : "Manager"}</p>
+              <p className="mt-0.5 text-[10px] uppercase tracking-[0.16em] text-stone-400">{isSuperAdmin ? "Super Admin" : "Manager"}</p>
             </div>
-            <div className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700">Online</div>
+            <div className="rounded-full bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-700">Online</div>
           </div>
         </div>
 
-        <nav className="flex-1 space-y-1.5 overflow-y-auto px-3 py-4">
-          {navItems.map((item) => {
-            const isActive = location === item.path || (item.path !== "/dayone" && location.startsWith(item.path));
+        {/* Grouped nav */}
+        <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
+          {NAV_GROUPS.map((group) => {
+            const visibleItems = group.items.filter((item) => isVisible(item.moduleKey));
+            if (visibleItems.length === 0) return null;
+            // Hide "其他" label if only entry
+            const showLabel = group.label !== "其他" || visibleItems.length > 0;
             return (
-              <button
-                key={item.path}
-                onClick={() => handleNavClick(item.path)}
-                className={`w-full rounded-[22px] px-4 py-3.5 text-left text-sm transition-all ${
-                  isActive
-                    ? "bg-[linear-gradient(135deg,#f59e0b,#d97706)] font-semibold text-white shadow-[0_14px_26px_rgba(180,83,9,0.24)]"
-                    : "text-stone-600 hover:bg-white/85 hover:text-stone-900 hover:shadow-[0_10px_18px_rgba(120,53,15,0.05)]"
-                }`}
-              >
-                <span className="flex items-center gap-3">
-                  <item.icon className="h-4 w-4 shrink-0" />
-                  {item.label}
-                </span>
-              </button>
+              <div key={group.label}>
+                {showLabel && (
+                  <p className="mb-1 px-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-stone-400">{group.label}</p>
+                )}
+                <div className="space-y-0.5">
+                  {visibleItems.map((item) => (
+                    <NavButton key={item.path} item={item as NavItem} />
+                  ))}
+                </div>
+              </div>
             );
           })}
         </nav>
 
-        <div className="space-y-1 border-t border-amber-100/80 p-3">
+        {/* Footer */}
+        <div className="space-y-0.5 border-t border-amber-100/80 p-3">
           {isSuperAdmin && (
             <button
-              onClick={() => {
-                navigate("/dashboard");
-                setSidebarOpen(false);
-              }}
+              onClick={() => { navigate("/dashboard"); setSidebarOpen(false); }}
               className="flex w-full items-center gap-2 rounded-2xl px-3 py-2.5 text-sm text-gray-500 transition-colors hover:bg-white hover:text-gray-900"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -179,11 +220,9 @@ export default function DayoneLayout({ children }: { children: React.ReactNode }
       </aside>
 
       <main className="min-w-0 flex-1 overflow-auto">
+        {/* Mobile topbar */}
         <div className="sticky top-0 z-40 flex h-16 items-center gap-3 border-b border-amber-100/80 bg-[rgba(255,252,245,0.94)] px-4 backdrop-blur-xl md:hidden">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="rounded-xl p-2 text-gray-600 hover:bg-white hover:text-gray-900"
-          >
+          <button onClick={() => setSidebarOpen(true)} className="rounded-xl p-2 text-gray-600 hover:bg-white hover:text-gray-900">
             <Menu className="h-5 w-5" />
           </button>
           <div className="min-w-0">
