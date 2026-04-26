@@ -30,10 +30,10 @@ export default function DriverOrders() {
       ) : (
         <div className="space-y-4">
           <section className="rounded-[28px] bg-stone-900 px-5 py-5 text-white shadow-[0_16px_40px_rgba(28,25,23,0.18)]">
-            <p className="text-xs uppercase tracking-[0.24em] text-white/50">Orders</p>
-            <h2 className="mt-3 font-brand text-[1.75rem] leading-none">今日配送清單</h2>
+            <p className="text-xs tracking-[0.18em] text-white/50">今日配送</p>
+            <h2 className="mt-3 font-brand text-[1.75rem] leading-none">配送清單</h2>
             <p className="mt-3 text-sm leading-6 text-white/72">
-              共 {orders.length} 筆訂單，點進去就能處理狀態、收款與簽名。
+              共 {orders.length} 站，依路線順序排列，點進去可收款、簽名。
             </p>
           </section>
 
@@ -50,12 +50,21 @@ export default function DriverOrders() {
                   href={`/driver/order/${order.id}`}
                   className="block rounded-[26px] border border-stone-200/80 bg-white p-4 shadow-[0_12px_24px_rgba(120,53,15,0.05)] transition-transform active:scale-[0.99]"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
+                  <div className="flex items-center gap-3">
+                    {order.stopSequence != null && (
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-600 text-sm font-bold text-white">
+                        {order.stopSequence}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
                       <p className="text-base font-semibold text-stone-900">{order.customerName}</p>
-                      <p className="mt-1 text-xs font-medium tracking-[0.16em] text-stone-400">{order.orderNo}</p>
+                      <p className="mt-0.5 text-xs tracking-widest text-stone-400">{order.orderNo}</p>
                     </div>
-                    <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                    <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      order.status === "delivered" ? "bg-emerald-100 text-emerald-700" :
+                      order.status === "delivering" ? "bg-orange-100 text-orange-700" :
+                      "bg-amber-50 text-amber-700"
+                    }`}>
                       {STATUS_LABEL[order.status] ?? order.status}
                     </span>
                   </div>

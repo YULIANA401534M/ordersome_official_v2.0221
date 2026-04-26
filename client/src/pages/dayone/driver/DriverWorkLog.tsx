@@ -86,10 +86,10 @@ export default function DriverWorkLog() {
     <DriverLayout title="剩貨回庫 / 日結">
       <div className="space-y-4">
         <section className="rounded-[28px] bg-stone-900 px-5 py-5 text-white shadow-[0_16px_40px_rgba(28,25,23,0.18)]">
-          <p className="text-xs uppercase tracking-[0.24em] text-white/50">Closing</p>
+          <p className="text-xs tracking-[0.18em] text-white/50">回倉結算</p>
           <h2 className="mt-3 font-brand text-[1.7rem] leading-none">收尾不要漏掉</h2>
           <p className="mt-3 text-sm leading-6 text-white/72">
-                    先回報剩貨待驗，再提交今天的工作日誌與現金結果。
+            先回報車上剩貨待驗，再提交今天的工作日誌與現金結果。
           </p>
         </section>
 
@@ -124,11 +124,17 @@ export default function DriverWorkLog() {
                     <SelectValue placeholder="選擇今天要回報的派車單" />
                   </SelectTrigger>
                   <SelectContent>
-                    {dispatches.map((dispatch: any) => (
-                      <SelectItem key={dispatch.id} value={String(dispatch.id)}>
-                        {`${dispatch.routeCode || "R00"} / ${dispatch.status} / #${dispatch.id}`}
-                      </SelectItem>
-                    ))}
+                    {dispatches.map((dispatch: any) => {
+                      const statusLabel: Record<string, string> = {
+                        draft: "草稿", printed: "已列印", in_progress: "配送中",
+                        pending_handover: "待點收", completed: "已完成",
+                      };
+                      return (
+                        <SelectItem key={dispatch.id} value={String(dispatch.id)}>
+                          {`路線 ${dispatch.routeCode || "—"}　${statusLabel[dispatch.status] ?? dispatch.status}　共 ${dispatch.totalStops ?? "?"} 站`}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>

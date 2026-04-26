@@ -87,6 +87,7 @@ export const dyDriverRouter = router({
         `SELECT o.*, c.name as customerName, c.address as customerAddress, c.phone as customerPhone,
                 c.settlementCycle, c.overdueDays,
                 dist.name as districtName,
+                di.stopSequence,
                 (SELECT COALESCE(SUM(uo.totalAmount - uo.paidAmount), 0)
                  FROM dy_orders uo
                  WHERE uo.customerId = o.customerId AND uo.tenantId = o.tenantId
@@ -95,8 +96,9 @@ export const dyDriverRouter = router({
          FROM dy_orders o
          JOIN dy_customers c ON o.customerId = c.id
          LEFT JOIN dy_districts dist ON o.districtId = dist.id
+         LEFT JOIN dy_dispatch_items di ON di.orderId = o.id AND di.tenantId = o.tenantId
          WHERE o.tenantId = ? AND o.driverId = ? AND o.deliveryDate = ?
-         ORDER BY o.id ASC`,
+         ORDER BY COALESCE(di.stopSequence, 9999) ASC, o.id ASC`,
         [input.tenantId, driver.id, date]
       );
       return rows as any[];
@@ -109,6 +111,11 @@ export const dyDriverRouter = router({
         tenantId: z.number(),
         status: z.enum(["picked", "delivering", "delivered", "returned"]),
         driverNote: z.string().optional(),
+        // Box counts recorded when driver arrives at customer
+        inBoxes: z.number().int().min(0).optional(),
+        returnBoxes: z.number().int().min(0).optional(),
+        // Cash collected at this stop (for delivered)
+        cashCollected: z.number().min(0).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -117,21 +124,41 @@ export const dyDriverRouter = router({
       const client = (db as any).$client;
       const driver = await getDriverByUser(client, ctx.user.id, input.tenantId);
       if (!driver) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Driver account is not linked to Dayone" });
+        throw new TRPCError({ code: "FORBIDDEN", message: "司機帳號未連結" });
       }
 
+      // Build dynamic SET clauses for optional fields
+      const setParts = [
+        "status=?",
+        "driverNote=COALESCE(?, driverNote)",
+        "updatedAt=NOW()",
+      ];
+      const params: any[] = [input.status, input.driverNote ?? null];
+
+      if (input.inBoxes !== undefined) {
+        setParts.push("inBoxes=?");
+        params.push(input.inBoxes);
+      }
+      if (input.returnBoxes !== undefined) {
+        setParts.push("returnBoxes=?");
+        params.push(input.returnBoxes);
+      }
+      if (input.cashCollected !== undefined) {
+        setParts.push("cashCollected=?", "paidAmount=?");
+        setParts.push("paymentStatus=IF(? >= totalAmount,'paid',IF(? > 0,'partial','unpaid'))");
+        params.push(input.cashCollected, input.cashCollected, input.cashCollected, input.cashCollected);
+      }
+
+      params.push(input.id, input.tenantId, driver.id);
       await client.execute(
-        `UPDATE dy_orders
-         SET status=?, driverNote=COALESCE(?, driverNote), updatedAt=NOW()
-         WHERE id=? AND tenantId=? AND driverId=?`,
-        [input.status, input.driverNote ?? null, input.id, input.tenantId, driver.id]
+        `UPDATE dy_orders SET ${setParts.join(",")} WHERE id=? AND tenantId=? AND driverId=?`,
+        params
       );
 
       if (input.status === "delivered") {
         const [orderRows] = await client.execute(
           `SELECT o.id, o.customerId, o.deliveryDate, o.totalAmount, o.paidAmount, c.settlementCycle, c.overdueDays
-           FROM dy_orders o
-           JOIN dy_customers c ON c.id = o.customerId
+           FROM dy_orders o JOIN dy_customers c ON c.id = o.customerId
            WHERE o.id=? AND o.tenantId=? LIMIT 1`,
           [input.id, input.tenantId]
         );

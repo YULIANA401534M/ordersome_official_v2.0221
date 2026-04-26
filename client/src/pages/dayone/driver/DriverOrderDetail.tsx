@@ -3,72 +3,105 @@ import { useLocation, useParams } from "wouter";
 import { trpc } from "../../../lib/trpc";
 import DriverLayout from "./DriverLayout";
 import SignatureCanvas from "react-signature-canvas";
-import { MapPin, Phone, DollarSign, PenLine, CheckCircle, ChevronLeft, Truck } from "lucide-react";
+import { MapPin, Phone, ChevronLeft, Truck, Package, AlertCircle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
 const TENANT_ID = 90004;
 
-const STATUS_FLOW: Record<string, { next: "picked" | "delivering" | "delivered"; label: string }> = {
-  assigned: { next: "picked", label: "確認已撿貨" },
-  pending: { next: "picked", label: "確認已撿貨" },
-  picked: { next: "delivering", label: "開始配送" },
-  delivering: { next: "delivered", label: "確認送達" },
+const STATUS_LABEL: Record<string, string> = {
+  pending:    "待處理",
+  assigned:   "已派車",
+  picked:     "已撿貨",
+  delivering: "配送中",
+  delivered:  "已送達",
+  returned:   "已回單",
+  cancelled:  "已取消",
+};
+
+const STATUS_TONE: Record<string, string> = {
+  pending:    "bg-stone-100 text-stone-600",
+  assigned:   "bg-sky-100 text-sky-700",
+  picked:     "bg-amber-100 text-amber-700",
+  delivering: "bg-orange-100 text-orange-700",
+  delivered:  "bg-emerald-100 text-emerald-700",
+  returned:   "bg-rose-100 text-rose-700",
+  cancelled:  "bg-stone-100 text-stone-400",
+};
+
+const PAY_LABEL: Record<string, string> = {
+  monthly: "月結",
+  weekly:  "週結",
+  unpaid:  "現收－未收",
+  partial: "現收－部分",
+  paid:    "現收－已收",
 };
 
 export default function DriverOrderDetail() {
   const params = useParams<{ id: string }>();
   const orderId = Number(params.id ?? "0");
   const [, navigate] = useLocation();
+
+  // Delivery confirmation state
   const [cashInput, setCashInput] = useState("");
-  const [showSignature, setShowSignature] = useState(false);
-  const [note, setNote] = useState("");
+  const [inBoxes, setInBoxes] = useState("");   // 客戶還回空箱
+  const [returnBoxes, setReturnBoxes] = useState(""); // 退貨/回收箱
+  const [driverNote, setDriverNote] = useState("");
+  const [showSig, setShowSig] = useState(false);
   const sigRef = useRef<SignatureCanvas>(null);
 
   const today = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const utils = trpc.useUtils();
+
   const { data: orders = [] } = trpc.dayone.driver.getMyTodayOrders.useQuery({
     tenantId: TENANT_ID,
     deliveryDate: today,
   });
-  const order = (orders as any[]).find((item: any) => item.id === orderId);
+  const order = (orders as any[]).find((o: any) => o.id === orderId);
+
+  const { data: orderDetail } = trpc.dayone.orders.getWithItems.useQuery(
+    { id: orderId, tenantId: TENANT_ID },
+    { enabled: !!orderId }
+  );
 
   const updateStatus = trpc.dayone.driver.updateOrderStatus.useMutation({
     onSuccess: () => {
-      toast.success("訂單狀態已更新");
+      toast.success("狀態已更新");
       utils.dayone.driver.getMyTodayOrders.invalidate();
     },
-    onError: (error) => toast.error(error.message),
-  });
-
-  const recordCash = trpc.dayone.driver.recordCashPayment.useMutation({
-    onSuccess: () => {
-      toast.success("收款已更新");
-      setCashInput("");
-      utils.dayone.driver.getMyTodayOrders.invalidate();
-    },
-    onError: (error) => toast.error(error.message),
+    onError: (e) => toast.error(e.message),
   });
 
   const uploadSignature = trpc.dayone.driver.uploadSignature.useMutation({
     onSuccess: () => {
-      toast.success("簽名已上傳");
-      setShowSignature(false);
+      toast.success("簽名已記錄");
+      setShowSig(false);
       utils.dayone.driver.getMyTodayOrders.invalidate();
     },
-    onError: (error) => toast.error(error.message),
+    onError: (e) => toast.error(e.message),
   });
+
+  async function handleConfirmDelivery() {
+    const cash = cashInput !== "" ? Number(cashInput) : undefined;
+    const ib = inBoxes !== "" ? Number(inBoxes) : undefined;
+    const rb = returnBoxes !== "" ? Number(returnBoxes) : undefined;
+    await updateStatus.mutateAsync({
+      id: orderId,
+      tenantId: TENANT_ID,
+      status: "delivered",
+      cashCollected: cash,
+      inBoxes: ib,
+      returnBoxes: rb,
+      driverNote: driverNote || undefined,
+    });
+  }
 
   async function handleSaveSignature() {
     if (!sigRef.current || sigRef.current.isEmpty()) {
-      toast.error("請先簽名");
+      toast.error("請先讓客戶簽名");
       return;
     }
     const dataUrl = sigRef.current.toDataURL("image/png");
-    await uploadSignature.mutateAsync({
-      orderId,
-      tenantId: TENANT_ID,
-      imageBase64: dataUrl,
-    });
+    await uploadSignature.mutateAsync({ orderId, tenantId: TENANT_ID, imageBase64: dataUrl });
   }
 
   if (!order) {
@@ -76,177 +109,248 @@ export default function DriverOrderDetail() {
       <DriverLayout title="訂單明細">
         <div className="flex h-64 flex-col items-center justify-center text-stone-400">
           <Truck className="h-12 w-12 opacity-40" />
-          <p className="mt-4 text-sm">找不到這筆今日訂單。</p>
-          <button type="button" onClick={() => navigate("/driver/orders")} className="mt-4 text-sm font-medium text-amber-600">
-            返回訂單列表
+          <p className="mt-4 text-sm">找不到這筆今日訂單</p>
+          <button type="button" onClick={() => navigate("/driver/orders")} className="mt-4 text-sm font-semibold text-amber-600">
+            返回列表
           </button>
         </div>
       </DriverLayout>
     );
   }
 
-  const flow = STATUS_FLOW[order.status];
-  const unpaidAmt = Number(order.customerUnpaidAmount ?? 0);
+  const isDelivered = order.status === "delivered";
+  const isCash = !["monthly", "weekly"].includes(order.settlementCycle ?? "");
+  const unpaid = Number(order.customerUnpaidAmount ?? 0);
+  const totalAmt = Number(order.totalAmount ?? 0);
+  const items = (orderDetail as any)?.items ?? [];
 
   return (
     <DriverLayout title="訂單明細">
-      <div className="space-y-4">
-        <button type="button" onClick={() => navigate("/driver/orders")} className="inline-flex items-center gap-1 px-1 text-sm text-stone-500">
-          <ChevronLeft className="h-4 w-4" />
-          返回列表
+      <div className="space-y-4 pb-8">
+        <button type="button" onClick={() => navigate("/driver/orders")}
+          className="inline-flex items-center gap-1 px-1 text-sm text-stone-500">
+          <ChevronLeft className="h-4 w-4" />返回列表
         </button>
 
-        {unpaidAmt > 0 && (
-          <section className="rounded-3xl border border-rose-200 bg-rose-50 px-4 py-4">
-            <p className="text-sm font-semibold text-rose-700">此客戶尚有未收款</p>
-            <p className="mt-1 text-sm text-rose-600">累計待收 NT$ {unpaidAmt.toLocaleString()}</p>
-          </section>
-        )}
-
-        <section className="rounded-[28px] border border-stone-200/70 bg-white p-4 shadow-[0_12px_24px_rgba(120,53,15,0.05)]">
+        {/* ── 客戶與訂單資訊 ── */}
+        <section className="rounded-[28px] border border-stone-200/70 bg-white p-5 shadow-[0_12px_24px_rgba(120,53,15,0.05)]">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-lg font-semibold text-stone-900">{order.customerName}</p>
-              <p className="mt-1 text-xs font-medium tracking-[0.16em] text-stone-400">{order.orderNo}</p>
+              <p className="text-xl font-bold text-stone-900 leading-tight">{order.customerName}</p>
+              <p className="mt-1 text-xs tracking-widest text-stone-400">{order.orderNo}</p>
             </div>
-            <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">{order.status}</span>
+            <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${STATUS_TONE[order.status] ?? "bg-stone-100 text-stone-600"}`}>
+              {STATUS_LABEL[order.status] ?? order.status}
+            </span>
           </div>
-
           <div className="mt-4 space-y-2 text-sm text-stone-500">
             <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-amber-500" />
+              <MapPin className="h-4 w-4 shrink-0 text-amber-500" />
               <span>{order.customerAddress ?? "未提供地址"}</span>
             </div>
             <div className="flex items-center gap-2">
-              <Phone className="h-4 w-4 text-amber-500" />
-              <span>{order.customerPhone ?? "未提供電話"}</span>
+              <Phone className="h-4 w-4 shrink-0 text-amber-500" />
+              <a href={`tel:${order.customerPhone}`} className="text-amber-700 underline-offset-2 hover:underline">
+                {order.customerPhone ?? "未提供電話"}
+              </a>
             </div>
           </div>
-        </section>
-
-        <section className="rounded-[28px] border border-amber-100 bg-amber-50 p-4">
-          <div className="flex items-center justify-between">
+          <div className="mt-4 flex items-center justify-between border-t border-stone-100 pt-4">
             <div>
-              <p className="text-xs text-amber-600">訂單總額</p>
-              <p className="mt-1 text-2xl font-semibold text-amber-700">NT$ {Number(order.totalAmount ?? 0).toLocaleString()}</p>
+              <p className="text-xs text-stone-400">結帳方式</p>
+              <p className="mt-0.5 text-sm font-semibold text-stone-700">{PAY_LABEL[order.settlementCycle ?? "unpaid"] ?? "現收"}</p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-amber-600">已收現金</p>
-              <p className="mt-1 text-lg font-semibold text-stone-900">NT$ {Number(order.cashCollected ?? 0).toLocaleString()}</p>
+              <p className="text-xs text-stone-400">訂單金額</p>
+              <p className="mt-0.5 text-2xl font-bold text-stone-900">NT$ {totalAmt.toLocaleString()}</p>
             </div>
           </div>
         </section>
 
-        {order.status !== "delivered" && (
-          <section className="rounded-[28px] border border-stone-200/70 bg-white p-4 shadow-[0_12px_24px_rgba(120,53,15,0.05)]">
-            <div className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-amber-600" />
-              <h3 className="text-sm font-semibold text-stone-900">現場收款</h3>
-            </div>
-            <div className="mt-4 flex gap-2">
-              <input
-                type="number"
-                value={cashInput}
-                onChange={(event) => setCashInput(event.target.value)}
-                placeholder="輸入實收金額"
-                className="flex-1 rounded-2xl border border-stone-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-              />
-              <button
-                type="button"
-                onClick={() =>
-                  recordCash.mutate({
-                    orderId,
-                    tenantId: TENANT_ID,
-                    cashCollected: Number(cashInput || 0),
-                  })
-                }
-                disabled={!cashInput || recordCash.isPending}
-                className="rounded-2xl bg-amber-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
-              >
-                登記收款
-              </button>
+        {/* ── 歷史欠款提醒 ── */}
+        {unpaid > 0 && (
+          <section className="flex items-start gap-3 rounded-3xl border border-rose-200 bg-rose-50 px-4 py-4">
+            <AlertCircle className="h-5 w-5 shrink-0 text-rose-500 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-rose-700">此客戶尚有舊帳未收</p>
+              <p className="mt-0.5 text-sm text-rose-600">累計 NT$ {unpaid.toLocaleString()}，送達後可一併提醒。</p>
             </div>
           </section>
         )}
 
-        <section className="rounded-[28px] border border-stone-200/70 bg-white p-4 shadow-[0_12px_24px_rgba(120,53,15,0.05)]">
-          <div className="flex items-center gap-2">
-            <PenLine className="h-5 w-5 text-amber-600" />
-            <h3 className="text-sm font-semibold text-stone-900">客戶簽名</h3>
-          </div>
-
-          {order.signatureUrl ? (
-            <div className="mt-4">
-              <img src={order.signatureUrl} alt="簽名" className="max-h-36 w-full rounded-2xl border border-stone-200 bg-stone-50 object-contain" />
-              <p className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-emerald-600">
-                <CheckCircle className="h-3.5 w-3.5" />
-                已完成簽名
-              </p>
+        {/* ── 商品明細 ── */}
+        {items.length > 0 && (
+          <section className="rounded-[28px] border border-stone-200/70 bg-white p-4 shadow-[0_12px_24px_rgba(120,53,15,0.05)]">
+            <div className="flex items-center gap-2 mb-3">
+              <Package className="h-4 w-4 text-amber-600" />
+              <p className="text-sm font-semibold text-stone-900">本次出貨明細</p>
             </div>
-          ) : showSignature ? (
-            <div className="mt-4">
-              <div className="overflow-hidden rounded-2xl border-2 border-dashed border-stone-300 bg-stone-50">
-                <SignatureCanvas ref={sigRef} canvasProps={{ className: "h-36 w-full", style: { background: "#fafaf9" } }} />
-              </div>
-              <div className="mt-3 flex gap-2">
-                <button type="button" onClick={() => sigRef.current?.clear()} className="flex-1 rounded-2xl border border-stone-200 px-4 py-3 text-sm font-medium text-stone-600">
-                  清除
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveSignature}
-                  disabled={uploadSignature.isPending}
-                  className="flex-1 rounded-2xl bg-amber-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
-                >
-                  {uploadSignature.isPending ? "上傳中..." : "儲存簽名"}
-                </button>
-              </div>
+            <div className="space-y-2">
+              {items.map((item: any) => (
+                <div key={item.id} className="flex items-center justify-between text-sm">
+                  <span className="text-stone-700">{item.productName}</span>
+                  <span className="font-semibold text-stone-900 tabular-nums">
+                    {item.qty} {item.unit ?? ""} × NT$ {Number(item.unitPrice ?? 0).toLocaleString()}
+                    <span className="ml-2 text-stone-400">= {(Number(item.qty) * Number(item.unitPrice ?? 0)).toLocaleString()}</span>
+                  </span>
+                </div>
+              ))}
             </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setShowSignature(true)}
-              className="mt-4 w-full rounded-2xl border-2 border-dashed border-stone-300 px-4 py-6 text-sm font-medium text-stone-500"
-            >
-              點這裡讓客戶簽名
-            </button>
-          )}
-        </section>
+            <div className="mt-3 flex justify-end border-t border-stone-100 pt-3">
+              <p className="text-base font-bold text-stone-900">合計 NT$ {totalAmt.toLocaleString()}</p>
+            </div>
+          </section>
+        )}
 
-        <section className="rounded-[28px] border border-stone-200/70 bg-white p-4 shadow-[0_12px_24px_rgba(120,53,15,0.05)]">
-          <label className="mb-2 block text-sm font-semibold text-stone-900">配送備註</label>
-          <textarea
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-            placeholder="例如：客戶臨時加量、放置位置、退回空箱等"
-            rows={3}
-            className="w-full rounded-2xl border border-stone-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-          />
-        </section>
-
-        {flow && (
-          <button
-            type="button"
-            onClick={() =>
-              updateStatus.mutate({
-                id: orderId,
-                tenantId: TENANT_ID,
-                status: flow.next,
-                driverNote: note || undefined,
-              })
-            }
+        {/* ── 狀態前進按鈕（非送達前） ── */}
+        {order.status === "picked" && (
+          <button type="button"
+            className="w-full rounded-2xl bg-amber-600 py-4 text-base font-semibold text-white active:scale-[0.98] transition-transform disabled:opacity-50"
             disabled={updateStatus.isPending}
-            className="w-full rounded-2xl bg-stone-900 py-4 text-base font-semibold text-white disabled:opacity-50"
-          >
-            {updateStatus.isPending ? "更新中..." : flow.label}
+            onClick={() => updateStatus.mutate({ id: orderId, tenantId: TENANT_ID, status: "delivering" })}>
+            {updateStatus.isPending ? "更新中…" : "出發配送"}
           </button>
         )}
 
-        {order.status === "delivered" && (
-          <div className="rounded-3xl border border-emerald-100 bg-emerald-50 px-4 py-4 text-center">
-            <p className="text-sm font-semibold text-emerald-700">這筆訂單已完成送達</p>
-            <p className="mt-1 text-xs text-emerald-700/75">接下來可以前往日結處理剩貨回庫。</p>
-          </div>
+        {/* ── 送達確認區塊 ── */}
+        {order.status === "delivering" && (
+          <section className="rounded-[28px] border border-amber-200 bg-amber-50 p-5 space-y-4">
+            <p className="text-sm font-semibold text-amber-800">到達客戶端 — 填完再按確認送達</p>
+
+            {/* 現收欄位（月結/週結不顯示） */}
+            {isCash && (
+              <div>
+                <label className="mb-1 block text-xs font-medium text-stone-600">現場收款金額（NT$）</label>
+                <input
+                  type="number" inputMode="numeric" min={0}
+                  value={cashInput}
+                  onChange={(e) => setCashInput(e.target.value)}
+                  placeholder={`應收 NT$ ${totalAmt.toLocaleString()}`}
+                  className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-amber-400"
+                />
+                {cashInput !== "" && Number(cashInput) !== totalAmt && (
+                  <p className="mt-1 text-xs font-semibold text-rose-600">
+                    差額 NT$ {Math.abs(Number(cashInput) - totalAmt).toLocaleString()}
+                    {Number(cashInput) < totalAmt ? "（少收）" : "（多收）"}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* 箱數 */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-stone-600">收前箱（客戶還回空箱）</label>
+                <input
+                  type="number" inputMode="numeric" min={0}
+                  value={inBoxes}
+                  onChange={(e) => setInBoxes(e.target.value)}
+                  placeholder="0"
+                  className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-center text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-amber-400"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-stone-600">退回箱（退貨/未送出）</label>
+                <input
+                  type="number" inputMode="numeric" min={0}
+                  value={returnBoxes}
+                  onChange={(e) => setReturnBoxes(e.target.value)}
+                  placeholder="0"
+                  className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-center text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-amber-400"
+                />
+              </div>
+            </div>
+
+            {/* 備註 */}
+            <div>
+              <label className="mb-1 block text-xs font-medium text-stone-600">備註（臨時加量、退貨說明等）</label>
+              <textarea
+                value={driverNote}
+                onChange={(e) => setDriverNote(e.target.value)}
+                rows={2}
+                placeholder="選填"
+                className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              />
+            </div>
+
+            {/* 客戶簽名 */}
+            <div>
+              <p className="mb-2 text-xs font-medium text-stone-600">客戶簽名</p>
+              {order.signatureUrl ? (
+                <div className="rounded-2xl border border-emerald-200 bg-white p-2">
+                  <img src={order.signatureUrl} alt="客戶簽名" className="max-h-28 w-full object-contain" />
+                  <p className="mt-1 text-center text-xs font-semibold text-emerald-600">已簽名</p>
+                </div>
+              ) : showSig ? (
+                <div>
+                  <div className="overflow-hidden rounded-2xl border-2 border-dashed border-amber-300 bg-white">
+                    <SignatureCanvas ref={sigRef} canvasProps={{ className: "h-32 w-full", style: { background: "#fff" } }} />
+                  </div>
+                  <div className="mt-2 flex gap-2">
+                    <button type="button" onClick={() => sigRef.current?.clear()}
+                      className="flex-1 rounded-2xl border border-stone-200 py-2.5 text-sm font-medium text-stone-600">
+                      清除
+                    </button>
+                    <button type="button" onClick={handleSaveSignature} disabled={uploadSignature.isPending}
+                      className="flex-1 rounded-2xl bg-amber-600 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+                      {uploadSignature.isPending ? "上傳中…" : "儲存簽名"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button type="button" onClick={() => setShowSig(true)}
+                  className="w-full rounded-2xl border-2 border-dashed border-amber-300 py-5 text-sm font-medium text-amber-700">
+                  點這裡讓客戶簽名
+                </button>
+              )}
+            </div>
+
+            {/* 確認送達 */}
+            <button
+              type="button"
+              className="w-full rounded-2xl bg-stone-900 py-4 text-base font-bold text-white active:scale-[0.98] transition-transform disabled:opacity-50"
+              disabled={updateStatus.isPending || (isCash && cashInput === "")}
+              onClick={handleConfirmDelivery}
+            >
+              {updateStatus.isPending ? "送出中…" : "確認送達"}
+            </button>
+            {isCash && cashInput === "" && (
+              <p className="text-center text-xs text-rose-500">現收客戶請先填入收款金額</p>
+            )}
+          </section>
+        )}
+
+        {/* ── 已送達狀態 ── */}
+        {isDelivered && (
+          <section className="rounded-3xl border border-emerald-100 bg-emerald-50 px-5 py-5 space-y-3">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+              <p className="text-sm font-semibold text-emerald-700">已確認送達</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="rounded-2xl bg-white px-3 py-2.5">
+                <p className="text-xs text-stone-400">收款金額</p>
+                <p className="mt-1 font-semibold text-stone-900">
+                  {isCash ? `NT$ ${Number(order.cashCollected ?? 0).toLocaleString()}` : PAY_LABEL[order.settlementCycle ?? ""] ?? "月結"}
+                </p>
+              </div>
+              <div className="rounded-2xl bg-white px-3 py-2.5">
+                <p className="text-xs text-stone-400">收前箱 / 退回箱</p>
+                <p className="mt-1 font-semibold text-stone-900">
+                  {order.inBoxes ?? "—"} / {order.returnBoxes ?? "—"}
+                </p>
+              </div>
+            </div>
+            {order.signatureUrl && (
+              <div className="rounded-2xl border border-emerald-200 bg-white p-2">
+                <img src={order.signatureUrl} alt="客戶簽名" className="max-h-24 w-full object-contain" />
+              </div>
+            )}
+            {order.driverNote && (
+              <p className="text-xs text-stone-500">備註：{order.driverNote}</p>
+            )}
+            <p className="text-xs text-emerald-700/70 text-center">回倉後在「剩貨回庫 / 日結」頁面完成今日結算</p>
+          </section>
         )}
       </div>
     </DriverLayout>

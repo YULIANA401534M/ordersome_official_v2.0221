@@ -1,91 +1,30 @@
-import { useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "../../../lib/trpc";
 import DriverLayout from "./DriverLayout";
-import { CheckCircle, Clock3, MapPin, Package, Phone, ChevronRight, ChevronDown, Hash } from "lucide-react";
+import { CheckCircle2, MapPin, Package, Phone, ChevronRight, Truck } from "lucide-react";
 
 const TENANT_ID = 90004;
 
 const STATUS_LABEL: Record<string, string> = {
-  pending: "待處理",
-  assigned: "已派車",
-  picked: "已撿貨",
+  pending:    "待處理",
+  assigned:   "已派車",
+  picked:     "已撿貨",
   delivering: "配送中",
-  delivered: "已送達",
-  returned: "已回單",
+  delivered:  "已送達",
+  returned:   "已回單",
 };
 
 const STATUS_TONE: Record<string, string> = {
-  pending: "bg-stone-100 text-stone-600",
-  assigned: "bg-sky-100 text-sky-700",
-  picked: "bg-amber-100 text-amber-700",
+  pending:    "bg-stone-100 text-stone-500",
+  assigned:   "bg-sky-100 text-sky-700",
+  picked:     "bg-amber-100 text-amber-700",
   delivering: "bg-orange-100 text-orange-700",
-  delivered: "bg-emerald-100 text-emerald-700",
-  returned: "bg-rose-100 text-rose-700",
+  delivered:  "bg-emerald-100 text-emerald-700",
+  returned:   "bg-rose-100 text-rose-700",
 };
 
-function OrderCard({ order }: { order: any }) {
-  const [, navigate] = useLocation();
-  const [expanded, setExpanded] = useState(false);
-
-  return (
-    <div className="rounded-[26px] border border-stone-200/80 bg-white shadow-[0_12px_24px_rgba(120,53,15,0.05)] overflow-hidden">
-      {/* Always-visible row */}
-      <div className="flex items-center gap-3 p-4">
-        <button
-          type="button"
-          className="flex-1 min-w-0 text-left"
-          onClick={() => navigate(`/driver/order/${order.id}`)}
-        >
-          <div className="flex items-center gap-2">
-            <p className="text-base font-semibold text-stone-900 truncate">{order.customerName}</p>
-            <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_TONE[order.status] ?? "bg-stone-100 text-stone-600"}`}>
-              {STATUS_LABEL[order.status] ?? order.status}
-            </span>
-          </div>
-          <div className="mt-2 flex items-center gap-1.5 text-sm text-stone-500">
-            <MapPin className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-            <span className="truncate">{order.customerAddress ?? "未提供地址"}</span>
-          </div>
-          <p className="mt-2 text-base font-semibold text-stone-900">NT$ {Number(order.totalAmount ?? 0).toLocaleString()}</p>
-        </button>
-
-        {/* Expand toggle */}
-        <button
-          type="button"
-          className="shrink-0 rounded-full p-2 text-stone-300 hover:bg-stone-50 hover:text-stone-500 active:scale-95 transition-all"
-          onClick={() => setExpanded((v) => !v)}
-          aria-label={expanded ? "收合" : "展開"}
-        >
-          {expanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
-        </button>
-      </div>
-
-      {/* Expanded detail */}
-      {expanded && (
-        <div className="border-t border-stone-100 px-4 pb-4 pt-3 space-y-2 text-sm text-stone-500">
-          <div className="flex items-center gap-2">
-            <Hash className="h-3.5 w-3.5 text-stone-300 shrink-0" />
-            <span className="font-mono text-xs tracking-wider text-stone-400">{order.orderNo}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Phone className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-            <span>{order.customerPhone ?? "未提供電話"}</span>
-          </div>
-          <button
-            type="button"
-            className="mt-2 w-full rounded-2xl bg-amber-600 py-2.5 text-sm font-semibold text-white active:scale-[0.98] transition-transform"
-            onClick={() => navigate(`/driver/order/${order.id}`)}
-          >
-            前往配送
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function DriverToday() {
+  const [, navigate] = useLocation();
   const today = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
   const { data: orders = [], isLoading } = trpc.dayone.driver.getMyTodayOrders.useQuery({
@@ -93,67 +32,127 @@ export default function DriverToday() {
     deliveryDate: today,
   });
 
-  const pending = orders.filter((o: any) => ["pending", "assigned", "picked"].includes(o.status));
-  const inProgress = orders.filter((o: any) => o.status === "delivering");
-  const done = orders.filter((o: any) => o.status === "delivered");
+  const active  = (orders as any[]).filter((o: any) => o.status !== "delivered" && o.status !== "returned");
+  const done    = (orders as any[]).filter((o: any) => o.status === "delivered");
+  const totalCash = done.reduce((s: number, o: any) => s + Number(o.cashCollected ?? 0), 0);
 
   return (
-    <DriverLayout title="今日總覽">
+    <DriverLayout title="今日路線">
       {isLoading ? (
         <div className="flex h-64 items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-amber-500 border-t-transparent" />
         </div>
       ) : (
         <div className="space-y-5">
+          {/* KPI strip */}
           <section className="grid grid-cols-3 gap-3">
             <div className="rounded-3xl border border-stone-200/70 bg-white p-4 text-center shadow-[0_12px_24px_rgba(120,53,15,0.05)]">
-              <p className="text-3xl font-semibold text-stone-900">{orders.length}</p>
-              <p className="mt-1 text-xs text-stone-500">今日總單</p>
+              <p className="text-3xl font-bold text-stone-900">{(orders as any[]).length}</p>
+              <p className="mt-1 text-xs text-stone-500">今日總站</p>
             </div>
             <div className="rounded-3xl border border-orange-100 bg-orange-50 p-4 text-center">
-              <p className="text-3xl font-semibold text-orange-700">{inProgress.length}</p>
-              <p className="mt-1 text-xs text-orange-600">配送中</p>
+              <p className="text-3xl font-bold text-orange-700">{active.length}</p>
+              <p className="mt-1 text-xs text-orange-600">待完成</p>
             </div>
             <div className="rounded-3xl border border-emerald-100 bg-emerald-50 p-4 text-center">
-              <p className="text-3xl font-semibold text-emerald-700">{done.length}</p>
+              <p className="text-3xl font-bold text-emerald-700">{done.length}</p>
               <p className="mt-1 text-xs text-emerald-600">已送達</p>
             </div>
           </section>
 
-          {inProgress.length > 0 && (
-            <section className="space-y-3">
-              <div className="flex items-center gap-2 px-1 text-sm font-semibold text-orange-700">
-                <Clock3 className="h-4 w-4" />
-                配送中 {inProgress.length} 筆
-              </div>
-              <div className="space-y-3">{inProgress.map((o: any) => <OrderCard key={o.id} order={o} />)}</div>
-            </section>
-          )}
-
-          {pending.length > 0 && (
-            <section className="space-y-3">
-              <div className="flex items-center gap-2 px-1 text-sm font-semibold text-stone-700">
-                <Package className="h-4 w-4" />
-                待處理 {pending.length} 筆
-              </div>
-              <div className="space-y-3">{pending.map((o: any) => <OrderCard key={o.id} order={o} />)}</div>
-            </section>
-          )}
-
+          {/* Today's cash summary */}
           {done.length > 0 && (
-            <section className="space-y-3">
-              <div className="flex items-center gap-2 px-1 text-sm font-semibold text-emerald-700">
-                <CheckCircle className="h-4 w-4" />
-                已送達 {done.length} 筆
-              </div>
-              <div className="space-y-3">{done.map((o: any) => <OrderCard key={o.id} order={o} />)}</div>
+            <section className="rounded-3xl border border-amber-100 bg-amber-50 px-5 py-4">
+              <p className="text-xs text-amber-600">今日現金收款合計</p>
+              <p className="mt-1 text-2xl font-bold text-amber-700">NT$ {totalCash.toLocaleString()}</p>
             </section>
           )}
 
-          {orders.length === 0 && (
-            <div className="rounded-[28px] border border-dashed border-stone-200 bg-white px-6 py-14 text-center text-stone-400">
-              <Package className="mx-auto h-12 w-12 opacity-40" />
-              <p className="mt-4 text-sm">今天沒有配送單，先休息一下。</p>
+          {/* Active stops */}
+          {active.length > 0 && (
+            <section className="space-y-2">
+              <p className="px-1 text-xs font-semibold uppercase tracking-widest text-stone-400">待配送路線</p>
+              <div className="space-y-2">
+                {active.map((order: any) => (
+                  <button
+                    key={order.id}
+                    type="button"
+                    className="w-full text-left rounded-[26px] border border-stone-200/80 bg-white p-4 shadow-[0_8px_20px_rgba(120,53,15,0.05)] active:scale-[0.99] transition-transform"
+                    onClick={() => navigate(`/driver/order/${order.id}`)}
+                  >
+                    <div className="flex items-center gap-3">
+                      {/* Stop number badge */}
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-600 text-sm font-bold text-white">
+                        {order.stopSequence ?? "—"}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="truncate text-base font-semibold text-stone-900">{order.customerName}</p>
+                          <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_TONE[order.status] ?? "bg-stone-100 text-stone-500"}`}>
+                            {STATUS_LABEL[order.status] ?? order.status}
+                          </span>
+                        </div>
+                        <div className="mt-1 flex items-center gap-1 text-sm text-stone-500">
+                          <MapPin className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                          <span className="truncate">{order.customerAddress ?? "未提供地址"}</span>
+                        </div>
+                        {order.customerPhone && (
+                          <div className="mt-0.5 flex items-center gap-1 text-xs text-stone-400">
+                            <Phone className="h-3 w-3 shrink-0" />
+                            <span>{order.customerPhone}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        <p className="text-base font-bold text-stone-900">NT$ {Number(order.totalAmount ?? 0).toLocaleString()}</p>
+                        <ChevronRight className="h-4 w-4 text-stone-300" />
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Completed stops */}
+          {done.length > 0 && (
+            <section className="space-y-2">
+              <p className="px-1 text-xs font-semibold uppercase tracking-widest text-stone-400">已完成</p>
+              <div className="space-y-2">
+                {done.map((order: any) => (
+                  <button
+                    key={order.id}
+                    type="button"
+                    className="w-full text-left rounded-[26px] border border-emerald-100 bg-emerald-50/60 p-4 active:scale-[0.99] transition-transform"
+                    onClick={() => navigate(`/driver/order/${order.id}`)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-200 text-sm font-bold text-emerald-700">
+                        <CheckCircle2 className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-stone-700">{order.customerName}</p>
+                        <p className="text-xs text-stone-400">{order.customerAddress ?? ""}</p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="text-sm font-semibold text-emerald-700">
+                          NT$ {Number(order.cashCollected ?? 0).toLocaleString()}
+                        </p>
+                        <p className="text-xs text-stone-400">已收</p>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {(orders as any[]).length === 0 && (
+            <div className="rounded-[28px] border border-dashed border-stone-200 bg-white px-6 py-16 text-center text-stone-400">
+              <Truck className="mx-auto h-12 w-12 opacity-30" />
+              <p className="mt-4 text-sm">今天沒有派車任務</p>
             </div>
           )}
         </div>
