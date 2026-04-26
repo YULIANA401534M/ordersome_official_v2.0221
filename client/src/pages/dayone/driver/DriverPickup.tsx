@@ -1,6 +1,6 @@
 import DriverLayout from "./DriverLayout";
 import { trpc } from "@/lib/trpc";
-import { CheckCircle2, ChevronRight, Package } from "lucide-react";
+import { CheckCircle2, ChevronRight, Package, Truck } from "lucide-react";
 import { toast } from "sonner";
 
 const TENANT_ID = 90004;
@@ -13,6 +13,14 @@ export default function DriverPickup() {
     tenantId: TENANT_ID,
     deliveryDate: todayDate,
   });
+
+  const { data: dispatches = [] } = trpc.dayone.dispatch.listDispatch.useQuery({
+    tenantId: TENANT_ID,
+    dispatchDate: todayDate,
+  });
+
+  const myDispatch = (dispatches as any[])[0];
+  const dispatchPrinted = myDispatch && ["printed", "in_progress", "pending_handover", "completed"].includes(myDispatch.status);
 
   const pendingOrders = orders.filter((order: any) => ["pending", "assigned"].includes(order.status));
 
@@ -36,9 +44,30 @@ export default function DriverPickup() {
             <p className="text-xs uppercase tracking-[0.22em] text-amber-600">準備上車</p>
             <h2 className="mt-3 font-brand text-[1.7rem] leading-none text-stone-900">出車前最後確認</h2>
             <p className="mt-3 text-sm leading-6 text-stone-500">
-              先確認今天待送訂單、車上貨量與配送路線。司機在這一步完成撿貨後，後台才會知道這張單已準備出車。
+              管理員列印撿貨單後才會扣庫存，請按照撿貨單核對車上貨量，確認無誤後按「完成撿貨」。
             </p>
           </section>
+
+          {myDispatch && (
+            <section className={`rounded-[26px] border px-4 py-4 text-sm ${
+              dispatchPrinted
+                ? "border-emerald-200 bg-emerald-50"
+                : "border-amber-200 bg-amber-50"
+            }`}>
+              <div className="flex items-center gap-2">
+                {dispatchPrinted
+                  ? <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                  : <Truck className="h-4 w-4 text-amber-600" />
+                }
+                <span className={`font-semibold ${dispatchPrinted ? "text-emerald-700" : "text-amber-700"}`}>
+                  {dispatchPrinted ? "撿貨單已列印，可以開始撿貨出車" : "管理員尚未列印撿貨單，請稍候"}
+                </span>
+              </div>
+              <p className="mt-1 ml-6 text-xs text-stone-500">
+                路線 {myDispatch.routeCode}，共 {myDispatch.totalStops ?? orders.length} 站
+              </p>
+            </section>
+          )}
 
           {!pendingOrders.length ? (
             <div className="rounded-[28px] border border-emerald-100 bg-emerald-50 px-6 py-14 text-center">

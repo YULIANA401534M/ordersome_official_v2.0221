@@ -179,6 +179,31 @@ export const dyOrdersRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
       const client = (db as any).$client;
+
+      // 若此訂單已在派車單裡，先確認派車單狀態
+      const [diRows] = await client.execute(
+        `SELECT di.id, di.dispatchOrderId, ddo.status AS dispatchStatus
+         FROM dy_dispatch_items di
+         JOIN dy_dispatch_orders ddo ON ddo.id = di.dispatchOrderId
+         WHERE di.orderId=? AND di.tenantId=?`,
+        [input.id, input.tenantId]
+      );
+      for (const di of diRows as any[]) {
+        if (["printed", "pending_handover", "completed"].includes(di.dispatchStatus)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "此訂單已列印派車單或正在配送，無法刪除。請先處理派車單。",
+          });
+        }
+        // 從派車單移除這個站點
+        await client.execute(`DELETE FROM dy_dispatch_items WHERE id=? AND tenantId=?`, [di.id, input.tenantId]);
+      }
+
+      // 刪除應收帳款
+      await client.execute(`DELETE FROM dy_ar_records WHERE orderId=? AND tenantId=?`, [input.id, input.tenantId]);
+      // 刪除待驗回庫（若有）
+      await client.execute(`DELETE FROM dy_pending_returns WHERE tenantId=? AND dispatchOrderId IN (SELECT id FROM dy_dispatch_orders WHERE tenantId=?)`, [input.tenantId, input.tenantId]);
+      // 刪除訂單品項與訂單
       await client.execute(`DELETE FROM dy_order_items WHERE orderId=? AND tenantId=?`, [input.id, input.tenantId]);
       await client.execute(`DELETE FROM dy_orders WHERE id=? AND tenantId=?`, [input.id, input.tenantId]);
       return { success: true };

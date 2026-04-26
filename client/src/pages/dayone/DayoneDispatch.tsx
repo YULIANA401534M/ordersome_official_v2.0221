@@ -396,19 +396,19 @@ function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onCl
             `}</style>
             <div className="no-print sticky top-0 z-20 flex items-center gap-2 border-b bg-white px-5 py-3">
               <Button variant="outline" onClick={onClose}>返回</Button>
-              <div className="ml-auto flex gap-2">
+              <div className="ml-auto flex items-center gap-2">
                 {detail.status === "draft" && (
                   <Button
                     variant="outline"
                     onClick={() => markPrinted.mutate({ id: dispatchId, tenantId: TENANT_ID })}
                     disabled={markPrinted.isPending}
                   >
-                    先列印並扣庫存
+                    {markPrinted.isPending ? "處理中..." : "撿貨完畢並扣庫存"}
                   </Button>
                 )}
                 <Button className="bg-amber-600 text-white hover:bg-amber-700" onClick={handlePrint}>
                   <Printer className="mr-2 h-4 w-4" />
-                  列印派車單
+                  列印撿貨單
                 </Button>
               </div>
             </div>
@@ -467,7 +467,7 @@ function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onCl
                 <div style={{borderBottom:"2px solid #1f2937", paddingBottom:"8px", marginBottom:"10px"}}>
                   <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-end"}}>
                     <div>
-                      <div style={{fontSize:"18px", fontWeight:"700", letterSpacing:"0.04em"}}>大永蛋行 派車單</div>
+                      <div style={{fontSize:"18px", fontWeight:"700", letterSpacing:"0.04em"}}>大永蛋行 撿貨單</div>
                       <div style={{fontSize:"12px", color:"#555", marginTop:"2px"}}>
                         配送日期：{fmtDate(detail.dispatchDate)}　司機：{detail.driverName}　路線：{detail.routeCode}
                       </div>
@@ -998,7 +998,7 @@ export default function DayoneDispatch() {
                       </Button>
                       {dispatch.status === "draft" && (
                         <Button className="bg-amber-600 text-white hover:bg-amber-700" onClick={() => setDetailId(dispatch.id)}>
-                          列印 / 扣庫存
+                          列印撿貨單
                         </Button>
                       )}
                     </div>
