@@ -71,7 +71,13 @@ export default function TenantUserManagement({ tenantId, tenantName }: Props) {
       setCreateForm(emptyCreateForm);
       utils.dayone.tenantUsers.listUsers.invalidate();
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => {
+      if (e.message.includes("CONFLICT") || e.message.includes("已被使用")) {
+        toast.error("此 Email 已被使用，請換一個");
+      } else {
+        toast.error("建立失敗，請確認所有欄位填寫正確");
+      }
+    },
   });
 
   const updateMut = trpc.dayone.tenantUsers.updateUser.useMutation({
@@ -80,7 +86,7 @@ export default function TenantUserManagement({ tenantId, tenantName }: Props) {
       setEditOpen(false);
       utils.dayone.tenantUsers.listUsers.invalidate();
     },
-    onError: (e) => toast.error(e.message),
+    onError: () => toast.error("更新失敗，請重試"),
   });
 
   const resetPwMut = trpc.dayone.tenantUsers.resetPassword.useMutation({
@@ -89,7 +95,7 @@ export default function TenantUserManagement({ tenantId, tenantName }: Props) {
       setResetOpen(false);
       setNewPassword("");
     },
-    onError: (e) => toast.error(e.message),
+    onError: () => toast.error("重設密碼失敗，請重試"),
   });
 
   const deleteMut = trpc.dayone.tenantUsers.deleteUser.useMutation({
@@ -98,7 +104,7 @@ export default function TenantUserManagement({ tenantId, tenantName }: Props) {
       setDeleteOpen(false);
       utils.dayone.tenantUsers.listUsers.invalidate();
     },
-    onError: (e) => toast.error(e.message),
+    onError: () => toast.error("刪除失敗，請重試"),
   });
 
   function openEdit(user: any) {
@@ -269,15 +275,20 @@ export default function TenantUserManagement({ tenantId, tenantName }: Props) {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>密碼 *</Label>
-              <Input type="password" value={createForm.password} onChange={(e) => setCreateForm((f) => ({ ...f, password: e.target.value }))} />
+              <Label>密碼 * <span className="text-xs font-normal text-stone-400">（至少 6 個字元）</span></Label>
+              <Input type="password" value={createForm.password} onChange={(e) => setCreateForm((f) => ({ ...f, password: e.target.value }))} placeholder="至少 6 個字元" />
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setCreateOpen(false)}>取消</Button>
             <Button
-              disabled={!createForm.name || !createForm.email || !createForm.password || createMut.isPending}
-              onClick={() => createMut.mutate({ tenantId, ...createForm })}
+              disabled={createMut.isPending}
+              onClick={() => {
+                if (!createForm.name.trim()) { toast.error("請填寫姓名"); return; }
+                if (!createForm.email.trim()) { toast.error("請填寫 Email"); return; }
+                if (createForm.password.length < 6) { toast.error("密碼至少需要 6 個字元"); return; }
+                createMut.mutate({ tenantId, ...createForm });
+              }}
             >
               {createMut.isPending ? "建立中..." : "建立"}
             </Button>
@@ -329,8 +340,8 @@ export default function TenantUserManagement({ tenantId, tenantName }: Props) {
             <DialogTitle>重設密碼</DialogTitle>
           </DialogHeader>
           <div className="space-y-1.5 py-2">
-            <Label>新密碼</Label>
-            <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+            <Label>新密碼 <span className="text-xs font-normal text-stone-400">（至少 6 個字元）</span></Label>
+            <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="至少 6 個字元" />
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setResetOpen(false)}>取消</Button>
