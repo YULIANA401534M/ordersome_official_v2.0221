@@ -190,7 +190,6 @@ export const dyDispatchRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
       const client = (db as any).$client;
-      await ensureDyDispatchSchema(client);
       const scopedDriverId = await resolveDriverScope(client, input.tenantId, ctx.user.id, ctx.user.role ?? "");
 
       let sql = `SELECT do2.*, d.name AS driverName,
@@ -225,7 +224,7 @@ export const dyDispatchRouter = router({
         sql += " AND do2.driverId = ?";
         params.push(input.driverId);
       }
-      sql += " ORDER BY do2.dispatchDate DESC LIMIT 30";
+      sql += " ORDER BY do2.dispatchDate DESC, do2.id ASC LIMIT 30";
 
       const [rows] = await client.execute(sql, params);
       return rows as any[];
@@ -289,7 +288,6 @@ export const dyDispatchRouter = router({
       }
 
       // pending returns for this dispatch (司機已回報但管理員尚未確認)
-      await ensureDyPendingReturnsTable(client);
       const [pendingReturnRows] = await client.execute(
         `SELECT productId, SUM(qty) AS returnedQty
          FROM dy_pending_returns

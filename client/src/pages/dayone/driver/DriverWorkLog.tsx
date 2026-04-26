@@ -33,14 +33,15 @@ export default function DriverWorkLog() {
     dispatchDate: today,
   });
 
-  // Default to the most recent active (non-completed/pending_handover) dispatch;
-  // fall back to dispatches[0] only if all are completed
+  // dispatches 已按 id ASC 排序（舊到新）；找最新的非完成派車單（從尾端找）
   const defaultDispatchId = useMemo(() => {
-    const list = dispatches as any[];
+    const list = [...(dispatches as any[])].reverse();
     const active = list.find((d: any) => !["pending_handover", "completed"].includes(d.status ?? ""));
     return active?.id ?? list[0]?.id ?? 0;
   }, [dispatches]);
-  const activeDispatchId = Number(selectedDispatchId || defaultDispatchId);
+  const dispatchIds = new Set((dispatches as any[]).map((d: any) => String(d.id)));
+  const resolvedSelectedId = dispatchIds.has(selectedDispatchId) ? selectedDispatchId : "";
+  const activeDispatchId = Number(resolvedSelectedId || defaultDispatchId);
   const { data: dispatchDetail } = trpc.dayone.dispatch.getDispatchDetail.useQuery(
     { id: activeDispatchId, tenantId: TENANT_ID },
     { enabled: !!activeDispatchId }

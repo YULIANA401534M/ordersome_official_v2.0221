@@ -1,6 +1,6 @@
 # CLAUDE.md — OrderSome 專案主腦
 
-> 版本 v6.47｜最後更新：2026-04-27
+> 版本 v6.48｜最後更新：2026-04-27
 
 ---
 
@@ -206,6 +206,13 @@ Hero 圖片規則：
 - `DriverWorkLog` 可填寫畫面：預設值由 `shippedQty` 改為 `0`（正確預設是全部送完），司機只填車上有剩的量
 - `dispatch.getDispatchDetail`：回傳新增 `pendingReturnsByProduct`，從 `dy_pending_returns` 按 productId 聚合回報量（driver 和 admin 均可讀）
 - `DayoneDispatch` screen view 站點卡片：`shippedQty` 補 `Math.round` 確保整數顯示
+
+**v6.48 修掉的 bug（查詢速度 + 雙派車單顯示不穩定）：**
+- `dispatch.listDispatch`：移除每次查詢都跑的 `ensureDyDispatchSchema`（ALTER TABLE），查詢速度大幅改善
+- `dispatch.getDispatchDetail`：移除每次查詢都跑的 `ensureDyPendingReturnsTable`（9 條 ALTER TABLE），查詢速度大幅改善
+- `listDispatch` ORDER BY 改為 `dispatchDate DESC, id ASC`，確保同一天多張派車單順序穩定（id 小的在前）
+- `DriverWorkLog.defaultDispatchId`：從尾端 reverse 找最新的非完成派車單，避免同天兩張單時仍預設到早上已完成的舊單
+- `DriverWorkLog.activeDispatchId`：`selectedDispatchId` 若不在當前 `dispatches` 清單內（資料重載後可能失效），自動回退到 `defaultDispatchId`
 
 **大永尚未測試的功能（P3）：**
 - 多車同一天、跨日累積後庫存數字
