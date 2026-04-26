@@ -10,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Upload, Plus, RefreshCw, FileSpreadsheet } from "lucide-react";
-import * as XLSX from "xlsx";
 
 function fmtAmt(n: number | null | undefined) {
   if (n == null) return "-";
@@ -185,7 +184,8 @@ export default function OSAccounting() {
   function parseBankExcel(file: File) {
     setBankBatchName(`台新_${month}`);
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
+      const XLSX = await import("xlsx");
       const data = new Uint8Array(e.target!.result as ArrayBuffer);
       const wb = XLSX.read(data, { type: "array", cellDates: true });
       const ws = wb.Sheets[wb.SheetNames[0]];
@@ -206,7 +206,8 @@ export default function OSAccounting() {
 
   function parseTransferExcel(file: File) {
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
+      const XLSX = await import("xlsx");
       const data = new Uint8Array(e.target!.result as ArrayBuffer);
       const wb = XLSX.read(data, { type: "array", cellDates: true });
       const ws = wb.Sheets[wb.SheetNames[0]];
@@ -237,7 +238,8 @@ export default function OSAccounting() {
     reader.readAsArrayBuffer(file);
   }
 
-  function handleExportPayables() {
+  async function handleExportPayables() {
+    const XLSX = await import("xlsx");
     const rows = (exportData as any[]).map(p => ({
       "廠商": p.supplierName,
       "月份": p.month,

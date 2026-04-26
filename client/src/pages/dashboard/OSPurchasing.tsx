@@ -16,7 +16,6 @@ import {
   Plus, ChevronDown, ChevronUp,
   ShoppingCart, Send, CheckCircle, XCircle, Trash2, Upload, Pencil, Printer
 } from "lucide-react";
-import * as XLSX from "xlsx";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   pending:   { label: "待處理", color: "#6b7280", bg: "#f3f4f6" },
@@ -379,7 +378,8 @@ export default function OSPurchasing() {
     });
   }
 
-  function exportExcel() {
+  async function exportExcel() {
+    const XLSX = await import("xlsx");
     const rows = (orders as any[]).map((o: any) => ({
       "叫貨單號": o.orderNo,
       "日期": o.orderDate,
@@ -399,7 +399,8 @@ export default function OSPurchasing() {
 
   function parseDamaiExcel(file: File) {
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
+      const XLSX = await import("xlsx");
       const data = new Uint8Array(e.target!.result as ArrayBuffer);
       const wb = XLSX.read(data, { type: "array", cellDates: true });
       const ws = wb.Sheets[wb.SheetNames[0]];

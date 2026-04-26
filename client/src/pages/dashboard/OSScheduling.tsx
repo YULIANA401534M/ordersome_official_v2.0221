@@ -7,7 +7,6 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Settings, Download } from "lucide-react";
-import * as XLSX from "xlsx";
 
 const HQ_STORE_ID = 401534;
 
@@ -136,7 +135,8 @@ export default function OSScheduling() {
     });
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    const XLSX = await import("xlsx");
     const wb = XLSX.utils.book_new();
     const header1 = ["員工", ...days.map(d => d), "出勤"];
     const header2 = ["星期", ...days.map(d => {
