@@ -1,6 +1,6 @@
 # CLAUDE.md — OrderSome 專案主腦
 
-> 版本 v6.27｜最後更新：2026-04-26
+> 版本 v6.28｜最後更新：2026-04-26
 
 ---
 
@@ -146,6 +146,54 @@ Hero 圖片規則：
 - 禁用 `corporate-logo.png`（白底 PNG 放深色背景會破圖）
 
 頁面：CorporateAbout、CorporateBrands、CorporateCulture、CorporateFranchise、CorporateNews、CorporateContact（全部完成）
+
+---
+
+## 當前任務優先順序（2026-04-26 更新）
+
+### 第一階段：大永落地（現在進行）
+
+目標是讓大永可以真實跑完整一天作業。已完成的是頁面和後端邏輯，但**還沒有人跑過完整流程驗證數字**。
+
+**已修的 bug（v6.28）：**
+- 派車單列印空白：Sheet 透過 Radix Portal 掛載，`body > *` 的 print CSS 把 portal 容器一起隱藏。改成 `handlePrint` 開新視窗並注入 `.print-target` 的 HTML 列印，繞過 Portal。
+
+**大永落地驗收條件（需要真人跑過）：**
+1. 建訂單 → 派車 → 列印派車單有內容（v6.28 已修）
+2. 司機 APP 送達 → AR 應收自動出現在「應收帳款」
+3. 司機收現 → 訂單付款狀態同步更新
+4. 剩貨回庫待驗 → 管理員確認 → 庫存數字增加
+5. 進貨簽收 → AP 應付出現 → 確認入倉 → 庫存增加
+
+**大永尚未測試的功能（P3）：**
+- 多車同一天、跨日累積後庫存數字
+- 補單（臨時加站）的差異對帳
+- 供應商付款（AP 付款單）完整閉環
+
+---
+
+### 第二階段：宇聯後台落地（大永驗收完成後）
+
+宇聯的頁面都已做完，問題是**數字還躺在 Google Sheet / Excel，系統沒有接住**。按照以下順序打通：
+
+**Step 1 — 日報閉環（最快有感）**
+- 目標：每天門市從 `/dashboard/daily-report` 填報，損益報表數字跟智慧報表一致
+- 驗收：`/dashboard/profit-loss` 顯示的各店月損益，跟「來點什麼-智慧報表系統」Google Sheet 對得起來
+
+**Step 2 — 採購閉環**
+- 目標：Make 自動化採購總表打進來的叫貨資料，可在 `/dashboard/purchasing` 看到並確認
+- 驗收：`os_procurement_orders` 筆數與「!!!2026_自動化採購總表」一致
+
+**Step 3 — 應付帳款閉環**
+- 目標：月結廠商進貨金額（藍色字 Excel）對應 `os_payables`，每月可在系統核銷
+- 驗收：抽 2-3 個供應商，系統應付帳金額與 Excel 一致
+
+**Step 4 — 銀行流水對帳**
+- 目標：台新銀行帳戶明細 Excel 匯入 `os_bank_transactions`，自動比對 AP 付款
+- 驗收：2026-02 某月，銀行流水付款金額 = AP 核銷金額
+
+**Step 5 — 調貨 / 加盟週結閉環**
+- 目標：門市調貨與加盟主週結貨款能在系統追蹤，不靠手工 Excel
 
 ---
 

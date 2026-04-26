@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>大永蛋品系統｜親測驗收表 2026-04-26</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; font-size: 14px; color: #1c1917; background: #fafaf9; padding: 32px; line-height: 1.6; }
+  h1 { font-size: 22px; font-weight: 700; color: #1c1917; margin-bottom: 4px; }
+  .subtitle { font-size: 13px; color: #78716c; margin-bottom: 32px; }
+
+  .section { margin-bottom: 36px; }
+  .section-title { font-size: 15px; font-weight: 700; color: #92400e; border-left: 4px solid #d97706; padding-left: 10px; margin-bottom: 14px; }
+
+  /* AP/AR 解釋方塊 */
+  .explain-box { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 10px; padding: 16px 20px; margin-bottom: 28px; }
+  .explain-box h3 { font-size: 14px; font-weight: 700; color: #92400e; margin-bottom: 10px; }
+  .explain-row { display: flex; gap: 12px; margin-bottom: 6px; }
+  .explain-tag { min-width: 40px; font-size: 12px; font-weight: 700; color: #fff; background: #d97706; border-radius: 5px; padding: 1px 8px; text-align: center; line-height: 22px; }
+  .explain-text { color: #44403c; font-size: 13px; }
+
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+  thead tr { background: #292524; color: #fafaf9; }
+  thead th { padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 600; letter-spacing: 0.03em; }
+  tbody tr { border-bottom: 1px solid #f5f5f4; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody td { padding: 11px 14px; vertical-align: top; }
+  .step-num { font-size: 12px; font-weight: 700; color: #d97706; min-width: 28px; }
+  .page-label { font-size: 12px; background: #f5f5f4; color: #57534e; border-radius: 5px; padding: 2px 8px; display: inline-block; white-space: nowrap; }
+  .action { font-weight: 500; color: #1c1917; }
+  .note { font-size: 12px; color: #78716c; margin-top: 4px; }
+  .check-col { width: 72px; text-align: center; }
+  .checkbox { width: 20px; height: 20px; border: 2px solid #d6d3d1; border-radius: 4px; display: inline-block; }
+  .result-col { width: 160px; }
+  .result-input { width: 100%; border: 1px solid #e7e5e4; border-radius: 5px; padding: 4px 8px; font-size: 12px; color: #57534e; min-height: 28px; }
+
+  .cat-row td { background: #fef3c7; font-weight: 600; color: #92400e; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+  .warn { color: #dc2626; font-size: 12px; font-weight: 600; }
+  .ok { color: #16a34a; font-size: 12px; font-weight: 600; }
+
+  .footer-note { margin-top: 28px; font-size: 12px; color: #a8a29e; border-top: 1px solid #e7e5e4; padding-top: 14px; }
+
+  @media print {
+    body { padding: 16px; font-size: 12px; }
+    .result-input { border: none; border-bottom: 1px solid #d6d3d1; border-radius: 0; }
+    table { box-shadow: none; border: 1px solid #e7e5e4; }
+  }
+</style>
+</head>
+<body>
+
+<h1>大永蛋品系統｜親測驗收表</h1>
+<div class="subtitle">2026-04-26 版｜測試人員：________________　　測試日期：________________</div>
+
+<!-- AP/AR 白話說明 -->
+<div class="explain-box">
+  <h3>先看這個：AP 和 AR 是什麼？</h3>
+  <div class="explain-row">
+    <span class="explain-tag">AP</span>
+    <span class="explain-text"><strong>應付帳款（公司欠別人的錢）</strong>——大永向供應商拿了貨、還沒付錢，這筆錢就是 AP。簡單說：<em>我欠你的</em>。</span>
+  </div>
+  <div class="explain-row">
+    <span class="explain-tag">AR</span>
+    <span class="explain-text"><strong>應收帳款（別人欠公司的錢）</strong>——大永把蛋送給客戶、客戶還沒付錢，這筆錢就是 AR。簡單說：<em>你欠我的</em>。</span>
+  </div>
+</div>
+
+<!-- ======= A. 總覽儀表板 ======= -->
+<div class="section">
+  <div class="section-title">A｜總覽（今天的全局狀況）</div>
+  <table>
+    <thead><tr>
+      <th style="width:32px">#</th>
+      <th>到哪裡</th>
+      <th>做什麼、看什麼</th>
+      <th>預期結果</th>
+      <th class="check-col">✓</th>
+      <th class="result-col">實測備註</th>
+    </tr></thead>
+    <tbody>
+      <tr>
+        <td class="step-num">A1</td>
+        <td><span class="page-label">總覽</span></td>
+        <td class="action">登入後看今日 KPI 卡片<br><span class="note">今日訂單數、待簽收進貨、已送達、待驗回庫、應收金額</span></td>
+        <td>數字顯示正常，沒有 0 或 NaN</td>
+        <td class="check-col"><span class="checkbox"></span></td>
+        <td class="result-col"><div class="result-input"></div></td>
+      </tr>
+      <tr>
+        <td class="step-num">A2</td>
+        <td><span class="page-label">總覽</span></td>
+        <td class="action">確認「庫存警示」區塊<br><span class="note">有沒有商品庫存低於安全量</span></td>
+        <td>有顯示列表或「暫無警示」</td>
+        <td class="check-col"><span class="checkbox"></span></td>
+        <td class="result-col"><div class="result-input"></div></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ======= B. 訂單流程 ======= -->
+<div class="section">
+  <div class="section-title">B｜客戶訂單（有客戶要買東西）</div>
+  <table>
+    <thead><tr>
+      <th style="width:32px">#</th>
+      <th>到哪裡</th>
+      <th>做什麼、看什麼</th>
+      <th>預期結果</th>
+      <th class="check-col">✓</th>
+      <th class="result-col">實測備註</th>
+    </tr></thead>
+    <tbody>
+      <tr>
+        <td class="step-num">B1</td>
+        <td><span class="page-label">訂單管理</span></td>
+        <td class="action">查看現有訂單列表<br><span class="note">確認有訂單資料，狀態欄清楚（待出貨、已送達等）</span></td>
+        <td>訂單列表有資料，狀態顯示正確</td>
+        <td class="check-col"><span class="checkbox"></span></td>
+        <td class="result-col"><div class="result-input"></div></td>
+      </tr>
+      <tr>
+        <td class="step-num">B2</td>
+        <td><span class="page-label">訂單管理</span></td>
+        <td class="action">手動建立一筆新訂單<br><span class="note">選客戶、品項（蛋）、數量、配送日期</span></td>
+        <td>訂單建立成功，出現在列表</td>
+        <td class="check-col"><span class="checkbox"></span></td>
+        <td class="result-col"><div class="result-input"></div></td>
+      </tr>
+      <tr>
+        <td class="step-num">B3</td>
+        <td><span class="page-label">訂單管理</span></td>
+        <td class="action">點進剛建立的訂單，確認品項、金額正確</td>
+        <td>金額 = 數量 × 單價，無誤</td>
+        <td class="check-col"><span class="checkbox"></span></td>
+        <td class="result-col"><div class="result-input"></div></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ======= C. 派車流程 ======= -->
+<div class="section">
+  <div class="section-title">C｜派車管理（整理明天要送的貨）</div>
+  <table>
+    <thead><tr>
+      <th style="width:32px">#</th>
+      <th>到哪裡</th>
+      <th>做什麼、看什麼</th>
+      <th>預期結果</th>
+      <th class="check-col">✓</th>
+      <th class="result-col">實測備註</th>
+    </tr></thead>
+    <tbody>
+      <tr>
+        <td class="step-num">C1</td>
+        <td><span class="page-label">派車管理</span></td>
+        <td class="action">選日期 → 點「產生派車單」<br><span class="note">系統會把那天的訂單整合成一張派車單</span></td>
+        <td>出現一筆新的派車單（狀態：草稿）</td>
+        <td class="check-col"><span class="checkbox"></span></td>
+        <td class="result-col"><div class="result-input"></div></td>
+      </tr>
+      <tr>
+        <td class="step-num">C2</td>
+        <td><span class="page-label">派車管理</span></td>
+        <td class="action">點開派車單，確認內容<br><span class="note">司機、各停靠點、品項、數量都有顯示</span></td>
+        <td>停靠點清單有資料，沒有空白列</td>
+        <td class="check-col"><span class="checkbox"></span></td>
+        <td class="result-col"><div class="result-input"></div></td>
+      </tr>
+      <tr>
+        <td class="step-num">C3</td>
+        <td><span class="page-label">派車管理</span></td>
+        <td class="action">點「列印派車單」<br><span class="note">應該開新視窗顯示派車單內容（v6.28 已修空白問題）</span></td>
+        <td>新視窗有完整派車單，不是空白</td>
+        <td class="check-col"><span class="checkbox"></span></td>
+        <td class="result-col"><div class="result-input"></div></td>
+      </tr>
+      <tr>
+        <td class="step-num">C4</td>
+        <td><span class="page-label">派車管理</span> → <span class="page-label">庫存管理</span></td>
+        <td class="action">列印後，去庫存管理確認庫存有扣減<br><span class="note">列印動作會觸發「出車扣庫存」，可賣庫存數字應減少</span></td>
+        <td>庫存數量比列印前少</td>
+        <td class="check-col"><span class="checkbox"></span></td>
+        <td class="result-col"><div class="result-input"></div></td>
+      </tr>
+      <tr>
+        <td class="step-num">C5</td>
+        <td><span class="page-label">派車管理</span></td>
+        <td class="action">測試「新增加站」（補單）<br><span class="note">臨時多一個客戶要送</span></td>
+        <td>新停靠點出現在派車單，可列印</td>
+        <td class="check-col"><span class="checkbox"></span></td>
+        <td class="result-col"><div class="result-input"></div></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ======= D. 司機 APP ======= -->
+<div class="section">
+  <div class="section-title">D｜司機 APP（出車、送貨、收錢）</div>
+  <table>
+    <thead><tr>
+      <th style="width:32px">#</th>
+      <th>到哪裡</th>
+      <th>做什麼、看什麼</th>
+      <th>預期結果</th>
+      <th class="check-col">✓</th>
+      <th class="result-col">實測備註</th>
+    </tr></thead>
+    <tbody>
+      <tr>
+        <td class="step-num">D1</td>
+        <td><span class="page-label">今日任務</span><br><span class="note">手機瀏覽器</span></td>
+        <td class="action">司機帳號登入，看今日任務<br><span class="note">應顯示今天要送的停靠點清單</span></td>
+        <td>有停靠點，有品項、地址</td>
+        <td class="check-col"><span class="checkbox"></span></td>
+        <td class="result-col"><div class="result-input"></div></td>
+      </tr>
+      <tr>
+        <td class="step-num">D2</td>
+        <td><span class="page-label">訂單（司機）</span></td>
+        <td class="action">點進一個停靠點，模擬送達<br><span class="note">點「確認送達」或「客戶簽名」</span></td>
+        <td>訂單狀態改為「已送達」</td>
+        <td class="check-col"><span class="checkbox"></span></td>
+        <td class="result-col"><div class="result-input"></div></td>
+      </tr>
+      <tr>
+        <td class="step-num">D3</td>
+        <td><span class="page-label">應收帳款</span><br><span class="note">管理端</span></td>
+        <td class="action">回到管理端，看「應收帳款」<br><span class="note">剛才送達的訂單，AR 應收應該自動出現</span></td>
+        <td>應收帳款出現一筆，金額正確</td>
+        <td class="check-col"><span class="checkbox"></span></td>
+        <td class="result-col"><div class="result-input"></div></td>
+      </tr>
+      <tr>
+        <td class="step-num">D4</td>
+        <td><span class="page-label">訂單（司機）</span></td>
+        <td class="action">模擬司機收現金<br><span class="note">點「收款」，輸入金額</span></td>
+        <td>訂單付款狀態更新，AR 金額同步</td>
+        <td class="check-col"><span class="checkbox"></span></td>
+        <td class="result-col"><div class="result-input"></div></td>
+      </tr>
+      <tr>
+        <td class="step-num">D5</td>
+        <td><span class="page-label">工作日誌</span></td>
+        <td class="action">司機回報剩貨<br><span class="note">送不完的蛋，填回剩餘數量</span></td>
+        <td>出現「回庫待驗」紀錄</td>
+        <td class="check-col"><span class="checkbox"></span></td>
+        <td class="result-col"><div class="result-input"></div></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ======= E. 回庫待驗 ======= -->
+<div class="section">
+  <div class="section-title">E｜回庫待驗（剩貨回來要確認才算庫存）</div>
+  <table>
+    <thead><tr>
+      <th style="width:32px">#</th>
+      <th>到哪裡</th>
+      <th>做什麼、看什麼</th>
+      <th>預期結果</th>
+      <th class="check-col">✓</th>
+      <th class="result-col">實測備註</th>
+    </tr></thead>
+    <tbody>
+      <tr>
+        <td class="step-num">E1</td>
+        <td><span class="page-label">庫存管理</span></td>
+        <td class="action">找「待驗回庫」區塊<br><span class="note">看司機剛回報的剩貨有沒有出現在這裡</span></td>
+        <td>有一筆待驗紀錄，品項數量對</td>
+        <td class="check-col"><span class="checkbox"></span></td>
+        <td class="result-col"><div class="result-input"></div></td>
+      </tr>
+      <tr>
+        <td class="step-num">E2</td>
+        <td><span class="page-label">庫存管理</span></td>
+        <td class="action">管理員點「確認回庫」<br><span class="note">確認數量後送出</span></td>
+        <td>可賣庫存增加，待驗紀錄消失</td>
+        <td class="check-col"><span class="checkbox"></span></td>
+        <td class="result-col"><div class="result-input"></div></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ======= F. 進貨流程 ======= -->
+<div class="section">
+  <div class="section-title">F｜進貨簽收（向供應商買貨進來）</div>
+  <table>
+    <thead><tr>
+      <th style="width:32px">#</th>
+      <th>到哪裡</th>
+      <th>做什麼、看什麼</th>
+      <th>預期結果</th>
+      <th class="check-col">✓</th>
+      <th class="result-col">實測備註</th>
+    </tr></thead>
+    <tbody>
+      <tr>
+        <td class="step-num">F1</td>
+        <td><span class="page-label">進貨簽收</span></td>
+        <td class="action">建立一筆進貨收貨單<br><span class="note">選供應商（如大永蛋行）、品項、數量</span></td>
+        <td>進貨單建立成功，狀態：待簽收</td>
+        <td class="check-col"><span class="checkbox"></span></td>
+        <td class="result-col"><div class="result-input"></div></td>
+      </tr>
+      <tr>
+        <td class="step-num">F2</td>
+        <td><span class="page-label">進貨簽收</span></td>
+        <td class="action">點「供應商簽名」<br><span class="note">代表這批貨確認收到，公司開始欠供應商錢</span></td>
+        <td>狀態改為「已簽收」</td>
+        <td class="check-col"><span class="checkbox"></span></td>
+        <td class="result-col"><div class="result-input"></div></td>
+      </tr>
+      <tr>
+        <td class="step-num">F3</td>
+        <td><span class="page-label">進貨簽收</span><br>→ 自動處理</td>
+        <td class="action">簽收後，確認「我欠供應商的錢（AP）」有沒有自動建立<br><span class="note">可在進貨單詳情或應付帳款頁確認</span></td>
+        <td>AP 應付帳款出現一筆，金額正確</td>
+        <td class="check-col"><span class="checkbox"></span></td>
+        <td class="result-col"><div class="result-input"></div></td>
+      </tr>
+      <tr>
+        <td class="step-num">F4</td>
+        <td><span class="page-label">進貨簽收</span></td>
+        <td class="action">點「確認入庫」<br><span class="note">確認貨真的回到大永倉庫，才能賣</span></td>
+        <td>狀態改為「已入庫」</td>
+        <td class="check-col"><span class="checkbox"></span></td>
+        <td class="result-col"><div class="result-input"></div></td>
+      </tr>
+      <tr>
+        <td class="step-num">F5</td>
+        <td><span class="page-label">庫存管理</span></td>
+        <td class="action">入庫後，去庫存管理確認可賣庫存增加<br><span class="note">簽名不增加庫存，入庫才增加</span></td>
+        <td>可賣庫存數量增加，與進貨數量一致</td>
+        <td class="check-col"><span class="checkbox"></span></td>
+        <td class="result-col"><div class="result-input"></div></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ======= G. 帳款確認 ======= -->
+<div class="section">
+  <div class="section-title">G｜帳款確認（錢的進出）</div>
+  <table>
+    <thead><tr>
+      <th style="width:32px">#</th>
+      <th>到哪裡</th>
+      <th>做什麼、看什麼</span></th>
+      <th>預期結果</th>
+      <th class="check-col">✓</th>
+      <th class="result-col">實測備註</th>
+    </tr></thead>
+    <tbody>
+      <tr>
+        <td class="step-num">G1</td>
+        <td><span class="page-label">應收帳款</span></td>
+        <td class="action">查看應收帳款列表<br><span class="note">「別人欠我的錢」——客戶送達未付款的金額</span></td>
+        <td>有帳款資料，狀態（未收/已收/逾期）顯示正確</td>
+        <td class="check-col"><span class="checkbox"></span></td>
+        <td class="result-col"><div class="result-input"></div></td>
+      </tr>
+      <tr>
+        <td class="step-num">G2</td>
+        <td><span class="page-label">應收帳款</span></td>
+        <td class="action">對一筆 AR 點「標記已收」<br><span class="note">客戶月結付款後更新</span></td>
+        <td>狀態改為已收，訂單付款狀態同步</td>
+        <td class="check-col"><span class="checkbox"></span></td>
+        <td class="result-col"><div class="result-input"></div></td>
+      </tr>
+      <tr>
+        <td class="step-num">G3</td>
+        <td><span class="page-label">應收帳款</span></td>
+        <td class="action">查看「司機日報」Tab<br><span class="note">今日司機收了多少現金</span></td>
+        <td>有日期、司機、金額顯示</td>
+        <td class="check-col"><span class="checkbox"></span></td>
+        <td class="result-col"><div class="result-input"></div></td>
+      </tr>
+      <tr>
+        <td class="step-num">G4</td>
+        <td><span class="page-label">應收帳款</span></td>
+        <td class="action">查看「月結對帳」功能<br><span class="note">選客戶、月份，匯出對帳單 Excel</span></td>
+        <td>Excel 下載成功，欄位有應收、已收、未收</td>
+        <td class="check-col"><span class="checkbox"></span></td>
+        <td class="result-col"><div class="result-input"></div></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ======= H. 庫存查詢 ======= -->
+<div class="section">
+  <div class="section-title">H｜庫存查詢（現在有多少貨可以賣）</div>
+  <table>
+    <thead><tr>
+      <th style="width:32px">#</th>
+      <th>到哪裡</th>
+      <th>做什麼、看什麼</th>
+      <th>預期結果</th>
+      <th class="check-col">✓</th>
+      <th class="result-col">實測備註</th>
+    </tr></thead>
+    <tbody>
+      <tr>
+        <td class="step-num">H1</td>
+        <td><span class="page-label">庫存管理</span></td>
+        <td class="action">查看「可賣庫存」數字<br><span class="note">這是現在倉庫裡可以賣出去的數量</span></td>
+        <td>有品項列表、數量，無奇怪的負數</td>
+        <td class="check-col"><span class="checkbox"></span></td>
+        <td class="result-col"><div class="result-input"></div></td>
+      </tr>
+      <tr>
+        <td class="step-num">H2</td>
+        <td><span class="page-label">庫存管理</span></td>
+        <td class="action">查看「待入倉進貨」<br><span class="note">已向供應商簽收但還沒入倉確認的貨</span></td>
+        <td>有顯示，或顯示「無待入倉」</td>
+        <td class="check-col"><span class="checkbox"></span></td>
+        <td class="result-col"><div class="result-input"></div></td>
+      </tr>
+      <tr>
+        <td class="step-num">H3</td>
+        <td><span class="page-label">庫存管理</span></td>
+        <td class="action">查看「庫存異動紀錄」<br><span class="note">進貨 / 出車 / 回庫每一筆異動都應該在這裡</span></td>
+        <td>有紀錄，原因說明清楚（進貨/出車/回庫）</td>
+        <td class="check-col"><span class="checkbox"></span></td>
+        <td class="result-col"><div class="result-input"></div></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ======= I. 客戶管理 ======= -->
+<div class="section">
+  <div class="section-title">I｜客戶管理（買蛋的客戶資料）</div>
+  <table>
+    <thead><tr>
+      <th style="width:32px">#</th>
+      <th>到哪裡</th>
+      <th>做什麼、看什麼</th>
+      <th>預期結果</th>
+      <th class="check-col">✓</th>
+      <th class="result-col">實測備註</th>
+    </tr></thead>
+    <tbody>
+      <tr>
+        <td class="step-num">I1</td>
+        <td><span class="page-label">客戶管理</span></td>
+        <td class="action">查看客戶列表<br><span class="note">名稱、電話、地址、結帳方式（現金 / 月結）</span></td>
+        <td>有客戶資料，結帳方式標示清楚</td>
+        <td class="check-col"><span class="checkbox"></span></td>
+        <td class="result-col"><div class="result-input"></div></td>
+      </tr>
+      <tr>
+        <td class="step-num">I2</td>
+        <td><span class="page-label">客戶管理</span></td>
+        <td class="action">新增或編輯一筆客戶資料</td>
+        <td>儲存成功，資料更新</td>
+        <td class="check-col"><span class="checkbox"></span></td>
+        <td class="result-col"><div class="result-input"></div></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ======= J. 報表分析 ======= -->
+<div class="section">
+  <div class="section-title">J｜報表分析（這個月賣了多少、收了多少）</div>
+  <table>
+    <thead><tr>
+      <th style="width:32px">#</th>
+      <th>到哪裡</th>
+      <th>做什麼、看什麼</th>
+      <th>預期結果</th>
+      <th class="check-col">✓</th>
+      <th class="result-col">實測備註</th>
+    </tr></thead>
+    <tbody>
+      <tr>
+        <td class="step-num">J1</td>
+        <td><span class="page-label">報表分析</span></td>
+        <td class="action">選月份，查看當月銷售報表</td>
+        <td>有圖表和數字，沒有空白</td>
+        <td class="check-col"><span class="checkbox"></span></td>
+        <td class="result-col"><div class="result-input"></div></td>
+      </tr>
+      <tr>
+        <td class="step-num">J2</td>
+        <td><span class="page-label">報表分析</span></td>
+        <td class="action">查看「司機業績」或「客戶銷售」分類<br><span class="note">確認每個司機送了多少、每個客戶買了多少</span></td>
+        <td>數字有合理分佈，沒有全 0</td>
+        <td class="check-col"><span class="checkbox"></span></td>
+        <td class="result-col"><div class="result-input"></div></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ======= 總結 ======= -->
+<div class="section">
+  <div class="section-title">整體評分</div>
+  <table>
+    <thead><tr>
+      <th>區塊</th>
+      <th>全部通過</th>
+      <th>部分問題</th>
+      <th>無法使用</th>
+      <th>問題描述</th>
+    </tr></thead>
+    <tbody>
+      <tr><td>A 總覽</td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><div class="result-input"></div></td></tr>
+      <tr><td>B 訂單管理</td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><div class="result-input"></div></td></tr>
+      <tr><td>C 派車管理</td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><div class="result-input"></div></td></tr>
+      <tr><td>D 司機 APP</td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><div class="result-input"></div></td></tr>
+      <tr><td>E 回庫待驗</td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><div class="result-input"></div></td></tr>
+      <tr><td>F 進貨簽收</td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><div class="result-input"></div></td></tr>
+      <tr><td>G 帳款確認</td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><div class="result-input"></div></td></tr>
+      <tr><td>H 庫存查詢</td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><div class="result-input"></div></td></tr>
+      <tr><td>I 客戶管理</td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><div class="result-input"></div></td></tr>
+      <tr><td>J 報表分析</td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><div class="result-input"></div></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="footer-note">
+  測試網址：https://ordersome.com.tw/dayone　　版本：v6.28　　此表由 Claude 依程式碼與業務流程產生，測試結果請回報給開發端。
+</div>
+
+</body>
+</html>

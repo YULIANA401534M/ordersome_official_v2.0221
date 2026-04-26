@@ -341,7 +341,17 @@ function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onCl
   }));
 
   function handlePrint() {
-    window.print();
+    const target = document.querySelector(".print-target") as HTMLElement | null;
+    if (!target) return;
+    const win = window.open("", "_blank", "width=900,height=700");
+    if (!win) return;
+    const styles = Array.from(document.styleSheets)
+      .flatMap((s) => { try { return Array.from(s.cssRules).map((r) => r.cssText); } catch { return []; } })
+      .join("\n");
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>${styles} body{margin:0;padding:20px;background:white;} @media print{body{margin:0;padding:0;}}</style></head><body>${target.innerHTML}</body></html>`);
+    win.document.close();
+    win.focus();
+    setTimeout(() => { win.print(); win.close(); }, 500);
   }
 
   return (
@@ -576,14 +586,6 @@ export default function DayoneDispatch() {
 
   return (
     <>
-      <style>{`
-        @media print {
-          body > * { display: none !important; }
-          .print-target { display: block !important; position: fixed; inset: 0; background: white; overflow: auto; }
-          .no-print { display: none !important; }
-        }
-      `}</style>
-
       <DayoneLayout>
         <div className="dayone-page">
           <section className="rounded-[34px] bg-[radial-gradient(circle_at_top_left,_rgba(255,247,224,0.7),_transparent_30%),linear-gradient(135deg,#111827_0%,#374151_44%,#b45309_100%)] px-6 py-6 text-white shadow-[0_20px_48px_rgba(120,53,15,0.18)]">
