@@ -466,22 +466,34 @@ export default function AdminUsers() {
                   <div>
                     <p style={{ fontSize: 13, fontWeight: 600, color: "var(--os-text-1)", marginBottom: 10 }}>系統細粒權限</p>
                     <div className="space-y-2">
-                      {PERMISSIONS.map((perm) => (
-                        <label key={perm.key} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-                          <input type="checkbox"
-                            checked={normalizeOrderSomePermissions(editingUser.permissions).includes(perm.key)}
-                            onChange={(e) => {
+                      {PERMISSIONS.map((perm) => {
+                        const active = normalizeOrderSomePermissions(editingUser.permissions).includes(perm.key);
+                        return (
+                          <div key={perm.key}
+                            onClick={() => {
                               const cur = normalizeOrderSomePermissions(editingUser.permissions);
-                              const next = e.target.checked ? [...cur, perm.key as OrderSomePermission] : cur.filter((p) => p !== perm.key);
+                              const next = active ? cur.filter((p) => p !== perm.key) : [...cur, perm.key as OrderSomePermission];
                               setEditingUser({ ...editingUser, permissions: next });
                             }}
-                            style={{ width: 15, height: 15, accentColor: "var(--os-amber)" }} />
-                          <span style={{ fontSize: 13, color: "var(--os-text-1)" }}>{perm.label}</span>
-                          <span style={{ fontSize: 11, color: "var(--os-text-3)" }}>
-                            聯動：{perm.routes.join("、")}
-                          </span>
-                        </label>
-                      ))}
+                            style={{
+                              display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 12px",
+                              borderRadius: 8, cursor: "pointer", border: "1px solid",
+                              borderColor: active ? "var(--os-amber)" : "var(--os-border)",
+                              background: active ? "var(--os-amber-soft)" : "var(--os-surface-2)",
+                              transition: "all 0.15s",
+                            }}>
+                            <div style={{ width: 18, height: 18, borderRadius: 4, border: "2px solid", flexShrink: 0, marginTop: 1, display: "flex", alignItems: "center", justifyContent: "center", borderColor: active ? "var(--os-amber)" : "var(--os-border)", background: active ? "var(--os-amber)" : "transparent" }}>
+                              {active && <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                            </div>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--os-text-1)" }}>{perm.label}</div>
+                              <div style={{ fontSize: 11, color: "var(--os-text-3)", marginTop: 3, wordBreak: "break-all" }}>
+                                {perm.routes.join("、")}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 

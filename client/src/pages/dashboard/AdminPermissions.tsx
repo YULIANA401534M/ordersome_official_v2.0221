@@ -4,6 +4,7 @@ import { Shield, Search, Check, ToggleRight } from "lucide-react";
 import AdminDashboardLayout from "@/components/AdminDashboardLayout";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "../../_core/hooks/useAuth";
 import {
   FRANCHISEE_FEATURE_KEYS,
@@ -269,51 +270,55 @@ export default function AdminPermissions() {
 
       {/* Edit Permissions Modal */}
       <Dialog open={!!editingUser} onOpenChange={v => { if (!v) setEditingUser(null); }}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle style={{ color: "var(--os-text-1)" }}>編輯系統權限</DialogTitle>
-            {editingUser && <p style={{ fontSize: 12, color: "var(--os-text-3)", marginTop: 2 }}>{editingUser.name} ({editingUser.email})</p>}
-          </DialogHeader>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setSelectedPermissions([...ORDER_SOME_PERMISSIONS])}>
-              新增全部權限
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setSelectedPermissions([])}>
-              刪除全部權限
-            </Button>
-          </div>
-          <div className="space-y-3 py-2">
-            {AVAILABLE_PERMISSIONS.map((permission) => {
-              const active = selectedPermissions.includes(permission.id);
-              return (
-                <div key={permission.id}
-                  onClick={() => handleTogglePermission(permission.id)}
-                  style={{
-                    display: "flex", alignItems: "flex-start", gap: 12, padding: "12px 14px",
-                    border: "1px solid", borderColor: active ? "var(--os-amber)" : "var(--os-border)",
-                    borderRadius: 8, cursor: "pointer", background: active ? "var(--os-amber-soft)" : "var(--os-surface-2)",
-                    transition: "all 0.15s",
-                  }}>
-                  <div style={{ width: 20, height: 20, borderRadius: 4, border: "2px solid", flexShrink: 0, marginTop: 1, display: "flex", alignItems: "center", justifyContent: "center", borderColor: active ? "var(--os-amber)" : "var(--os-border)", background: active ? "var(--os-amber)" : "transparent" }}>
-                    {active && <Check style={{ width: 13, height: 13, color: "#fff" }} />}
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--os-text-1)" }}>{permission.label}</div>
-                    <div style={{ fontSize: 12, color: "var(--os-text-3)", marginTop: 2 }}>{permission.description}</div>
-                    <div style={{ fontSize: 11, color: "var(--os-text-3)", marginTop: 4 }}>
-                      聯動頁面：{permission.routes.join("、")}
-                    </div>
-                  </div>
+        <DialogContent className="!max-w-lg p-0 gap-0 max-h-[90vh]">
+          <div className="flex flex-col h-full max-h-[90vh]">
+            <DialogHeader className="px-6 py-4 shrink-0" style={{ borderBottom: "1px solid var(--os-border)" }}>
+              <DialogTitle style={{ color: "var(--os-text-1)" }}>編輯系統權限</DialogTitle>
+              {editingUser && <p style={{ fontSize: 12, color: "var(--os-text-3)", marginTop: 2 }}>{editingUser.name} ({editingUser.email})</p>}
+            </DialogHeader>
+            <ScrollArea className="flex-1 min-h-0 w-full">
+              <div className="px-6 py-4 space-y-3">
+                <div className="flex gap-2 pb-1">
+                  <Button variant="outline" size="sm" onClick={() => setSelectedPermissions([...ORDER_SOME_PERMISSIONS])}>
+                    新增全部權限
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setSelectedPermissions([])}>
+                    刪除全部權限
+                  </Button>
                 </div>
-              );
-            })}
+                {AVAILABLE_PERMISSIONS.map((permission) => {
+                  const active = selectedPermissions.includes(permission.id);
+                  return (
+                    <div key={permission.id}
+                      onClick={() => handleTogglePermission(permission.id)}
+                      style={{
+                        display: "flex", alignItems: "flex-start", gap: 12, padding: "12px 14px",
+                        border: "1px solid", borderColor: active ? "var(--os-amber)" : "var(--os-border)",
+                        borderRadius: 8, cursor: "pointer", background: active ? "var(--os-amber-soft)" : "var(--os-surface-2)",
+                        transition: "all 0.15s",
+                      }}>
+                      <div style={{ width: 20, height: 20, borderRadius: 4, border: "2px solid", flexShrink: 0, marginTop: 1, display: "flex", alignItems: "center", justifyContent: "center", borderColor: active ? "var(--os-amber)" : "var(--os-border)", background: active ? "var(--os-amber)" : "transparent" }}>
+                        {active && <Check style={{ width: 13, height: 13, color: "#fff" }} />}
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--os-text-1)" }}>{permission.label}</div>
+                        <div style={{ fontSize: 12, color: "var(--os-text-3)", marginTop: 2 }}>{permission.description}</div>
+                        <div style={{ fontSize: 11, color: "var(--os-text-3)", marginTop: 4, wordBreak: "break-all" }}>
+                          聯動：{permission.routes.join("、")}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+            <DialogFooter className="px-6 py-3 shrink-0" style={{ borderTop: "1px solid var(--os-border)" }}>
+              <Button variant="outline" onClick={() => setEditingUser(null)}>取消</Button>
+              <Button style={{ background: "var(--os-amber)", color: "#fff" }} onClick={handleSavePermissions} disabled={updateUserMutation.isPending}>
+                {updateUserMutation.isPending ? "儲存中..." : "儲存"}
+              </Button>
+            </DialogFooter>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingUser(null)}>取消</Button>
-            <Button style={{ background: "var(--os-amber)", color: "#fff" }} onClick={handleSavePermissions} disabled={updateUserMutation.isPending}>
-              {updateUserMutation.isPending ? "儲存中..." : "儲存"}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </AdminDashboardLayout>
