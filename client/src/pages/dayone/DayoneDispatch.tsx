@@ -551,7 +551,17 @@ function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onCl
 
                 <div className="space-y-3">
                   {items.map((item: any) => {
-                    const remain = Number(item.remainBoxes ?? Number(item.prevBoxes ?? 0) + Number(item.deliverBoxes ?? 0) - Number(item.returnBoxes ?? 0));
+                    const stopProducts = productsByOrder.filter((p: any) => Number(p.orderId) === Number(item.orderId));
+                    const ORDER_STATUS: Record<string, { label: string; cls: string }> = {
+                      pending: { label: "待處理", cls: "bg-stone-100 text-stone-600" },
+                      assigned: { label: "已指派", cls: "bg-sky-100 text-sky-700" },
+                      picked: { label: "已撿貨", cls: "bg-amber-100 text-amber-700" },
+                      delivering: { label: "配送中", cls: "bg-orange-100 text-orange-700" },
+                      delivered: { label: "已送達", cls: "bg-emerald-100 text-emerald-700" },
+                      returned: { label: "已回單", cls: "bg-rose-100 text-rose-700" },
+                    };
+                    const orderSt = ORDER_STATUS[item.orderStatus] ?? { label: item.orderStatus ?? "—", cls: "bg-stone-100 text-stone-600" };
+                    const PAY_LABEL: Record<string, string> = { monthly: "月結", weekly: "週結", unpaid: "現收", paid: "已收", partial: "部份收" };
                     return (
                       <div key={item.id} className="rounded-[26px] border border-stone-200/70 bg-white p-4 shadow-[0_12px_24px_rgba(120,53,15,0.05)]">
                         <div className="flex items-start justify-between gap-3">
@@ -561,31 +571,24 @@ function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onCl
                             </p>
                             <p className="mt-1 text-sm text-stone-500">{item.customerAddress ?? "未提供地址"}</p>
                           </div>
-                          <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
-                            {item.paymentStatus}
-                          </span>
-                        </div>
-
-                        <div className="mt-4 grid grid-cols-4 gap-2 text-center text-sm">
-                          <div className="rounded-2xl bg-stone-50 px-2 py-3">
-                            <p className="text-xs text-stone-400">原有</p>
-                            <p className="mt-1 font-semibold text-stone-900">{item.prevBoxes}</p>
-                          </div>
-                          <div className="rounded-2xl bg-amber-50 px-2 py-3">
-                            <p className="text-xs text-amber-600">送達</p>
-                            <p className="mt-1 font-semibold text-amber-700">{item.deliverBoxes}</p>
-                          </div>
-                          <div className="rounded-2xl bg-stone-50 px-2 py-3">
-                            <p className="text-xs text-stone-400">回收</p>
-                            <p className="mt-1 font-semibold text-stone-900">{item.returnBoxes}</p>
-                          </div>
-                          <div className="rounded-2xl bg-emerald-50 px-2 py-3">
-                            <p className="text-xs text-emerald-600">剩餘</p>
-                            <p className="mt-1 font-semibold text-emerald-700">{remain}</p>
+                          <div className="flex flex-col items-end gap-1.5 shrink-0">
+                            <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${orderSt.cls}`}>{orderSt.label}</span>
+                            <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs text-stone-500">{PAY_LABEL[item.paymentStatus] ?? item.paymentStatus}</span>
                           </div>
                         </div>
 
-                        <div className="mt-4 flex items-center justify-between text-sm">
+                        {stopProducts.length > 0 && (
+                          <div className="mt-3 rounded-2xl bg-stone-50 px-3 py-2.5 space-y-1">
+                            {stopProducts.map((p: any, pi: number) => (
+                              <div key={pi} className="flex items-center justify-between text-sm">
+                                <span className="text-stone-700">{p.productName}</span>
+                                <span className="font-semibold text-stone-900">{p.shippedQty} {p.unit || ""}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="mt-3 flex items-center justify-between text-sm">
                           <div>
                             <p className="text-xs text-stone-400">訂單金額</p>
                             <p className="mt-1 font-semibold text-stone-900">{fmtMoney(item.orderAmount ?? 0)}</p>

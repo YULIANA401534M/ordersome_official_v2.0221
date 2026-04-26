@@ -61,13 +61,15 @@ export default function DriverWorkLog() {
   const returnItems = useMemo(
     () =>
       (dispatchDetail?.products ?? [])
-        .map((product: any) => ({
-          productId: Number(product.productId),
-          productName: product.productName,
-          unit: product.unit,
-          shippedQty: Number(product.shippedQty ?? 0),
-          qty: Number(returnQtyByProduct[Number(product.productId)] ?? 0),
-        }))
+        .map((product: any) => {
+          const pid = Number(product.productId);
+          const shipped = Number(product.shippedQty ?? 0);
+          // Default to full shipped qty; driver reduces if all was delivered
+          const qty = returnQtyByProduct[pid] !== undefined
+            ? Number(returnQtyByProduct[pid])
+            : shipped;
+          return { productId: pid, productName: product.productName, unit: product.unit, shippedQty: shipped, qty };
+        })
         .filter((item: any) => item.shippedQty > 0),
     [dispatchDetail?.products, returnQtyByProduct]
   );
@@ -130,27 +132,30 @@ export default function DriverWorkLog() {
               </div>
             ) : null}
 
-            <div className="mt-4 space-y-3">
+            <div className="mt-3 rounded-2xl bg-amber-50 border border-amber-100 px-3 py-2.5 text-xs text-amber-700 leading-5">
+              全部送完就填 <strong>0</strong>，車上有剩貨就填剩幾箱（桶）。預設帶出幾箱就填幾箱，按送出後等管理員確認入庫。
+            </div>
+
+            <div className="mt-3 space-y-3">
               {returnItems.map((item: any) => (
                 <div key={item.productId} className="rounded-2xl border border-stone-200/80 bg-stone-50 px-4 py-3">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-stone-900">{item.productName}</p>
-                      <p className="mt-1 text-xs text-stone-500">今日派出 {item.shippedQty} {item.unit || "單位"}</p>
+                      <p className="mt-1 text-xs text-stone-500">今日帶出 {item.shippedQty} {item.unit || "單位"}　回庫幾{item.unit || "箱"}？</p>
                     </div>
                     <input
                       type="number"
                       min={0}
                       max={item.shippedQty}
-                      value={item.qty || ""}
+                      value={item.qty}
                       onChange={(event) =>
                         setReturnQtyByProduct((prev) => ({
                           ...prev,
-                          [item.productId]: Math.max(0, Math.min(item.shippedQty, Number(event.target.value || 0))),
+                          [item.productId]: Math.max(0, Math.min(item.shippedQty, Number(event.target.value ?? 0))),
                         }))
                       }
                       className="w-24 rounded-2xl border border-stone-200 bg-white px-3 py-2 text-right text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                      placeholder="0"
                     />
                   </div>
                 </div>
@@ -160,16 +165,12 @@ export default function DriverWorkLog() {
             <button
               type="button"
               className="mt-4 w-full rounded-2xl bg-amber-600 py-3 text-sm font-semibold text-white disabled:opacity-50"
-              disabled={
-                returnInventory.isPending ||
-                !activeDispatchId ||
-                !returnItems.some((item: any) => item.qty > 0)
-              }
+              disabled={returnInventory.isPending || !activeDispatchId}
               onClick={() =>
                 returnInventory.mutate({
                   dispatchOrderId: activeDispatchId,
                   tenantId: TENANT_ID,
-                  note: "Driver return from worklog",
+                  note: "司機回庫回報",
                   items: returnItems
                     .filter((item: any) => item.qty > 0)
                     .map((item: any) => ({ productId: item.productId, qty: item.qty })),
