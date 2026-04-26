@@ -205,28 +205,28 @@ export default function DriverWorkLog() {
             <>
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs text-stone-500">出勤時間</label>
-                  <div className="relative">
-                    <Clock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-300" />
-                    <input
-                      type="time"
-                      value={startTime}
-                      onChange={(event) => setStartTime(event.target.value)}
-                      className="w-full rounded-2xl border border-stone-200 bg-white py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    />
-                  </div>
+                  <label className="mb-1 flex items-center gap-1.5 text-xs text-stone-500">
+                    <Clock className="h-3.5 w-3.5" />
+                    出勤時間
+                  </label>
+                  <input
+                    type="time"
+                    value={startTime}
+                    onChange={(event) => setStartTime(event.target.value)}
+                    className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-stone-500">收工時間</label>
-                  <div className="relative">
-                    <Clock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-300" />
-                    <input
-                      type="time"
-                      value={endTime}
-                      onChange={(event) => setEndTime(event.target.value)}
-                      className="w-full rounded-2xl border border-stone-200 bg-white py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    />
-                  </div>
+                  <label className="mb-1 flex items-center gap-1.5 text-xs text-stone-500">
+                    <Clock className="h-3.5 w-3.5" />
+                    收工時間
+                  </label>
+                  <input
+                    type="time"
+                    value={endTime}
+                    onChange={(event) => setEndTime(event.target.value)}
+                    className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  />
                 </div>
               </div>
 

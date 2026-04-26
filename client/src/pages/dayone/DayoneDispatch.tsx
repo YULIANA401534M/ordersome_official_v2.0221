@@ -8,7 +8,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { Package, Printer, Plus, RotateCcw, Route, Truck, Wallet } from "lucide-react";
+import { AlertTriangle, Package, Printer, Plus, RotateCcw, Route, Truck, Wallet } from "lucide-react";
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
@@ -592,9 +592,29 @@ function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onCl
                           </div>
                           <div className="text-right">
                             <p className="text-xs text-stone-400">已收現金</p>
-                            <p className="mt-1 font-semibold text-amber-700">{fmtMoney(item.cashCollected ?? 0)}</p>
+                            <p className="mt-1 font-semibold text-amber-700">{fmtMoney(item.orderCashCollected ?? item.cashCollected ?? 0)}</p>
                           </div>
                         </div>
+                        {(() => {
+                          const amt = Number(item.orderAmount ?? 0);
+                          const collected = Number(item.orderCashCollected ?? item.cashCollected ?? 0);
+                          const diff = amt - collected;
+                          const note = item.orderDriverNote;
+                          if (diff <= 0 && !note) return null;
+                          return (
+                            <div className="mt-3 rounded-2xl border border-rose-100 bg-rose-50 px-3 py-2.5 space-y-1">
+                              {diff > 0 && (
+                                <div className="flex items-center gap-1.5 text-xs font-semibold text-rose-700">
+                                  <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                                  差額 NT$ {diff.toLocaleString()}（少收）
+                                </div>
+                              )}
+                              {note && (
+                                <p className="text-xs text-rose-600 leading-4">備註：{note}</p>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                     );
                   })}
@@ -848,6 +868,20 @@ export default function DayoneDispatch() {
                         <span>列印時間</span>
                         <span className="font-medium text-stone-900">{fmtDateTime(dispatch.printedAt)}</span>
                       </div>
+                      {Number(dispatch.totalStops) > 0 && (
+                        <div className="flex items-center justify-between">
+                          <span>送達進度</span>
+                          <span className="font-medium text-stone-900">
+                            {dispatch.deliveredStops} / {dispatch.totalStops} 站
+                          </span>
+                        </div>
+                      )}
+                      {Number(dispatch.shortfallStops) > 0 && (
+                        <div className="flex items-center gap-1.5 rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                          {dispatch.shortfallStops} 站有差額，請查明細
+                        </div>
+                      )}
                     </div>
 
                     <div className="mt-5 flex gap-2">

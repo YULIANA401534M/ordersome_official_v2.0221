@@ -193,7 +193,15 @@ export const dyDispatchRouter = router({
       await ensureDyDispatchSchema(client);
       const scopedDriverId = await resolveDriverScope(client, input.tenantId, ctx.user.id, ctx.user.role ?? "");
 
-      let sql = `SELECT do2.*, d.name AS driverName
+      let sql = `SELECT do2.*, d.name AS driverName,
+                        (SELECT COUNT(*) FROM dy_dispatch_items di WHERE di.dispatchOrderId=do2.id) AS totalStops,
+                        (SELECT COUNT(*) FROM dy_dispatch_items di
+                         JOIN dy_orders o ON o.id=di.orderId
+                         WHERE di.dispatchOrderId=do2.id AND o.status='delivered') AS deliveredStops,
+                        (SELECT COUNT(*) FROM dy_dispatch_items di
+                         JOIN dy_orders o ON o.id=di.orderId
+                         WHERE di.dispatchOrderId=do2.id AND o.status='delivered'
+                           AND o.cashCollected < o.totalAmount AND o.totalAmount > 0) AS shortfallStops
                  FROM dy_dispatch_orders do2
                  JOIN dy_drivers d ON do2.driverId = d.id
                  WHERE do2.tenantId = ?`;
@@ -241,7 +249,8 @@ export const dyDispatchRouter = router({
 
       const [itemRows] = await client.execute(
         `SELECT di.*, c.name AS customerName, c.address AS customerAddress,
-                c.phone AS customerPhone, o.totalAmount AS orderAmount, o.orderNo
+                c.phone AS customerPhone, o.totalAmount AS orderAmount, o.orderNo,
+                o.cashCollected AS orderCashCollected, o.driverNote AS orderDriverNote, o.status AS orderStatus
          FROM dy_dispatch_items di
          JOIN dy_customers c ON di.customerId = c.id
          LEFT JOIN dy_orders o ON di.orderId = o.id
@@ -251,14 +260,15 @@ export const dyDispatchRouter = router({
       );
 
       // per-stop products (keyed by orderId for frontend grouping)
+      // Only join rows where orderId is not null (manual stops have no orderId)
       const [productRows] = await client.execute(
         `SELECT di.orderId, oi.productId, p.name AS productName, p.unit, SUM(oi.qty) AS shippedQty
          FROM dy_dispatch_items di
          JOIN dy_order_items oi ON oi.orderId = di.orderId
          JOIN dy_products p ON p.id = oi.productId
-         WHERE di.dispatchOrderId=? AND di.tenantId=?
+         WHERE di.dispatchOrderId=? AND di.tenantId=? AND di.orderId IS NOT NULL
          GROUP BY di.orderId, oi.productId, p.name, p.unit
-         ORDER BY di.stopSequence, p.code, p.name`,
+         ORDER BY di.stopSequence, p.name`,
         [input.id, input.tenantId]
       );
 
