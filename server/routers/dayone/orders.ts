@@ -180,7 +180,15 @@ export const dyOrdersRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
       const client = (db as any).$client;
 
-      // 若此訂單已在派車單裡，先確認派車單狀態
+      // 先確認訂單狀態（已取消的直接允許刪除，不管派車單）
+      const [orderCheck] = await client.execute(
+        `SELECT status FROM dy_orders WHERE id=? AND tenantId=? LIMIT 1`,
+        [input.id, input.tenantId]
+      );
+      const orderStatus = (orderCheck as any[])[0]?.status;
+      const isCancelled = orderStatus === "cancelled";
+
+      // 若此訂單已在派車單裡，確認派車單狀態（已取消訂單跳過此檢查）
       const [diRows] = await client.execute(
         `SELECT di.id, di.dispatchOrderId, ddo.status AS dispatchStatus
          FROM dy_dispatch_items di
@@ -189,20 +197,28 @@ export const dyOrdersRouter = router({
         [input.id, input.tenantId]
       );
       for (const di of diRows as any[]) {
-        if (["printed", "pending_handover", "completed"].includes(di.dispatchStatus)) {
+        if (!isCancelled && ["printed", "pending_handover", "completed"].includes(di.dispatchStatus)) {
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "此訂單已列印派車單或正在配送，無法刪除。請先處理派車單。",
           });
         }
-        // 從派車單移除這個站點
         await client.execute(`DELETE FROM dy_dispatch_items WHERE id=? AND tenantId=?`, [di.id, input.tenantId]);
       }
 
       // 刪除應收帳款
       await client.execute(`DELETE FROM dy_ar_records WHERE orderId=? AND tenantId=?`, [input.id, input.tenantId]);
-      // 刪除待驗回庫（若有）
-      await client.execute(`DELETE FROM dy_pending_returns WHERE tenantId=? AND dispatchOrderId IN (SELECT id FROM dy_dispatch_orders WHERE tenantId=?)`, [input.tenantId, input.tenantId]);
+      // 刪除此訂單所在派車單的待驗回庫（若訂單是該派車單唯一品項才會影響）
+      // 注意：pending_returns 是以 dispatchOrderId 為單位，共用派車單的其他訂單不受影響
+      if ((diRows as any[]).length > 0) {
+        const dispatchOrderIds = [...new Set((diRows as any[]).map((di: any) => di.dispatchOrderId))];
+        for (const doid of dispatchOrderIds) {
+          await client.execute(
+            `DELETE FROM dy_pending_returns WHERE tenantId=? AND dispatchOrderId=? AND status='pending'`,
+            [input.tenantId, doid]
+          );
+        }
+      }
       // 刪除訂單品項與訂單
       await client.execute(`DELETE FROM dy_order_items WHERE orderId=? AND tenantId=?`, [input.id, input.tenantId]);
       await client.execute(`DELETE FROM dy_orders WHERE id=? AND tenantId=?`, [input.id, input.tenantId]);
