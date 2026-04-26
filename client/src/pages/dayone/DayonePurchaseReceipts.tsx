@@ -1278,25 +1278,25 @@ export default function DayonePurchaseReceipts() {
           <Card className="dayone-panel rounded-[28px] border-amber-100">
             <CardContent className="pt-5">
               <p className="text-xs text-stone-500">本次查詢進貨數量</p>
-              <p className="mt-2 text-2xl font-semibold text-stone-900">{topStats.totalQty.toLocaleString("zh-TW")} 箱</p>
+              <p className="mt-2 dayone-kpi-value text-stone-900">{topStats.totalQty.toLocaleString("zh-TW")} 箱</p>
             </CardContent>
           </Card>
           <Card className="dayone-panel rounded-[28px] border-amber-100">
             <CardContent className="pt-5">
               <p className="text-xs text-stone-500">本次查詢進貨金額</p>
-              <p className="mt-2 text-2xl font-semibold text-stone-900">{fmtMoney(topStats.totalAmount)}</p>
+              <p className="mt-2 dayone-kpi-value text-stone-900">{fmtMoney(topStats.totalAmount)}</p>
             </CardContent>
           </Card>
           <Card className="dayone-panel rounded-[28px] border-amber-100">
             <CardContent className="pt-5">
               <p className="text-xs text-stone-500">待簽收進貨單</p>
-              <p className="mt-2 text-2xl font-semibold text-amber-700">{topStats.pendingCount}</p>
+              <p className="mt-2 dayone-kpi-value text-amber-700">{topStats.pendingCount}</p>
             </CardContent>
           </Card>
           <Card className="dayone-panel rounded-[28px] border-amber-100">
             <CardContent className="pt-5">
               <p className="text-xs text-stone-500">{summaryMonth} 應付未付</p>
-              <p className="mt-2 text-2xl font-semibold text-red-600">{fmtMoney(overview?.unpaidAmount)}</p>
+              <p className="mt-2 dayone-kpi-value text-red-600">{fmtMoney(overview?.unpaidAmount)}</p>
             </CardContent>
           </Card>
         </section>
@@ -1320,19 +1320,19 @@ export default function DayonePurchaseReceipts() {
           <div className="mt-4 grid gap-4 md:grid-cols-4">
             <div className="rounded-3xl border border-stone-200 bg-stone-50 px-4 py-4">
               <p className="text-xs text-stone-500">供應商數</p>
-              <p className="mt-2 text-2xl font-semibold text-stone-900">{Number(overview?.supplierCount ?? 0)}</p>
+              <p className="mt-2 dayone-kpi-value text-stone-900">{Number(overview?.supplierCount ?? 0)}</p>
             </div>
             <div className="rounded-3xl border border-stone-200 bg-stone-50 px-4 py-4">
               <p className="text-xs text-stone-500">本月應付總額</p>
-              <p className="mt-2 text-2xl font-semibold text-stone-900">{fmtMoney(overview?.totalAmount)}</p>
+              <p className="mt-2 dayone-kpi-value text-stone-900">{fmtMoney(overview?.totalAmount)}</p>
             </div>
             <div className="rounded-3xl border border-emerald-100 bg-emerald-50 px-4 py-4">
               <p className="text-xs text-emerald-600">本月已付</p>
-              <p className="mt-2 text-2xl font-semibold text-emerald-700">{fmtMoney(overview?.paidAmount)}</p>
+              <p className="mt-2 dayone-kpi-value text-emerald-700">{fmtMoney(overview?.paidAmount)}</p>
             </div>
             <div className="rounded-3xl border border-red-100 bg-red-50 px-4 py-4">
               <p className="text-xs text-red-600">逾期未付筆數</p>
-              <p className="mt-2 text-2xl font-semibold text-red-700">{Number(overview?.overdueCount ?? 0)}</p>
+              <p className="mt-2 dayone-kpi-value text-red-700">{Number(overview?.overdueCount ?? 0)}</p>
             </div>
           </div>
 
@@ -1410,15 +1410,15 @@ export default function DayonePurchaseReceipts() {
           <div className="mt-4 grid gap-4 md:grid-cols-3">
             <div className="rounded-3xl border border-stone-200 bg-stone-50 px-4 py-4">
               <p className="text-xs text-stone-500">目前筆數</p>
-              <p className="mt-2 text-2xl font-semibold text-stone-900">{payableRows.length}</p>
+              <p className="mt-2 dayone-kpi-value text-stone-900">{payableRows.length}</p>
             </div>
             <div className="rounded-3xl border border-stone-200 bg-stone-50 px-4 py-4">
               <p className="text-xs text-stone-500">本批應付總額</p>
-              <p className="mt-2 text-2xl font-semibold text-stone-900">{fmtMoney(payableStats.total)}</p>
+              <p className="mt-2 dayone-kpi-value text-stone-900">{fmtMoney(payableStats.total)}</p>
             </div>
             <div className="rounded-3xl border border-red-100 bg-red-50 px-4 py-4">
               <p className="text-xs text-red-600">尚未結清</p>
-              <p className="mt-2 text-2xl font-semibold text-red-700">{fmtMoney(payableStats.unpaid)}</p>
+              <p className="mt-2 dayone-kpi-value text-red-700">{fmtMoney(payableStats.unpaid)}</p>
             </div>
           </div>
 

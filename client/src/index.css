@@ -457,21 +457,31 @@
 
 .dayone-page-title {
   font-family: var(--font-ui);
-  font-size: clamp(2rem, 4vw, 3.05rem);
-  font-weight: 800;
-  line-height: 0.92;
-  letter-spacing: -0.055em;
+  font-size: 1.35rem;        /* 21.6px — 後台管理頁 H1，清晰不喧賓奪主 */
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
   color: #18181b;
   text-wrap: balance;
 }
 
 .dayone-page-subtitle {
-  margin-top: 0.8rem;
-  font-size: 1rem;
-  line-height: 1.8;
-  color: #6b7280;
+  margin-top: 0.35rem;
+  font-size: 0.8125rem;     /* 13px */
+  line-height: 1.6;
+  color: #78716c;
   max-width: 46rem;
   text-wrap: pretty;
+}
+
+/* KPI 數字：統一用這個 class 取代各頁散落的 text-2xl/text-3xl */
+.dayone-kpi-value {
+  font-family: var(--font-ui);
+  font-size: clamp(1.55rem, 3vw, 2.1rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
 .dayone-action {

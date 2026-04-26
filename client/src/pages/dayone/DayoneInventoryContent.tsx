@@ -75,22 +75,16 @@ export default function DayoneInventoryContent({ tenantId }: { tenantId: number 
 
   return (
     <div className="dayone-page">
-      <section className="rounded-[32px] bg-[linear-gradient(135deg,#eff6ff_0%,#fffdf7_55%,#ffffff_100%)] px-6 py-6 shadow-[0_16px_38px_rgba(120,53,15,0.08)]">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-sky-600">Inventory</p>
-            <h1 className="mt-3 font-brand text-[2rem] leading-none text-stone-900">庫存與異動</h1>
-            <p className="mt-4 max-w-2xl text-sm leading-6 text-stone-500">
-              這裡負責即時存量、警戒線與人工調整。派車列印與剩貨回庫也會回寫到這裡。
-            </p>
-          </div>
-
-          <Button className="rounded-2xl bg-amber-600 text-white hover:bg-amber-700" onClick={() => setAdjustOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            新增庫存異動
-          </Button>
+      <div className="dayone-page-header">
+        <div>
+          <h1 className="dayone-page-title">庫存與異動</h1>
+          <p className="dayone-page-subtitle">即時存量、警戒線與人工調整 · 派車與回庫自動回寫</p>
         </div>
-      </section>
+        <Button className="rounded-2xl bg-amber-600 text-white hover:bg-amber-700 shrink-0" onClick={() => setAdjustOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          新增庫存異動
+        </Button>
+      </div>
 
       {alerts.length > 0 && (
         <Card className="border-orange-200 bg-orange-50">
@@ -118,7 +112,7 @@ export default function DayoneInventoryContent({ tenantId }: { tenantId: number 
             <CardTitle className="text-sm text-stone-500">可賣庫存總量</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-semibold text-stone-900">{inventorySummary.availableQty}</p>
+            <p className="dayone-kpi-value text-stone-900">{inventorySummary.availableQty}</p>
             <p className="mt-2 text-xs text-stone-500">目前已正式入倉、可再派車的總數量。</p>
           </CardContent>
         </Card>
@@ -127,7 +121,7 @@ export default function DayoneInventoryContent({ tenantId }: { tenantId: number 
             <CardTitle className="text-sm text-amber-700">回庫待驗</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-semibold text-amber-800">{inventorySummary.pendingQty}</p>
+            <p className="dayone-kpi-value text-amber-800">{inventorySummary.pendingQty}</p>
             <p className="mt-2 text-xs text-amber-700/80">司機已回報，但管理端尚未正式加回可賣庫存。</p>
           </CardContent>
         </Card>
@@ -136,7 +130,7 @@ export default function DayoneInventoryContent({ tenantId }: { tenantId: number 
             <CardTitle className="text-sm text-sky-700">待入倉進貨</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-semibold text-sky-800">{inventorySummary.inboundQty}</p>
+            <p className="dayone-kpi-value text-sky-800">{inventorySummary.inboundQty}</p>
             <p className="mt-2 text-xs text-sky-700/80">供應商已簽名、應付已成立，但尚未正式轉為可賣庫存。</p>
           </CardContent>
         </Card>
@@ -145,7 +139,7 @@ export default function DayoneInventoryContent({ tenantId }: { tenantId: number 
             <CardTitle className="text-sm text-orange-700">低於安全庫存</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-semibold text-orange-800">{inventorySummary.lowStockCount}</p>
+            <p className="dayone-kpi-value text-orange-800">{inventorySummary.lowStockCount}</p>
             <p className="mt-2 text-xs text-orange-700/80">需要優先補貨或檢查派車扣庫是否異常的品項。</p>
           </CardContent>
         </Card>

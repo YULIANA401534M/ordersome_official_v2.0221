@@ -55,8 +55,8 @@ export default function DayoneReports() {
     <DayoneLayout>
       <div className="dayone-page-header mb-6">
         <div>
-          <h1 className="dayone-page-title" style={{ fontSize: "1.6rem" }}>報表分析</h1>
-          <p className="dayone-page-subtitle" style={{ fontSize: 13 }}>日報、月報、客戶排行、庫存警示與收款統計</p>
+          <h1 className="dayone-page-title">報表分析</h1>
+          <p className="dayone-page-subtitle">日報、月報、客戶排行、庫存警示與收款統計</p>
         </div>
       </div>
 

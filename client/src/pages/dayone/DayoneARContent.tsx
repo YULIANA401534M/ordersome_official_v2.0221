@@ -360,25 +360,25 @@ function ReceivableTab({ tenantId }: { tenantId: number }) {
         <Card className="rounded-[28px] border-amber-100">
           <CardContent className="pt-5">
             <p className="text-xs text-stone-500">未收總額</p>
-            <p className="mt-2 text-2xl font-semibold text-stone-900">{fmtMoney(kpi.unpaidAmount)}</p>
+            <p className="mt-2 dayone-kpi-value text-stone-900">{fmtMoney(kpi.unpaidAmount)}</p>
           </CardContent>
         </Card>
         <Card className="rounded-[28px] border-red-100">
           <CardContent className="pt-5">
             <p className="text-xs text-red-600">逾期金額</p>
-            <p className="mt-2 text-2xl font-semibold text-red-700">{fmtMoney(kpi.overdueAmount)}</p>
+            <p className="mt-2 dayone-kpi-value text-red-700">{fmtMoney(kpi.overdueAmount)}</p>
           </CardContent>
         </Card>
         <Card className="rounded-[28px] border-red-100">
           <CardContent className="pt-5">
             <p className="text-xs text-red-600">逾期客戶</p>
-            <p className="mt-2 text-2xl font-semibold text-red-700">{kpi.overdueCustomers}</p>
+            <p className="mt-2 dayone-kpi-value text-red-700">{kpi.overdueCustomers}</p>
           </CardContent>
         </Card>
         <Card className="rounded-[28px] border-emerald-100">
           <CardContent className="pt-5">
             <p className="text-xs text-emerald-600">已收金額</p>
-            <p className="mt-2 text-2xl font-semibold text-emerald-700">{fmtMoney(kpi.paidAmount)}</p>
+            <p className="mt-2 dayone-kpi-value text-emerald-700">{fmtMoney(kpi.paidAmount)}</p>
           </CardContent>
         </Card>
       </div>
@@ -926,7 +926,7 @@ function MonthlyStatementTab({ tenantId }: { tenantId: number }) {
             <div className="mt-5 grid gap-4 md:grid-cols-2">
               <div className="rounded-3xl border border-amber-100 bg-amber-50 px-4 py-4">
                 <p className="text-xs text-amber-700">空箱台帳</p>
-                <p className="mt-2 text-2xl font-semibold text-amber-700">{Number(statement.boxBalance ?? 0)}</p>
+                <p className="mt-2 dayone-kpi-value text-amber-700">{Number(statement.boxBalance ?? 0)}</p>
               </div>
               <div className="space-y-2 rounded-3xl border border-stone-200 bg-stone-50 px-4 py-4 text-sm">
                 <div className="flex items-center justify-between">

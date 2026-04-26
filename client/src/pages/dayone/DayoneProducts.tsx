@@ -84,27 +84,21 @@ export default function DayoneProducts() {
   return (
     <DayoneLayout>
       <div className="dayone-page">
-        <section className="rounded-[32px] bg-[linear-gradient(135deg,#fef3c7_0%,#fffdf7_55%,#ffffff_100%)] px-6 py-6 shadow-[0_16px_38px_rgba(120,53,15,0.08)]">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.24em] text-amber-600">Products</p>
-              <h1 className="mt-3 font-brand text-[2rem] leading-none text-stone-900">品項管理</h1>
-              <p className="mt-4 max-w-2xl text-sm leading-6 text-stone-500">
-                管理蛋品、包材與配送計價基礎。這裡的預設售價會影響建單與報表基礎資料。
-              </p>
-            </div>
-
-            <div className="flex gap-2">
-              <Button variant="outline" className="rounded-2xl" onClick={() => { setEditingUnit(null); setUnitForm({ name: "", sortOrder: 0 }); setUnitOpen(true); }}>
-                管理單位
-              </Button>
-              <Button className="rounded-2xl bg-amber-600 text-white hover:bg-amber-700" onClick={openCreate}>
-                <Plus className="mr-2 h-4 w-4" />
-                新增品項
-              </Button>
-            </div>
+        <div className="dayone-page-header">
+          <div>
+            <h1 className="dayone-page-title">品項管理</h1>
+            <p className="dayone-page-subtitle">管理蛋品、包材與配送計價基礎 · 預設售價影響建單與報表</p>
           </div>
-        </section>
+          <div className="flex gap-2 shrink-0">
+            <Button variant="outline" className="rounded-2xl" onClick={() => { setEditingUnit(null); setUnitForm({ name: "", sortOrder: 0 }); setUnitOpen(true); }}>
+              管理單位
+            </Button>
+            <Button className="rounded-2xl bg-amber-600 text-white hover:bg-amber-700" onClick={openCreate}>
+              <Plus className="mr-2 h-4 w-4" />
+              新增品項
+            </Button>
+          </div>
+        </div>
 
         <section className="rounded-[30px] border border-stone-200/70 bg-white shadow-[0_14px_28px_rgba(120,53,15,0.05)]">
           {isLoading ? (

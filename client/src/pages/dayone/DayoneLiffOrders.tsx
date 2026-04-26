@@ -49,38 +49,28 @@ export default function DayoneLiffOrders() {
   return (
     <DayoneLayout>
       <div className="space-y-6 md:space-y-7">
-        <section className="dayone-panel dayone-hero-panel md:p-8">
-          <div className="grid gap-6 px-5 py-6 md:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.9fr)] md:px-8 md:py-8">
-            <div className="min-w-0">
-              <div className="dayone-hero-eyebrow">
-                <Smartphone className="h-3.5 w-3.5" />
-                LINE LIFF
-              </div>
-              <h1 className="mt-4 text-[clamp(2rem,4vw,3.4rem)] font-ui font-extrabold leading-[0.94] tracking-[-0.055em] text-stone-950">
-                LIFF 訂單總覽
-              </h1>
-              <p className="mt-4 max-w-2xl text-sm leading-7 text-stone-600 md:text-[15px]">
-                集中查看 LINE LIFF 進來的訂單狀態、客戶資訊與金額，手機維持卡片閱讀，桌面保留清楚的表格節奏。
-              </p>
-            </div>
+        <div className="dayone-page-header">
+          <div>
+            <h1 className="dayone-page-title">LIFF 訂單總覽</h1>
+            <p className="dayone-page-subtitle">LINE LIFF 入口 · 訂單狀態、客戶資訊與金額</p>
+          </div>
+        </div>
 
-            <div className="grid gap-3 sm:grid-cols-3 md:grid-cols-1">
-              <div className="dayone-stat-card">
-                <p className="dayone-stat-label">目前訂單數</p>
-                <p className="dayone-stat-value">{totalOrders}</p>
-                <p className="dayone-stat-note">LIFF 入口累積單量</p>
-              </div>
-              <div className="dayone-stat-card">
-                <p className="dayone-stat-label">待確認</p>
-                <p className="dayone-stat-value text-amber-700">{pendingOrders}</p>
-                <p className="dayone-stat-note">需要補價或後續派單</p>
-              </div>
-              <div className="dayone-stat-card">
-                <p className="dayone-stat-label">最近一筆</p>
-                <p className="mt-3 text-sm font-semibold leading-6 text-stone-900">{latestOrderAt}</p>
-                <p className="mt-2 text-xs text-stone-500">已補金額 {payableOrders} 筆</p>
-              </div>
-            </div>
+        <section className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div className="dayone-surface-card rounded-[24px] p-4">
+            <p className="dayone-stat-label">目前訂單數</p>
+            <p className="dayone-kpi-value mt-1 text-stone-900">{totalOrders}</p>
+            <p className="dayone-stat-note mt-1">LIFF 入口累積單量</p>
+          </div>
+          <div className="dayone-surface-card rounded-[24px] p-4">
+            <p className="dayone-stat-label">待確認</p>
+            <p className="dayone-kpi-value mt-1 text-amber-700">{pendingOrders}</p>
+            <p className="dayone-stat-note mt-1">需要補價或後續派單</p>
+          </div>
+          <div className="dayone-surface-card rounded-[24px] p-4 col-span-2 sm:col-span-1">
+            <p className="dayone-stat-label">最近一筆</p>
+            <p className="mt-2 text-sm font-semibold leading-6 text-stone-900">{latestOrderAt}</p>
+            <p className="mt-1 dayone-stat-note">已補金額 {payableOrders} 筆</p>
           </div>
         </section>
 

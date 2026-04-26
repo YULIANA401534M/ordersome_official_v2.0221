@@ -377,7 +377,7 @@ function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onCl
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="text-xs uppercase tracking-[0.22em] text-white/55">Dispatch order</p>
-                    <h2 className="mt-3 font-brand text-[1.8rem] leading-none">派車工作台</h2>
+                    <h2 className="mt-3 dayone-page-title text-white">派車工作台</h2>
                     <p className="mt-3 text-sm text-white/72">{fmtDate(detail.dispatchDate)} 配送日</p>
                   </div>
                   <Badge className={`${DISPATCH_STATUS[detail.status]?.className ?? "bg-stone-100 text-stone-600"} border-0`}>
@@ -408,15 +408,15 @@ function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onCl
               <section className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-3xl border border-stone-200/70 bg-white p-4 shadow-[0_12px_24px_rgba(120,53,15,0.05)]">
                   <p className="text-xs text-stone-400">派出箱數</p>
-                  <p className="mt-3 text-3xl font-semibold text-stone-900">{totals.deliverBoxes}</p>
+                  <p className="mt-3 dayone-kpi-value text-stone-900">{totals.deliverBoxes}</p>
                 </div>
                 <div className="rounded-3xl border border-stone-200/70 bg-white p-4 shadow-[0_12px_24px_rgba(120,53,15,0.05)]">
                   <p className="text-xs text-stone-400">回收空箱</p>
-                  <p className="mt-3 text-3xl font-semibold text-stone-900">{totals.returnBoxes}</p>
+                  <p className="mt-3 dayone-kpi-value text-stone-900">{totals.returnBoxes}</p>
                 </div>
                 <div className="rounded-3xl border border-amber-100 bg-amber-50 p-4">
                   <p className="text-xs text-amber-600">現場收款</p>
-                  <p className="mt-3 text-2xl font-semibold text-amber-700">{fmtMoney(totals.cashCollected)}</p>
+                  <p className="mt-3 dayone-kpi-value text-amber-700">{fmtMoney(totals.cashCollected)}</p>
                 </div>
               </section>
 
@@ -590,7 +590,7 @@ export default function DayoneDispatch() {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.28em] text-white/50">Dispatch center</p>
-                <h1 className="mt-3 font-brand text-[2rem] leading-none">派車與回庫工作台</h1>
+                <h1 className="mt-3 dayone-page-title text-white">派車與回庫工作台</h1>
                 <p className="mt-4 max-w-2xl text-sm leading-6 text-white/72">
                   從當日訂單自動整併派車，到列印扣庫存、司機配送、回來剩貨回庫，都在同一條主流程完成。
                 </p>
@@ -612,19 +612,19 @@ export default function DayoneDispatch() {
           <section className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-3xl border border-stone-200/70 bg-white p-4 shadow-[0_12px_24px_rgba(120,53,15,0.05)]">
               <Truck className="h-5 w-5 text-amber-600" />
-              <p className="mt-5 text-3xl font-semibold text-stone-900">{dispatches.length}</p>
+              <p className="mt-5 dayone-kpi-value text-stone-900">{dispatches.length}</p>
               <p className="mt-1 text-sm text-stone-500">當日派車單</p>
             </div>
             <div className="rounded-3xl border border-stone-200/70 bg-white p-4 shadow-[0_12px_24px_rgba(120,53,15,0.05)]">
               <Package className="h-5 w-5 text-amber-600" />
-              <p className="mt-5 text-3xl font-semibold text-stone-900">
+              <p className="mt-5 dayone-kpi-value text-stone-900">
                 {dispatches.reduce((sum: number, dispatch: any) => sum + Number(dispatch.extraBoxes ?? 20), 0)}
               </p>
               <p className="mt-1 text-sm text-stone-500">預設備用箱</p>
             </div>
             <div className="rounded-3xl border border-amber-100 bg-amber-50 p-4">
               <Wallet className="h-5 w-5 text-amber-600" />
-              <p className="mt-5 text-2xl font-semibold text-amber-700">
+              <p className="mt-5 dayone-kpi-value text-amber-700">
                 {dispatches.filter((dispatch: any) => dispatch.status === "completed").length}
               </p>
               <p className="mt-1 text-sm text-amber-700/75">已完成車次</p>

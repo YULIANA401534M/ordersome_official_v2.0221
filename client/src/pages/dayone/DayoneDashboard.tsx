@@ -10,33 +10,27 @@ function todayStr() {
 
 function KpiCard({
   icon: Icon,
-  iconWrap,
-  iconColor,
   value,
   label,
-  valueClassName = "text-stone-900",
+  accent = false,
+  danger = false,
 }: {
   icon: React.ComponentType<{ className?: string }>;
-  iconWrap: string;
-  iconColor: string;
   value: string | number;
   label: string;
-  valueClassName?: string;
+  accent?: boolean;
+  danger?: boolean;
 }) {
   return (
-    <Card className="dayone-surface-card rounded-[28px]">
-      <CardContent className="pt-5">
-        <div className="flex items-center gap-3">
-          <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${iconWrap}`}>
-            <Icon className={`h-5 w-5 ${iconColor}`} />
-          </div>
-          <div className="min-w-0">
-            <div className={`text-2xl font-bold ${valueClassName}`}>{value}</div>
-            <div className="text-xs text-stone-500">{label}</div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="dayone-surface-card rounded-[24px] p-4 flex items-center gap-3">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-100/80">
+        <Icon className="h-5 w-5 text-amber-700" />
+      </div>
+      <div className="min-w-0">
+        <div className={`dayone-kpi-value ${danger ? "text-red-700" : accent ? "text-amber-700" : "text-stone-900"}`}>{value}</div>
+        <div className="dayone-stat-label mt-1">{label}</div>
+      </div>
+    </div>
   );
 }
 
@@ -70,48 +64,35 @@ export default function DayoneDashboard() {
 
   return (
     <DayoneLayout>
-      <div className="space-y-6">
-        <section className="dayone-panel dayone-hero-panel md:p-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="min-w-0">
-              <p className="dayone-hero-eyebrow">Dayone Operations</p>
-              <h1 className="mt-4 text-[clamp(2.2rem,4vw,3.6rem)] font-ui font-extrabold tracking-[-0.055em] text-stone-950">大永蛋品總覽</h1>
-              <p className="mt-3 max-w-2xl text-sm leading-7 text-stone-600 md:text-[15px]">
-                {today} 的配送、進貨、應收與庫存提醒會集中顯示在這裡，手機版改成單欄資訊流，不再出現標題被擠出畫面的問題。
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-3 sm:max-w-sm">
-              <div className="dayone-stat-card">
-                <div className="dayone-stat-label">今日訂單</div>
-                <div className="dayone-stat-value">{(summary as any)?.summary?.totalOrders ?? 0}</div>
-                <div className="dayone-stat-note">目前已進入配送池的單量</div>
-              </div>
-              <div className="dayone-stat-card">
-                <div className="dayone-stat-label">已送達</div>
-                <div className="dayone-stat-value">{(summary as any)?.summary?.deliveredCount ?? 0}</div>
-                <div className="dayone-stat-note">今日已完成簽收配送</div>
-              </div>
-            </div>
+      <div className="space-y-5">
+        {/* 頁面標題 */}
+        <div className="dayone-page-header">
+          <div>
+            <h1 className="dayone-page-title">大永蛋品總覽</h1>
+            <p className="dayone-page-subtitle">{today} · 配送、進貨、應收與庫存提醒</p>
           </div>
+        </div>
+
+        {/* KPI 警示區 */}
+        <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <KpiCard icon={CreditCard} value={`$${todayArSum.toLocaleString()}`} label="今日應收" accent />
+          <KpiCard icon={AlertOctagon} value={`$${overdueSum.toLocaleString()}`} label="逾期未收" danger />
+          <KpiCard icon={AlertTriangle} value={anomalyDrivers} label="異常司機" danger={anomalyDrivers > 0} />
+          <KpiCard icon={Receipt} value={pendingReceiptCount} label="待簽收進貨" />
         </section>
 
-        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <KpiCard icon={CreditCard} iconWrap="bg-blue-100" iconColor="text-blue-600" value={`$${todayArSum.toLocaleString()}`} label="今日應收" />
-          <KpiCard icon={AlertOctagon} iconWrap="bg-red-100" iconColor="text-red-600" value={`$${overdueSum.toLocaleString()}`} label="逾期未收" valueClassName="text-red-600" />
-          <KpiCard icon={AlertTriangle} iconWrap="bg-orange-100" iconColor="text-orange-600" value={anomalyDrivers} label="異常司機" valueClassName={anomalyDrivers > 0 ? "text-orange-600" : "text-stone-900"} />
-          <KpiCard icon={Receipt} iconWrap="bg-amber-100" iconColor="text-amber-600" value={pendingReceiptCount} label="待簽收進貨" />
+        {/* KPI 配送區 */}
+        <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <KpiCard icon={ShoppingCart} value={(summary as any)?.summary?.totalOrders ?? 0} label="今日訂單數" />
+          <KpiCard icon={Truck} value={(summary as any)?.summary?.deliveredCount ?? 0} label="今日已送達" />
+          <KpiCard icon={TrendingUp} value={`$${Number((summary as any)?.summary?.totalAmount ?? 0).toLocaleString()}`} label="今日金額" accent />
+          <KpiCard icon={TrendingUp} value={`$${totalMonthly.toLocaleString()}`} label={`${month} 月營收`} accent />
         </section>
 
-        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <KpiCard icon={ShoppingCart} iconWrap="bg-blue-100" iconColor="text-blue-600" value={(summary as any)?.summary?.totalOrders ?? 0} label="今日訂單數" />
-          <KpiCard icon={Truck} iconWrap="bg-green-100" iconColor="text-green-600" value={(summary as any)?.summary?.deliveredCount ?? 0} label="今日已送達" />
-          <KpiCard icon={TrendingUp} iconWrap="bg-amber-100" iconColor="text-amber-600" value={`$${Number((summary as any)?.summary?.totalAmount ?? 0).toLocaleString()}`} label="今日金額" />
-          <KpiCard icon={TrendingUp} iconWrap="bg-fuchsia-100" iconColor="text-fuchsia-600" value={`$${totalMonthly.toLocaleString()}`} label={`${month} 月營收`} />
-        </section>
-
-        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-2">
-          <KpiCard icon={Receipt} iconWrap="bg-sky-100" iconColor="text-sky-600" value={signedReceiptCount} label="待入倉進貨" />
-          <KpiCard icon={Truck} iconWrap="bg-amber-100" iconColor="text-amber-700" value={pendingReturnCount} label="回庫待驗" />
+        {/* 庫存狀態 */}
+        <section className="grid grid-cols-2 gap-3">
+          <KpiCard icon={Receipt} value={signedReceiptCount} label="待入倉進貨" />
+          <KpiCard icon={Truck} value={pendingReturnCount} label="回庫待驗" />
         </section>
 
         <div className="grid gap-6 xl:grid-cols-2">
