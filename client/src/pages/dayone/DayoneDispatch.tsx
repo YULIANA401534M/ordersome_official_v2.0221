@@ -8,7 +8,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Package, Printer, Plus, RotateCcw, Route, Truck, Wallet } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Package, Printer, Plus, RotateCcw, Route, Truck, Wallet } from "lucide-react";
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
@@ -404,6 +404,12 @@ body { margin: 0; padding: 16px; background: white; font-family: 'Noto Sans TC',
             <div className="no-print sticky top-0 z-20 flex items-center gap-2 border-b bg-white px-5 py-3">
               <Button variant="outline" onClick={onClose}>返回</Button>
               <div className="ml-auto flex items-center gap-2">
+                {detail.status !== "draft" && (
+                  <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    撿貨單已列印
+                  </span>
+                )}
                 {detail.status === "draft" && (
                   <Button
                     variant="outline"
@@ -534,7 +540,7 @@ body { margin: 0; padding: 16px; background: white; font-family: 'Noto Sans TC',
                                   <div style={{display:"flex", flexWrap:"wrap", gap:"2px 8px"}}>
                                     {stopProducts.map((p: any, pi: number) => (
                                       <span key={pi} style={{whiteSpace:"nowrap"}}>
-                                        {p.productName} <strong>{p.shippedQty}</strong>{p.unit || ""}
+                                        {p.productName} <strong>{Math.round(Number(p.shippedQty))}</strong>{p.unit || ""}
                                       </span>
                                     ))}
                                   </div>
@@ -675,7 +681,7 @@ body { margin: 0; padding: 16px; background: white; font-family: 'Noto Sans TC',
                                   return (
                                     <tr key={pi} style={{borderBottom:"1px solid #eee"}}>
                                       <td style={{padding:"5px 6px"}}>{p.productName}</td>
-                                      <td style={{padding:"5px 6px", textAlign:"right", fontVariantNumeric:"tabular-nums"}}>{p.shippedQty} {p.unit || ""}</td>
+                                      <td style={{padding:"5px 6px", textAlign:"right", fontVariantNumeric:"tabular-nums"}}>{Math.round(Number(p.shippedQty))} {p.unit || ""}</td>
                                       <td style={{padding:"5px 6px", textAlign:"right", color:"#555", fontVariantNumeric:"tabular-nums"}}>
                                         {p.unitPrice ? Number(p.unitPrice).toLocaleString() : "—"}
                                       </td>
@@ -910,68 +916,6 @@ body { margin: 0; padding: 16px; background: white; font-family: 'Noto Sans TC',
                 </section>
               )}
 
-              <section className="rounded-[28px] border border-stone-200/70 bg-white p-4 shadow-[0_12px_24px_rgba(120,53,15,0.05)]">
-                <div className="flex items-center gap-2">
-                  <RotateCcw className="h-5 w-5 text-amber-600" />
-                  <div>
-                    <p className="text-sm font-semibold text-stone-900">剩貨回庫</p>
-                    <p className="mt-1 text-xs text-stone-500">司機回來後先送出回庫待驗，管理端確認後才會正式加回可賣庫存。</p>
-                  </div>
-                </div>
-
-                <div className="mt-4 space-y-3">
-                  {returnRows.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-stone-200 px-4 py-6 text-center text-sm text-stone-400">
-                      這張派車單沒有可回庫的品項資料。
-                    </div>
-                  ) : (
-                    returnRows.map((product) => (
-                      <div key={product.productId} className="rounded-2xl border border-stone-200/80 bg-stone-50 px-4 py-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-semibold text-stone-900">{product.productName}</p>
-                            <p className="mt-1 text-xs text-stone-500">
-                              今日派出 {product.shippedQty} {product.unit || "單位"}
-                            </p>
-                          </div>
-                          <Input
-                            type="number"
-                            min={0}
-                            max={product.shippedQty}
-                            value={product.qty || ""}
-                            onChange={(event) =>
-                              setReturnQtyByProduct((prev) => ({
-                                ...prev,
-                                [product.productId]: Math.max(0, Math.min(product.shippedQty, Number(event.target.value || 0))),
-                              }))
-                            }
-                            className="w-28 rounded-2xl bg-white text-right"
-                            placeholder="0"
-                          />
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                <Button
-                  className="mt-4 w-full bg-stone-900 text-white hover:bg-stone-800"
-                  disabled={
-                    returnInventory.isPending ||
-                    !returnRows.some((row) => row.qty > 0)
-                  }
-                  onClick={() =>
-                    returnInventory.mutate({
-                      dispatchOrderId: dispatchId,
-                      tenantId: TENANT_ID,
-                      note: "管理員確認剩貨回庫",
-                      items: returnRows.filter((row) => row.qty > 0).map((row) => ({ productId: row.productId, qty: row.qty })),
-                    })
-                  }
-                >
-                  {returnInventory.isPending ? "送出中..." : "送出回庫待驗"}
-                </Button>
-              </section>
             </div>
           </div>
         )}

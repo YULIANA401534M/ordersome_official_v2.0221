@@ -1,6 +1,6 @@
 # CLAUDE.md — OrderSome 專案主腦
 
-> 版本 v6.45｜最後更新：2026-04-27
+> 版本 v6.46｜最後更新：2026-04-27
 
 ---
 
@@ -192,6 +192,14 @@ Hero 圖片規則：
 **v6.45 修掉的 bug：**
 - `DriverWorkLog`：剩貨回庫送出後（`dispatch.status = pending_handover/completed`）或日結已送出後，剩貨區塊切換唯讀，顯示「帶出 N 回庫 N 箱」摘要，不可重複送出
 - 修掉送出後 qty 跳回 shippedQty 的視覺錯誤（改由 dispatch status 控制鎖定，不再 reset state）
+
+**v6.46 修掉的 bug（測試 3.3/3.4/4.1/4.2/4.7）：**
+- `DayoneDispatch`：撿貨單列印樣式，商品數量 `Math.round()` 移除 `.00` 小數（如 `10.00箱` → `10箱`）
+- `DayoneDispatch`：派車詳情頁底部移除管理員端「剩貨回庫」section（該功能已移至司機端 `DriverWorkLog`）
+- `DayoneDispatch`（3.4）：派車單已列印後顯示「撿貨單已列印」綠色 badge；`status !== "draft"` 時常駐顯示
+- `DayoneDispatch`（4.2）：「撿貨完畢並扣庫存」按鈕邏輯不變，但列印按鈕改為獨立動作（只開列印視窗，不觸發 markPrinted）
+- `DriverPickup`（4.1）：頁面改版為唯讀路線明細參考頁，依 stopSequence 顯示每站客戶、地址、商品明細、金額；新員工只需看頁面即可跑路線；移除個別確認按鈕
+- `DriverWorkLog`（4.7）：`defaultDispatchId` 預設選最新的非 `pending_handover/completed` 派車單，同一司機下午有新派車單時不再被早上已完成的派車單鎖定
 
 **大永尚未測試的功能（P3）：**
 - 多車同一天、跨日累積後庫存數字

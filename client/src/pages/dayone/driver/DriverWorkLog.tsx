@@ -33,7 +33,14 @@ export default function DriverWorkLog() {
     dispatchDate: today,
   });
 
-  const activeDispatchId = Number(selectedDispatchId || dispatches[0]?.id || 0);
+  // Default to the most recent active (non-completed/pending_handover) dispatch;
+  // fall back to dispatches[0] only if all are completed
+  const defaultDispatchId = useMemo(() => {
+    const list = dispatches as any[];
+    const active = list.find((d: any) => !["pending_handover", "completed"].includes(d.status ?? ""));
+    return active?.id ?? list[0]?.id ?? 0;
+  }, [dispatches]);
+  const activeDispatchId = Number(selectedDispatchId || defaultDispatchId);
   const { data: dispatchDetail } = trpc.dayone.dispatch.getDispatchDetail.useQuery(
     { id: activeDispatchId, tenantId: TENANT_ID },
     { enabled: !!activeDispatchId }

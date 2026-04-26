@@ -1,54 +1,47 @@
-import { useState } from "react";
 import DriverLayout from "./DriverLayout";
 import { trpc } from "@/lib/trpc";
-import { CheckCircle2, Package, Truck } from "lucide-react";
-import { toast } from "sonner";
+import { CheckCircle2, MapPin, Package, Truck } from "lucide-react";
 
 const TENANT_ID = 90004;
 
 export default function DriverPickup() {
-  const utils = trpc.useUtils();
   const todayDate = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  const [pickingAll, setPickingAll] = useState(false);
 
-  const { data: orders = [], isLoading } = trpc.dayone.driver.getMyTodayOrders.useQuery({
-    tenantId: TENANT_ID,
-    deliveryDate: todayDate,
-  });
-
-  const { data: dispatches = [] } = trpc.dayone.dispatch.listDispatch.useQuery({
+  const { data: dispatches = [], isLoading } = trpc.dayone.dispatch.listDispatch.useQuery({
     tenantId: TENANT_ID,
     dispatchDate: todayDate,
   });
 
   const myDispatch = (dispatches as any[])[0];
-  const dispatchPrinted = myDispatch && ["printed", "in_progress", "pending_handover", "completed"].includes(myDispatch.status);
+  const dispatchId = myDispatch?.id ?? 0;
+  const dispatchPrinted = myDispatch && ["printed", "in_progress", "pending_handover", "completed"].includes(myDispatch.status ?? "");
 
-  const pendingOrders = (orders as any[]).filter((o: any) => ["pending", "assigned"].includes(o.status));
-  const pickedOrders  = (orders as any[]).filter((o: any) => o.status === "picked");
+  const { data: detail } = trpc.dayone.dispatch.getDispatchDetail.useQuery(
+    { id: dispatchId, tenantId: TENANT_ID },
+    { enabled: !!dispatchId }
+  );
 
-  const updateStatus = trpc.dayone.driver.updateOrderStatus.useMutation({
-    onSuccess: () => utils.dayone.driver.getMyTodayOrders.invalidate(),
-    onError: (e) => toast.error(e.message),
-  });
+  const items: any[] = (detail as any)?.items ?? [];
+  const productsByOrder: any[] = (detail as any)?.productsByOrder ?? [];
 
-  async function handlePickAll() {
-    if (!pendingOrders.length) return;
-    setPickingAll(true);
-    try {
-      for (const order of pendingOrders) {
-        await updateStatus.mutateAsync({ id: order.id, tenantId: TENANT_ID, status: "picked" });
-      }
-      toast.success(`已標記 ${pendingOrders.length} 筆完成撿貨，可以出車了`);
-    } finally {
-      setPickingAll(false);
-    }
+  // Group products by orderId for quick lookup
+  const prodMap: Record<number, any[]> = {};
+  for (const p of productsByOrder) {
+    const oid = Number(p.orderId);
+    if (!prodMap[oid]) prodMap[oid] = [];
+    prodMap[oid].push(p);
   }
 
-  const allPicked = pendingOrders.length === 0 && (orders as any[]).length > 0;
+  const ORDER_STATUS: Record<string, { label: string; cls: string }> = {
+    pending:    { label: "待撿貨", cls: "bg-stone-100 text-stone-500" },
+    assigned:   { label: "待撿貨", cls: "bg-stone-100 text-stone-500" },
+    picked:     { label: "已撿貨", cls: "bg-emerald-100 text-emerald-700" },
+    delivering: { label: "配送中", cls: "bg-orange-100 text-orange-700" },
+    delivered:  { label: "已送達", cls: "bg-sky-100 text-sky-700" },
+  };
 
   return (
-    <DriverLayout title="撿貨出車">
+    <DriverLayout title="今日路線">
       {isLoading ? (
         <div className="flex h-64 items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-amber-500 border-t-transparent" />
@@ -56,16 +49,16 @@ export default function DriverPickup() {
       ) : (
         <div className="space-y-4">
           {/* Header */}
-          <section className="rounded-[28px] border border-amber-100 bg-[linear-gradient(135deg,#fff8eb_0%,#fffdf8_100%)] px-5 py-5 shadow-[0_16px_40px_rgba(120,53,15,0.08)]">
-            <p className="text-xs tracking-[0.18em] text-amber-600">撿貨出車</p>
-            <h2 className="mt-3 font-brand text-[1.7rem] leading-none text-stone-900">出車前最後確認</h2>
-            <p className="mt-3 text-sm leading-6 text-stone-500">
-              管理員列印撿貨單後才會扣庫存。按照撿貨單核對車上貨量，核對無誤後按「全部完成撿貨」出車。
+          <section className="rounded-[28px] bg-stone-900 px-5 py-5 text-white shadow-[0_16px_40px_rgba(28,25,23,0.18)]">
+            <p className="text-xs tracking-[0.18em] text-white/50">撿貨出車</p>
+            <h2 className="mt-3 font-brand text-[1.7rem] leading-none">今日路線明細</h2>
+            <p className="mt-3 text-sm leading-6 text-white/72">
+              依序核對每站貨品，確認車上貨量與撿貨單一致後出車。
             </p>
           </section>
 
           {/* Dispatch status */}
-          {myDispatch && (
+          {myDispatch ? (
             <section className={`rounded-[26px] border px-4 py-4 text-sm ${
               dispatchPrinted ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"
             }`}>
@@ -79,77 +72,78 @@ export default function DriverPickup() {
                 </span>
               </div>
               <p className="mt-1 ml-6 text-xs text-stone-500">
-                路線 {myDispatch.routeCode}，共 {myDispatch.totalStops ?? (orders as any[]).length} 站
+                路線 {myDispatch.routeCode ?? "—"}，共 {myDispatch.totalStops ?? items.length} 站，備用箱 {detail?.extraBoxes ?? myDispatch.extraBoxes ?? 20} 箱
               </p>
             </section>
+          ) : (
+            <div className="rounded-[26px] border border-stone-200 bg-stone-50 px-4 py-6 text-center text-sm text-stone-400">
+              今日尚未建立派車單
+            </div>
           )}
 
-          {/* All picked */}
-          {allPicked ? (
-            <div className="rounded-[28px] border border-emerald-100 bg-emerald-50 px-6 py-12 text-center">
-              <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-500" />
-              <p className="mt-4 text-sm font-semibold text-emerald-700">全部撿貨完成，可以出車了！</p>
-              <p className="mt-1 text-xs text-emerald-600">前往「配送清單」開始配送。</p>
-            </div>
-          ) : (
-            <>
-              {/* Order list — view only, confirm all at once */}
-              <div className="space-y-2">
-                {(orders as any[]).map((order: any) => {
-                  const isPicked = order.status === "picked";
-                  return (
-                    <div key={order.id} className={`rounded-[24px] border p-4 ${
+          {/* Stops */}
+          {items.length > 0 && (
+            <div className="space-y-3">
+              {items.map((item: any, idx: number) => {
+                const stopProds = prodMap[Number(item.orderId)] ?? [];
+                const st = ORDER_STATUS[item.orderStatus] ?? { label: item.orderStatus ?? "—", cls: "bg-stone-100 text-stone-500" };
+                const isPicked = ["picked", "delivering", "delivered"].includes(item.orderStatus ?? "");
+                return (
+                  <div
+                    key={item.id}
+                    className={`rounded-[26px] border p-4 ${
                       isPicked
-                        ? "border-emerald-100 bg-emerald-50/70"
-                        : "border-stone-200/80 bg-white shadow-[0_8px_20px_rgba(120,53,15,0.05)]"
-                    }`}>
-                      <div className="flex items-center gap-3">
-                        <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
-                          isPicked ? "bg-emerald-200 text-emerald-700" : "bg-amber-600 text-white"
-                        }`}>
-                          {isPicked ? <CheckCircle2 className="h-4 w-4" /> : (order.stopSequence ?? "—")}
+                        ? "border-emerald-100 bg-emerald-50/60"
+                        : "border-stone-200/70 bg-white shadow-[0_8px_20px_rgba(120,53,15,0.05)]"
+                    }`}
+                  >
+                    {/* Stop header */}
+                    <div className="flex items-start gap-3">
+                      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
+                        isPicked ? "bg-emerald-200 text-emerald-700" : "bg-amber-600 text-white"
+                      }`}>
+                        {isPicked ? <CheckCircle2 className="h-4 w-4" /> : (item.stopSequence ?? idx + 1)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm font-semibold text-stone-900">{item.customerName}</p>
+                          <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${st.cls}`}>{st.label}</span>
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <p className={`text-sm font-semibold ${isPicked ? "text-emerald-700" : "text-stone-900"}`}>
-                            {order.customerName}
-                          </p>
-                          <p className="text-xs text-stone-400 truncate">{order.customerAddress ?? ""}</p>
-                        </div>
-                        <div className="shrink-0 text-right">
-                          <p className="text-sm font-semibold text-stone-900">NT$ {Number(order.totalAmount ?? 0).toLocaleString()}</p>
-                          <p className="text-xs text-stone-400">
-                            {isPicked ? "已撿" : "待撿"}
-                          </p>
-                        </div>
+                        {item.customerAddress && (
+                          <div className="mt-1 flex items-center gap-1 text-xs text-stone-400">
+                            <MapPin className="h-3 w-3 shrink-0" />
+                            <span className="truncate">{item.customerAddress}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
 
-              {/* Pick all button */}
-              {pendingOrders.length > 0 && (
-                <button
-                  type="button"
-                  className="w-full rounded-2xl bg-amber-600 py-4 text-base font-bold text-white active:scale-[0.98] transition-transform disabled:opacity-50"
-                  disabled={pickingAll || !dispatchPrinted}
-                  onClick={handlePickAll}
-                >
-                  {pickingAll
-                    ? "標記中…"
-                    : !dispatchPrinted
-                      ? "等待管理員列印撿貨單"
-                      : `全部完成撿貨（${pendingOrders.length} 筆）出車`
-                  }
-                </button>
-              )}
+                    {/* Products */}
+                    {stopProds.length > 0 && (
+                      <div className="mt-3 rounded-2xl bg-stone-50 px-3 py-2.5 space-y-1.5">
+                        {stopProds.map((p: any, pi: number) => (
+                          <div key={pi} className="flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-1.5 text-stone-600">
+                              <Package className="h-3.5 w-3.5 shrink-0 text-stone-400" />
+                              <span>{p.productName}</span>
+                            </div>
+                            <span className="font-semibold tabular-nums text-stone-900">
+                              {Math.round(Number(p.shippedQty))} {p.unit || ""}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
-              {pickedOrders.length > 0 && pendingOrders.length > 0 && (
-                <p className="text-center text-xs text-stone-400">
-                  已撿 {pickedOrders.length} 筆，剩 {pendingOrders.length} 筆未撿
-                </p>
-              )}
-            </>
+                    {/* Amount */}
+                    <div className="mt-3 flex items-center justify-between text-xs text-stone-400">
+                      <span>訂單金額</span>
+                      <span className="font-semibold text-stone-700">NT$ {Number(item.orderAmount ?? 0).toLocaleString()}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
       )}
