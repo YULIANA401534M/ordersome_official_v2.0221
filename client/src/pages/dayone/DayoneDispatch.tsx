@@ -470,236 +470,272 @@ body { margin: 0; padding: 16px; background: white; font-family: 'Noto Sans TC',
 
               {/* ─── PRINT LAYOUT ────────────────────────────────────── */}
               <section className="print-dispatch-sheet">
-                {/* === PAGE 1: Master dispatch summary table === */}
-                <div style={{fontFamily:"'Noto Sans TC', Arial, sans-serif"}}>
-                  {/* Header */}
-                  <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-end", borderBottom:"2px solid #111", paddingBottom:"6px", marginBottom:"10px"}}>
-                    <div>
-                      <div style={{fontSize:"20px", fontWeight:"800", letterSpacing:"0.06em", color:"#111"}}>大永蛋行 出貨單</div>
-                      <div style={{fontSize:"12px", color:"#555", marginTop:"3px"}}>
-                        配送日期：{fmtDate(detail.dispatchDate)}　司機：{detail.driverName}　路線：{detail.routeCode}　共 {items.length} 站
+                <div style={{fontFamily:"'Noto Sans TC', Arial, sans-serif", fontSize:"12px", color:"#111"}}>
+
+                  {/* ══ PAGE 1: 出貨彙總表（司機工作表） ══ */}
+                  <div style={{marginBottom:"20px"}}>
+                    {/* Header */}
+                    <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-end", borderBottom:"2.5px solid #111", paddingBottom:"6px", marginBottom:"10px"}}>
+                      <div>
+                        <div style={{fontSize:"18px", fontWeight:"800", letterSpacing:"0.05em"}}>大永蛋行　出貨彙總表</div>
+                        <div style={{fontSize:"11px", color:"#555", marginTop:"3px"}}>
+                          {fmtDate(detail.dispatchDate)}　司機：{detail.driverName}　路線：{detail.routeCode}　共 {items.length} 站　備用箱 {detail.extraBoxes ?? 20} 箱
+                        </div>
+                      </div>
+                      <div style={{fontSize:"11px", color:"#888", textAlign:"right"}}>
+                        列印時間：{new Date().toLocaleString("zh-TW")}
                       </div>
                     </div>
-                    <div style={{textAlign:"right", fontSize:"11px", color:"#888"}}>
-                      <div>列印：{new Date().toLocaleDateString("zh-TW")}</div>
-                      <div>預備箱：{detail.extraBoxes ?? 20} 箱</div>
-                    </div>
-                  </div>
 
-                  {/* Summary table */}
-                  <table style={{width:"100%", borderCollapse:"collapse", fontSize:"12px", tableLayout:"fixed"}}>
-                    <colgroup>
-                      <col style={{width:"24px"}} />
-                      <col style={{width:"110px"}} />
-                      <col style={{width:"130px"}} />
-                      <col />
-                      <col style={{width:"64px"}} />
-                      <col style={{width:"44px"}} />
-                      <col style={{width:"42px"}} />
-                      <col style={{width:"42px"}} />
-                      <col style={{width:"42px"}} />
-                      <col style={{width:"64px"}} />
-                      <col style={{width:"56px"}} />
-                    </colgroup>
-                    <thead>
-                      <tr style={{background:"#f3f4f6", borderTop:"1px solid #d1d5db", borderBottom:"1px solid #d1d5db"}}>
-                        <th style={{...thStyle}}>#</th>
-                        <th style={{...thStyle}}>客戶</th>
-                        <th style={{...thStyle}}>地址／電話</th>
-                        <th style={{...thStyle}}>商品明細</th>
-                        <th style={{...thStyle, textAlign:"right"}}>金額</th>
-                        <th style={{...thStyle, textAlign:"center"}}>結帳</th>
-                        <th style={{...thStyle, textAlign:"center"}}>前箱</th>
-                        <th style={{...thStyle, textAlign:"center"}}>入箱</th>
-                        <th style={{...thStyle, textAlign:"center"}}>回箱</th>
-                        <th style={{...thStyle, textAlign:"right"}}>實收</th>
-                        <th style={{...thStyle, textAlign:"center"}}>簽收</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {items.map((item: any) => {
-                        const stopProducts = productsByOrder.filter((p: any) => Number(p.orderId) === Number(item.orderId));
-                        const payLabel: Record<string, string> = { monthly: "月結", weekly: "週結", unpaid: "現收", paid: "已收", partial: "部份" };
-                        return (
-                          <tr key={item.id} style={{borderBottom:"1px solid #e5e7eb", verticalAlign:"top"}}>
-                            <td style={{...tdStyle, fontWeight:"700", paddingTop:"7px", color:"#111"}}>{item.stopSequence}</td>
-                            <td style={{...tdStyle, fontWeight:"600", paddingTop:"7px", color:"#111", wordBreak:"keep-all"}}>{item.customerName}</td>
-                            <td style={{...tdStyle, fontSize:"10px", color:"#666", paddingTop:"7px", wordBreak:"break-all"}}>{item.customerAddress ?? "—"}{item.customerPhone ? `　${item.customerPhone}` : ""}</td>
-                            <td style={{...tdStyle, paddingTop:"5px", paddingBottom:"5px"}}>
-                              {stopProducts.length > 0 ? (
-                                <div>
-                                  {stopProducts.map((p: any, pi: number) => (
-                                    <div key={pi} style={{display:"flex", gap:"6px", lineHeight:"1.6"}}>
-                                      <span style={{flex:1, color:"#374151"}}>{p.productName}</span>
-                                      <span style={{color:"#111", fontWeight:"600", fontVariantNumeric:"tabular-nums", minWidth:"52px", textAlign:"right"}}>
-                                        {p.shippedQty} {p.unit || ""}
-                                        {p.unitPrice ? `×${Number(p.unitPrice).toLocaleString()}` : ""}
+                    {/* Summary table — modelled after original pages 23-24 */}
+                    <table style={{width:"100%", borderCollapse:"collapse", fontSize:"11.5px", tableLayout:"fixed"}}>
+                      <colgroup>
+                        <col style={{width:"22px"}} />
+                        <col style={{width:"100px"}} />
+                        <col style={{width:"130px"}} />
+                        <col />
+                        <col style={{width:"70px"}} />
+                        <col style={{width:"60px"}} />
+                        <col style={{width:"60px"}} />
+                        <col style={{width:"44px"}} />
+                        <col style={{width:"44px"}} />
+                        <col style={{width:"80px"}} />
+                      </colgroup>
+                      <thead>
+                        <tr style={{background:"#f3f4f6", borderTop:"1px solid #aaa", borderBottom:"1.5px solid #aaa"}}>
+                          <th style={{...thStyle, textAlign:"center"}}>#</th>
+                          <th style={{...thStyle}}>客戶／電話</th>
+                          <th style={{...thStyle}}>地址</th>
+                          <th style={{...thStyle}}>貨種</th>
+                          <th style={{...thStyle, textAlign:"right"}}>銷售額</th>
+                          <th style={{...thStyle, textAlign:"right"}}>已收</th>
+                          <th style={{...thStyle, textAlign:"right"}}>未收</th>
+                          <th style={{...thStyle, textAlign:"center"}}>收前箱</th>
+                          <th style={{...thStyle, textAlign:"center"}}>收後箱</th>
+                          <th style={{...thStyle}}>備註</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {items.map((item: any) => {
+                          const stopProducts = productsByOrder.filter((p: any) => Number(p.orderId) === Number(item.orderId));
+                          const amt = Number(item.orderAmount ?? 0);
+                          const isSettled = item.paymentStatus === "monthly" || item.paymentStatus === "weekly";
+                          const payLabel: Record<string, string> = { monthly: "月結", weekly: "週結" };
+                          return (
+                            <tr key={item.id} style={{borderBottom:"1px solid #ddd", verticalAlign:"top"}}>
+                              <td style={{...tdStyle, textAlign:"center", fontWeight:"700", paddingTop:"7px"}}>{item.stopSequence}</td>
+                              <td style={{...tdStyle, fontWeight:"600", paddingTop:"7px"}}>
+                                {item.customerName}
+                                {item.customerPhone && <div style={{fontSize:"10px", color:"#666", fontWeight:"400"}}>{item.customerPhone}</div>}
+                              </td>
+                              <td style={{...tdStyle, fontSize:"10px", color:"#555", paddingTop:"7px"}}>{item.customerAddress ?? "—"}</td>
+                              <td style={{...tdStyle, paddingTop:"5px", paddingBottom:"5px", fontSize:"11px"}}>
+                                {stopProducts.length > 0 ? (
+                                  <div style={{display:"flex", flexWrap:"wrap", gap:"2px 8px"}}>
+                                    {stopProducts.map((p: any, pi: number) => (
+                                      <span key={pi} style={{whiteSpace:"nowrap"}}>
+                                        {p.productName} <strong>{p.shippedQty}</strong>{p.unit || ""}
                                       </span>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : <span style={{color:"#9ca3af", fontSize:"11px"}}>—</span>}
-                            </td>
-                            <td style={{...tdStyle, textAlign:"right", fontWeight:"700", paddingTop:"7px", color:"#111"}}>{Number(item.orderAmount ?? 0).toLocaleString()}</td>
-                            <td style={{...tdStyle, textAlign:"center", paddingTop:"7px", fontWeight:"600", color: item.paymentStatus === "monthly" || item.paymentStatus === "weekly" ? "#2563eb" : "#111"}}>{payLabel[item.paymentStatus] ?? item.paymentStatus}</td>
-                            <td style={{...tdStyle, textAlign:"center", paddingTop:"7px", color:"#555"}}>{item.prevBoxes ?? "—"}</td>
-                            <td style={{...tdStyle, textAlign:"center", paddingTop:"7px", color:"#555"}}>{item.deliverBoxes ?? "—"}</td>
-                            <td style={{...tdStyle, textAlign:"center", paddingTop:"7px", color:"#aaa"}}>＿</td>
-                            <td style={{...tdStyle, textAlign:"right", paddingTop:"7px", color:"#aaa"}}>＿＿＿＿</td>
-                            <td style={{...tdStyle, textAlign:"center", paddingTop:"7px", color:"#aaa"}}>＿＿</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                    <tfoot>
-                      <tr style={{background:"#f9fafb", borderTop:"2px solid #111"}}>
-                        <td colSpan={4} style={{...tdStyle, fontWeight:"700", textAlign:"right", paddingTop:"7px", paddingBottom:"7px", color:"#111"}}>合計</td>
-                        <td style={{...tdStyle, fontWeight:"700", textAlign:"right", paddingTop:"7px", color:"#111"}}>{items.reduce((s: number, i: any) => s + Number(i.orderAmount ?? 0), 0).toLocaleString()}</td>
-                        <td colSpan={3} style={{...tdStyle}}></td>
-                        <td style={{...tdStyle, textAlign:"center", paddingTop:"7px", color:"#aaa"}}>＿</td>
-                        <td style={{...tdStyle, textAlign:"right", paddingTop:"7px", color:"#aaa"}}>＿＿＿＿</td>
-                        <td></td>
-                      </tr>
-                    </tfoot>
-                  </table>
+                                    ))}
+                                  </div>
+                                ) : <span style={{color:"#aaa"}}>—</span>}
+                              </td>
+                              <td style={{...tdStyle, textAlign:"right", fontWeight:"700", paddingTop:"7px"}}>
+                                {isSettled ? <span style={{color:"#2563eb"}}>{payLabel[item.paymentStatus]}</span> : amt.toLocaleString()}
+                              </td>
+                              <td style={{...tdStyle, textAlign:"right", paddingTop:"7px", color:"#16a34a"}}>
+                                {isSettled ? "" : "＿＿＿＿"}
+                              </td>
+                              <td style={{...tdStyle, textAlign:"right", paddingTop:"7px", color:"#dc2626"}}>
+                                {isSettled ? "" : "＿＿＿＿"}
+                              </td>
+                              <td style={{...tdStyle, textAlign:"center", paddingTop:"7px", color:"#666"}}>{item.prevBoxes ?? "＿"}</td>
+                              <td style={{...tdStyle, textAlign:"center", paddingTop:"7px", color:"#aaa"}}>＿</td>
+                              <td style={{...tdStyle, paddingTop:"7px", fontSize:"10px", color:"#aaa"}}>
+                                {item.note || ""}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                      <tfoot>
+                        <tr style={{borderTop:"2px solid #111", background:"#f9fafb"}}>
+                          <td colSpan={4} style={{...tdStyle, fontWeight:"700", textAlign:"right", paddingTop:"7px", paddingBottom:"7px"}}>合計</td>
+                          <td style={{...tdStyle, fontWeight:"700", textAlign:"right", paddingTop:"7px"}}>
+                            {items.filter((i: any) => i.paymentStatus !== "monthly" && i.paymentStatus !== "weekly")
+                              .reduce((s: number, i: any) => s + Number(i.orderAmount ?? 0), 0).toLocaleString()}
+                          </td>
+                          <td style={{...tdStyle, textAlign:"right", paddingTop:"7px", color:"#16a34a", fontWeight:"700"}}>＿＿＿＿＿</td>
+                          <td style={{...tdStyle, textAlign:"right", paddingTop:"7px", color:"#dc2626", fontWeight:"700"}}>＿＿＿＿＿</td>
+                          <td colSpan={3}></td>
+                        </tr>
+                      </tfoot>
+                    </table>
 
-                  {/* Bottom note area */}
-                  <div style={{marginTop:"14px", display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px", fontSize:"11px"}}>
-                    <div style={{border:"1px solid #d1d5db", borderRadius:"4px", padding:"8px"}}>
-                      <div style={{fontWeight:"700", marginBottom:"4px", color:"#111"}}>司機備註</div>
-                      <div style={{height:"36px"}}></div>
-                    </div>
-                    <div style={{border:"1px solid #d1d5db", borderRadius:"4px", padding:"8px"}}>
-                      <div style={{fontWeight:"700", marginBottom:"4px", color:"#111"}}>管理員確認</div>
-                      <div style={{height:"36px"}}></div>
+                    {/* Signature / note area */}
+                    <div style={{marginTop:"12px", display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"10px", fontSize:"11px"}}>
+                      {[
+                        {label:"司機出發簽名", sub:""},
+                        {label:"司機回倉現收金額", sub:"NT$＿＿＿＿＿＿"},
+                        {label:"管理員點收確認", sub:""},
+                      ].map(({label, sub}) => (
+                        <div key={label} style={{border:"1px solid #ccc", borderRadius:"3px", padding:"7px 10px"}}>
+                          <div style={{fontWeight:"700", marginBottom:"4px"}}>{label}</div>
+                          {sub && <div style={{color:"#dc2626", fontWeight:"600", marginBottom:"4px"}}>{sub}</div>}
+                          <div style={{height:"32px"}}></div>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
-                  {/* === PAGE 2+: Individual delivery slips, one per stop === */}
-                  <div style={{pageBreakBefore:"always", marginTop:"0"}}>
-                    <div style={{
-                      display:"grid",
-                      gridTemplateColumns:"1fr 1fr",
-                      gap:"0",
-                    }}>
-                      {items.map((item: any, idx: number) => {
-                        const stopProducts = productsByOrder.filter((p: any) => Number(p.orderId) === Number(item.orderId));
-                        const isMonthly = item.paymentStatus === "monthly";
-                        const isWeekly = item.paymentStatus === "weekly";
-                        const isCash = !isMonthly && !isWeekly;
-                        const payLabel: Record<string, string> = { monthly: "月結", weekly: "週結", unpaid: "現收", paid: "已收", partial: "部份收" };
-                        const totalAmt = Number(item.orderAmount ?? 0);
-                        const slipBorder = "1px solid #ccc";
-                        return (
-                          <div key={item.id} style={{
-                            border: slipBorder,
-                            padding: "10px 12px",
-                            fontSize: "11px",
-                            fontFamily: "'Noto Sans TC', Arial, sans-serif",
-                            borderRight: idx % 2 === 0 ? "none" : slipBorder,
-                            pageBreakInside: "avoid",
-                            minHeight: "200px",
-                            display: "flex",
-                            flexDirection: "column",
+                  {/* ══ PAGE 2+: 個別出貨單（每頁兩站，cut line 分隔） ══ */}
+                  <div style={{pageBreakBefore:"always"}}>
+                    <div style={{fontSize:"11px", color:"#888", marginBottom:"8px", textAlign:"center", letterSpacing:"0.06em"}}>
+                      ── 以下為各站個別出貨單，請沿虛線裁切交給客戶 ──
+                    </div>
+                    {items.map((item: any, idx: number) => {
+                      const stopProducts = productsByOrder.filter((p: any) => Number(p.orderId) === Number(item.orderId));
+                      const isMonthly = item.paymentStatus === "monthly";
+                      const isWeekly = item.paymentStatus === "weekly";
+                      const isCash = !isMonthly && !isWeekly;
+                      const totalAmt = Number(item.orderAmount ?? 0);
+                      const slipTotal = stopProducts.reduce((s: number, p: any) =>
+                        s + (p.unitPrice ? Number(p.shippedQty) * Number(p.unitPrice) : 0), 0);
+
+                      return (
+                        <div key={item.id} style={{pageBreakInside:"avoid"}}>
+                          {/* Cut line between slips */}
+                          {idx > 0 && (
+                            <div style={{
+                              borderTop:"1.5px dashed #aaa",
+                              margin:"6px 0",
+                              position:"relative",
+                            }}>
+                              <span style={{
+                                position:"absolute",
+                                top:"-8px",
+                                left:"50%",
+                                transform:"translateX(-50%)",
+                                background:"white",
+                                padding:"0 8px",
+                                fontSize:"10px",
+                                color:"#aaa",
+                              }}>✂</span>
+                            </div>
+                          )}
+
+                          {/* Slip */}
+                          <div style={{
+                            border:"1.5px solid #aaa",
+                            borderRadius:"4px",
+                            padding:"10px 14px",
+                            marginBottom:"6px",
                           }}>
-                            {/* Slip header */}
-                            <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:"6px", borderBottom:"1.5px solid #111", paddingBottom:"5px"}}>
+                            {/* Slip header row */}
+                            <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", borderBottom:"2px solid #111", paddingBottom:"6px", marginBottom:"8px"}}>
                               <div>
-                                <div style={{fontSize:"13px", fontWeight:"800", color:"#111", letterSpacing:"0.04em"}}>大永蛋行 出貨單</div>
-                                <div style={{fontSize:"10px", color:"#666", marginTop:"1px"}}>{fmtDate(detail.dispatchDate)}</div>
+                                <div style={{fontSize:"15px", fontWeight:"800", letterSpacing:"0.05em"}}>大永蛋行　出貨單</div>
+                                <div style={{fontSize:"10px", color:"#666", marginTop:"1px"}}>
+                                  第一聯（白）存根　第二聯（粉）客戶　第三聯（黃）收款
+                                </div>
                               </div>
                               <div style={{textAlign:"right"}}>
-                                <div style={{fontSize:"15px", fontWeight:"700", color:"#111", letterSpacing:"0.08em"}}>No. {String(item.stopSequence).padStart(3, "0")}</div>
-                                <div style={{fontSize:"10px", color:"#888"}}>路線 {detail.routeCode}</div>
+                                <div style={{fontSize:"11px", color:"#888"}}>路線 {detail.routeCode}　{fmtDate(detail.dispatchDate)}</div>
+                                <div style={{fontSize:"16px", fontWeight:"700", letterSpacing:"0.12em", color:"#111"}}>No. {String((detail.routeCode ?? "") + String(item.stopSequence).padStart(3, "0"))}</div>
                               </div>
                             </div>
 
-                            {/* Customer info */}
-                            <div style={{marginBottom:"6px"}}>
-                              <div style={{display:"flex", gap:"4px", alignItems:"baseline"}}>
-                                <span style={{fontSize:"10px", color:"#888", whiteSpace:"nowrap"}}>訂購人</span>
-                                <span style={{fontSize:"13px", fontWeight:"700", color:"#111"}}>{item.customerName}</span>
-                              </div>
-                              {item.customerAddress && (
-                                <div style={{fontSize:"10px", color:"#666", marginTop:"1px"}}>{item.customerAddress}</div>
-                              )}
-                              {item.customerPhone && (
-                                <div style={{fontSize:"10px", color:"#666"}}>{item.customerPhone}</div>
-                              )}
+                            {/* Customer row */}
+                            <div style={{display:"grid", gridTemplateColumns:"auto 1fr", gap:"4px 12px", marginBottom:"8px", fontSize:"12px"}}>
+                              <span style={{color:"#666", whiteSpace:"nowrap"}}>訂購人</span>
+                              <span style={{fontWeight:"700", fontSize:"14px"}}>{item.customerName}</span>
+                              {item.customerPhone && <>
+                                <span style={{color:"#666"}}>電話</span>
+                                <span>{item.customerPhone}</span>
+                              </>}
+                              {item.customerAddress && <>
+                                <span style={{color:"#666", whiteSpace:"nowrap"}}>地址</span>
+                                <span style={{fontSize:"11px", color:"#444"}}>{item.customerAddress}</span>
+                              </>}
                             </div>
 
                             {/* Products table */}
-                            <div style={{flex:1}}>
-                              <table style={{width:"100%", borderCollapse:"collapse", fontSize:"11px"}}>
-                                <thead>
-                                  <tr style={{borderBottom:"1px solid #d1d5db"}}>
-                                    <th style={{textAlign:"left", fontWeight:"600", padding:"2px 4px", color:"#555"}}>產品</th>
-                                    <th style={{textAlign:"right", fontWeight:"600", padding:"2px 4px", color:"#555", width:"36px"}}>數量</th>
-                                    <th style={{textAlign:"right", fontWeight:"600", padding:"2px 4px", color:"#555", width:"52px"}}>單價</th>
-                                    <th style={{textAlign:"right", fontWeight:"600", padding:"2px 4px", color:"#555", width:"60px"}}>金額</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {stopProducts.length > 0 ? stopProducts.map((p: any, pi: number) => (
-                                    <tr key={pi} style={{borderBottom:"1px solid #f3f4f6"}}>
-                                      <td style={{padding:"3px 4px", color:"#111"}}>{p.productName}</td>
-                                      <td style={{padding:"3px 4px", textAlign:"right", color:"#111", fontVariantNumeric:"tabular-nums"}}>{p.shippedQty}</td>
-                                      <td style={{padding:"3px 4px", textAlign:"right", color:"#555", fontVariantNumeric:"tabular-nums"}}>{p.unitPrice ? Number(p.unitPrice).toLocaleString() : "—"}</td>
-                                      <td style={{padding:"3px 4px", textAlign:"right", color:"#111", fontWeight:"600", fontVariantNumeric:"tabular-nums"}}>
-                                        {p.unitPrice ? (Number(p.shippedQty) * Number(p.unitPrice)).toLocaleString() : "—"}
+                            <table style={{width:"100%", borderCollapse:"collapse", fontSize:"12px", marginBottom:"8px"}}>
+                              <thead>
+                                <tr style={{borderBottom:"1.5px solid #aaa", background:"#f9fafb"}}>
+                                  <th style={{textAlign:"left", padding:"4px 6px", fontWeight:"600", color:"#444"}}>產品</th>
+                                  <th style={{textAlign:"right", padding:"4px 6px", fontWeight:"600", color:"#444", width:"52px"}}>數量</th>
+                                  <th style={{textAlign:"right", padding:"4px 6px", fontWeight:"600", color:"#444", width:"64px"}}>價格</th>
+                                  <th style={{textAlign:"right", padding:"4px 6px", fontWeight:"600", color:"#444", width:"72px"}}>金額</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {stopProducts.length > 0 ? stopProducts.map((p: any, pi: number) => {
+                                  const lineAmt = p.unitPrice ? Number(p.shippedQty) * Number(p.unitPrice) : null;
+                                  return (
+                                    <tr key={pi} style={{borderBottom:"1px solid #eee"}}>
+                                      <td style={{padding:"5px 6px"}}>{p.productName}</td>
+                                      <td style={{padding:"5px 6px", textAlign:"right", fontVariantNumeric:"tabular-nums"}}>{p.shippedQty} {p.unit || ""}</td>
+                                      <td style={{padding:"5px 6px", textAlign:"right", color:"#555", fontVariantNumeric:"tabular-nums"}}>
+                                        {p.unitPrice ? Number(p.unitPrice).toLocaleString() : "—"}
+                                      </td>
+                                      <td style={{padding:"5px 6px", textAlign:"right", fontWeight:"600", fontVariantNumeric:"tabular-nums"}}>
+                                        {lineAmt !== null ? lineAmt.toLocaleString() : "—"}
                                       </td>
                                     </tr>
-                                  )) : (
-                                    <tr><td colSpan={4} style={{padding:"4px", color:"#aaa", textAlign:"center"}}>—</td></tr>
-                                  )}
-                                </tbody>
-                              </table>
-                            </div>
+                                  );
+                                }) : (
+                                  <tr><td colSpan={4} style={{padding:"6px", textAlign:"center", color:"#aaa"}}>—</td></tr>
+                                )}
+                              </tbody>
+                            </table>
 
-                            {/* Box tracking row */}
-                            <div style={{marginTop:"8px", borderTop:"1px solid #d1d5db", paddingTop:"5px"}}>
-                              <div style={{display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:"4px", textAlign:"center", marginBottom:"6px"}}>
-                                {[
-                                  {label:"前箱", value: item.prevBoxes ?? "＿"},
-                                  {label:"入箱", value: item.deliverBoxes ?? "＿"},
-                                  {label:"回箱", value: "＿＿"},
-                                  {label:"餘箱", value: "＿＿"},
-                                ].map(({label, value}) => (
-                                  <div key={label} style={{border:"1px solid #d1d5db", borderRadius:"3px", padding:"3px 2px"}}>
-                                    <div style={{fontSize:"9px", color:"#888"}}>{label}</div>
-                                    <div style={{fontSize:"12px", fontWeight:"600", color:"#111", marginTop:"1px"}}>{value}</div>
+                            {/* Bottom section: boxes + payment + total */}
+                            <div style={{borderTop:"1.5px solid #aaa", paddingTop:"7px", display:"grid", gridTemplateColumns:"auto 1fr auto", gap:"0 16px", alignItems:"center"}}>
+                              {/* Box grid */}
+                              <div style={{display:"grid", gridTemplateColumns:"repeat(4,52px)", gap:"4px", textAlign:"center"}}>
+                                {([
+                                  {label:"前　箱", value: item.prevBoxes != null ? String(item.prevBoxes) : ""},
+                                  {label:"入　箱", value: item.deliverBoxes != null ? String(item.deliverBoxes) : ""},
+                                  {label:"回　箱", value: ""},
+                                  {label:"餘　箱", value: ""},
+                                ] as {label: string; value: string}[]).map(({label, value}) => (
+                                  <div key={label} style={{border:"1px solid #ccc", borderRadius:"2px", padding:"3px 2px"}}>
+                                    <div style={{fontSize:"9px", color:"#777", lineHeight:"1.2"}}>{label}</div>
+                                    <div style={{fontSize:"13px", fontWeight:"700", minHeight:"18px", borderBottom:"1px solid #aaa", marginTop:"1px", paddingBottom:"1px"}}>
+                                      {value}
+                                    </div>
                                   </div>
                                 ))}
                               </div>
 
-                              {/* Total + payment status */}
-                              <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
-                                <div style={{display:"flex", gap:"8px", fontSize:"10px"}}>
-                                  <label style={{display:"flex", alignItems:"center", gap:"2px"}}>
-                                    <span style={{width:"10px", height:"10px", border:"1px solid #555", display:"inline-block", marginRight:"2px"}}></span>
-                                    {isCash ? "☑已收款" : (isMonthly ? "月結" : "週結")}
-                                  </label>
-                                  <label style={{display:"flex", alignItems:"center", gap:"2px"}}>
-                                    <span style={{width:"10px", height:"10px", border:"1px solid #555", display:"inline-block", marginRight:"2px"}}></span>
-                                    {isCash ? "□未收款" : payLabel[item.paymentStatus]}
-                                  </label>
+                              {/* Payment checkboxes + note */}
+                              <div style={{fontSize:"11px"}}>
+                                <div style={{display:"flex", gap:"12px", marginBottom:"4px"}}>
+                                  <span>□ 已收款</span>
+                                  <span>□ 未收款</span>
+                                  {!isCash && <span style={{color:"#2563eb", fontWeight:"700"}}>{isMonthly ? "月結" : "週結"}</span>}
                                 </div>
-                                <div style={{textAlign:"right"}}>
-                                  <div style={{fontSize:"10px", color:"#666"}}>總金額</div>
-                                  <div style={{fontSize:"15px", fontWeight:"800", color:"#111", fontVariantNumeric:"tabular-nums"}}>{totalAmt.toLocaleString()}</div>
-                                </div>
+                                <div style={{color:"#888", fontSize:"10px"}}>備註：＿＿＿＿＿＿＿＿＿</div>
                               </div>
 
-                              {/* Signature line */}
-                              <div style={{marginTop:"6px", display:"flex", justifyContent:"flex-end", fontSize:"10px", color:"#888"}}>
-                                簽收：＿＿＿＿＿＿＿
+                              {/* Total */}
+                              <div style={{textAlign:"right", borderLeft:"1px solid #ddd", paddingLeft:"12px"}}>
+                                <div style={{fontSize:"10px", color:"#666", marginBottom:"2px"}}>總金額</div>
+                                <div style={{fontSize:"20px", fontWeight:"800", fontVariantNumeric:"tabular-nums", letterSpacing:"0.02em"}}>
+                                  {(slipTotal || totalAmt).toLocaleString()}
+                                </div>
+                                <div style={{fontSize:"10px", color:"#888", marginTop:"4px"}}>
+                                  客戶簽收：＿＿＿＿＿
+                                </div>
                               </div>
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
+                        </div>
+                      );
+                    })}
                   </div>
+
                 </div>
               </section>
 
