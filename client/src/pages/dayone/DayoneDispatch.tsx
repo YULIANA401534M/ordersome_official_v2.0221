@@ -791,7 +791,7 @@ body { margin: 0; padding: 16px; background: white; font-family: 'Noto Sans TC',
                             {stopProducts.map((p: any, pi: number) => (
                               <div key={pi} className="flex items-center justify-between text-sm">
                                 <span className="text-stone-700">{p.productName}</span>
-                                <span className="font-semibold text-stone-900">{p.shippedQty} {p.unit || ""}</span>
+                                <span className="font-semibold text-stone-900">{Math.round(Number(p.shippedQty))} {p.unit || ""}</span>
                               </div>
                             ))}
                           </div>

@@ -288,11 +288,26 @@ export const dyDispatchRouter = router({
         productTotals[pid].shippedQty += Number(row.shippedQty ?? 0);
       }
 
+      // pending returns for this dispatch (司機已回報但管理員尚未確認)
+      await ensureDyPendingReturnsTable(client);
+      const [pendingReturnRows] = await client.execute(
+        `SELECT productId, SUM(qty) AS returnedQty
+         FROM dy_pending_returns
+         WHERE tenantId=? AND dispatchOrderId=?
+         GROUP BY productId`,
+        [input.tenantId, input.id]
+      );
+      const pendingReturnsByProduct: Record<number, number> = {};
+      for (const row of pendingReturnRows as any[]) {
+        pendingReturnsByProduct[Number(row.productId)] = Number(row.returnedQty ?? 0);
+      }
+
       return {
         ...dispatchOrder,
         items: itemRows as any[],
         products: Object.values(productTotals),
         productsByOrder: productRows as any[],
+        pendingReturnsByProduct,
       };
     }),
 

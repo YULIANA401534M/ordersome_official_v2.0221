@@ -1,6 +1,6 @@
 # CLAUDE.md — OrderSome 專案主腦
 
-> 版本 v6.46｜最後更新：2026-04-27
+> 版本 v6.47｜最後更新：2026-04-27
 
 ---
 
@@ -200,6 +200,12 @@ Hero 圖片規則：
 - `DayoneDispatch`（4.2）：「撿貨完畢並扣庫存」按鈕邏輯不變，但列印按鈕改為獨立動作（只開列印視窗，不觸發 markPrinted）
 - `DriverPickup`（4.1）：頁面改版為唯讀路線明細參考頁，依 stopSequence 顯示每站客戶、地址、商品明細、金額；新員工只需看頁面即可跑路線；移除個別確認按鈕
 - `DriverWorkLog`（4.7）：`defaultDispatchId` 預設選最新的非 `pending_handover/completed` 派車單，同一司機下午有新派車單時不再被早上已完成的派車單鎖定
+
+**v6.47 修掉的 bug（回庫邏輯 + 數量格式）：**
+- `DriverWorkLog` 回庫唯讀畫面：原本「回庫 N 箱」顯示的是 `returnQtyByProduct` state 預設值（等於 shippedQty），與實際無關。改為從 `dispatch.getDispatchDetail` 的 `pendingReturnsByProduct` 取實際已回報數量，客戶全部簽收則顯示「回庫 0 箱」
+- `DriverWorkLog` 可填寫畫面：預設值由 `shippedQty` 改為 `0`（正確預設是全部送完），司機只填車上有剩的量
+- `dispatch.getDispatchDetail`：回傳新增 `pendingReturnsByProduct`，從 `dy_pending_returns` 按 productId 聚合回報量（driver 和 admin 均可讀）
+- `DayoneDispatch` screen view 站點卡片：`shippedQty` 補 `Math.round` 確保整數顯示
 
 **大永尚未測試的功能（P3）：**
 - 多車同一天、跨日累積後庫存數字

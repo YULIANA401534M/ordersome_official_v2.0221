@@ -66,20 +66,24 @@ export default function DriverWorkLog() {
 
   const deliveredOrders = orders.filter((order: any) => order.status === "delivered");
   const totalCollected = deliveredOrders.reduce((sum: number, order: any) => sum + Number(order.cashCollected ?? 0), 0);
+  const pendingReturnsByProduct: Record<number, number> = (dispatchDetail as any)?.pendingReturnsByProduct ?? {};
+
   const returnItems = useMemo(
     () =>
       (dispatchDetail?.products ?? [])
         .map((product: any) => {
           const pid = Number(product.productId);
-          const shipped = Number(product.shippedQty ?? 0);
-          // Default to full shipped qty; driver reduces if all was delivered
+          const shipped = Math.round(Number(product.shippedQty ?? 0));
+          // 可填寫模式：預設 0（全部送出去），司機只填車上有剩的數量
           const qty = returnQtyByProduct[pid] !== undefined
             ? Number(returnQtyByProduct[pid])
-            : shipped;
-          return { productId: pid, productName: product.productName, unit: product.unit, shippedQty: shipped, qty };
+            : 0;
+          // 唯讀模式：從 pendingReturnsByProduct 取實際已回報量
+          const reportedQty = Math.round(Number(pendingReturnsByProduct[pid] ?? 0));
+          return { productId: pid, productName: product.productName, unit: product.unit, shippedQty: shipped, qty, reportedQty };
         })
         .filter((item: any) => item.shippedQty > 0),
-    [dispatchDetail?.products, returnQtyByProduct]
+    [dispatchDetail?.products, returnQtyByProduct, pendingReturnsByProduct]
   );
 
   useEffect(() => {
@@ -164,7 +168,7 @@ export default function DriverWorkLog() {
                     <div key={item.productId} className="flex items-center justify-between rounded-2xl bg-white px-4 py-2.5 text-sm">
                       <span className="text-stone-700">{item.productName}</span>
                       <span className="font-semibold text-stone-900">
-                        帶出 {item.shippedQty}　回庫 {item.qty} {item.unit || "箱"}
+                        帶出 {item.shippedQty}　回庫 {item.reportedQty} {item.unit || "箱"}
                       </span>
                     </div>
                   ))}
@@ -174,7 +178,7 @@ export default function DriverWorkLog() {
               /* 尚未送出 → 可填寫 */
               <>
                 <div className="mt-3 rounded-2xl bg-amber-50 border border-amber-100 px-3 py-2.5 text-xs text-amber-700 leading-5">
-                  全部送完就填 <strong>0</strong>，車上有剩貨就填剩幾箱（桶）。預設帶出幾箱就填幾箱，按送出後等管理員確認入庫。
+                  全部送完填 <strong>0</strong>，車上有剩貨才填剩幾箱（桶）。送出後等管理員確認入庫。
                 </div>
 
                 <div className="mt-3 space-y-3">
