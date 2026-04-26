@@ -1,6 +1,6 @@
 # CLAUDE.md — OrderSome 專案主腦
 
-> 版本 v6.49｜最後更新：2026-04-27
+> 版本 v6.50｜最後更新：2026-04-27
 
 ---
 
@@ -219,6 +219,11 @@ Hero 圖片規則：
 - `driver.submitWorkLog`：`dispatchOrderId` 改為必填，`totalOrders/totalCollected` 改為只計算這張派車單關聯的已送達訂單（透過 `dy_dispatch_items JOIN dy_orders`），`pending_handover` 狀態改為 `IN ('printed','in_progress')` 均可觸發
 - `driver.getMyWorkLog`：新增 `dispatchOrderId` 可選參數，有帶時按派車單查，否則 fallback 按 `workDate` 查最新一筆（向下相容）
 - `DriverWorkLog` 前端：`getMyWorkLog` 帶入 `activeDispatchId`；`deliveredOrders` 改為只算當前派車單的訂單；工作日誌區加入派車單選擇器（多張單時顯示）；送出成功提示改為「本次派車單日結已送出」
+
+**v6.50 修掉的 bug（派車單重複建立）：**
+- `generateDispatch` 的 `NOT EXISTS` 原本只排除 `draft/printed/completed`，漏掉 `in_progress` 和 `pending_handover`，導致已在配送中的訂單可被再次撈出重複建立派車單
+- 補上全部 5 個 status：`draft/printed/in_progress/pending_handover/completed`
+- 清掉測試過程中產生的重複派車單（dispatch id: 150001-150004）
 
 **大永尚未測試的功能（P3）：**
 - 多車同一天、跨日累積後庫存數字

@@ -119,7 +119,7 @@ export const dyDispatchRouter = router({
               AND ddo.tenantId = di.tenantId
              WHERE di.tenantId = o.tenantId
                AND di.orderId = o.id
-               AND ddo.status IN ('draft', 'printed', 'completed')
+               AND ddo.status IN ('draft', 'printed', 'in_progress', 'pending_handover', 'completed')
            )
          ORDER BY o.driverId, dist.sortOrder, o.id`,
         [input.tenantId, input.dispatchDate]
