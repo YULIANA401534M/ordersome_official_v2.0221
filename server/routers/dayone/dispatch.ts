@@ -261,13 +261,14 @@ export const dyDispatchRouter = router({
 
       // per-stop products (keyed by orderId for frontend grouping)
       // Only join rows where orderId is not null (manual stops have no orderId)
+      // stopSequence included in GROUP BY to satisfy only_full_group_by sql_mode
       const [productRows] = await client.execute(
-        `SELECT di.orderId, oi.productId, p.name AS productName, p.unit, SUM(oi.qty) AS shippedQty
+        `SELECT di.orderId, di.stopSequence, oi.productId, p.name AS productName, p.unit, SUM(oi.qty) AS shippedQty
          FROM dy_dispatch_items di
          JOIN dy_order_items oi ON oi.orderId = di.orderId
          JOIN dy_products p ON p.id = oi.productId
          WHERE di.dispatchOrderId=? AND di.tenantId=? AND di.orderId IS NOT NULL
-         GROUP BY di.orderId, oi.productId, p.name, p.unit
+         GROUP BY di.orderId, di.stopSequence, oi.productId, p.name, p.unit
          ORDER BY di.stopSequence, p.name`,
         [input.id, input.tenantId]
       );
