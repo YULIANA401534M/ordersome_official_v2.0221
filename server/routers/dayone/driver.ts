@@ -244,9 +244,9 @@ export const dyDriverRouter = router({
         [url, input.orderId, input.tenantId, driver.id]
       );
       await client.execute(
-        `INSERT INTO dy_delivery_signatures (tenantId, orderId, driverId, signatureUrl, signedAt)
-         VALUES (?,?,?,?,NOW())`,
-        [input.tenantId, input.orderId, driver.id, url]
+        `INSERT INTO dy_delivery_signatures (tenantId, refId, refType, signatureUrl, signedBy, signedAt)
+         VALUES (?,?,'order',?,?,NOW())`,
+        [input.tenantId, input.orderId, url, driver.id]
       );
       return { success: true, signatureUrl: url };
     }),
