@@ -141,15 +141,33 @@ export const dyDispatchRouter = router({
 
       for (const [driverId, driverOrders] of Array.from(driverMap.entries())) {
         const routeCode = driverOrders[0]?.routeCode ?? "R00";
-        const [dispatchResult] = await client.execute(
-          `INSERT INTO dy_dispatch_orders
-           (tenantId, dispatchDate, driverId, routeCode, status, generatedAt, createdAt, updatedAt)
-           VALUES (?,?,?,?,'draft',NOW(),NOW(),NOW())`,
-          [input.tenantId, input.dispatchDate, driverId, routeCode]
-        );
-        const dispatchOrderId = (dispatchResult as any).insertId;
 
-        let stopSequence = 1;
+        // 如果同一天同一司機已有 draft 派車單，複用它，不重複建立
+        const [existingRows] = await client.execute(
+          `SELECT id FROM dy_dispatch_orders
+           WHERE tenantId=? AND dispatchDate=? AND driverId=? AND status='draft' LIMIT 1`,
+          [input.tenantId, input.dispatchDate, driverId]
+        );
+        let dispatchOrderId: number;
+        if ((existingRows as any[]).length > 0) {
+          dispatchOrderId = Number((existingRows as any[])[0].id);
+        } else {
+          const [dispatchResult] = await client.execute(
+            `INSERT INTO dy_dispatch_orders
+             (tenantId, dispatchDate, driverId, routeCode, status, generatedAt, createdAt, updatedAt)
+             VALUES (?,?,?,?,'draft',NOW(),NOW(),NOW())`,
+            [input.tenantId, input.dispatchDate, driverId, routeCode]
+          );
+          dispatchOrderId = (dispatchResult as any).insertId;
+        }
+
+        // 複用既有派車單時，stopSequence 接著現有最大值
+        const [maxSeqRows] = await client.execute(
+          `SELECT COALESCE(MAX(stopSequence), 0) AS maxSeq FROM dy_dispatch_items WHERE dispatchOrderId=?`,
+          [dispatchOrderId]
+        );
+        let stopSequence = Number((maxSeqRows as any[])[0]?.maxSeq ?? 0) + 1;
+
         for (const order of driverOrders) {
           const [boxRows] = await client.execute(
             `SELECT currentBalance FROM dy_box_ledger WHERE tenantId=? AND customerId=?`,

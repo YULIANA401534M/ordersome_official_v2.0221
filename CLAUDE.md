@@ -1,6 +1,6 @@
 # CLAUDE.md — OrderSome 專案主腦
 
-> 版本 v6.50｜最後更新：2026-04-27
+> 版本 v6.51｜最後更新：2026-04-27
 
 ---
 
@@ -224,6 +224,10 @@ Hero 圖片規則：
 - `generateDispatch` 的 `NOT EXISTS` 原本只排除 `draft/printed/completed`，漏掉 `in_progress` 和 `pending_handover`，導致已在配送中的訂單可被再次撈出重複建立派車單
 - 補上全部 5 個 status：`draft/printed/in_progress/pending_handover/completed`
 - 清掉測試過程中產生的重複派車單（dispatch id: 150001-150004）
+
+**v6.51 修掉的 bug（派車單 race condition 雙重防護）：**
+- 前端 `GenerateDialog` 加 `firedRef`：按鈕觸發後立即鎖定，防止同一操作觸發兩次 mutation；mutation 錯誤時 reset，讓使用者可重試
+- 後端 `generateDispatch` 加「複用 draft」邏輯：若同日同司機已有 draft 派車單則複用，不再新建；stopSequence 接續現有最大值；徹底消除並發請求導致的重複建立
 
 **大永尚未測試的功能（P3）：**
 - 多車同一天、跨日累積後庫存數字

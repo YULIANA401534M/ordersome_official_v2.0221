@@ -38,6 +38,7 @@ const DISPATCH_STATUS: Record<string, { label: string; className: string }> = {
 };
 
 function GenerateDialog({ date, onClose, onSuccess }: { date: string; onClose: () => void; onSuccess: () => void }) {
+  const firedRef = React.useRef(false);
   const generateDispatch = trpc.dayone.dispatch.generateDispatch.useMutation({
     onSuccess: (data) => {
       if (!data.dispatchOrders.length) {
@@ -48,8 +49,17 @@ function GenerateDialog({ date, onClose, onSuccess }: { date: string; onClose: (
       onSuccess();
       onClose();
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => {
+      firedRef.current = false;
+      toast.error(error.message);
+    },
   });
+
+  function handleConfirm() {
+    if (firedRef.current || generateDispatch.isPending) return;
+    firedRef.current = true;
+    generateDispatch.mutate({ tenantId: TENANT_ID, dispatchDate: date });
+  }
 
   return (
     <Dialog open onOpenChange={onClose}>
@@ -67,8 +77,8 @@ function GenerateDialog({ date, onClose, onSuccess }: { date: string; onClose: (
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={onClose}>取消</Button>
             <Button
-              onClick={() => generateDispatch.mutate({ tenantId: TENANT_ID, dispatchDate: date })}
-              disabled={generateDispatch.isPending}
+              onClick={handleConfirm}
+              disabled={generateDispatch.isPending || firedRef.current}
               className="bg-amber-600 text-white hover:bg-amber-700"
             >
               {generateDispatch.isPending ? "建立中..." : "確認建立"}
