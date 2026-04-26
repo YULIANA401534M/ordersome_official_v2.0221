@@ -12,6 +12,7 @@ export const dyApRouter = router({
         tenantId: z.number(),
         status: z.string().optional(),
         supplierId: z.number().optional(),
+        dueSoon: z.boolean().optional(),
         page: z.number().default(1),
       })
     )
@@ -22,9 +23,11 @@ export const dyApRouter = router({
       }
 
       const offset = (input.page - 1) * 20;
-      let sql = `SELECT ap.*, s.name AS supplierName
+      let sql = `SELECT ap.*, s.name AS supplierName,
+                        pr.receiptDate, pr.receiptNo
                  FROM dy_ap_records ap
                  JOIN dy_suppliers s ON ap.supplierId = s.id
+                 LEFT JOIN dy_purchase_receipts pr ON ap.purchaseReceiptId = pr.id
                  WHERE ap.tenantId = ?`;
       const params: any[] = [input.tenantId];
 
@@ -36,10 +39,27 @@ export const dyApRouter = router({
         sql += " AND ap.supplierId = ?";
         params.push(input.supplierId);
       }
+      if (input.dueSoon) {
+        sql += " AND ap.dueDate BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY) AND ap.status != 'paid'";
+      }
       sql += ` ORDER BY ap.dueDate ASC LIMIT 20 OFFSET ${offset}`;
 
       const [rows] = await (db as any).$client.execute(sql, params);
       return rows as any[];
+    }),
+
+  // 本週到期預警數量（sidebar badge 用）
+  dueSoonCount: dyAdminProcedure
+    .input(z.object({ tenantId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      const [rows] = await (db as any).$client.execute(
+        `SELECT COUNT(*) AS cnt FROM dy_ap_records
+         WHERE tenantId=? AND dueDate BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY) AND status != 'paid'`,
+        [input.tenantId]
+      );
+      return { count: Number((rows as any[])[0]?.cnt ?? 0) };
     }),
 
   summary: dyAdminProcedure

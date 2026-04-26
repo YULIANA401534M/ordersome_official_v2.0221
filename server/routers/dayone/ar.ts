@@ -301,6 +301,95 @@ export const dyArRouter = router({
       return rows as any[];
     }),
 
+  // 8. 空箱流水帳（dy_box_transactions）
+  listBoxTransactions: dyAdminProcedure
+    .input(
+      z.object({
+        tenantId: z.number(),
+        customerId: z.number().optional(),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+        page: z.number().default(1),
+      })
+    )
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      const client = (db as any).$client;
+      const offset = (input.page - 1) * 30;
+      let sql = `SELECT bt.*, c.name AS customerName
+                 FROM dy_box_transactions bt
+                 JOIN dy_customers c ON bt.customerId = c.id
+                 WHERE bt.tenantId = ?`;
+      const params: any[] = [input.tenantId];
+      if (input.customerId) { sql += " AND bt.customerId = ?"; params.push(input.customerId); }
+      if (input.startDate) { sql += " AND DATE(bt.createdAt) >= ?"; params.push(input.startDate); }
+      if (input.endDate) { sql += " AND DATE(bt.createdAt) <= ?"; params.push(input.endDate); }
+      sql += ` ORDER BY bt.createdAt DESC LIMIT 30 OFFSET ${offset}`;
+      const [rows] = await client.execute(sql, params);
+      return rows as any[];
+    }),
+
+  // 9. 各客戶目前空箱餘額彙整
+  boxBalanceSummary: dyAdminProcedure
+    .input(z.object({ tenantId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      const [rows] = await (db as any).$client.execute(
+        `SELECT bl.customerId, bl.currentBalance, c.name AS customerName
+         FROM dy_box_ledger bl
+         JOIN dy_customers c ON c.id = bl.customerId
+         WHERE bl.tenantId = ?
+         ORDER BY bl.currentBalance DESC`,
+        [input.tenantId]
+      );
+      return rows as any[];
+    }),
+
+  // 10. 帳齡分析（0-30 / 31-60 / 61-90 / 90+ 天分桶）
+  agingReport: dyAdminProcedure
+    .input(z.object({ tenantId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      const client = (db as any).$client;
+      const [rows] = await client.execute(
+        `SELECT
+           c.id AS customerId,
+           c.name AS customerName,
+           c.settlementCycle,
+           c.creditLimit,
+           COALESCE(SUM(ar.amount - ar.paidAmount), 0) AS totalUnpaid,
+           COALESCE(SUM(CASE WHEN DATEDIFF(NOW(), ar.dueDate) BETWEEN 0 AND 30 THEN ar.amount - ar.paidAmount ELSE 0 END), 0) AS bucket0_30,
+           COALESCE(SUM(CASE WHEN DATEDIFF(NOW(), ar.dueDate) BETWEEN 31 AND 60 THEN ar.amount - ar.paidAmount ELSE 0 END), 0) AS bucket31_60,
+           COALESCE(SUM(CASE WHEN DATEDIFF(NOW(), ar.dueDate) BETWEEN 61 AND 90 THEN ar.amount - ar.paidAmount ELSE 0 END), 0) AS bucket61_90,
+           COALESCE(SUM(CASE WHEN DATEDIFF(NOW(), ar.dueDate) > 90 THEN ar.amount - ar.paidAmount ELSE 0 END), 0) AS bucket90plus,
+           MAX(DATEDIFF(NOW(), ar.dueDate)) AS maxOverdueDays
+         FROM dy_customers c
+         LEFT JOIN dy_ar_records ar
+           ON ar.customerId = c.id AND ar.tenantId = c.tenantId
+           AND ar.status IN ('unpaid','partial','overdue')
+           AND ar.dueDate < NOW()
+         WHERE c.tenantId = ?
+         GROUP BY c.id, c.name, c.settlementCycle, c.creditLimit
+         HAVING totalUnpaid > 0
+         ORDER BY totalUnpaid DESC`,
+        [input.tenantId]
+      );
+      return (rows as any[]).map((r: any) => ({
+        ...r,
+        totalUnpaid: Number(r.totalUnpaid),
+        bucket0_30: Number(r.bucket0_30),
+        bucket31_60: Number(r.bucket31_60),
+        bucket61_90: Number(r.bucket61_90),
+        bucket90plus: Number(r.bucket90plus),
+        creditLimit: Number(r.creditLimit ?? 0),
+        maxOverdueDays: Number(r.maxOverdueDays ?? 0),
+        overCreditLimit: Number(r.creditLimit ?? 0) > 0 && Number(r.totalUnpaid) > Number(r.creditLimit ?? 0),
+      }));
+    }),
+
   // 7. 月結對帳單
   monthlyStatement: dyAdminProcedure
     .input(

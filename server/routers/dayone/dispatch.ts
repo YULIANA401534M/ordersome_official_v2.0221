@@ -201,9 +201,14 @@ export const dyDispatchRouter = router({
                         (SELECT COUNT(*) FROM dy_dispatch_items di
                          JOIN dy_orders o ON o.id=di.orderId
                          WHERE di.dispatchOrderId=do2.id AND o.status='delivered'
-                           AND o.cashCollected < o.totalAmount AND o.totalAmount > 0) AS shortfallStops
+                           AND o.cashCollected < o.totalAmount AND o.totalAmount > 0) AS shortfallStops,
+                        wl.totalCollected AS wlTotalCollected,
+                        wl.cashHandedOver AS wlCashHandedOver,
+                        wl.handoverNote AS wlHandoverNote
                  FROM dy_dispatch_orders do2
                  JOIN dy_drivers d ON do2.driverId = d.id
+                 LEFT JOIN dy_work_logs wl ON wl.driverId = do2.driverId
+                   AND wl.workDate = do2.dispatchDate AND wl.tenantId = do2.tenantId
                  WHERE do2.tenantId = ?`;
       const params: any[] = [input.tenantId];
 
