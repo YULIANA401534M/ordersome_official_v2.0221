@@ -176,6 +176,23 @@ Hero 圖片規則：
 4. 剩貨回庫待驗 → 管理員確認 → 庫存數字增加
 5. 進貨簽收 → AP 應付出現 → 確認入倉 → 庫存增加
 
+**v6.43 修掉的 bug：**
+- `deleteOrder`：已取消訂單可直接刪除（跳過派車單狀態檢查）
+- `deleteOrder`：`dy_pending_returns` 刪除改為只刪此訂單關聯的特定 dispatchOrderId，不再誤刪其他訂單的回庫記錄
+
+**v6.44 帳務整合（DayoneARContent 五 tab）：**
+- 應收帳款 tab：補帳齡分析（0-30/31-60/61-90/90+ 天分桶）、信用額度超額警示、收款方式（現金/轉帳）KPI 分列
+- 應付帳款 tab：從進貨頁獨立出來，本週到期橘色橫幅（`ap.dueSoonCount`）、一鍵篩選本週到期、付款對話框
+- 司機日報 tab：補管理員點收確認按鈕（呼叫 `dispatch.confirmHandover`，含剩貨入庫+AR結清+派車單完成）
+- 空箱台帳 tab：各客戶空箱餘額一覽（快速選客戶按鈕）+ `dy_box_transactions` 流水明細
+- 月結對帳單 tab：改用獨立列印視窗（含雙簽章欄）、Excel 匯出保留
+- 後端新增：`ar.listBoxTransactions`、`ar.boxBalanceSummary`、`ar.agingReport`、`ap.dueSoonCount`
+- `dispatch.listDispatch` SQL 補 LEFT JOIN `dy_work_logs`，管理端可取得司機回報現金數字
+
+**v6.45 修掉的 bug：**
+- `DriverWorkLog`：剩貨回庫送出後（`dispatch.status = pending_handover/completed`）或日結已送出後，剩貨區塊切換唯讀，顯示「帶出 N 回庫 N 箱」摘要，不可重複送出
+- 修掉送出後 qty 跳回 shippedQty 的視覺錯誤（改由 dispatch status 控制鎖定，不再 reset state）
+
 **大永尚未測試的功能（P3）：**
 - 多車同一天、跨日累積後庫存數字
 - 補單（臨時加站）的差異對帳
