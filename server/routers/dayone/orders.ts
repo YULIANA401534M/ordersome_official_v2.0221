@@ -26,6 +26,8 @@ export const dyOrdersRouter = router({
       z.object({
         tenantId: z.number(),
         deliveryDate: z.string().optional(),
+        dateFrom: z.string().optional(),
+        dateTo: z.string().optional(),
         driverId: z.number().optional(),
         status: z.string().optional(),
       })
@@ -44,6 +46,14 @@ export const dyOrdersRouter = router({
       if (input.deliveryDate) {
         sql += " AND o.deliveryDate = ?";
         params.push(input.deliveryDate);
+      }
+      if (input.dateFrom) {
+        sql += " AND o.deliveryDate >= ?";
+        params.push(input.dateFrom);
+      }
+      if (input.dateTo) {
+        sql += " AND o.deliveryDate <= ?";
+        params.push(input.dateTo);
       }
       if (input.driverId) {
         sql += " AND o.driverId = ?";

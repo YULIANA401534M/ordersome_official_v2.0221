@@ -16,13 +16,13 @@ export default function DayonePortalLogin() {
 
   const loginMut = trpc.dayone.portal.loginWithLine.useMutation({
     onSuccess: () => navigate("/dayone/portal"),
-    onError: (e) => toast.error(e.message),
+    onError: () => toast.error("LINE 登入失敗，請重試"),
   });
 
   // Email/password login via existing auth
   const pwdLogin = trpc.auth.loginWithPassword.useMutation({
     onSuccess: () => navigate("/dayone/portal"),
-    onError: (e) => toast.error(e.message),
+    onError: () => toast.error("帳號或密碼錯誤，請重試"),
   });
 
   async function handleLineLogin() {

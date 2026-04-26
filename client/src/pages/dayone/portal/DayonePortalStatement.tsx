@@ -41,7 +41,7 @@ export default function DayonePortalStatement() {
 
   const addNote = trpc.dayone.portal.addCustomerNote.useMutation({
     onSuccess: () => { toast.success("備註已儲存"); setNoteArId(null); refetch(); },
-    onError: (e) => toast.error(e.message),
+    onError: () => toast.error("備註儲存失敗，請重試"),
   });
 
   return (

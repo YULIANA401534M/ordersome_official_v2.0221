@@ -47,7 +47,7 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
       setOpen(false);
       utils.dayone.customers.list.invalidate();
     },
-    onError: (e) => toast.error(e.message),
+    onError: () => toast.error("儲存失敗，請確認填寫資料後再試"),
   });
 
   const del = trpc.dayone.customers.delete.useMutation({
@@ -55,7 +55,7 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
       toast.success("客戶已刪除");
       utils.dayone.customers.list.invalidate();
     },
-    onError: (e) => toast.error(e.message),
+    onError: () => toast.error("刪除失敗，請重試"),
   });
 
   function openNew() {
@@ -298,7 +298,7 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
                   <SelectContent>
                     <SelectItem value="monthly">月結</SelectItem>
                     <SelectItem value="weekly">週結</SelectItem>
-                    <SelectItem value="daily">日結</SelectItem>
+                    <SelectItem value="per_delivery">逐筆結</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -18,7 +18,7 @@ export default function DayonePortalResetPassword() {
       toast.success("密碼重設成功，請使用新密碼登入");
       navigate("/dayone/portal/login");
     },
-    onError: (e) => toast.error(e.message),
+    onError: () => toast.error("重設密碼失敗，連結可能已過期，請重新申請"),
   });
 
   function handleSubmit(e: React.FormEvent) {

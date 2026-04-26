@@ -1,6 +1,6 @@
 # CLAUDE.md — OrderSome 專案主腦
 
-> 版本 v6.28｜最後更新：2026-04-26
+> 版本 v6.29｜最後更新：2026-04-26
 
 ---
 
@@ -155,8 +155,13 @@ Hero 圖片規則：
 
 目標是讓大永可以真實跑完整一天作業。已完成的是頁面和後端邏輯，但**還沒有人跑過完整流程驗證數字**。
 
-**已修的 bug（v6.28）：**
-- 派車單列印空白：Sheet 透過 Radix Portal 掛載，`body > *` 的 print CSS 把 portal 容器一起隱藏。改成 `handlePrint` 開新視窗並注入 `.print-target` 的 HTML 列印，繞過 Portal。
+**已修的 bug（v6.29）：**
+- 派車單列印空白（v6.28）：Sheet 透過 Radix Portal 掛載，`body > *` 的 print CSS 把 portal 容器一起隱藏。改成 `handlePrint` 開新視窗並注入 `.print-target` 的 HTML 列印，繞過 Portal。
+- 客戶管理新增客戶失敗（v6.29）：`settlementCycle` 的 `daily` 不在 DB enum `('per_delivery','weekly','monthly')` 內 → 改成 `per_delivery`（逐筆結）。
+- 庫存管理無修改按鈕（v6.29）：在目前庫存欄加入每列「調整」按鈕，inline 編輯新數量＋備註，呼叫 `adjust` mutation（type=adjust 設定絕對值）。
+- 訂單狀態欄文字斷行（v6.29）：`whitespace-nowrap` 加進 badge。
+- 訂單篩選只有單日（v6.29）：加「單日／區間」切換，區間模式顯示起訖日期 input，後端 `orders.list` 補 `dateFrom` / `dateTo` 參數。
+- 所有大永頁面錯誤訊息改中文（v6.29）：dayone/* 與 portal/* 的 `toast.error(e.message)` 全替換為中文說明。
 
 **大永落地驗收條件（需要真人跑過）：**
 1. 建訂單 → 派車 → 列印派車單有內容（v6.28 已修）

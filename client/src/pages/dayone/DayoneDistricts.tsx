@@ -26,7 +26,7 @@ export default function DayoneDistricts() {
       setOpen(false);
       utils.dayone.districts.list.invalidate();
     },
-    onError: (e) => toast.error(e.message),
+    onError: () => toast.error("操作失敗，請重試"),
   });
 
   const deleteDistrict = trpc.dayone.districts.delete.useMutation({
@@ -35,7 +35,7 @@ export default function DayoneDistricts() {
       setDeleteTarget(null);
       utils.dayone.districts.list.invalidate();
     },
-    onError: (e) => toast.error(e.message),
+    onError: () => toast.error("操作失敗，請重試"),
   });
 
   function openCreate() {

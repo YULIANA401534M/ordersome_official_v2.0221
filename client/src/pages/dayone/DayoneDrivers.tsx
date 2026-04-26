@@ -26,7 +26,7 @@ export default function DayoneDrivers() {
       setOpen(false);
       utils.dayone.drivers.list.invalidate();
     },
-    onError: (e) => toast.error(e.message),
+    onError: () => toast.error("操作失敗，請重試"),
   });
 
   const deleteDriver = trpc.dayone.drivers.delete.useMutation({
@@ -35,7 +35,7 @@ export default function DayoneDrivers() {
       setDeleteTarget(null);
       utils.dayone.drivers.list.invalidate();
     },
-    onError: (e) => toast.error(e.message),
+    onError: () => toast.error("操作失敗，請重試"),
   });
 
   function openCreate() {

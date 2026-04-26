@@ -37,7 +37,7 @@ function ChangePasswordDialog({ onClose }: { onClose: () => void }) {
   const [confirm, setConfirm] = useState("");
   const mut = trpc.dayone.portal.changePassword.useMutation({
     onSuccess: () => { toast.success("密碼已更新"); onClose(); },
-    onError: (e) => toast.error(e.message),
+    onError: () => toast.error("密碼更新失敗，請確認舊密碼是否正確"),
   });
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -75,7 +75,7 @@ export default function DayonePortalAccount() {
 
   const bindLine = trpc.dayone.portal.bindLine.useMutation({
     onSuccess: () => { toast.success("LINE 帳號綁定成功"); refetchMe(); },
-    onError: (e) => toast.error(e.message),
+    onError: () => toast.error("LINE 帳號綁定失敗，請重試"),
   });
 
   const customer = (me as any)?.customer;

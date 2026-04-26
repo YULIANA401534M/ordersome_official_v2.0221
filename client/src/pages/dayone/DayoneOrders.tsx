@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Search, Trash2 } from "lucide-react";
+import { Plus, Search, Trash2, CalendarDays, Calendar } from "lucide-react";
 import { toast } from "sonner";
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
@@ -25,8 +25,13 @@ function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }
 
+type DateMode = "single" | "range";
+
 export default function DayoneOrders() {
+  const [dateMode, setDateMode] = useState<DateMode>("single");
   const [date, setDate] = useState(todayStr);
+  const [dateFrom, setDateFrom] = useState(todayStr);
+  const [dateTo, setDateTo] = useState(todayStr);
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
@@ -40,7 +45,9 @@ export default function DayoneOrders() {
   const utils = trpc.useUtils();
   const { data: orders, isLoading } = trpc.dayone.orders.list.useQuery({
     tenantId: TENANT_ID,
-    deliveryDate: date || undefined,
+    deliveryDate: dateMode === "single" ? (date || undefined) : undefined,
+    dateFrom: dateMode === "range" ? (dateFrom || undefined) : undefined,
+    dateTo: dateMode === "range" ? (dateTo || undefined) : undefined,
     status: statusFilter === "all" ? undefined : statusFilter,
   });
   const { data: customers } = trpc.dayone.customers.list.useQuery({ tenantId: TENANT_ID });
@@ -53,7 +60,7 @@ export default function DayoneOrders() {
       setCreateOpen(false);
       utils.dayone.orders.list.invalidate();
     },
-    onError: (e) => toast.error(e.message),
+    onError: () => toast.error("建立訂單失敗，請確認填寫資料後再試"),
   });
 
   const updateStatus = trpc.dayone.orders.updateStatus.useMutation({
@@ -61,7 +68,7 @@ export default function DayoneOrders() {
       toast.success("訂單狀態已更新");
       utils.dayone.orders.list.invalidate();
     },
-    onError: (e) => toast.error(e.message),
+    onError: () => toast.error("狀態更新失敗，請重試"),
   });
 
   const deleteOrder = trpc.dayone.orders.deleteOrder.useMutation({
@@ -70,7 +77,7 @@ export default function DayoneOrders() {
       setDeleteTarget(null);
       utils.dayone.orders.list.invalidate();
     },
-    onError: (e) => toast.error(e.message),
+    onError: () => toast.error("刪除失敗，請重試"),
   });
 
   const filtered = (orders as any[] ?? []).filter((o: any) => !search || o.customerName?.includes(search) || o.orderNo?.includes(search));
@@ -195,10 +202,38 @@ export default function DayoneOrders() {
 
         <Card className="dayone-surface-card rounded-[30px]">
           <CardContent className="p-4 md:p-5">
-            <div className="dayone-toolbar md:grid-cols-[170px_180px_minmax(260px,1fr)]">
-              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            <div className="flex flex-wrap gap-3">
+              <div className="flex items-center gap-1 rounded-xl border border-stone-200 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setDateMode("single")}
+                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${dateMode === "single" ? "bg-amber-600 text-white" : "text-stone-500 hover:bg-stone-100"}`}
+                >
+                  <Calendar className="h-3.5 w-3.5" />
+                  單日
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDateMode("range")}
+                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${dateMode === "range" ? "bg-amber-600 text-white" : "text-stone-500 hover:bg-stone-100"}`}
+                >
+                  <CalendarDays className="h-3.5 w-3.5" />
+                  區間
+                </button>
+              </div>
+
+              {dateMode === "single" ? (
+                <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-40" />
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-38" />
+                  <span className="text-xs text-stone-400">至</span>
+                  <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-38" />
+                </div>
+              )}
+
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">全部狀態</SelectItem>
                   {Object.entries(STATUS_MAP).map(([k, v]) => (
@@ -206,7 +241,8 @@ export default function DayoneOrders() {
                   ))}
                 </SelectContent>
               </Select>
-              <div className="relative">
+
+              <div className="relative flex-1 min-w-[220px]">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <Input className="pl-9" placeholder="搜尋客戶名稱或訂單編號" value={search} onChange={(e) => setSearch(e.target.value)} />
               </div>
@@ -249,7 +285,7 @@ export default function DayoneOrders() {
                             <td>{o.deliveryDate}</td>
                             <td className="font-medium">${Number(o.totalAmount).toLocaleString()}</td>
                             <td>
-                              <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${st.color}`}>{st.label}</span>
+                              <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${st.color}`}>{st.label}</span>
                             </td>
                             <td>
                               <div className="flex items-center gap-1">

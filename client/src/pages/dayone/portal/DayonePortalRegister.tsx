@@ -17,7 +17,7 @@ export default function DayonePortalRegister() {
       toast.success("註冊成功，已自動登入");
       navigate("/dayone/portal");
     },
-    onError: (e) => toast.error(e.message),
+    onError: () => toast.error("註冊失敗，此信箱可能已被使用"),
   });
 
   function handleSubmit(e: React.FormEvent) {

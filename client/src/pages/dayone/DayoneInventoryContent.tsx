@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AlertTriangle, Plus, Boxes } from "lucide-react";
+import { AlertTriangle, Plus, Boxes, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 const MOVEMENT_TYPES = [
@@ -20,12 +20,13 @@ export default function DayoneInventoryContent({ tenantId }: { tenantId: number 
   const [adjustOpen, setAdjustOpen] = useState(false);
   const [form, setForm] = useState({ productId: "", movementType: "in", qty: 0, note: "" });
   const [safetyEdit, setSafetyEdit] = useState<{ id: number; productId: number; value: number } | null>(null);
+  const [qtyEdit, setQtyEdit] = useState<{ id: number; productId: number; currentQty: number; newQty: number; note: string } | null>(null);
 
   const utils = trpc.useUtils();
   const { data: inventory = [], isLoading } = trpc.dayone.inventory.list.useQuery({ tenantId });
   const { data: alerts = [] } = trpc.dayone.reports.inventoryAlerts.useQuery({ tenantId });
   const { data: products = [] } = trpc.dayone.products.list.useQuery({ tenantId });
-  const { data: movements = [] } = trpc.dayone.inventory.movements.useQuery({ tenantId, limit: 20 });
+  const { data: movements = [] } = trpc.dayone.inventory.movements.useQuery({ tenantId, limit: 50 });
   const { data: pendingReturns = [] } = trpc.dayone.inventory.pendingReturns.useQuery({ tenantId });
   const { data: signedReceipts = [] } = trpc.dayone.purchaseReceipt.list.useQuery({ tenantId, status: "signed" });
 
@@ -48,7 +49,7 @@ export default function DayoneInventoryContent({ tenantId }: { tenantId: number 
       utils.dayone.inventory.list.invalidate();
       utils.dayone.reports.inventoryAlerts.invalidate();
     },
-    onError: (error) => toast.error(error.message),
+    onError: () => toast.error("安全庫存更新失敗，請重試"),
   });
 
   const adjust = trpc.dayone.inventory.adjust.useMutation({
@@ -59,7 +60,7 @@ export default function DayoneInventoryContent({ tenantId }: { tenantId: number 
       utils.dayone.inventory.movements.invalidate();
       utils.dayone.reports.inventoryAlerts.invalidate();
     },
-    onError: (error) => toast.error(error.message),
+    onError: () => toast.error("庫存調整失敗，請重試"),
   });
 
   const confirmPendingReturn = trpc.dayone.inventory.confirmPendingReturn.useMutation({
@@ -70,7 +71,7 @@ export default function DayoneInventoryContent({ tenantId }: { tenantId: number 
       utils.dayone.inventory.movements.invalidate();
       utils.dayone.reports.inventoryAlerts.invalidate();
     },
-    onError: (error) => toast.error(error.message),
+    onError: () => toast.error("確認回庫失敗，請重試"),
   });
 
   return (
@@ -223,7 +224,7 @@ export default function DayoneInventoryContent({ tenantId }: { tenantId: number 
               <table className="w-full text-sm">
                 <thead className="border-b bg-stone-50">
                   <tr>
-                    {["品項", "目前庫存", "安全庫存", "單位"].map((heading) => (
+                    {["品項", "目前庫存", "安全庫存", "單位", "調整"].map((heading) => (
                       <th key={heading} className="px-4 py-3 text-left font-medium text-stone-500">{heading}</th>
                     ))}
                   </tr>
@@ -233,7 +234,44 @@ export default function DayoneInventoryContent({ tenantId }: { tenantId: number 
                     <tr key={item.id} className="border-b transition-colors hover:bg-stone-50/80">
                       <td className="px-4 py-3 font-medium text-stone-900">{item.productName}</td>
                       <td className={`px-4 py-3 font-semibold ${Number(item.currentQty) <= Number(item.safetyQty) ? "text-orange-600" : "text-stone-900"}`}>
-                        {item.currentQty}
+                        {qtyEdit?.id === item.id ? (
+                          <div className="flex items-center gap-2">
+                            <Input
+                              className="h-8 w-20"
+                              type="number"
+                              value={qtyEdit.newQty}
+                              onChange={(e) => setQtyEdit((prev) => prev ? { ...prev, newQty: Number(e.target.value) } : null)}
+                            />
+                            <Input
+                              className="h-8 w-28"
+                              placeholder="備註原因"
+                              value={qtyEdit.note}
+                              onChange={(e) => setQtyEdit((prev) => prev ? { ...prev, note: e.target.value } : null)}
+                            />
+                            <button
+                              type="button"
+                              className="text-xs text-amber-600 hover:text-amber-700"
+                              onClick={() => {
+                                if (qtyEdit.newQty === qtyEdit.currentQty) { setQtyEdit(null); return; }
+                                const diff = qtyEdit.newQty - qtyEdit.currentQty;
+                                adjust.mutate({
+                                  tenantId,
+                                  productId: qtyEdit.productId,
+                                  type: "adjust",
+                                  qty: qtyEdit.newQty,
+                                  note: `${qtyEdit.note || "手動調整"} (${diff > 0 ? "+" : ""}${diff})`,
+                                }, {
+                                  onSuccess: () => setQtyEdit(null),
+                                });
+                              }}
+                            >
+                              儲存
+                            </button>
+                            <button type="button" className="text-xs text-stone-400" onClick={() => setQtyEdit(null)}>取消</button>
+                          </div>
+                        ) : (
+                          item.currentQty
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         {safetyEdit?.id === item.id ? (
@@ -249,6 +287,18 @@ export default function DayoneInventoryContent({ tenantId }: { tenantId: number 
                         )}
                       </td>
                       <td className="px-4 py-3 text-stone-500">{item.unit}</td>
+                      <td className="px-4 py-3">
+                        {qtyEdit?.id !== item.id && (
+                          <button
+                            type="button"
+                            className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-stone-500 hover:bg-amber-50 hover:text-amber-700 transition-colors"
+                            onClick={() => setQtyEdit({ id: item.id, productId: item.productId, currentQty: Number(item.currentQty), newQty: Number(item.currentQty), note: "" })}
+                          >
+                            <Pencil className="h-3 w-3" />
+                            調整
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
