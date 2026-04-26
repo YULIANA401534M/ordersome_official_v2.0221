@@ -81,6 +81,14 @@ export default function DayoneOrders() {
     onError: () => toast.error("刪除失敗，請重試"),
   });
 
+  const reassignDriver = trpc.dayone.orders.reassignDriver.useMutation({
+    onSuccess: () => {
+      toast.success("司機已更新");
+      utils.dayone.orders.list.invalidate();
+    },
+    onError: () => toast.error("換司機失敗，請重試"),
+  });
+
   const filtered = (orders as any[] ?? []).filter((o: any) => !search || o.customerName?.includes(search) || o.orderNo?.includes(search));
 
   function MobileOrderItems({ orderId }: { orderId: number }) {
@@ -364,7 +372,29 @@ export default function DayoneOrders() {
                               </td>
                               <td className="font-mono text-xs">{o.orderNo}</td>
                               <td className="font-medium">{o.customerName}</td>
-                              <td className={`text-stone-600 ${!o.driverName ? "text-amber-600 font-medium" : ""}`}>{o.driverName ?? "⚠ 未指派"}</td>
+                              <td>
+                                {["pending", "assigned"].includes(o.status) ? (
+                                  <Select
+                                    value={o.driverId ? String(o.driverId) : "none"}
+                                    onValueChange={(v) => {
+                                      if (v === "none") return;
+                                      reassignDriver.mutate({ id: o.id, tenantId: TENANT_ID, driverId: Number(v) });
+                                    }}
+                                  >
+                                    <SelectTrigger className={`h-7 w-28 text-xs border-dashed ${!o.driverName ? "border-amber-400 text-amber-600" : "border-stone-200 text-stone-600"}`}>
+                                      <SelectValue placeholder="⚠ 未指派" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="none" disabled>{o.driverName ?? "⚠ 未指派"}</SelectItem>
+                                      {(drivers as any[] ?? []).filter((d: any) => d.status === "active").map((d: any) => (
+                                        <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                ) : (
+                                  <span className="text-stone-600 text-xs">{o.driverName ?? "-"}</span>
+                                )}
+                              </td>
                               <td>{o.deliveryDate}</td>
                               <td className="font-medium">${Number(o.totalAmount).toLocaleString()}</td>
                               <td>
@@ -411,7 +441,27 @@ export default function DayoneOrders() {
                           <div className="min-w-0">
                             <div className="font-mono text-[11px] text-stone-400">{o.orderNo}</div>
                             <h2 className="mt-1 text-lg font-semibold text-stone-900">{o.customerName}</h2>
-                            <p className={`mt-1 text-sm ${!o.driverName ? "text-amber-600 font-medium" : "text-stone-500"}`}>{o.driverName ?? "⚠ 未指派司機"}</p>
+                            {["pending", "assigned"].includes(o.status) ? (
+                              <Select
+                                value={o.driverId ? String(o.driverId) : "none"}
+                                onValueChange={(v) => {
+                                  if (v === "none") return;
+                                  reassignDriver.mutate({ id: o.id, tenantId: TENANT_ID, driverId: Number(v) });
+                                }}
+                              >
+                                <SelectTrigger className={`mt-1 h-7 w-36 text-xs border-dashed ${!o.driverName ? "border-amber-400 text-amber-600" : "border-stone-200 text-stone-500"}`}>
+                                  <SelectValue placeholder="⚠ 未指派" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none" disabled>{o.driverName ?? "⚠ 未指派"}</SelectItem>
+                                  {(drivers as any[] ?? []).filter((d: any) => d.status === "active").map((d: any) => (
+                                    <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <p className="mt-1 text-sm text-stone-500">{o.driverName ?? "-"}</p>
+                            )}
                           </div>
                           <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${st.color}`}>{st.label}</span>
                         </div>

@@ -72,7 +72,7 @@ export const liffRouter = router({
 
       // 1. 查客戶（用 lineId）
       const [customerRows] = await client.execute(
-        `SELECT id, name FROM dy_customers WHERE tenantId = ? AND lineId = ? AND status = 'active' LIMIT 1`,
+        `SELECT id, name, defaultDriverId, deliveryFrequency FROM dy_customers WHERE tenantId = ? AND lineId = ? AND status = 'active' LIMIT 1`,
         [tenantId, input.lineId]
       );
       const customer = (customerRows as any[])[0];
@@ -115,17 +115,34 @@ export const liffRouter = router({
         0
       );
 
-      // 4. 寫入 dy_orders
+      // 4. 推算 deliveryDate：依 deliveryFrequency 找下一個合適的送貨日
+      const freq: string = customer.deliveryFrequency ?? "daily";
+      const driverId: number | null = customer.defaultDriverId ?? null;
+
+      function nextDeliveryDate(frequency: string): string {
+        // Taiwan time = UTC+8
+        const now = new Date(Date.now() + 8 * 60 * 60 * 1000);
+        const todayTW = new Date(now.toISOString().slice(0, 10) + "T00:00:00Z");
+        // 從明天開始找
+        for (let i = 1; i <= 7; i++) {
+          const d = new Date(todayTW.getTime() + i * 86400000);
+          const dayOfWeek = d.getUTCDay(); // 0=Sun,1=Mon,...,6=Sat
+          if (frequency === "D1" && [1, 3, 5].includes(dayOfWeek)) return d.toISOString().slice(0, 10);
+          if (frequency === "D2" && [2, 4, 6].includes(dayOfWeek)) return d.toISOString().slice(0, 10);
+          if (frequency === "daily") return d.toISOString().slice(0, 10);
+        }
+        // fallback: 明天
+        return new Date(todayTW.getTime() + 86400000).toISOString().slice(0, 10);
+      }
+
+      const deliveryDate = nextDeliveryDate(freq);
       const orderNo = `LIFF${Date.now()}`;
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const deliveryDate = tomorrow.toISOString().slice(0, 10);
       const [orderResult] = await client.execute(
         `INSERT INTO dy_orders
-           (tenantId, orderNo, customerId, status, orderSource, totalAmount, paidAmount, paymentStatus,
+           (tenantId, orderNo, customerId, driverId, status, orderSource, totalAmount, paidAmount, paymentStatus,
             prevBoxes, inBoxes, returnBoxes, remainBoxes, deliveryDate, createdAt, updatedAt)
-         VALUES (?, ?, ?, 'pending', 'liff', ?, 0, 'unpaid', 0, 0, 0, 0, ?, NOW(), NOW())`,
-        [tenantId, orderNo, customerId, totalAmount, deliveryDate]
+         VALUES (?, ?, ?, ?, 'pending', 'liff', ?, 0, 'unpaid', 0, 0, 0, 0, ?, NOW(), NOW())`,
+        [tenantId, orderNo, customerId, driverId, totalAmount, deliveryDate]
       );
       const orderId: number = (orderResult as any).insertId;
 

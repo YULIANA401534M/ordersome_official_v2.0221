@@ -74,10 +74,12 @@ export const dyCustomersRouter = router({
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
-      let sql = `SELECT c.*, d.name as districtName, g.name as groupName
+      let sql = `SELECT c.*, d.name as districtName, g.name as groupName,
+                        dr.name as defaultDriverName
                  FROM dy_customers c
                  LEFT JOIN dy_districts d ON c.districtId = d.id
                  LEFT JOIN dy_customer_groups g ON c.groupId = g.id
+                 LEFT JOIN dy_drivers dr ON c.defaultDriverId = dr.id
                  WHERE c.tenantId = ?`;
       const params: any[] = [input.tenantId];
       if (input.groupId) {
@@ -107,6 +109,8 @@ export const dyCustomersRouter = router({
       loginEmail: z.string().optional(),
       isPortalActive: z.boolean().optional(),
       portalNote: z.string().optional(),
+      defaultDriverId: z.number().optional(),
+      deliveryFrequency: z.enum(['D1', 'D2', 'daily']).optional(),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -115,24 +119,28 @@ export const dyCustomersRouter = router({
       if (input.id) {
         await client.execute(
           `UPDATE dy_customers SET name=?, phone=?, address=?, districtId=?, groupId=?, paymentType=?, creditLimit=?, status=?,
-           customerLevel=?, settlementCycle=?, overdueDays=?, loginEmail=?, isPortalActive=?, portalNote=?, updatedAt=NOW()
+           customerLevel=?, settlementCycle=?, overdueDays=?, loginEmail=?, isPortalActive=?, portalNote=?,
+           defaultDriverId=?, deliveryFrequency=?, updatedAt=NOW()
            WHERE id=? AND tenantId=?`,
           [input.name, input.phone ?? null, input.address ?? null, input.districtId ?? null, input.groupId ?? null,
            input.paymentType, input.creditLimit, input.status,
            input.customerLevel ?? 'retail', input.settlementCycle ?? 'monthly', input.overdueDays ?? 30,
            input.loginEmail ?? null, input.isPortalActive ? 1 : 0, input.portalNote ?? null,
+           input.defaultDriverId ?? null, input.deliveryFrequency ?? 'daily',
            input.id, input.tenantId]
         );
         return { id: input.id };
       } else {
         const [result] = await client.execute(
           `INSERT INTO dy_customers (tenantId, groupId, name, phone, address, districtId, paymentType, creditLimit, outstandingAmount, status,
-           customerLevel, settlementCycle, overdueDays, loginEmail, isPortalActive, portalNote, createdAt, updatedAt)
-           VALUES (?,?,?,?,?,?,?,?,0,?,?,?,?,?,?,?,NOW(),NOW())`,
+           customerLevel, settlementCycle, overdueDays, loginEmail, isPortalActive, portalNote,
+           defaultDriverId, deliveryFrequency, createdAt, updatedAt)
+           VALUES (?,?,?,?,?,?,?,?,0,?,?,?,?,?,?,?,?,?,NOW(),NOW())`,
           [input.tenantId, input.groupId ?? null, input.name, input.phone ?? null, input.address ?? null, input.districtId ?? null,
            input.paymentType, input.creditLimit, input.status,
            input.customerLevel ?? 'retail', input.settlementCycle ?? 'monthly', input.overdueDays ?? 30,
-           input.loginEmail ?? null, input.isPortalActive ? 1 : 0, input.portalNote ?? null]
+           input.loginEmail ?? null, input.isPortalActive ? 1 : 0, input.portalNote ?? null,
+           input.defaultDriverId ?? null, input.deliveryFrequency ?? 'daily']
         );
         return { id: (result as any).insertId };
       }

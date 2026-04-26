@@ -24,6 +24,8 @@ const EMPTY_FORM = {
   loginEmail: "",
   isPortalActive: false,
   portalNote: "",
+  defaultDriverId: undefined as number | undefined,
+  deliveryFrequency: "daily" as "D1" | "D2" | "daily",
 };
 
 const EMPTY_GROUP_FORM = {
@@ -53,6 +55,7 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
   const { data: customers, isLoading } = trpc.dayone.customers.list.useQuery({ tenantId });
   const { data: districts } = trpc.dayone.districts.list.useQuery({ tenantId });
   const { data: groups } = trpc.dayone.customers.listGroups.useQuery({ tenantId });
+  const { data: drivers } = trpc.dayone.drivers.list.useQuery({ tenantId });
 
   const upsert = trpc.dayone.customers.upsert.useMutation({
     onSuccess: () => {
@@ -113,6 +116,8 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
       loginEmail: c.loginEmail ?? "",
       isPortalActive: !!c.isPortalActive,
       portalNote: c.portalNote ?? "",
+      defaultDriverId: c.defaultDriverId ?? undefined,
+      deliveryFrequency: c.deliveryFrequency ?? "daily",
     });
     setOpen(true);
   }
@@ -134,6 +139,8 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
       loginEmail: "",
       isPortalActive: false,
       portalNote: c.portalNote ?? "",
+      defaultDriverId: c.defaultDriverId ?? undefined,
+      deliveryFrequency: c.deliveryFrequency ?? "daily",
     });
     setOpen(true);
   }
@@ -160,6 +167,8 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
       loginEmail: form.loginEmail || undefined,
       isPortalActive: form.isPortalActive,
       portalNote: form.portalNote || undefined,
+      defaultDriverId: form.defaultDriverId,
+      deliveryFrequency: form.deliveryFrequency,
     });
   }
 
@@ -224,11 +233,14 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
     groupRows.push({ key: "ungrouped", label: "未分組", members: groupedMap["ungrouped"] });
   }
 
+  const freqLabel: Record<string, string> = { D1: "D1 週一三五", D2: "D2 週二四六", daily: "每天" };
+
   const CustomerRow = ({ c }: { c: any }) => (
     <tr key={c.id}>
       <td className="font-medium">{c.name}</td>
       <td className="text-stone-600">{c.phone ?? "-"}</td>
-      <td className="text-stone-600">{c.districtName ?? "-"}</td>
+      <td className="text-stone-600">{c.defaultDriverName ?? <span className="text-stone-400">未指定</span>}</td>
+      <td className="text-stone-600">{freqLabel[c.deliveryFrequency] ?? "-"}</td>
       <td className="text-stone-600">{paymentTypeLabel[c.paymentType] ?? c.paymentType}</td>
       <td className="text-stone-600">{c.customerLevel === "store" ? "門市" : c.customerLevel === "supplier" ? "供應商" : "零售"}</td>
       <td>
@@ -372,7 +384,7 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
               <table className="dayone-table w-full text-sm">
                 <thead>
                   <tr>
-                    {["名稱", "電話", "區域", "付款", "等級", "Portal", "狀態", "操作"].map((h) => (
+                    {["名稱", "電話", "預設司機", "頻率", "付款", "等級", "Portal", "狀態", "操作"].map((h) => (
                       <th key={h}>{h}</th>
                     ))}
                   </tr>
@@ -385,7 +397,7 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
                         className="cursor-pointer bg-stone-50 hover:bg-stone-100"
                         onClick={() => toggleGroup(key)}
                       >
-                        <td colSpan={8} className="py-2 pl-3">
+                        <td colSpan={10} className="py-2 pl-3">
                           <div className="flex items-center gap-2">
                             {expandedGroups.has(key) ? (
                               <FolderOpen className="h-4 w-4 text-amber-500" />
@@ -502,6 +514,32 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
               <Label>地址</Label>
               <Input value={form.address} onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))} />
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>預設司機</Label>
+                <Select value={form.defaultDriverId ? String(form.defaultDriverId) : "none"} onValueChange={(v) => setForm((p) => ({ ...p, defaultDriverId: v === "none" ? undefined : Number(v) }))}>
+                  <SelectTrigger><SelectValue placeholder="選擇司機" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">未指定</SelectItem>
+                    {(drivers as any[] ?? []).filter((d: any) => d.status === "active").map((d: any) => (
+                      <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>送貨頻率</Label>
+                <Select value={form.deliveryFrequency} onValueChange={(v) => setForm((p) => ({ ...p, deliveryFrequency: v as any }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="daily">每天</SelectItem>
+                    <SelectItem value="D1">D1（週一三五）</SelectItem>
+                    <SelectItem value="D2">D2（週二四六）</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>區域</Label>
