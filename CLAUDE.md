@@ -1,6 +1,6 @@
 # CLAUDE.md — OrderSome 專案主腦
 
-> 版本 v6.48｜最後更新：2026-04-27
+> 版本 v6.49｜最後更新：2026-04-27
 
 ---
 
@@ -213,6 +213,12 @@ Hero 圖片規則：
 - `listDispatch` ORDER BY 改為 `dispatchDate DESC, id ASC`，確保同一天多張派車單順序穩定（id 小的在前）
 - `DriverWorkLog.defaultDispatchId`：從尾端 reverse 找最新的非完成派車單，避免同天兩張單時仍預設到早上已完成的舊單
 - `DriverWorkLog.activeDispatchId`：`selectedDispatchId` 若不在當前 `dispatches` 清單內（資料重載後可能失效），自動回退到 `defaultDispatchId`
+
+**v6.49 日結改為任務導向（每張派車單各自日結）：**
+- `dy_work_logs` 新增 `dispatchOrderId BIGINT NULL` 欄位，建立 unique index `(tenantId, driverId, dispatchOrderId)`（TiDB migration 已執行）
+- `driver.submitWorkLog`：`dispatchOrderId` 改為必填，`totalOrders/totalCollected` 改為只計算這張派車單關聯的已送達訂單（透過 `dy_dispatch_items JOIN dy_orders`），`pending_handover` 狀態改為 `IN ('printed','in_progress')` 均可觸發
+- `driver.getMyWorkLog`：新增 `dispatchOrderId` 可選參數，有帶時按派車單查，否則 fallback 按 `workDate` 查最新一筆（向下相容）
+- `DriverWorkLog` 前端：`getMyWorkLog` 帶入 `activeDispatchId`；`deliveredOrders` 改為只算當前派車單的訂單；工作日誌區加入派車單選擇器（多張單時顯示）；送出成功提示改為「本次派車單日結已送出」
 
 **大永尚未測試的功能（P3）：**
 - 多車同一天、跨日累積後庫存數字

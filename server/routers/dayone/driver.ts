@@ -231,7 +231,7 @@ export const dyDriverRouter = router({
       note: z.string().optional(),
       cashHandedOver: z.number().min(0).optional(),
       handoverNote: z.string().optional(),
-      dispatchOrderId: z.number().optional(),
+      dispatchOrderId: z.number(),
     }))
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
@@ -242,33 +242,36 @@ export const dyDriverRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Driver account is not linked to Dayone" });
       }
 
+      // 只計算這張派車單關聯的已送達訂單
       const [summaryRows] = await client.execute(
-        `SELECT COUNT(*) as totalOrders, COALESCE(SUM(cashCollected),0) as totalCollected
-         FROM dy_orders WHERE tenantId=? AND driverId=? AND deliveryDate=? AND status='delivered'`,
-        [input.tenantId, driver.id, input.workDate]
+        `SELECT COUNT(*) as totalOrders, COALESCE(SUM(o.cashCollected),0) as totalCollected
+         FROM dy_dispatch_items di
+         JOIN dy_orders o ON o.id = di.orderId
+         WHERE di.dispatchOrderId=? AND di.tenantId=? AND o.status='delivered'`,
+        [input.dispatchOrderId, input.tenantId]
       );
       const summary = (summaryRows as any[])[0];
       const cashHandedOver = input.cashHandedOver ?? null;
 
       await client.execute(
-        `INSERT INTO dy_work_logs (tenantId, driverId, workDate, startTime, endTime, totalOrders, totalCollected, cashHandedOver, handoverNote, note, createdAt)
-         VALUES (?,?,?,?,?,?,?,?,?,?,NOW())
+        `INSERT INTO dy_work_logs
+           (tenantId, driverId, dispatchOrderId, workDate, startTime, endTime, totalOrders, totalCollected, cashHandedOver, handoverNote, note, createdAt)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,NOW())
          ON DUPLICATE KEY UPDATE startTime=VALUES(startTime), endTime=VALUES(endTime),
          totalOrders=VALUES(totalOrders), totalCollected=VALUES(totalCollected),
          cashHandedOver=VALUES(cashHandedOver), handoverNote=VALUES(handoverNote), note=VALUES(note)`,
-        [input.tenantId, driver.id, input.workDate, input.startTime ?? null, input.endTime ?? null,
+        [input.tenantId, driver.id, input.dispatchOrderId, input.workDate,
+         input.startTime ?? null, input.endTime ?? null,
          summary?.totalOrders ?? 0, summary?.totalCollected ?? 0,
          cashHandedOver, input.handoverNote ?? null, input.note ?? null]
       );
 
-      // Mark dispatch order as pending_handover so admin knows driver is back
-      if (input.dispatchOrderId) {
-        await client.execute(
-          `UPDATE dy_dispatch_orders SET status='pending_handover', updatedAt=NOW()
-           WHERE id=? AND tenantId=? AND driverId=? AND status='printed'`,
-          [input.dispatchOrderId, input.tenantId, driver.id]
-        );
-      }
+      // 標記這張派車單為待點收
+      await client.execute(
+        `UPDATE dy_dispatch_orders SET status='pending_handover', updatedAt=NOW()
+         WHERE id=? AND tenantId=? AND driverId=? AND status IN ('printed','in_progress')`,
+        [input.dispatchOrderId, input.tenantId, driver.id]
+      );
 
       return { success: true, totalOrders: summary?.totalOrders ?? 0, totalCollected: Number(summary?.totalCollected ?? 0) };
     }),
@@ -302,7 +305,7 @@ export const dyDriverRouter = router({
     }),
 
   getMyWorkLog: driverProcedure
-    .input(z.object({ tenantId: z.number(), workDate: z.string() }))
+    .input(z.object({ tenantId: z.number(), workDate: z.string(), dispatchOrderId: z.number().optional() }))
     .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
@@ -310,8 +313,16 @@ export const dyDriverRouter = router({
       const driver = await getDriverByUser(client, ctx.user.id, input.tenantId);
       if (!driver) return null;
 
+      if (input.dispatchOrderId) {
+        const [logRows] = await client.execute(
+          `SELECT * FROM dy_work_logs WHERE driverId=? AND dispatchOrderId=? AND tenantId=? LIMIT 1`,
+          [driver.id, input.dispatchOrderId, input.tenantId]
+        );
+        return (logRows as any[])[0] ?? null;
+      }
+      // fallback: 按 workDate 查最新一筆（向下相容）
       const [logRows] = await client.execute(
-        `SELECT * FROM dy_work_logs WHERE driverId=? AND workDate=? AND tenantId=? LIMIT 1`,
+        `SELECT * FROM dy_work_logs WHERE driverId=? AND workDate=? AND tenantId=? ORDER BY id DESC LIMIT 1`,
         [driver.id, input.workDate, input.tenantId]
       );
       return (logRows as any[])[0] ?? null;

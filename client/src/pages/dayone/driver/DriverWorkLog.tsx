@@ -18,11 +18,6 @@ export default function DriverWorkLog() {
   const [returnQtyByProduct, setReturnQtyByProduct] = useState<Record<number, number>>({});
   const [selectedDispatchId, setSelectedDispatchId] = useState<string>("");
 
-  const { data: workLog } = trpc.dayone.driver.getMyWorkLog.useQuery({
-    tenantId: TENANT_ID,
-    workDate: today,
-  });
-
   const { data: orders = [] } = trpc.dayone.driver.getMyTodayOrders.useQuery({
     tenantId: TENANT_ID,
     deliveryDate: today,
@@ -42,14 +37,21 @@ export default function DriverWorkLog() {
   const dispatchIds = new Set((dispatches as any[]).map((d: any) => String(d.id)));
   const resolvedSelectedId = dispatchIds.has(selectedDispatchId) ? selectedDispatchId : "";
   const activeDispatchId = Number(resolvedSelectedId || defaultDispatchId);
+
   const { data: dispatchDetail } = trpc.dayone.dispatch.getDispatchDetail.useQuery(
     { id: activeDispatchId, tenantId: TENANT_ID },
     { enabled: !!activeDispatchId }
   );
 
+  // 每張派車單各自的日結狀態
+  const { data: workLog } = trpc.dayone.driver.getMyWorkLog.useQuery(
+    { tenantId: TENANT_ID, workDate: today, dispatchOrderId: activeDispatchId },
+    { enabled: !!activeDispatchId }
+  );
+
   const submitLog = trpc.dayone.driver.submitWorkLog.useMutation({
     onSuccess: () => {
-      toast.success("今日日結已送出");
+      toast.success("派車單日結已送出");
       utils.dayone.driver.getMyWorkLog.invalidate();
     },
     onError: (error) => toast.error(error.message),
@@ -65,7 +67,14 @@ export default function DriverWorkLog() {
     onError: (error) => toast.error(error.message),
   });
 
-  const deliveredOrders = orders.filter((order: any) => order.status === "delivered");
+  // 只計算當前派車單的訂單
+  const dispatchOrderIds = useMemo(() => {
+    const items: any[] = (dispatchDetail as any)?.items ?? [];
+    return new Set(items.map((i: any) => Number(i.orderId)).filter(Boolean));
+  }, [dispatchDetail]);
+  const deliveredOrders = (orders as any[]).filter(
+    (order: any) => order.status === "delivered" && dispatchOrderIds.has(Number(order.id))
+  );
   const totalCollected = deliveredOrders.reduce((sum: number, order: any) => sum + Number(order.cashCollected ?? 0), 0);
   const pendingReturnsByProduct: Record<number, number> = (dispatchDetail as any)?.pendingReturnsByProduct ?? {};
 
@@ -236,15 +245,45 @@ export default function DriverWorkLog() {
         )}
 
         <section className="rounded-[28px] border border-stone-200/70 bg-white p-4 shadow-[0_12px_24px_rgba(120,53,15,0.05)]">
-          <div className="flex items-center gap-2">
-            <ClipboardCheck className="h-5 w-5 text-amber-600" />
-            <h3 className="text-sm font-semibold text-stone-900">工作日誌</h3>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <ClipboardCheck className="h-5 w-5 text-amber-600" />
+              <h3 className="text-sm font-semibold text-stone-900">工作日誌</h3>
+            </div>
+            {(dispatches as any[]).length > 1 && (
+              <span className="text-xs text-stone-400">
+                路線 {(dispatches as any[]).find((d: any) => d.id === activeDispatchId)?.routeCode ?? "—"}
+              </span>
+            )}
           </div>
+
+          {(dispatches as any[]).length > 1 && (
+            <div className="mt-3">
+              <Select value={activeDispatchId ? String(activeDispatchId) : ""} onValueChange={setSelectedDispatchId}>
+                <SelectTrigger className="rounded-2xl">
+                  <SelectValue placeholder="選擇要日結的派車單" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(dispatches as any[]).map((dispatch: any) => {
+                    const statusLabel: Record<string, string> = {
+                      draft: "草稿", printed: "已列印", in_progress: "配送中",
+                      pending_handover: "待點收", completed: "已完成",
+                    };
+                    return (
+                      <SelectItem key={dispatch.id} value={String(dispatch.id)}>
+                        {`路線 ${dispatch.routeCode || "—"}　${statusLabel[dispatch.status] ?? dispatch.status}　共 ${dispatch.totalStops ?? "?"} 站`}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {hasSubmitted ? (
             <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-4 text-center">
               <CheckCircle className="mx-auto h-10 w-10 text-emerald-500" />
-              <p className="mt-3 text-sm font-semibold text-emerald-700">今天日結已送出</p>
+              <p className="mt-3 text-sm font-semibold text-emerald-700">本次派車單日結已送出</p>
               <p className="mt-1 text-xs text-emerald-700/75">
                 完成 {Number((workLog as any)?.totalOrders ?? deliveredOrders.length)} 筆，現收 NT${" "}
                 {Number((workLog as any)?.totalCollected ?? totalCollected).toLocaleString()}
@@ -333,7 +372,7 @@ export default function DriverWorkLog() {
                     note: note || undefined,
                     cashHandedOver: cashHandedOver ? Number(cashHandedOver) : undefined,
                     handoverNote: handoverNote || undefined,
-                    dispatchOrderId: activeDispatchId || undefined,
+                    dispatchOrderId: activeDispatchId,
                   })
                 }
               >
