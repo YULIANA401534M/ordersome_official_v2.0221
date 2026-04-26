@@ -98,15 +98,17 @@ Backoffice access refactor note: shared role/tenant/module constants live in `sh
 | 優先 | 頁面 | 路由 | 狀態 |
 |------|------|------|------|
 | 1 | DayoneLayout.tsx | （全域 Shell） | pending |
-| 2 | DayoneDashboard.tsx | /dayone | pending |
+| 2 | DayoneDashboard.tsx | /dayone | done（v6.24 字體統一） |
 | 3 | DayoneOrders.tsx | /dayone/orders | pending |
-| 4 | DayoneDispatch.tsx | /dayone/dispatch | 參考基準，小調整 |
-| 5 | DayonePurchaseReceipts.tsx | /dayone/purchase-receipts | pending |
-| 6 | DayoneInventoryContent.tsx | /dayone/inventory | pending |
-| 7 | DayoneARContent.tsx | /dayone/ar | pending |
+| 4 | DayoneDispatch.tsx | /dayone/dispatch | done（v6.24 字體統一） |
+| 5 | DayonePurchaseReceipts.tsx | /dayone/purchase-receipts | done（v6.24 字體統一） |
+| 6 | DayoneInventoryContent.tsx | /dayone/inventory | done（v6.24 字體統一） |
+| 7 | DayoneARContent.tsx | /dayone/ar | done（v6.24 字體統一） |
 | 8 | DayoneCustomersContent.tsx | /dayone/customers | pending |
-| 9 | DayonePurchaseContent.tsx | /dayone/purchase | pending |
-| 10 | 其餘 dayone 頁面 | driver/* / portal/* | pending |
+| 9 | DayonePurchaseContent.tsx | /dayone/purchase | done（v6.24 字體統一） |
+| 10 | DayoneLiffOrders.tsx / DayoneProducts.tsx | /dayone/liff-orders, /dayone/products | done（v6.24 字體統一） |
+| 11 | DayoneSettings / DayoneReports | /dayone/settings, /dayone/reports | done（v6.23 + v6.24 字體統一） |
+| 12 | 其餘 dayone 頁面 | driver/* / portal/* | pending |
 
 **商城頁面改版順序**
 | 優先 | 頁面 | 路由 | 狀態 |
@@ -243,18 +245,18 @@ Hero 圖片規則：
 
 | 門市名稱 | 簡稱 |
 |---------|------|
-| 靘?隞暻?北屯中清店 | 北屯中清店 |
-| 靘?隞暻?北屯崇德店 | 北屯崇德店 |
-| 靘?隞暻?豐原店 | 豐原店 |
-| 靘?隞暻?太平店 | 太平店 |
-| 靘?隞暻?太平東店 | 太平東店 |
-| 靘?隞暻?霧峰店 | 霧峰店 |
-| 靘?隞暻?霧峰南店 | 霧峰南店 |
-| 靘?隞暻?大里店 | 大里店 |
-| 靘?隞暻?北屯文心控股店 | 北屯文心控股店 |
-| 靘?隞暻?鎮平扈蝳?店 | 鎮平扈蝳?店 |
-| 靘?隞暻?鞎∠?店 | 鞎∠?店 |
-| 靘?隞暻?東勢店 | 東勢店 |
+| 來點什麼 東勢店(創始店)  | 東勢店 |
+| 來點什麼 逢甲旗艦店(直營店) | 逢甲旗艦店 |
+| 來點什麼 東山店(直營店) | 東山店 |
+| 來點什麼 大里店(加盟店) | 大里店 |
+| 來點什麼 草屯中山店(加盟店) | 草屯店 |
+| 來點什麼 北區永興店(加盟店) | 永興店 |
+| 來點什麼 財神店(加盟店) | 財神店 |
+| 來點什麼 民權店(加盟店) | 民權店 |
+| 來點什麼 西屯福上店(加盟店) | 福上店 |
+| 來點什麼 瀋陽梅川店(加盟店) | 瀋陽梅川店 |
+| 來點什麼 來點什麼 北屯昌平店(加盟店) | 昌平店 |
+| 來點什麼-來點什麼 南屯林新店(加盟店) | 林新店 |
 
 ---
 
