@@ -1,6 +1,6 @@
 # CLAUDE.md — OrderSome 專案主腦
 
-> 版本 v6.26｜最後更新：2026-04-26
+> 版本 v6.27｜最後更新：2026-04-26
 
 ---
 
@@ -13,7 +13,7 @@
 - `docs/yulian-ordersome-wanwansia-business-map-2026-04-26.md` — 宇聯/來點什麼業務地圖
 - `docs/backoffice-access-map-2026-04-26.md` — 後台存取與權限重構細節
 
-這些文件目前留在 repo 作為專案文件，不提取為全局 skill。它會隨 CLAUDE.md 一起演進。建議閱讀策略：**最新優先**，從最近更新的資料夾/檔案開始，只在需要確認數字或供應商/門市/流程時回頭查舊資料。
+建議閱讀策略：**最新優先**，從最近更新的資料夾/檔案開始，只在需要確認數字或供應商/門市/流程時回頭查舊資料。
 
 **BowlHero / 碗碗俠**：最新確認來源（截至 2026-04-26）為 `C:\Users\barmy\Downloads\碗碗俠_試菜SOP記錄表_完整版_v2_20260424.xlsx` 與 `C:\Users\barmy\Downloads\碗碗俠_公司設立流程與開幕前準備_20260423.xlsx`；若與較舊的計劃 PDF 衝突，以這兩份為準。南屯林新店正確地址：「台中市南屯區惠中路三段54號」（舊表出現「大墩十一街453號」視為舊資料）。
 
@@ -29,6 +29,7 @@
 - `AdminDashboardLayout.tsx` 現在使用共用 access helpers 處理 role/tenant/permissions/cost
 - 第三輪新增了 `ORDER_SOME_PERMISSION_DEFINITIONS`，對建立/更新時的未知權限字串做清理，並讓 AdminUsers/AdminPermissions 顯示與每個權限關聯的頁面路由，加入全選/全移控制
 - 繼續做權限工作前請先執行 `node scripts/audit-access-control.mjs`；下一步目標：共用側邊欄路由矩陣、`has_procurement_access` migration、權限稽核日誌
+- `has_procurement_access` 目前用 any cast 暫解，需要等正式 permissions 系統完成
 
 ---
 
@@ -72,68 +73,38 @@
 
 ## 後台改版任務（v6.05 起）
 
-### 背景
+### 宇聯後台頁面改版進度（全部完成）
 
-宇聯後台、大永後台、商城三系統皆需前端改版。
+| 頁面 | 路由 | 版本 |
+|------|------|------|
+| AdminDashboardLayout.tsx | 全域 Shell | v6.05 |
+| OSProducts.tsx | /dashboard/products | v6.08 |
+| OSProcurement.tsx | /dashboard/procurement | v6.09 |
+| OSInventory.tsx | /dashboard/inventory | v6.10 |
+| OSDailyReport.tsx | /dashboard/daily-report | v6.11 |
+| OSProfitLoss.tsx | /dashboard/profit-loss | v6.12 |
+| OSPurchasing.tsx | /dashboard/purchasing | v6.13 |
+| OSAccounting.tsx | /dashboard/accounting | v6.14 |
+| OSRebate.tsx | /dashboard/rebate | v6.15 |
+| OSDelivery.tsx | /dashboard/delivery | v6.16 |
+| OSCustomers.tsx | /dashboard/customers | v6.17 |
+| FranchiseDashboard / Franchisees / FranchiseInquiries | /dashboard/franchise* | v6.18 |
+| AdminUsers / AdminPermissions / AdminTenants / AdminSopPermissions | /dashboard/admin-* | v6.19 |
+| ContentManagement / ContentEditor / AIWriter | /dashboard/content* | v6.20 |
+| SOPKnowledgeBase / DailyChecklist / EquipmentRepairs / OSScheduling | 其餘 | v6.21 |
 
-| 系統 | 風格定位 | 關鍵問題 |
-|------|---------|---------|
-| 宇聯後台 `/dashboard/` | 暖色系、高質感、好閱讀 | 各頁面風格不一致、RWD 跑版 |
-| 大永後台 `/dayone/` | 沿用現有深色系但需統一，dispatch 頁是最佳參考 | 字型/間距/排版/RWD 各頁不統一 |
-| 商城 `/shop/` | 貼近品牌暖黃，乾淨購物體驗 | 尚未開始 |
+### 大永後台頁面改版進度（全部完成，v6.24 字體統一）
 
-### 執行策略
+已完成：DayoneLayout、DayoneDashboard、DayoneOrders、DayoneDispatch、DayonePurchaseReceipts、DayoneInventoryContent、DayoneARContent、DayoneCustomersContent、DayonePurchaseContent、DayoneLiffOrders、DayoneProducts、DayoneSettings、DayoneReports、DayoneUsers、DriverPickup、DriverLayout、DriverHome、DriverToday、DriverOrders、DriverDone、DriverOrderDetail、DriverWorkLog
 
-1. 先用 `/impeccable teach` 建立三套設計規範，寫入 PRODUCT.md + DESIGN.md
-2. 宇聯後台先改 Layout Shell（`AdminDashboardLayout.tsx`），確立全局 token 後再逐頁套用
-3. 大永後台以 `DayoneLayout.tsx` + `/dayone/dispatch` 為基準，對齊其他頁面
-4. 商城最後處理
+### 商城頁面改版進度（尚未開始）
 
-### 宇聯後台頁面改版進度（tRPC 查詢邏輯和路由一律不動）
-
-| 優先 | 頁面 | 路由 | 狀態 |
-|------|------|------|------|
-| 1 | AdminDashboardLayout.tsx | 全域 Shell | done（v6.05 Warm Paper 暖色側邊欄+OKLCH token） |
-| 2 | OSProducts.tsx | /dashboard/products | done（v6.08） |
-| 3 | OSProcurement.tsx | /dashboard/procurement | done（v6.09） |
-| 4 | OSInventory.tsx | /dashboard/inventory | done（v6.10） |
-| 5 | OSDailyReport.tsx | /dashboard/daily-report | done（v6.11） |
-| 6 | OSProfitLoss.tsx | /dashboard/profit-loss | done（v6.12） |
-| 7 | OSPurchasing.tsx | /dashboard/purchasing | done（v6.13） |
-| 8 | OSAccounting.tsx | /dashboard/accounting | done（v6.14） |
-| 9 | OSRebate.tsx | /dashboard/rebate | done（v6.15） |
-| 10 | OSDelivery.tsx | /dashboard/delivery | done（v6.16） |
-| 11 | OSCustomers.tsx | /dashboard/customers | done（v6.17） |
-| 12 | FranchiseDashboard / Franchisees / FranchiseInquiries | /dashboard/franchise* | done（v6.18） |
-| 13 | AdminUsers / AdminPermissions / AdminTenants / AdminSopPermissions | /dashboard/admin-* | done（v6.19） |
-| 14 | ContentManagement / ContentEditor / AIWriter | /dashboard/content* | done（v6.20） |
-| 15 | SOPKnowledgeBase / DailyChecklist / EquipmentRepairs / OSScheduling | 其餘 | done（v6.21） |
-
-### 大永後台頁面改版進度
-
-| 優先 | 頁面 | 路由 | 狀態 |
-|------|------|------|------|
-| 1 | DayoneLayout.tsx | 全域 Shell | pending |
-| 2 | DayoneDashboard.tsx | /dayone | done（v6.24 字體統一） |
-| 3 | DayoneOrders.tsx | /dayone/orders | pending |
-| 4 | DayoneDispatch.tsx | /dayone/dispatch | done（v6.24 字體統一） |
-| 5 | DayonePurchaseReceipts.tsx | /dayone/purchase-receipts | done（v6.24 字體統一） |
-| 6 | DayoneInventoryContent.tsx | /dayone/inventory | done（v6.24 字體統一） |
-| 7 | DayoneARContent.tsx | /dayone/ar | done（v6.24 字體統一） |
-| 8 | DayoneCustomersContent.tsx | /dayone/customers | pending |
-| 9 | DayonePurchaseContent.tsx | /dayone/purchase | done（v6.24 字體統一） |
-| 10 | DayoneLiffOrders.tsx / DayoneProducts.tsx | /dayone/liff-orders, /dayone/products | done（v6.24 字體統一） |
-| 11 | DayoneSettings / DayoneReports | /dayone/settings, /dayone/reports | done（v6.23 + v6.24 字體統一） |
-| 12 | 其餘頁面 | driver/* / portal/* | pending |
-
-### 商城頁面改版進度
-
-| 優先 | 頁面 | 路由 | 狀態 |
-|------|------|------|------|
-| 1 | ShopHome.tsx | /shop | pending |
-| 2 | ShopCategory.tsx | /shop/category/* | pending |
-| 3 | ProductDetail.tsx | /shop/product/* | pending |
-| 4 | Cart / Checkout / OrderComplete | /shop/cart* | pending |
+| 頁面 | 路由 |
+|------|------|
+| ShopHome.tsx | /shop |
+| ShopCategory.tsx | /shop/category/* |
+| ProductDetail.tsx | /shop/product/* |
+| Cart / Checkout / OrderComplete | /shop/cart* |
 
 ### 設計規則（後台通用）
 
@@ -146,7 +117,7 @@
 
 ---
 
-## 前端官網改版進度（v6.03）
+## 前端官網改版進度（v6.03，全部完成）
 
 ### 品牌設計規範
 
@@ -157,19 +128,9 @@
 - 非同步資料頁：文章/門市卡片不可用 `useInView` 控制 `animate`，改用直接 `animate`
 - tRPC 查詢與路由不動，每次改完必須 `npm run build` 通過再 commit
 
-### 品牌子頁面（全部完成）
+品牌子頁面（全部完成）：BrandHome、BrandMenu、BrandStores、BrandStory、BrandFranchise、BrandNews、BrandContact
 
-| 頁面 | 狀態 | 特色 |
-|------|------|------|
-| BrandHome.tsx | done | 視差 Hero「今天，來點什麼？」，食物照片牆，門市數字條 |
-| BrandMenu.tsx | done | 菜單圖片貼紙標籤，分類 Tab + 圖片磚格子 |
-| BrandStores.tsx | done | 地圖全寬，auto-fill minmax(260px,1fr) 格子 |
-| BrandStory.tsx | done | 視差 Hero，暗底引言帶，四里程碑時間軸，三大理念橫線，暖黃願景帶 |
-| BrandFranchise.tsx | done | 深色 Hero，四大優勢橫線，暖黃引言帶，六步驟格子，FAQ，深色表單 |
-| BrandNews.tsx | done | 視差 Hero，分類 tab，非同步文章格子（直接 animate），空狀態大字 |
-| BrandContact.tsx | done | 深色 Hero，雙欄（聯絡資訊橫線/表單），hover 暖黃按鈕 |
-
-### 企業子頁面（深暖碳黑＋品牌金銅色系）
+### 企業子頁面（深暖碳黑＋品牌金銅色系，全部完成）
 
 色彩 token：
 - 背景：`oklch(0.12 0.01 60)`，淺色段：`oklch(0.97 0.02 85)`
@@ -184,14 +145,7 @@ Hero 圖片規則：
 - 底部漸層 `linear-gradient(to top, bg 0%, transparent 35%)`
 - 禁用 `corporate-logo.png`（白底 PNG 放深色背景會破圖）
 
-| 頁面 | 狀態 |
-|------|------|
-| CorporateAbout.tsx | done |
-| CorporateBrands.tsx | done |
-| CorporateCulture.tsx | done |
-| CorporateFranchise.tsx | done |
-| CorporateNews.tsx | done |
-| CorporateContact.tsx | done |
+頁面：CorporateAbout、CorporateBrands、CorporateCulture、CorporateFranchise、CorporateNews、CorporateContact（全部完成）
 
 ---
 
@@ -215,7 +169,7 @@ Hero 圖片規則：
 
 1. **先更新 CLAUDE.md**，版號 +0.01
 2. CLAUDE.md 要讓下一個接手的 Claude 看完就能掌握全局
-3. 版號格式 v6.XX（目前已到 v6.24）
+3. 版號格式 v6.XX（目前已到 v6.27）
 4. 確認 TypeScript 無錯誤再 commit
 5. 每次 commit 後也要更新 `docs/ordersome_module_map_v1.html`（每個功能模組的 status-pill）
 6. **前端設計工作**：使用 `impeccable` skill
@@ -224,14 +178,42 @@ Hero 圖片規則：
 
 ## 待辦（後端功能）
 
-1. **RWD 優化**：部分手機/桌面版面跑版，需全站驗證
-2. **細粒度權限**：目前只有 super_admin 和 manager 兩層
-3. **欄位驗證**：補完所有後台功能的 DB 欄位驗證
-4. **稽核日誌**：所有重要操作寫入 `os_audit_logs`，包含庫存異動寫入 `os_inventory_logs`
-5. **供應商匹配**：模糊比對 `os_products.name`，補完 aliases JSON 機制
-6. **商品名稱對照**：A 供應商用「大盒蛋」，進貨用 aliases JSON 對照
-7. **庫存盤點**：手動調整目前沒有完整 DB 紀錄
-8. **多租戶架構**：宇聯 ERP（os_）、大永（dy_）、server/_core/ 分開管理
+**P1 — 影響正常作業**
+- [ ] **帳務核對**：/dashboard/purchasing、/dashboard/inventory、/dashboard/accounting 各有不完整功能待補
+- [ ] **needsReview 商品審核**：137筆待審商品在 /dashboard/products 逐一確認
+- [ ] **日報彙總功能**：`os_daily_reports` 目前各門市資料格式不統一，彙總計算有誤
+
+**P2 — 重要**
+- [ ] 太平東/北屯等多店的門市成本分攤問題
+- [ ] 異常採購品項的成本追蹤
+- [ ] 供應商對帳：`autoMatchTransactions` 尚未完成，目前為手動流程
+- [ ] **細粒度權限系統**：DB 新增 `os_user_permissions`，後端 permissionMiddleware，前端動態 sidebar
+- [ ] **os_menu_items 待建**：TiDB 尚未建立，OSCaMenu 功能不完整；需補 migration + `os_menu_item_ingredients` + `os_products.unitCost`
+- [ ] **欄位驗證**：補完所有後台功能的 DB 欄位驗證
+- [ ] **稽核日誌**：所有重要操作寫入 `os_audit_logs`，庫存異動寫入 `os_inventory_logs`
+- [ ] **供應商匹配**：模糊比對 `os_products.name`，補完 aliases JSON 機制
+
+**P3 — 備用**
+- [ ] BOM 建立：整合品項主檔 + `os_products`（類似 CA 表功能）
+- [ ] 大永 LIFF 功能：liffId 尚未設定，`LiffOrder.tsx` 連結不上
+- [ ] 大永 LINE 通知：cron 排程尚未建立
+- [ ] 大永 Portal 找回密碼：email 發送尚未串接 Resend
+- [ ] 商城前端改版（ShopHome / ShopCategory / ProductDetail / Cart 等）
+- [ ] 臨時加貨補單與差異對帳（dispatch.ts 已加 manualAddStop，端對端未驗）
+- [ ] 供應商付款單完整閉環
+- [ ] 逐頁完整人工 smoke test
+
+---
+
+## 給 Leo 的待辦資料
+
+| 資料 | 狀態 |
+|------|------|
+| 3/31 期初盤點 | 已完成 |
+| 大買進貨匯入 | 已完成 2025/12起 |
+| 廣弘採購單 | 已完成 2026-02起 |
+| 盤點初期表單（2025全年） | 尚未提供，只有2025/12起 |
+| 供應商月結帳期（合約/憑單） | 尚未提供，處理中 |
 
 ---
 
@@ -273,54 +255,6 @@ Hero 圖片規則：
 | 來點什麼 南屯林新店（加盟店） | 林新店 |
 
 > 注意：目前**沒有**豐原店。完整名稱格式：`來點什麼-{shortName}`，例如 `來點什麼-東勢店`。
-
----
-
-## 待解決的業務 Todo
-
-### 緊急（影響正常作業）
-
-**P1 需要盡快修的**
-- [ ] **帳務核對**：/dashboard/purchasing、/dashboard/inventory、/dashboard/accounting 各有不完整功能待補
-- [ ] **needsReview 商品審核**：137筆待審商品在 /dashboard/products 逐一確認
-- [ ] **日報彙總功能**：`os_daily_reports` 目前各門市資料格式不統一，彙總計算有誤
-
-**P2 重要**
-- [ ] 太平東/北屯等多店的門市成本分攤問題
-- [ ] 異常採購品項的成本追蹤
-- [ ] 供應商對帳：目前為手動流程
-- [x] chunk size 優化（v6.26）：xlsx/RichTextEditor/DayoneARContent 全改動態載入，頁面 chunk 已精簡
-
-**P3 備用**
-- [ ] BOM 建立：整合品項主檔 + `os_products`（類似 CA 表功能）
-- [ ] 大永 LIFF 功能：liffId 尚未上線
-- [ ] 加盟商 RWD 優化
-- [ ] 商品搜尋與篩選
-
-**已完成（2026-04-19）**
-- [x] 3/31 期初盤點入庫，165筆（B類4+嗡嗡蜂141）
-- [x] 大買進貨匯入 453筆（2025/12~2026/04）
-- [x] 廣弘採購單 5筆（2026-02~04）
-- [x] v5.63 應付帳修正
-- [x] v5.64 加盟商月結修正
-- [x] v5.65 損益報表修正 + 零筆規則
-- [x] v5.67 進貨/應付表單修正 + profitLoss 補完 + OSInventory deleteMut 修正
-- [x] v5.68 manager 模組規則 + 商品30筆 + 商品50筆needsReview + 應付帳細項
-- [x] v5.69 韓濟修正 + OSProfitLoss redirect + 異常修正 + 商品/庫存更新
-- [x] v5.70 rebateRate > 1 支援100倍 + profitLoss 補完 channelSales/dailyTrend/procurementCost + OSDailyReport viewYear/viewMonth
-- [x] v5.71 加盟商採購列表 franchiseeOrAdminProcedure，franchisee 限 storeId
-
----
-
-## 給 Leo 的待辦資料
-
-| 資料 | 需要提供 | 格式 | 用途 | 狀態 |
-|------|----------|------|------|------|
-| 3/31 期初盤點 | 盤點人員簽核 | Excel | 庫存入庫基準 | 已完成 |
-| 大買進貨匯入 | 大買進貨憑單 | Excel | 進貨匯入 | 已完成 2025/12起 |
-| 廣弘採購單 | 大買進貨帶來的 | Excel | 進貨對帳 | 已完成 2026-02起 |
-| 盤點初期表單（2025全年） | 大買進貨憑函 | Excel | 2025進貨核對 | 尚未提供，只有2025/12起 |
-| 供應商月結帳期 | 合約/憑單 | xlsx | 供應商對帳 | 尚未提供，處理中 |
 
 ---
 
@@ -379,10 +313,8 @@ Hero 圖片規則：
 
 - 症狀：登入頁出現 "Incorrect arguments to LIMIT" / "Failed query: select ... LIMIT ?" 錯誤
 - 原因：drizzle-orm 0.44.x 把 LIMIT/OFFSET 數字當成 `?` params 傳給 mysql2 `query()`，TiDB 不支援 `LIMIT ?` 參數化語法
-- **錯誤修法（v6.01）**：`createPool` 加 `prepare: false`，對 `query()` 路徑無效
 - **正確修法（v6.02）**：在 `server/db.ts` 的 `getDb()` 中 patch `pool.query` 攔截器，把純整數 params inline 進 SQL（`LIMIT ?` → `LIMIT 1`）再送給 TiDB
-- 已修 commit：6942480
-- 升級 drizzle-orm / mysql2 後若再出現，確認 `inlineLimitOffsetParams` 邏輯在 `db.ts` 仍存在即可
+- 已修 commit：6942480；升級 drizzle-orm / mysql2 後若再出現，確認 `inlineLimitOffsetParams` 邏輯在 `db.ts` 仍存在
 
 **時區問題（v5.77 修）**
 
@@ -479,13 +411,6 @@ INDEX idx_tenant_name (tenantId, name)
 - 套件管理：npm 10
 - Git 規則：commit 只 add 指定檔案，不用 `git add -A`
 
-**注意事項**
-
-- `has_procurement_access` 目前用 any cast 暫解，需要等正式 permissions 系統完成
-- 大永/來點什麼 ERP 的 table 用 `dy_`/`os_` 前綴區分，在 `schema.ts` 管理，不走 raw SQL
-- 圖片目前寄放在 R2，路徑如 `client/public/images/menu/korean-roll/`
-- chunk size 警告：index.js 約 6453kB，後續再規劃 code splitting
-
 ---
 
 ## Migration 注意事項
@@ -532,46 +457,6 @@ check().catch(console.error);
 
 ---
 
-## 大永（Dayone）未完成功能
-
-- LIFF 功能：liffId 尚未設定，`client/src/pages/liff/LiffOrder.tsx` 連結不上
-- LINE 通知：cron 排程尚未建立
-- Portal 找回密碼：email 發送尚未串接 Resend
-
----
-
-## Make 自動化相關
-
-- 每天同步 Webhook 自動觸發 `os_daily_reports`，SYNC_SECRET 驗證
-- 大買進貨 importFromDamai 透過 Google Sheets 觸發
-- Make Webhook URL：`https://hook.us2.make.com/6ihglkavm26i29mdgg33dvxngggv1xiu`
-- SYNC_SECRET：`ordersome-sync-2026`
-
----
-
-## 細粒度權限系統（待開發）
-
-**現況**：role 欄位只有粗粒度角色判斷，進階模組開關 hardcode 在前端
-
-**計劃做法**：
-1. DB 新增 `os_user_permissions`（userId, moduleKey, canView, canEdit, canDelete）
-2. 後端新增 `permissionMiddleware`，擴充 adminProcedure/managerAllowed
-3. 前端改用動態讀取 permissions API，不要 hardcode 功能開關
-4. `AdminDashboardLayout` 從 permissions API 動態生成側邊欄
-5. `isSuperAdmin`/`isManager`/`canSeeCost` 改走 permissions 表
-
-**優先順序**：P2，等 UAT fix 穩定後再做
-
----
-
-## os_menu_items 待建
-
-- `os_menu_items` 欄位在 TiDB 尚未建立，OSCaMenu 功能目前不完整
-- 計劃：補 migration 建立 `os_menu_items` 和 `os_menu_item_ingredients`，補後端查詢，補 `os_products.unitCost` 計算
-- 優先順序：P2
-
----
-
 ## 大永系統完整紀錄
 
 ### 視覺系統規範
@@ -580,31 +465,6 @@ check().catch(console.error);
 - 後台主標題用穩定可讀的 UI 字體，不用強勢品牌字
 - 色彩：暖白 / 石墨 / amber，強調色只用在重點
 - CSS class 規範：`dayone-page-title`（1.35rem/700）、`dayone-page-subtitle`（0.8125rem）、`dayone-kpi-value`（clamp 動態縮放/tabular-nums）、`dayone-page-header`（flex justify-between）
-
-### 已完成頁面（2026-04-24 起，v6.24 字體統一）
-
-- `client/src/components/DayoneLayout.tsx`
-- `client/src/pages/dayone/DayoneDashboard.tsx`
-- `client/src/pages/dayone/DayoneOrders.tsx`
-- `client/src/pages/dayone/DayoneCustomersContent.tsx`
-- `client/src/pages/dayone/DayoneLiffOrders.tsx`
-- `client/src/pages/dayone/DayoneProducts.tsx`
-- `client/src/pages/dayone/DayoneInventoryContent.tsx`
-- `client/src/pages/dayone/DayonePurchaseContent.tsx`
-- `client/src/pages/dayone/DayoneUsers.tsx`
-- `client/src/pages/dayone/DayonePurchaseReceipts.tsx`
-- `client/src/pages/dayone/DayoneARContent.tsx`
-- `client/src/pages/dayone/DayoneDispatch.tsx`
-- `client/src/pages/dayone/DayoneSettings.tsx`
-- `client/src/pages/dayone/DayoneReports.tsx`
-- `client/src/pages/dayone/driver/DriverPickup.tsx`
-- `client/src/pages/dayone/driver/DriverLayout.tsx`
-- `client/src/pages/dayone/driver/DriverHome.tsx`
-- `client/src/pages/dayone/driver/DriverToday.tsx`
-- `client/src/pages/dayone/driver/DriverOrders.tsx`
-- `client/src/pages/dayone/driver/DriverDone.tsx`
-- `client/src/pages/dayone/driver/DriverOrderDetail.tsx`
-- `client/src/pages/dayone/driver/DriverWorkLog.tsx`
 
 ### 後端補強（2026-04-24）
 
@@ -621,6 +481,7 @@ check().catch(console.error);
 - 可賣庫存增加 = 貨品回到大永倉庫且管理員確認入倉後
 - `purchaseReceipt.sign`：只建 AP，不寫 `dy_inventory`
 - `purchaseReceipt.receiveToWarehouse`：管理員確認入倉，寫庫存異動（refType: `purchase_receipt_warehouse`）
+- `purchase.receive` 現已封鎖（加了明確錯誤訊息），導向進貨簽收＋入倉確認流程
 - 狀態流：`pending → signed（待入倉）→ warehoused（已入倉）`
 
 ### 回庫待驗流程（Phase 1，2026-04-25）
@@ -690,15 +551,6 @@ check().catch(console.error);
 - 下游應收：`dy_ar_records`
 - 上游應付：`dy_ap_records`
 
-### 尚未完成
-
-- 逐頁完整人工 smoke test
-- 臨時加貨補單與差異對帳（dispatch.ts 已加 manualAddStop，端對端未驗）
-- 供應商付款單完整閉環
-- 全站 RWD 驗證
-- 低頻頁面殘留舊樣式清理
-- `DriverSign.tsx` 目前為 legacy/未掛載狀態，現行簽名路徑是 `DriverOrderDetail.tsx -> dayone.driver.uploadSignature`
-
 ### Chunk 策略
 
 - 白畫面事故後已移除所有 `manualChunks`，回退保守單一 chunk 策略
@@ -713,15 +565,12 @@ check().catch(console.error);
 - 每做一輪都要 build 驗證後再 commit、push
 - 使用者非常在意：有沒有 commit、有沒有 push、有沒有更新 CLAUDE.md
 - 回報要誠實，build 有過 ≠ 全站驗證完
-
----
-
-## 大永進貨與 AP 邏輯確認（2026-04-25）
-
-- 供應商簽名 = 進貨確認且應建立 AP，**但不應**增加可賣倉庫庫存
-- 可賣庫存增加只在：貨品返回大永倉庫且管理員確認入倉後
-- `purchase.receive` 現已封鎖（加了明確錯誤訊息），導向進貨簽收＋入倉確認流程
-- `dispatch.returnInventory` 不再直接寫 `dy_inventory`，改用 `dy_pending_returns`
+- `DriverSign.tsx` 目前為 legacy/未掛載狀態，現行簽名路徑是 `DriverOrderDetail.tsx -> dayone.driver.uploadSignature`
 - AR 建立/更新仍有多個入口，後續需統一
 
-**最新 Dayone Commit**：`1242b34` feat: strengthen dayone payment workflows（2026-04-24）
+### Make 自動化相關
+
+- 每天同步 Webhook 自動觸發 `os_daily_reports`，SYNC_SECRET 驗證
+- 大買進貨 importFromDamai 透過 Google Sheets 觸發
+- Make Webhook URL：`https://hook.us2.make.com/6ihglkavm26i29mdgg33dvxngggv1xiu`
+- SYNC_SECRET：`ordersome-sync-2026`
