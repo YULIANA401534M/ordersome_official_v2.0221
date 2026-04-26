@@ -276,7 +276,7 @@ export default function AdminUsers() {
         </div>
 
         {/* Desktop Table */}
-        <div className="hidden md:block" style={{ background: "var(--os-surface)", border: "1px solid var(--os-border)", borderRadius: 10, overflow: "hidden" }}>
+        <div className="hidden md:block" style={{ background: "var(--os-surface)", border: "1px solid var(--os-border)", borderRadius: 10, overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
