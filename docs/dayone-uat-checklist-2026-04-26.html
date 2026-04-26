@@ -3,533 +3,992 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>大永蛋品系統｜親測驗收表 2026-04-26</title>
+<title>大永蛋品系統｜親測驗收表 v6.28</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; font-size: 14px; color: #1c1917; background: #fafaf9; padding: 32px; line-height: 1.6; }
-  h1 { font-size: 22px; font-weight: 700; color: #1c1917; margin-bottom: 4px; }
-  .subtitle { font-size: 13px; color: #78716c; margin-bottom: 32px; }
+  body { font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; font-size: 14px; color: #1c1917; background: #f5f5f4; padding: 28px 20px; line-height: 1.6; }
 
-  .section { margin-bottom: 36px; }
-  .section-title { font-size: 15px; font-weight: 700; color: #92400e; border-left: 4px solid #d97706; padding-left: 10px; margin-bottom: 14px; }
+  .header { background: #1c1917; color: #fafaf9; border-radius: 14px; padding: 20px 24px; margin-bottom: 20px; display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  .header h1 { font-size: 20px; font-weight: 700; }
+  .header .meta { font-size: 12px; color: #a8a29e; margin-top: 4px; }
+  .header-right { display: flex; gap: 10px; align-items: center; }
+  .progress-label { font-size: 12px; color: #d6d3d1; }
+  .progress-bar-wrap { width: 140px; height: 6px; background: #3f3f46; border-radius: 99px; margin-top: 4px; }
+  .progress-bar { height: 6px; background: #d97706; border-radius: 99px; transition: width 0.3s; }
+  .progress-text { font-size: 12px; color: #d97706; margin-top: 3px; text-align: right; }
 
-  /* AP/AR 解釋方塊 */
-  .explain-box { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 10px; padding: 16px 20px; margin-bottom: 28px; }
-  .explain-box h3 { font-size: 14px; font-weight: 700; color: #92400e; margin-bottom: 10px; }
-  .explain-row { display: flex; gap: 12px; margin-bottom: 6px; }
-  .explain-tag { min-width: 40px; font-size: 12px; font-weight: 700; color: #fff; background: #d97706; border-radius: 5px; padding: 1px 8px; text-align: center; line-height: 22px; }
+  .explain-box { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 12px; padding: 16px 20px; margin-bottom: 18px; }
+  .explain-box h3 { font-size: 13px; font-weight: 700; color: #92400e; margin-bottom: 10px; }
+  .explain-row { display: flex; gap: 10px; margin-bottom: 6px; align-items: flex-start; }
+  .explain-tag { min-width: 36px; font-size: 11px; font-weight: 700; color: #fff; background: #d97706; border-radius: 5px; padding: 2px 7px; text-align: center; flex-shrink: 0; }
   .explain-text { color: #44403c; font-size: 13px; }
 
-  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
-  thead tr { background: #292524; color: #fafaf9; }
-  thead th { padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 600; letter-spacing: 0.03em; }
-  tbody tr { border-bottom: 1px solid #f5f5f4; }
-  tbody tr:last-child { border-bottom: none; }
-  tbody td { padding: 11px 14px; vertical-align: top; }
-  .step-num { font-size: 12px; font-weight: 700; color: #d97706; min-width: 28px; }
-  .page-label { font-size: 12px; background: #f5f5f4; color: #57534e; border-radius: 5px; padding: 2px 8px; display: inline-block; white-space: nowrap; }
-  .action { font-weight: 500; color: #1c1917; }
-  .note { font-size: 12px; color: #78716c; margin-top: 4px; }
-  .check-col { width: 72px; text-align: center; }
-  .checkbox { width: 20px; height: 20px; border: 2px solid #d6d3d1; border-radius: 4px; display: inline-block; }
-  .result-col { width: 160px; }
-  .result-input { width: 100%; border: 1px solid #e7e5e4; border-radius: 5px; padding: 4px 8px; font-size: 12px; color: #57534e; min-height: 28px; }
+  .section { background: #fff; border-radius: 12px; margin-bottom: 16px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .section-header { background: #292524; color: #fafaf9; padding: 11px 18px; display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; }
+  .section-header:hover { background: #3f3f46; }
+  .section-letter { font-size: 13px; font-weight: 800; color: #d97706; min-width: 20px; }
+  .section-title { font-size: 13px; font-weight: 600; flex: 1; }
+  .section-badge { font-size: 11px; background: #3f3f46; color: #d6d3d1; border-radius: 99px; padding: 2px 10px; }
+  .section-badge.done { background: #14532d; color: #86efac; }
+  .section-body { display: block; }
+  .section-body.collapsed { display: none; }
 
-  .cat-row td { background: #fef3c7; font-weight: 600; color: #92400e; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .step-row { border-bottom: 1px solid #f5f5f4; padding: 12px 18px; display: grid; grid-template-columns: 28px 1fr auto; gap: 12px; align-items: start; transition: background 0.15s; }
+  .step-row:last-child { border-bottom: none; }
+  .step-row:hover { background: #fafaf9; }
+  .step-row.pass { background: #f0fdf4; }
+  .step-row.fail { background: #fff1f2; }
+  .step-row.skip { background: #fafaf9; opacity: 0.6; }
 
-  .warn { color: #dc2626; font-size: 12px; font-weight: 600; }
-  .ok { color: #16a34a; font-size: 12px; font-weight: 600; }
+  .step-num { font-size: 12px; font-weight: 700; color: #d97706; padding-top: 2px; }
+  .step-content { min-width: 0; }
+  .step-action { font-weight: 500; color: #1c1917; font-size: 13px; }
+  .step-where { font-size: 11px; color: #78716c; margin-bottom: 3px; }
+  .step-where span { background: #f5f5f4; border-radius: 4px; padding: 1px 7px; display: inline-block; }
+  .step-note { font-size: 11px; color: #a8a29e; margin-top: 3px; }
+  .step-expect { font-size: 11px; color: #57534e; margin-top: 5px; padding: 5px 9px; background: #f5f5f4; border-radius: 6px; border-left: 3px solid #d6d3d1; }
+  .step-expect.pass { border-left-color: #22c55e; background: #f0fdf4; color: #15803d; }
+  .step-expect.fail { border-left-color: #ef4444; background: #fff1f2; color: #dc2626; }
 
-  .footer-note { margin-top: 28px; font-size: 12px; color: #a8a29e; border-top: 1px solid #e7e5e4; padding-top: 14px; }
+  .step-controls { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; min-width: 200px; }
+  .btn-group { display: flex; gap: 4px; }
+  .btn { border: none; border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; font-family: inherit; }
+  .btn-pass { background: #dcfce7; color: #15803d; }
+  .btn-pass:hover, .btn-pass.active { background: #22c55e; color: #fff; }
+  .btn-fail { background: #fee2e2; color: #dc2626; }
+  .btn-fail:hover, .btn-fail.active { background: #ef4444; color: #fff; }
+  .btn-skip { background: #f5f5f4; color: #78716c; }
+  .btn-skip:hover, .btn-skip.active { background: #d6d3d1; color: #44403c; }
+
+  .note-input { width: 200px; border: 1px solid #e7e5e4; border-radius: 6px; padding: 5px 8px; font-size: 12px; color: #57534e; font-family: inherit; resize: vertical; min-height: 32px; background: #fafaf9; }
+  .note-input:focus { outline: none; border-color: #d97706; background: #fff; }
+
+  .summary-section { background: #fff; border-radius: 12px; padding: 20px 20px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .summary-title { font-size: 14px; font-weight: 700; color: #1c1917; margin-bottom: 14px; }
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .summary-card { border-radius: 10px; padding: 12px 14px; text-align: center; }
+  .summary-card.pass-card { background: #f0fdf4; border: 1px solid #bbf7d0; }
+  .summary-card.fail-card { background: #fff1f2; border: 1px solid #fecaca; }
+  .summary-card.skip-card { background: #f5f5f4; border: 1px solid #e7e5e4; }
+  .summary-card.pend-card { background: #fffbeb; border: 1px solid #fcd34d; }
+  .summary-num { font-size: 28px; font-weight: 800; }
+  .pass-card .summary-num { color: #16a34a; }
+  .fail-card .summary-num { color: #dc2626; }
+  .skip-card .summary-num { color: #78716c; }
+  .pend-card .summary-num { color: #d97706; }
+  .summary-label { font-size: 12px; color: #78716c; margin-top: 2px; }
+
+  .export-bar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+  .export-btn { border: none; border-radius: 8px; padding: 9px 18px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+  .export-btn.primary { background: #d97706; color: #fff; }
+  .export-btn.primary:hover { background: #b45309; }
+  .export-btn.secondary { background: #f5f5f4; color: #44403c; border: 1px solid #e7e5e4; }
+  .export-btn.secondary:hover { background: #e7e5e4; }
+
+  .footer { font-size: 11px; color: #a8a29e; text-align: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid #e7e5e4; }
 
   @media print {
-    body { padding: 16px; font-size: 12px; }
-    .result-input { border: none; border-bottom: 1px solid #d6d3d1; border-radius: 0; }
-    table { box-shadow: none; border: 1px solid #e7e5e4; }
+    .export-bar { display: none; }
+    .btn-group { display: none; }
+    body { background: white; padding: 12px; }
+    .section { box-shadow: none; border: 1px solid #e7e5e4; }
+    .section-body.collapsed { display: block !important; }
   }
 </style>
 </head>
 <body>
 
-<h1>大永蛋品系統｜親測驗收表</h1>
-<div class="subtitle">2026-04-26 版｜測試人員：________________　　測試日期：________________</div>
+<div class="header">
+  <div>
+    <h1>大永蛋品系統｜親測驗收表</h1>
+    <div class="meta">v6.28 · 2026-04-26 · 測試網址：ordersome.com.tw/dayone</div>
+  </div>
+  <div class="header-right">
+    <div>
+      <div class="progress-label">完成進度</div>
+      <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar" style="width:0%"></div></div>
+      <div class="progress-text" id="progressText">0 / 0</div>
+    </div>
+  </div>
+</div>
 
-<!-- AP/AR 白話說明 -->
+<!-- AP/AR 說明 -->
 <div class="explain-box">
   <h3>先看這個：AP 和 AR 是什麼？</h3>
   <div class="explain-row">
     <span class="explain-tag">AP</span>
-    <span class="explain-text"><strong>應付帳款（公司欠別人的錢）</strong>——大永向供應商拿了貨、還沒付錢，這筆錢就是 AP。簡單說：<em>我欠你的</em>。</span>
+    <span class="explain-text"><strong>應付帳款＝我欠別人的錢</strong>：大永向供應商拿了貨、還沒付錢，這筆就是 AP。對應側邊欄沒有獨立頁面，目前由系統在進貨簽收時自動建立。</span>
   </div>
   <div class="explain-row">
     <span class="explain-tag">AR</span>
-    <span class="explain-text"><strong>應收帳款（別人欠公司的錢）</strong>——大永把蛋送給客戶、客戶還沒付錢，這筆錢就是 AR。簡單說：<em>你欠我的</em>。</span>
+    <span class="explain-text"><strong>應收帳款＝別人欠我的錢</strong>：大永把蛋送給客戶、客戶還沒付錢，這筆就是 AR。對應側邊欄的「<strong>應收帳款</strong>」。</span>
   </div>
 </div>
 
-<!-- ======= A. 總覽儀表板 ======= -->
-<div class="section">
-  <div class="section-title">A｜總覽（今天的全局狀況）</div>
-  <table>
-    <thead><tr>
-      <th style="width:32px">#</th>
-      <th>到哪裡</th>
-      <th>做什麼、看什麼</th>
-      <th>預期結果</th>
-      <th class="check-col">✓</th>
-      <th class="result-col">實測備註</th>
-    </tr></thead>
-    <tbody>
-      <tr>
-        <td class="step-num">A1</td>
-        <td><span class="page-label">總覽</span></td>
-        <td class="action">登入後看今日 KPI 卡片<br><span class="note">今日訂單數、待簽收進貨、已送達、待驗回庫、應收金額</span></td>
-        <td>數字顯示正常，沒有 0 或 NaN</td>
-        <td class="check-col"><span class="checkbox"></span></td>
-        <td class="result-col"><div class="result-input"></div></td>
-      </tr>
-      <tr>
-        <td class="step-num">A2</td>
-        <td><span class="page-label">總覽</span></td>
-        <td class="action">確認「庫存警示」區塊<br><span class="note">有沒有商品庫存低於安全量</span></td>
-        <td>有顯示列表或「暫無警示」</td>
-        <td class="check-col"><span class="checkbox"></span></td>
-        <td class="result-col"><div class="result-input"></div></td>
-      </tr>
-    </tbody>
-  </table>
+<!-- 匯出列 -->
+<div class="export-bar">
+  <button class="export-btn primary" onclick="exportResult()">📋 匯出測試結果（複製文字）</button>
+  <button class="export-btn secondary" onclick="resetAll()">🔄 全部重置</button>
+  <button class="export-btn secondary" onclick="window.print()">🖨️ 列印</button>
 </div>
 
-<!-- ======= B. 訂單流程 ======= -->
-<div class="section">
-  <div class="section-title">B｜客戶訂單（有客戶要買東西）</div>
-  <table>
-    <thead><tr>
-      <th style="width:32px">#</th>
-      <th>到哪裡</th>
-      <th>做什麼、看什麼</th>
-      <th>預期結果</th>
-      <th class="check-col">✓</th>
-      <th class="result-col">實測備註</th>
-    </tr></thead>
-    <tbody>
-      <tr>
-        <td class="step-num">B1</td>
-        <td><span class="page-label">訂單管理</span></td>
-        <td class="action">查看現有訂單列表<br><span class="note">確認有訂單資料，狀態欄清楚（待出貨、已送達等）</span></td>
-        <td>訂單列表有資料，狀態顯示正確</td>
-        <td class="check-col"><span class="checkbox"></span></td>
-        <td class="result-col"><div class="result-input"></div></td>
-      </tr>
-      <tr>
-        <td class="step-num">B2</td>
-        <td><span class="page-label">訂單管理</span></td>
-        <td class="action">手動建立一筆新訂單<br><span class="note">選客戶、品項（蛋）、數量、配送日期</span></td>
-        <td>訂單建立成功，出現在列表</td>
-        <td class="check-col"><span class="checkbox"></span></td>
-        <td class="result-col"><div class="result-input"></div></td>
-      </tr>
-      <tr>
-        <td class="step-num">B3</td>
-        <td><span class="page-label">訂單管理</span></td>
-        <td class="action">點進剛建立的訂單，確認品項、金額正確</td>
-        <td>金額 = 數量 × 單價，無誤</td>
-        <td class="check-col"><span class="checkbox"></span></td>
-        <td class="result-col"><div class="result-input"></div></td>
-      </tr>
-    </tbody>
-  </table>
+<!-- 進度摘要 -->
+<div class="summary-section">
+  <div class="summary-title">測試進度摘要</div>
+  <div class="summary-grid">
+    <div class="summary-card pass-card"><div class="summary-num" id="cnt-pass">0</div><div class="summary-label">✓ 通過</div></div>
+    <div class="summary-card fail-card"><div class="summary-num" id="cnt-fail">0</div><div class="summary-label">✗ 有問題</div></div>
+    <div class="summary-card skip-card"><div class="summary-num" id="cnt-skip">0</div><div class="summary-label">— 跳過</div></div>
+    <div class="summary-card pend-card"><div class="summary-num" id="cnt-pend">0</div><div class="summary-label">⏳ 未測</div></div>
+  </div>
 </div>
 
-<!-- ======= C. 派車流程 ======= -->
-<div class="section">
-  <div class="section-title">C｜派車管理（整理明天要送的貨）</div>
-  <table>
-    <thead><tr>
-      <th style="width:32px">#</th>
-      <th>到哪裡</th>
-      <th>做什麼、看什麼</th>
-      <th>預期結果</th>
-      <th class="check-col">✓</th>
-      <th class="result-col">實測備註</th>
-    </tr></thead>
-    <tbody>
-      <tr>
-        <td class="step-num">C1</td>
-        <td><span class="page-label">派車管理</span></td>
-        <td class="action">選日期 → 點「產生派車單」<br><span class="note">系統會把那天的訂單整合成一張派車單</span></td>
-        <td>出現一筆新的派車單（狀態：草稿）</td>
-        <td class="check-col"><span class="checkbox"></span></td>
-        <td class="result-col"><div class="result-input"></div></td>
-      </tr>
-      <tr>
-        <td class="step-num">C2</td>
-        <td><span class="page-label">派車管理</span></td>
-        <td class="action">點開派車單，確認內容<br><span class="note">司機、各停靠點、品項、數量都有顯示</span></td>
-        <td>停靠點清單有資料，沒有空白列</td>
-        <td class="check-col"><span class="checkbox"></span></td>
-        <td class="result-col"><div class="result-input"></div></td>
-      </tr>
-      <tr>
-        <td class="step-num">C3</td>
-        <td><span class="page-label">派車管理</span></td>
-        <td class="action">點「列印派車單」<br><span class="note">應該開新視窗顯示派車單內容（v6.28 已修空白問題）</span></td>
-        <td>新視窗有完整派車單，不是空白</td>
-        <td class="check-col"><span class="checkbox"></span></td>
-        <td class="result-col"><div class="result-input"></div></td>
-      </tr>
-      <tr>
-        <td class="step-num">C4</td>
-        <td><span class="page-label">派車管理</span> → <span class="page-label">庫存管理</span></td>
-        <td class="action">列印後，去庫存管理確認庫存有扣減<br><span class="note">列印動作會觸發「出車扣庫存」，可賣庫存數字應減少</span></td>
-        <td>庫存數量比列印前少</td>
-        <td class="check-col"><span class="checkbox"></span></td>
-        <td class="result-col"><div class="result-input"></div></td>
-      </tr>
-      <tr>
-        <td class="step-num">C5</td>
-        <td><span class="page-label">派車管理</span></td>
-        <td class="action">測試「新增加站」（補單）<br><span class="note">臨時多一個客戶要送</span></td>
-        <td>新停靠點出現在派車單，可列印</td>
-        <td class="check-col"><span class="checkbox"></span></td>
-        <td class="result-col"><div class="result-input"></div></td>
-      </tr>
-    </tbody>
-  </table>
+<!-- ===== A. 總覽 ===== -->
+<div class="section" id="sec-A">
+  <div class="section-header" onclick="toggleSection('A')">
+    <span class="section-letter">A</span>
+    <span class="section-title">總覽（登入後的今日全局）</span>
+    <span class="section-badge" id="badge-A">2 項</span>
+  </div>
+  <div class="section-body" id="body-A">
+
+    <div class="step-row" id="row-A1">
+      <div class="step-num">A1</div>
+      <div class="step-content">
+        <div class="step-where"><span>總覽</span></div>
+        <div class="step-action">登入後看今日 KPI 卡片</div>
+        <div class="step-note">今日訂單數、待簽收進貨、已送達、待驗回庫、應收金額都有顯示</div>
+        <div class="step-expect" id="exp-A1">預期：數字正常顯示，沒有 0 全滿或 NaN</div>
+      </div>
+      <div class="step-controls">
+        <div class="btn-group">
+          <button class="btn btn-pass" onclick="mark('A1','pass')">✓ 通過</button>
+          <button class="btn btn-fail" onclick="mark('A1','fail')">✗ 問題</button>
+          <button class="btn btn-skip" onclick="mark('A1','skip')">— 跳過</button>
+        </div>
+        <textarea class="note-input" id="note-A1" placeholder="備註（可空白）" oninput="saveNote('A1')"></textarea>
+      </div>
+    </div>
+
+    <div class="step-row" id="row-A2">
+      <div class="step-num">A2</div>
+      <div class="step-content">
+        <div class="step-where"><span>總覽</span></div>
+        <div class="step-action">確認「庫存警示」區塊</div>
+        <div class="step-note">有沒有品項庫存過低的警告</div>
+        <div class="step-expect" id="exp-A2">預期：有列表顯示或出現「暫無警示」，不是空白</div>
+      </div>
+      <div class="step-controls">
+        <div class="btn-group">
+          <button class="btn btn-pass" onclick="mark('A2','pass')">✓ 通過</button>
+          <button class="btn btn-fail" onclick="mark('A2','fail')">✗ 問題</button>
+          <button class="btn btn-skip" onclick="mark('A2','skip')">— 跳過</button>
+        </div>
+        <textarea class="note-input" id="note-A2" placeholder="備註（可空白）" oninput="saveNote('A2')"></textarea>
+      </div>
+    </div>
+
+  </div>
 </div>
 
-<!-- ======= D. 司機 APP ======= -->
-<div class="section">
-  <div class="section-title">D｜司機 APP（出車、送貨、收錢）</div>
-  <table>
-    <thead><tr>
-      <th style="width:32px">#</th>
-      <th>到哪裡</th>
-      <th>做什麼、看什麼</th>
-      <th>預期結果</th>
-      <th class="check-col">✓</th>
-      <th class="result-col">實測備註</th>
-    </tr></thead>
-    <tbody>
-      <tr>
-        <td class="step-num">D1</td>
-        <td><span class="page-label">今日任務</span><br><span class="note">手機瀏覽器</span></td>
-        <td class="action">司機帳號登入，看今日任務<br><span class="note">應顯示今天要送的停靠點清單</span></td>
-        <td>有停靠點，有品項、地址</td>
-        <td class="check-col"><span class="checkbox"></span></td>
-        <td class="result-col"><div class="result-input"></div></td>
-      </tr>
-      <tr>
-        <td class="step-num">D2</td>
-        <td><span class="page-label">訂單（司機）</span></td>
-        <td class="action">點進一個停靠點，模擬送達<br><span class="note">點「確認送達」或「客戶簽名」</span></td>
-        <td>訂單狀態改為「已送達」</td>
-        <td class="check-col"><span class="checkbox"></span></td>
-        <td class="result-col"><div class="result-input"></div></td>
-      </tr>
-      <tr>
-        <td class="step-num">D3</td>
-        <td><span class="page-label">應收帳款</span><br><span class="note">管理端</span></td>
-        <td class="action">回到管理端，看「應收帳款」<br><span class="note">剛才送達的訂單，AR 應收應該自動出現</span></td>
-        <td>應收帳款出現一筆，金額正確</td>
-        <td class="check-col"><span class="checkbox"></span></td>
-        <td class="result-col"><div class="result-input"></div></td>
-      </tr>
-      <tr>
-        <td class="step-num">D4</td>
-        <td><span class="page-label">訂單（司機）</span></td>
-        <td class="action">模擬司機收現金<br><span class="note">點「收款」，輸入金額</span></td>
-        <td>訂單付款狀態更新，AR 金額同步</td>
-        <td class="check-col"><span class="checkbox"></span></td>
-        <td class="result-col"><div class="result-input"></div></td>
-      </tr>
-      <tr>
-        <td class="step-num">D5</td>
-        <td><span class="page-label">工作日誌</span></td>
-        <td class="action">司機回報剩貨<br><span class="note">送不完的蛋，填回剩餘數量</span></td>
-        <td>出現「回庫待驗」紀錄</td>
-        <td class="check-col"><span class="checkbox"></span></td>
-        <td class="result-col"><div class="result-input"></div></td>
-      </tr>
-    </tbody>
-  </table>
+<!-- ===== B. 訂單管理 ===== -->
+<div class="section" id="sec-B">
+  <div class="section-header" onclick="toggleSection('B')">
+    <span class="section-letter">B</span>
+    <span class="section-title">訂單管理（客戶要買東西）</span>
+    <span class="section-badge" id="badge-B">3 項</span>
+  </div>
+  <div class="section-body" id="body-B">
+
+    <div class="step-row" id="row-B1">
+      <div class="step-num">B1</div>
+      <div class="step-content">
+        <div class="step-where"><span>訂單管理</span></div>
+        <div class="step-action">查看現有訂單列表</div>
+        <div class="step-note">確認有訂單資料，每筆狀態欄清楚（待出貨、配送中、已送達等）</div>
+        <div class="step-expect" id="exp-B1">預期：訂單列表有資料，狀態顯示正確</div>
+      </div>
+      <div class="step-controls">
+        <div class="btn-group">
+          <button class="btn btn-pass" onclick="mark('B1','pass')">✓ 通過</button>
+          <button class="btn btn-fail" onclick="mark('B1','fail')">✗ 問題</button>
+          <button class="btn btn-skip" onclick="mark('B1','skip')">— 跳過</button>
+        </div>
+        <textarea class="note-input" id="note-B1" placeholder="備註（可空白）" oninput="saveNote('B1')"></textarea>
+      </div>
+    </div>
+
+    <div class="step-row" id="row-B2">
+      <div class="step-num">B2</div>
+      <div class="step-content">
+        <div class="step-where"><span>訂單管理</span></div>
+        <div class="step-action">手動建立一筆新訂單</div>
+        <div class="step-note">選客戶、品項（蛋）、數量、配送日期，送出</div>
+        <div class="step-expect" id="exp-B2">預期：訂單建立成功，出現在列表裡</div>
+      </div>
+      <div class="step-controls">
+        <div class="btn-group">
+          <button class="btn btn-pass" onclick="mark('B2','pass')">✓ 通過</button>
+          <button class="btn btn-fail" onclick="mark('B2','fail')">✗ 問題</button>
+          <button class="btn btn-skip" onclick="mark('B2','skip')">— 跳過</button>
+        </div>
+        <textarea class="note-input" id="note-B2" placeholder="備註（可空白）" oninput="saveNote('B2')"></textarea>
+      </div>
+    </div>
+
+    <div class="step-row" id="row-B3">
+      <div class="step-num">B3</div>
+      <div class="step-content">
+        <div class="step-where"><span>訂單管理</span></div>
+        <div class="step-action">點開剛建立的訂單，確認品項與金額</div>
+        <div class="step-note">金額 = 數量 × 單價，與下單時一致</div>
+        <div class="step-expect" id="exp-B3">預期：金額正確，品項數量吻合</div>
+      </div>
+      <div class="step-controls">
+        <div class="btn-group">
+          <button class="btn btn-pass" onclick="mark('B3','pass')">✓ 通過</button>
+          <button class="btn btn-fail" onclick="mark('B3','fail')">✗ 問題</button>
+          <button class="btn btn-skip" onclick="mark('B3','skip')">— 跳過</button>
+        </div>
+        <textarea class="note-input" id="note-B3" placeholder="備註（可空白）" oninput="saveNote('B3')"></textarea>
+      </div>
+    </div>
+
+  </div>
 </div>
 
-<!-- ======= E. 回庫待驗 ======= -->
-<div class="section">
-  <div class="section-title">E｜回庫待驗（剩貨回來要確認才算庫存）</div>
-  <table>
-    <thead><tr>
-      <th style="width:32px">#</th>
-      <th>到哪裡</th>
-      <th>做什麼、看什麼</th>
-      <th>預期結果</th>
-      <th class="check-col">✓</th>
-      <th class="result-col">實測備註</th>
-    </tr></thead>
-    <tbody>
-      <tr>
-        <td class="step-num">E1</td>
-        <td><span class="page-label">庫存管理</span></td>
-        <td class="action">找「待驗回庫」區塊<br><span class="note">看司機剛回報的剩貨有沒有出現在這裡</span></td>
-        <td>有一筆待驗紀錄，品項數量對</td>
-        <td class="check-col"><span class="checkbox"></span></td>
-        <td class="result-col"><div class="result-input"></div></td>
-      </tr>
-      <tr>
-        <td class="step-num">E2</td>
-        <td><span class="page-label">庫存管理</span></td>
-        <td class="action">管理員點「確認回庫」<br><span class="note">確認數量後送出</span></td>
-        <td>可賣庫存增加，待驗紀錄消失</td>
-        <td class="check-col"><span class="checkbox"></span></td>
-        <td class="result-col"><div class="result-input"></div></td>
-      </tr>
-    </tbody>
-  </table>
+<!-- ===== C. 派車管理 ===== -->
+<div class="section" id="sec-C">
+  <div class="section-header" onclick="toggleSection('C')">
+    <span class="section-letter">C</span>
+    <span class="section-title">派車管理（整理明天要送的貨）</span>
+    <span class="section-badge" id="badge-C">5 項</span>
+  </div>
+  <div class="section-body" id="body-C">
+
+    <div class="step-row" id="row-C1">
+      <div class="step-num">C1</div>
+      <div class="step-content">
+        <div class="step-where"><span>派車管理</span></div>
+        <div class="step-action">選日期 → 點「產生派車單」</div>
+        <div class="step-note">系統把那天的訂單整合成一張派車單</div>
+        <div class="step-expect" id="exp-C1">預期：出現一筆新派車單，狀態顯示「草稿」</div>
+      </div>
+      <div class="step-controls">
+        <div class="btn-group">
+          <button class="btn btn-pass" onclick="mark('C1','pass')">✓ 通過</button>
+          <button class="btn btn-fail" onclick="mark('C1','fail')">✗ 問題</button>
+          <button class="btn btn-skip" onclick="mark('C1','skip')">— 跳過</button>
+        </div>
+        <textarea class="note-input" id="note-C1" placeholder="備註（可空白）" oninput="saveNote('C1')"></textarea>
+      </div>
+    </div>
+
+    <div class="step-row" id="row-C2">
+      <div class="step-num">C2</div>
+      <div class="step-content">
+        <div class="step-where"><span>派車管理</span></div>
+        <div class="step-action">點開派車單，確認內容</div>
+        <div class="step-note">司機、各停靠點客戶、品項、數量都有顯示</div>
+        <div class="step-expect" id="exp-C2">預期：停靠點清單有資料，沒有空白列</div>
+      </div>
+      <div class="step-controls">
+        <div class="btn-group">
+          <button class="btn btn-pass" onclick="mark('C2','pass')">✓ 通過</button>
+          <button class="btn btn-fail" onclick="mark('C2','fail')">✗ 問題</button>
+          <button class="btn btn-skip" onclick="mark('C2','skip')">— 跳過</button>
+        </div>
+        <textarea class="note-input" id="note-C2" placeholder="備註（可空白）" oninput="saveNote('C2')"></textarea>
+      </div>
+    </div>
+
+    <div class="step-row" id="row-C3">
+      <div class="step-num">C3</div>
+      <div class="step-content">
+        <div class="step-where"><span>派車管理</span></div>
+        <div class="step-action">點「列印派車單」</div>
+        <div class="step-note">v6.28 已修：改開新視窗列印，不再空白</div>
+        <div class="step-expect" id="exp-C3">預期：新視窗有完整派車單內容，可以列印</div>
+      </div>
+      <div class="step-controls">
+        <div class="btn-group">
+          <button class="btn btn-pass" onclick="mark('C3','pass')">✓ 通過</button>
+          <button class="btn btn-fail" onclick="mark('C3','fail')">✗ 問題</button>
+          <button class="btn btn-skip" onclick="mark('C3','skip')">— 跳過</button>
+        </div>
+        <textarea class="note-input" id="note-C3" placeholder="備註（可空白）" oninput="saveNote('C3')"></textarea>
+      </div>
+    </div>
+
+    <div class="step-row" id="row-C4">
+      <div class="step-num">C4</div>
+      <div class="step-content">
+        <div class="step-where"><span>派車管理</span> → <span>庫存管理</span></div>
+        <div class="step-action">列印後，去庫存管理確認可賣庫存有扣減</div>
+        <div class="step-note">列印動作觸發「出車扣庫存」，數字應比列印前少</div>
+        <div class="step-expect" id="exp-C4">預期：庫存數量減少，與派車單品項數量一致</div>
+      </div>
+      <div class="step-controls">
+        <div class="btn-group">
+          <button class="btn btn-pass" onclick="mark('C4','pass')">✓ 通過</button>
+          <button class="btn btn-fail" onclick="mark('C4','fail')">✗ 問題</button>
+          <button class="btn btn-skip" onclick="mark('C4','skip')">— 跳過</button>
+        </div>
+        <textarea class="note-input" id="note-C4" placeholder="備註（可空白）" oninput="saveNote('C4')"></textarea>
+      </div>
+    </div>
+
+    <div class="step-row" id="row-C5">
+      <div class="step-num">C5</div>
+      <div class="step-content">
+        <div class="step-where"><span>派車管理</span></div>
+        <div class="step-action">測試「新增加站」（臨時補單）</div>
+        <div class="step-note">派車單已產生後，臨時再加一個客戶停靠點</div>
+        <div class="step-expect" id="exp-C5">預期：新停靠點出現在派車單，可再次列印</div>
+      </div>
+      <div class="step-controls">
+        <div class="btn-group">
+          <button class="btn btn-pass" onclick="mark('C5','pass')">✓ 通過</button>
+          <button class="btn btn-fail" onclick="mark('C5','fail')">✗ 問題</button>
+          <button class="btn btn-skip" onclick="mark('C5','skip')">— 跳過</button>
+        </div>
+        <textarea class="note-input" id="note-C5" placeholder="備註（可空白）" oninput="saveNote('C5')"></textarea>
+      </div>
+    </div>
+
+  </div>
 </div>
 
-<!-- ======= F. 進貨流程 ======= -->
-<div class="section">
-  <div class="section-title">F｜進貨簽收（向供應商買貨進來）</div>
-  <table>
-    <thead><tr>
-      <th style="width:32px">#</th>
-      <th>到哪裡</th>
-      <th>做什麼、看什麼</th>
-      <th>預期結果</th>
-      <th class="check-col">✓</th>
-      <th class="result-col">實測備註</th>
-    </tr></thead>
-    <tbody>
-      <tr>
-        <td class="step-num">F1</td>
-        <td><span class="page-label">進貨簽收</span></td>
-        <td class="action">建立一筆進貨收貨單<br><span class="note">選供應商（如大永蛋行）、品項、數量</span></td>
-        <td>進貨單建立成功，狀態：待簽收</td>
-        <td class="check-col"><span class="checkbox"></span></td>
-        <td class="result-col"><div class="result-input"></div></td>
-      </tr>
-      <tr>
-        <td class="step-num">F2</td>
-        <td><span class="page-label">進貨簽收</span></td>
-        <td class="action">點「供應商簽名」<br><span class="note">代表這批貨確認收到，公司開始欠供應商錢</span></td>
-        <td>狀態改為「已簽收」</td>
-        <td class="check-col"><span class="checkbox"></span></td>
-        <td class="result-col"><div class="result-input"></div></td>
-      </tr>
-      <tr>
-        <td class="step-num">F3</td>
-        <td><span class="page-label">進貨簽收</span><br>→ 自動處理</td>
-        <td class="action">簽收後，確認「我欠供應商的錢（AP）」有沒有自動建立<br><span class="note">可在進貨單詳情或應付帳款頁確認</span></td>
-        <td>AP 應付帳款出現一筆，金額正確</td>
-        <td class="check-col"><span class="checkbox"></span></td>
-        <td class="result-col"><div class="result-input"></div></td>
-      </tr>
-      <tr>
-        <td class="step-num">F4</td>
-        <td><span class="page-label">進貨簽收</span></td>
-        <td class="action">點「確認入庫」<br><span class="note">確認貨真的回到大永倉庫，才能賣</span></td>
-        <td>狀態改為「已入庫」</td>
-        <td class="check-col"><span class="checkbox"></span></td>
-        <td class="result-col"><div class="result-input"></div></td>
-      </tr>
-      <tr>
-        <td class="step-num">F5</td>
-        <td><span class="page-label">庫存管理</span></td>
-        <td class="action">入庫後，去庫存管理確認可賣庫存增加<br><span class="note">簽名不增加庫存，入庫才增加</span></td>
-        <td>可賣庫存數量增加，與進貨數量一致</td>
-        <td class="check-col"><span class="checkbox"></span></td>
-        <td class="result-col"><div class="result-input"></div></td>
-      </tr>
-    </tbody>
-  </table>
+<!-- ===== D. 司機 APP ===== -->
+<div class="section" id="sec-D">
+  <div class="section-header" onclick="toggleSection('D')">
+    <span class="section-letter">D</span>
+    <span class="section-title">司機 APP（出車、送貨、收錢）— 需用手機測試</span>
+    <span class="section-badge" id="badge-D">5 項</span>
+  </div>
+  <div class="section-body" id="body-D">
+
+    <div class="step-row" id="row-D1">
+      <div class="step-num">D1</div>
+      <div class="step-content">
+        <div class="step-where"><span>今日任務</span> <span style="font-size:11px;color:#a8a29e">（手機開 ordersome.com.tw/driver）</span></div>
+        <div class="step-action">司機帳號登入，看今日任務</div>
+        <div class="step-note">應顯示今天要送的停靠點、地址、品項</div>
+        <div class="step-expect" id="exp-D1">預期：有停靠點列表，地址清楚</div>
+      </div>
+      <div class="step-controls">
+        <div class="btn-group">
+          <button class="btn btn-pass" onclick="mark('D1','pass')">✓ 通過</button>
+          <button class="btn btn-fail" onclick="mark('D1','fail')">✗ 問題</button>
+          <button class="btn btn-skip" onclick="mark('D1','skip')">— 跳過</button>
+        </div>
+        <textarea class="note-input" id="note-D1" placeholder="備註（可空白）" oninput="saveNote('D1')"></textarea>
+      </div>
+    </div>
+
+    <div class="step-row" id="row-D2">
+      <div class="step-num">D2</div>
+      <div class="step-content">
+        <div class="step-where"><span>訂單（司機）</span></div>
+        <div class="step-action">點進一個停靠點，模擬送達</div>
+        <div class="step-note">點「確認送達」或讓客戶簽名</div>
+        <div class="step-expect" id="exp-D2">預期：訂單狀態變為「已送達」</div>
+      </div>
+      <div class="step-controls">
+        <div class="btn-group">
+          <button class="btn btn-pass" onclick="mark('D2','pass')">✓ 通過</button>
+          <button class="btn btn-fail" onclick="mark('D2','fail')">✗ 問題</button>
+          <button class="btn btn-skip" onclick="mark('D2','skip')">— 跳過</button>
+        </div>
+        <textarea class="note-input" id="note-D2" placeholder="備註（可空白）" oninput="saveNote('D2')"></textarea>
+      </div>
+    </div>
+
+    <div class="step-row" id="row-D3">
+      <div class="step-num">D3</div>
+      <div class="step-content">
+        <div class="step-where"><span>應收帳款</span> <span style="font-size:11px;color:#a8a29e">（管理端，電腦）</span></div>
+        <div class="step-action">回管理端，看「應收帳款」有沒有自動出現</div>
+        <div class="step-note">剛送達的訂單應自動建立一筆 AR（別人欠我的錢）</div>
+        <div class="step-expect" id="exp-D3">預期：應收帳款出現一筆，金額正確</div>
+      </div>
+      <div class="step-controls">
+        <div class="btn-group">
+          <button class="btn btn-pass" onclick="mark('D3','pass')">✓ 通過</button>
+          <button class="btn btn-fail" onclick="mark('D3','fail')">✗ 問題</button>
+          <button class="btn btn-skip" onclick="mark('D3','skip')">— 跳過</button>
+        </div>
+        <textarea class="note-input" id="note-D3" placeholder="備註（可空白）" oninput="saveNote('D3')"></textarea>
+      </div>
+    </div>
+
+    <div class="step-row" id="row-D4">
+      <div class="step-num">D4</div>
+      <div class="step-content">
+        <div class="step-where"><span>訂單（司機）</span></div>
+        <div class="step-action">模擬司機收現金</div>
+        <div class="step-note">點「收款」，輸入收到的金額送出</div>
+        <div class="step-expect" id="exp-D4">預期：訂單付款狀態更新，應收帳款金額同步</div>
+      </div>
+      <div class="step-controls">
+        <div class="btn-group">
+          <button class="btn btn-pass" onclick="mark('D4','pass')">✓ 通過</button>
+          <button class="btn btn-fail" onclick="mark('D4','fail')">✗ 問題</button>
+          <button class="btn btn-skip" onclick="mark('D4','skip')">— 跳過</button>
+        </div>
+        <textarea class="note-input" id="note-D4" placeholder="備註（可空白）" oninput="saveNote('D4')"></textarea>
+      </div>
+    </div>
+
+    <div class="step-row" id="row-D5">
+      <div class="step-num">D5</div>
+      <div class="step-content">
+        <div class="step-where"><span>工作日誌</span></div>
+        <div class="step-action">司機回報剩貨</div>
+        <div class="step-note">送不完的蛋，填回剩餘數量</div>
+        <div class="step-expect" id="exp-D5">預期：出現「回庫待驗」紀錄（庫存還不會增加）</div>
+      </div>
+      <div class="step-controls">
+        <div class="btn-group">
+          <button class="btn btn-pass" onclick="mark('D5','pass')">✓ 通過</button>
+          <button class="btn btn-fail" onclick="mark('D5','fail')">✗ 問題</button>
+          <button class="btn btn-skip" onclick="mark('D5','skip')">— 跳過</button>
+        </div>
+        <textarea class="note-input" id="note-D5" placeholder="備註（可空白）" oninput="saveNote('D5')"></textarea>
+      </div>
+    </div>
+
+  </div>
 </div>
 
-<!-- ======= G. 帳款確認 ======= -->
-<div class="section">
-  <div class="section-title">G｜帳款確認（錢的進出）</div>
-  <table>
-    <thead><tr>
-      <th style="width:32px">#</th>
-      <th>到哪裡</th>
-      <th>做什麼、看什麼</span></th>
-      <th>預期結果</th>
-      <th class="check-col">✓</th>
-      <th class="result-col">實測備註</th>
-    </tr></thead>
-    <tbody>
-      <tr>
-        <td class="step-num">G1</td>
-        <td><span class="page-label">應收帳款</span></td>
-        <td class="action">查看應收帳款列表<br><span class="note">「別人欠我的錢」——客戶送達未付款的金額</span></td>
-        <td>有帳款資料，狀態（未收/已收/逾期）顯示正確</td>
-        <td class="check-col"><span class="checkbox"></span></td>
-        <td class="result-col"><div class="result-input"></div></td>
-      </tr>
-      <tr>
-        <td class="step-num">G2</td>
-        <td><span class="page-label">應收帳款</span></td>
-        <td class="action">對一筆 AR 點「標記已收」<br><span class="note">客戶月結付款後更新</span></td>
-        <td>狀態改為已收，訂單付款狀態同步</td>
-        <td class="check-col"><span class="checkbox"></span></td>
-        <td class="result-col"><div class="result-input"></div></td>
-      </tr>
-      <tr>
-        <td class="step-num">G3</td>
-        <td><span class="page-label">應收帳款</span></td>
-        <td class="action">查看「司機日報」Tab<br><span class="note">今日司機收了多少現金</span></td>
-        <td>有日期、司機、金額顯示</td>
-        <td class="check-col"><span class="checkbox"></span></td>
-        <td class="result-col"><div class="result-input"></div></td>
-      </tr>
-      <tr>
-        <td class="step-num">G4</td>
-        <td><span class="page-label">應收帳款</span></td>
-        <td class="action">查看「月結對帳」功能<br><span class="note">選客戶、月份，匯出對帳單 Excel</span></td>
-        <td>Excel 下載成功，欄位有應收、已收、未收</td>
-        <td class="check-col"><span class="checkbox"></span></td>
-        <td class="result-col"><div class="result-input"></div></td>
-      </tr>
-    </tbody>
-  </table>
+<!-- ===== E. 回庫待驗 ===== -->
+<div class="section" id="sec-E">
+  <div class="section-header" onclick="toggleSection('E')">
+    <span class="section-letter">E</span>
+    <span class="section-title">回庫待驗（剩貨回來要管理員確認才算庫存）</span>
+    <span class="section-badge" id="badge-E">2 項</span>
+  </div>
+  <div class="section-body" id="body-E">
+
+    <div class="step-row" id="row-E1">
+      <div class="step-num">E1</div>
+      <div class="step-content">
+        <div class="step-where"><span>庫存管理</span></div>
+        <div class="step-action">找「待驗回庫」區塊，看司機回報的剩貨</div>
+        <div class="step-note">D5 步驟司機回報後，這裡應出現一筆待驗紀錄</div>
+        <div class="step-expect" id="exp-E1">預期：有待驗紀錄，品項與司機回報數量相符</div>
+      </div>
+      <div class="step-controls">
+        <div class="btn-group">
+          <button class="btn btn-pass" onclick="mark('E1','pass')">✓ 通過</button>
+          <button class="btn btn-fail" onclick="mark('E1','fail')">✗ 問題</button>
+          <button class="btn btn-skip" onclick="mark('E1','skip')">— 跳過</button>
+        </div>
+        <textarea class="note-input" id="note-E1" placeholder="備註（可空白）" oninput="saveNote('E1')"></textarea>
+      </div>
+    </div>
+
+    <div class="step-row" id="row-E2">
+      <div class="step-num">E2</div>
+      <div class="step-content">
+        <div class="step-where"><span>庫存管理</span></div>
+        <div class="step-action">管理員點「確認回庫」</div>
+        <div class="step-note">確認數量後送出，這才算回到可賣庫存</div>
+        <div class="step-expect" id="exp-E2">預期：可賣庫存增加，待驗紀錄消失</div>
+      </div>
+      <div class="step-controls">
+        <div class="btn-group">
+          <button class="btn btn-pass" onclick="mark('E2','pass')">✓ 通過</button>
+          <button class="btn btn-fail" onclick="mark('E2','fail')">✗ 問題</button>
+          <button class="btn btn-skip" onclick="mark('E2','skip')">— 跳過</button>
+        </div>
+        <textarea class="note-input" id="note-E2" placeholder="備註（可空白）" oninput="saveNote('E2')"></textarea>
+      </div>
+    </div>
+
+  </div>
 </div>
 
-<!-- ======= H. 庫存查詢 ======= -->
-<div class="section">
-  <div class="section-title">H｜庫存查詢（現在有多少貨可以賣）</div>
-  <table>
-    <thead><tr>
-      <th style="width:32px">#</th>
-      <th>到哪裡</th>
-      <th>做什麼、看什麼</th>
-      <th>預期結果</th>
-      <th class="check-col">✓</th>
-      <th class="result-col">實測備註</th>
-    </tr></thead>
-    <tbody>
-      <tr>
-        <td class="step-num">H1</td>
-        <td><span class="page-label">庫存管理</span></td>
-        <td class="action">查看「可賣庫存」數字<br><span class="note">這是現在倉庫裡可以賣出去的數量</span></td>
-        <td>有品項列表、數量，無奇怪的負數</td>
-        <td class="check-col"><span class="checkbox"></span></td>
-        <td class="result-col"><div class="result-input"></div></td>
-      </tr>
-      <tr>
-        <td class="step-num">H2</td>
-        <td><span class="page-label">庫存管理</span></td>
-        <td class="action">查看「待入倉進貨」<br><span class="note">已向供應商簽收但還沒入倉確認的貨</span></td>
-        <td>有顯示，或顯示「無待入倉」</td>
-        <td class="check-col"><span class="checkbox"></span></td>
-        <td class="result-col"><div class="result-input"></div></td>
-      </tr>
-      <tr>
-        <td class="step-num">H3</td>
-        <td><span class="page-label">庫存管理</span></td>
-        <td class="action">查看「庫存異動紀錄」<br><span class="note">進貨 / 出車 / 回庫每一筆異動都應該在這裡</span></td>
-        <td>有紀錄，原因說明清楚（進貨/出車/回庫）</td>
-        <td class="check-col"><span class="checkbox"></span></td>
-        <td class="result-col"><div class="result-input"></div></td>
-      </tr>
-    </tbody>
-  </table>
+<!-- ===== F. 進貨簽收 ===== -->
+<div class="section" id="sec-F">
+  <div class="section-header" onclick="toggleSection('F')">
+    <span class="section-letter">F</span>
+    <span class="section-title">進貨簽收（向供應商買貨進倉）</span>
+    <span class="section-badge" id="badge-F">5 項</span>
+  </div>
+  <div class="section-body" id="body-F">
+
+    <div class="step-row" id="row-F1">
+      <div class="step-num">F1</div>
+      <div class="step-content">
+        <div class="step-where"><span>進貨簽收</span></div>
+        <div class="step-action">建立一筆進貨收貨單</div>
+        <div class="step-note">選供應商（如大永蛋行）、品項、數量送出</div>
+        <div class="step-expect" id="exp-F1">預期：進貨單建立成功，狀態：待簽收</div>
+      </div>
+      <div class="step-controls">
+        <div class="btn-group">
+          <button class="btn btn-pass" onclick="mark('F1','pass')">✓ 通過</button>
+          <button class="btn btn-fail" onclick="mark('F1','fail')">✗ 問題</button>
+          <button class="btn btn-skip" onclick="mark('F1','skip')">— 跳過</button>
+        </div>
+        <textarea class="note-input" id="note-F1" placeholder="備註（可空白）" oninput="saveNote('F1')"></textarea>
+      </div>
+    </div>
+
+    <div class="step-row" id="row-F2">
+      <div class="step-num">F2</div>
+      <div class="step-content">
+        <div class="step-where"><span>進貨簽收</span></div>
+        <div class="step-action">點「供應商簽名」</div>
+        <div class="step-note">代表這批貨確認收到，公司開始欠供應商錢（AP 成立）</div>
+        <div class="step-expect" id="exp-F2">預期：狀態改為「已簽收」</div>
+      </div>
+      <div class="step-controls">
+        <div class="btn-group">
+          <button class="btn btn-pass" onclick="mark('F2','pass')">✓ 通過</button>
+          <button class="btn btn-fail" onclick="mark('F2','fail')">✗ 問題</button>
+          <button class="btn btn-skip" onclick="mark('F2','skip')">— 跳過</button>
+        </div>
+        <textarea class="note-input" id="note-F2" placeholder="備註（可空白）" oninput="saveNote('F2')"></textarea>
+      </div>
+    </div>
+
+    <div class="step-row" id="row-F3">
+      <div class="step-num">F3</div>
+      <div class="step-content">
+        <div class="step-where"><span>進貨簽收</span></div>
+        <div class="step-action">簽收後，確認「我欠供應商的錢（AP）」有自動出現</div>
+        <div class="step-note">在進貨單詳情頁應顯示 AP 金額，或進貨簽收列表有付款狀態</div>
+        <div class="step-expect" id="exp-F3">預期：AP 應付帳款出現，金額與進貨金額一致</div>
+      </div>
+      <div class="step-controls">
+        <div class="btn-group">
+          <button class="btn btn-pass" onclick="mark('F3','pass')">✓ 通過</button>
+          <button class="btn btn-fail" onclick="mark('F3','fail')">✗ 問題</button>
+          <button class="btn btn-skip" onclick="mark('F3','skip')">— 跳過</button>
+        </div>
+        <textarea class="note-input" id="note-F3" placeholder="備註（可空白）" oninput="saveNote('F3')"></textarea>
+      </div>
+    </div>
+
+    <div class="step-row" id="row-F4">
+      <div class="step-num">F4</div>
+      <div class="step-content">
+        <div class="step-where"><span>進貨簽收</span></div>
+        <div class="step-action">點「確認入庫」</div>
+        <div class="step-note">確認貨真的回到大永倉庫，此步驟才讓庫存增加</div>
+        <div class="step-expect" id="exp-F4">預期：狀態改為「已入庫」</div>
+      </div>
+      <div class="step-controls">
+        <div class="btn-group">
+          <button class="btn btn-pass" onclick="mark('F4','pass')">✓ 通過</button>
+          <button class="btn btn-fail" onclick="mark('F4','fail')">✗ 問題</button>
+          <button class="btn btn-skip" onclick="mark('F4','skip')">— 跳過</button>
+        </div>
+        <textarea class="note-input" id="note-F4" placeholder="備註（可空白）" oninput="saveNote('F4')"></textarea>
+      </div>
+    </div>
+
+    <div class="step-row" id="row-F5">
+      <div class="step-num">F5</div>
+      <div class="step-content">
+        <div class="step-where"><span>進貨簽收</span> → <span>庫存管理</span></div>
+        <div class="step-action">入庫後，去庫存管理確認可賣庫存增加</div>
+        <div class="step-note">簽名不增加庫存，只有點「確認入庫」後才增加</div>
+        <div class="step-expect" id="exp-F5">預期：可賣庫存增加，數量與進貨一致</div>
+      </div>
+      <div class="step-controls">
+        <div class="btn-group">
+          <button class="btn btn-pass" onclick="mark('F5','pass')">✓ 通過</button>
+          <button class="btn btn-fail" onclick="mark('F5','fail')">✗ 問題</button>
+          <button class="btn btn-skip" onclick="mark('F5','skip')">— 跳過</button>
+        </div>
+        <textarea class="note-input" id="note-F5" placeholder="備註（可空白）" oninput="saveNote('F5')"></textarea>
+      </div>
+    </div>
+
+  </div>
 </div>
 
-<!-- ======= I. 客戶管理 ======= -->
-<div class="section">
-  <div class="section-title">I｜客戶管理（買蛋的客戶資料）</div>
-  <table>
-    <thead><tr>
-      <th style="width:32px">#</th>
-      <th>到哪裡</th>
-      <th>做什麼、看什麼</th>
-      <th>預期結果</th>
-      <th class="check-col">✓</th>
-      <th class="result-col">實測備註</th>
-    </tr></thead>
-    <tbody>
-      <tr>
-        <td class="step-num">I1</td>
-        <td><span class="page-label">客戶管理</span></td>
-        <td class="action">查看客戶列表<br><span class="note">名稱、電話、地址、結帳方式（現金 / 月結）</span></td>
-        <td>有客戶資料，結帳方式標示清楚</td>
-        <td class="check-col"><span class="checkbox"></span></td>
-        <td class="result-col"><div class="result-input"></div></td>
-      </tr>
-      <tr>
-        <td class="step-num">I2</td>
-        <td><span class="page-label">客戶管理</span></td>
-        <td class="action">新增或編輯一筆客戶資料</td>
-        <td>儲存成功，資料更新</td>
-        <td class="check-col"><span class="checkbox"></span></td>
-        <td class="result-col"><div class="result-input"></div></td>
-      </tr>
-    </tbody>
-  </table>
+<!-- ===== G. 應收帳款 ===== -->
+<div class="section" id="sec-G">
+  <div class="section-header" onclick="toggleSection('G')">
+    <span class="section-letter">G</span>
+    <span class="section-title">應收帳款（客戶欠我多少錢）</span>
+    <span class="section-badge" id="badge-G">4 項</span>
+  </div>
+  <div class="section-body" id="body-G">
+
+    <div class="step-row" id="row-G1">
+      <div class="step-num">G1</div>
+      <div class="step-content">
+        <div class="step-where"><span>應收帳款</span></div>
+        <div class="step-action">查看應收帳款列表</div>
+        <div class="step-note">每筆有客戶名、金額、狀態（未收 / 已收 / 逾期）</div>
+        <div class="step-expect" id="exp-G1">預期：有帳款資料，狀態顯示正確</div>
+      </div>
+      <div class="step-controls">
+        <div class="btn-group">
+          <button class="btn btn-pass" onclick="mark('G1','pass')">✓ 通過</button>
+          <button class="btn btn-fail" onclick="mark('G1','fail')">✗ 問題</button>
+          <button class="btn btn-skip" onclick="mark('G1','skip')">— 跳過</button>
+        </div>
+        <textarea class="note-input" id="note-G1" placeholder="備註（可空白）" oninput="saveNote('G1')"></textarea>
+      </div>
+    </div>
+
+    <div class="step-row" id="row-G2">
+      <div class="step-num">G2</div>
+      <div class="step-content">
+        <div class="step-where"><span>應收帳款</span></div>
+        <div class="step-action">對一筆 AR 點「標記已收」</div>
+        <div class="step-note">月結客戶付款後，管理員在這裡更新</div>
+        <div class="step-expect" id="exp-G2">預期：狀態改為已收，對應訂單付款狀態同步</div>
+      </div>
+      <div class="step-controls">
+        <div class="btn-group">
+          <button class="btn btn-pass" onclick="mark('G2','pass')">✓ 通過</button>
+          <button class="btn btn-fail" onclick="mark('G2','fail')">✗ 問題</button>
+          <button class="btn btn-skip" onclick="mark('G2','skip')">— 跳過</button>
+        </div>
+        <textarea class="note-input" id="note-G2" placeholder="備註（可空白）" oninput="saveNote('G2')"></textarea>
+      </div>
+    </div>
+
+    <div class="step-row" id="row-G3">
+      <div class="step-num">G3</div>
+      <div class="step-content">
+        <div class="step-where"><span>應收帳款</span></div>
+        <div class="step-action">查看「司機日報」Tab</div>
+        <div class="step-note">今天各司機收了多少現金</div>
+        <div class="step-expect" id="exp-G3">預期：有日期、司機名稱、收款金額</div>
+      </div>
+      <div class="step-controls">
+        <div class="btn-group">
+          <button class="btn btn-pass" onclick="mark('G3','pass')">✓ 通過</button>
+          <button class="btn btn-fail" onclick="mark('G3','fail')">✗ 問題</button>
+          <button class="btn btn-skip" onclick="mark('G3','skip')">— 跳過</button>
+        </div>
+        <textarea class="note-input" id="note-G3" placeholder="備註（可空白）" oninput="saveNote('G3')"></textarea>
+      </div>
+    </div>
+
+    <div class="step-row" id="row-G4">
+      <div class="step-num">G4</div>
+      <div class="step-content">
+        <div class="step-where"><span>應收帳款</span></div>
+        <div class="step-action">月結對帳：選客戶 + 月份 → 匯出 Excel 對帳單</div>
+        <div class="step-note">給月結客戶的帳單，可下載</div>
+        <div class="step-expect" id="exp-G4">預期：Excel 下載成功，有應收、已收、未收欄位</div>
+      </div>
+      <div class="step-controls">
+        <div class="btn-group">
+          <button class="btn btn-pass" onclick="mark('G4','pass')">✓ 通過</button>
+          <button class="btn btn-fail" onclick="mark('G4','fail')">✗ 問題</button>
+          <button class="btn btn-skip" onclick="mark('G4','skip')">— 跳過</button>
+        </div>
+        <textarea class="note-input" id="note-G4" placeholder="備註（可空白）" oninput="saveNote('G4')"></textarea>
+      </div>
+    </div>
+
+  </div>
 </div>
 
-<!-- ======= J. 報表分析 ======= -->
-<div class="section">
-  <div class="section-title">J｜報表分析（這個月賣了多少、收了多少）</div>
-  <table>
-    <thead><tr>
-      <th style="width:32px">#</th>
-      <th>到哪裡</th>
-      <th>做什麼、看什麼</th>
-      <th>預期結果</th>
-      <th class="check-col">✓</th>
-      <th class="result-col">實測備註</th>
-    </tr></thead>
-    <tbody>
-      <tr>
-        <td class="step-num">J1</td>
-        <td><span class="page-label">報表分析</span></td>
-        <td class="action">選月份，查看當月銷售報表</td>
-        <td>有圖表和數字，沒有空白</td>
-        <td class="check-col"><span class="checkbox"></span></td>
-        <td class="result-col"><div class="result-input"></div></td>
-      </tr>
-      <tr>
-        <td class="step-num">J2</td>
-        <td><span class="page-label">報表分析</span></td>
-        <td class="action">查看「司機業績」或「客戶銷售」分類<br><span class="note">確認每個司機送了多少、每個客戶買了多少</span></td>
-        <td>數字有合理分佈，沒有全 0</td>
-        <td class="check-col"><span class="checkbox"></span></td>
-        <td class="result-col"><div class="result-input"></div></td>
-      </tr>
-    </tbody>
-  </table>
+<!-- ===== H. 庫存管理 ===== -->
+<div class="section" id="sec-H">
+  <div class="section-header" onclick="toggleSection('H')">
+    <span class="section-letter">H</span>
+    <span class="section-title">庫存管理（現在有多少貨可以賣）</span>
+    <span class="section-badge" id="badge-H">3 項</span>
+  </div>
+  <div class="section-body" id="body-H">
+
+    <div class="step-row" id="row-H1">
+      <div class="step-num">H1</div>
+      <div class="step-content">
+        <div class="step-where"><span>庫存管理</span></div>
+        <div class="step-action">查看「可賣庫存」數字</div>
+        <div class="step-note">現在倉庫裡每個品項可以賣出去的數量</div>
+        <div class="step-expect" id="exp-H1">預期：有品項列表、數量，沒有負數或奇怪數字</div>
+      </div>
+      <div class="step-controls">
+        <div class="btn-group">
+          <button class="btn btn-pass" onclick="mark('H1','pass')">✓ 通過</button>
+          <button class="btn btn-fail" onclick="mark('H1','fail')">✗ 問題</button>
+          <button class="btn btn-skip" onclick="mark('H1','skip')">— 跳過</button>
+        </div>
+        <textarea class="note-input" id="note-H1" placeholder="備註（可空白）" oninput="saveNote('H1')"></textarea>
+      </div>
+    </div>
+
+    <div class="step-row" id="row-H2">
+      <div class="step-num">H2</div>
+      <div class="step-content">
+        <div class="step-where"><span>庫存管理</span></div>
+        <div class="step-action">查看「待入倉進貨」</div>
+        <div class="step-note">已向供應商簽收但還沒入倉確認的貨</div>
+        <div class="step-expect" id="exp-H2">預期：有待入倉紀錄，或顯示「無待入倉」</div>
+      </div>
+      <div class="step-controls">
+        <div class="btn-group">
+          <button class="btn btn-pass" onclick="mark('H2','pass')">✓ 通過</button>
+          <button class="btn btn-fail" onclick="mark('H2','fail')">✗ 問題</button>
+          <button class="btn btn-skip" onclick="mark('H2','skip')">— 跳過</button>
+        </div>
+        <textarea class="note-input" id="note-H2" placeholder="備註（可空白）" oninput="saveNote('H2')"></textarea>
+      </div>
+    </div>
+
+    <div class="step-row" id="row-H3">
+      <div class="step-num">H3</div>
+      <div class="step-content">
+        <div class="step-where"><span>庫存管理</span></div>
+        <div class="step-action">查看「庫存異動紀錄」</div>
+        <div class="step-note">進貨入庫、出車扣庫、回庫補充，每一筆異動都應有紀錄</div>
+        <div class="step-expect" id="exp-H3">預期：有異動紀錄，每筆原因說明清楚</div>
+      </div>
+      <div class="step-controls">
+        <div class="btn-group">
+          <button class="btn btn-pass" onclick="mark('H3','pass')">✓ 通過</button>
+          <button class="btn btn-fail" onclick="mark('H3','fail')">✗ 問題</button>
+          <button class="btn btn-skip" onclick="mark('H3','skip')">— 跳過</button>
+        </div>
+        <textarea class="note-input" id="note-H3" placeholder="備註（可空白）" oninput="saveNote('H3')"></textarea>
+      </div>
+    </div>
+
+  </div>
 </div>
 
-<!-- ======= 總結 ======= -->
-<div class="section">
-  <div class="section-title">整體評分</div>
-  <table>
-    <thead><tr>
-      <th>區塊</th>
-      <th>全部通過</th>
-      <th>部分問題</th>
-      <th>無法使用</th>
-      <th>問題描述</th>
-    </tr></thead>
-    <tbody>
-      <tr><td>A 總覽</td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><div class="result-input"></div></td></tr>
-      <tr><td>B 訂單管理</td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><div class="result-input"></div></td></tr>
-      <tr><td>C 派車管理</td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><div class="result-input"></div></td></tr>
-      <tr><td>D 司機 APP</td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><div class="result-input"></div></td></tr>
-      <tr><td>E 回庫待驗</td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><div class="result-input"></div></td></tr>
-      <tr><td>F 進貨簽收</td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><div class="result-input"></div></td></tr>
-      <tr><td>G 帳款確認</td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><div class="result-input"></div></td></tr>
-      <tr><td>H 庫存查詢</td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><div class="result-input"></div></td></tr>
-      <tr><td>I 客戶管理</td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><div class="result-input"></div></td></tr>
-      <tr><td>J 報表分析</td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><span class="checkbox"></span></td><td><div class="result-input"></div></td></tr>
-    </tbody>
-  </table>
+<!-- ===== I. 客戶管理 ===== -->
+<div class="section" id="sec-I">
+  <div class="section-header" onclick="toggleSection('I')">
+    <span class="section-letter">I</span>
+    <span class="section-title">客戶管理（買蛋的客戶資料）</span>
+    <span class="section-badge" id="badge-I">2 項</span>
+  </div>
+  <div class="section-body" id="body-I">
+
+    <div class="step-row" id="row-I1">
+      <div class="step-num">I1</div>
+      <div class="step-content">
+        <div class="step-where"><span>客戶管理</span></div>
+        <div class="step-action">查看客戶列表</div>
+        <div class="step-note">名稱、電話、地址、結帳方式（現金 / 月結）清楚</div>
+        <div class="step-expect" id="exp-I1">預期：有客戶資料，結帳方式標示清楚</div>
+      </div>
+      <div class="step-controls">
+        <div class="btn-group">
+          <button class="btn btn-pass" onclick="mark('I1','pass')">✓ 通過</button>
+          <button class="btn btn-fail" onclick="mark('I1','fail')">✗ 問題</button>
+          <button class="btn btn-skip" onclick="mark('I1','skip')">— 跳過</button>
+        </div>
+        <textarea class="note-input" id="note-I1" placeholder="備註（可空白）" oninput="saveNote('I1')"></textarea>
+      </div>
+    </div>
+
+    <div class="step-row" id="row-I2">
+      <div class="step-num">I2</div>
+      <div class="step-content">
+        <div class="step-where"><span>客戶管理</span></div>
+        <div class="step-action">新增或編輯一筆客戶資料</div>
+        <div class="step-note">填名稱、電話、地址、結帳方式後儲存</div>
+        <div class="step-expect" id="exp-I2">預期：儲存成功，資料更新，無錯誤訊息</div>
+      </div>
+      <div class="step-controls">
+        <div class="btn-group">
+          <button class="btn btn-pass" onclick="mark('I2','pass')">✓ 通過</button>
+          <button class="btn btn-fail" onclick="mark('I2','fail')">✗ 問題</button>
+          <button class="btn btn-skip" onclick="mark('I2','skip')">— 跳過</button>
+        </div>
+        <textarea class="note-input" id="note-I2" placeholder="備註（可空白）" oninput="saveNote('I2')"></textarea>
+      </div>
+    </div>
+
+  </div>
 </div>
 
-<div class="footer-note">
-  測試網址：https://ordersome.com.tw/dayone　　版本：v6.28　　此表由 Claude 依程式碼與業務流程產生，測試結果請回報給開發端。
+<!-- ===== J. 報表分析 ===== -->
+<div class="section" id="sec-J">
+  <div class="section-header" onclick="toggleSection('J')">
+    <span class="section-letter">J</span>
+    <span class="section-title">報表分析（這個月賣了多少、收了多少）</span>
+    <span class="section-badge" id="badge-J">2 項</span>
+  </div>
+  <div class="section-body" id="body-J">
+
+    <div class="step-row" id="row-J1">
+      <div class="step-num">J1</div>
+      <div class="step-content">
+        <div class="step-where"><span>報表分析</span></div>
+        <div class="step-action">選月份，查看當月銷售報表</div>
+        <div class="step-note">有圖表和數字顯示各項統計</div>
+        <div class="step-expect" id="exp-J1">預期：有圖表和數字，不是空白頁面</div>
+      </div>
+      <div class="step-controls">
+        <div class="btn-group">
+          <button class="btn btn-pass" onclick="mark('J1','pass')">✓ 通過</button>
+          <button class="btn btn-fail" onclick="mark('J1','fail')">✗ 問題</button>
+          <button class="btn btn-skip" onclick="mark('J1','skip')">— 跳過</button>
+        </div>
+        <textarea class="note-input" id="note-J1" placeholder="備註（可空白）" oninput="saveNote('J1')"></textarea>
+      </div>
+    </div>
+
+    <div class="step-row" id="row-J2">
+      <div class="step-num">J2</div>
+      <div class="step-content">
+        <div class="step-where"><span>報表分析</span></div>
+        <div class="step-action">確認各項數字有合理分佈</div>
+        <div class="step-note">銷售額、司機業績、客戶銷售等，不應全部是 0</div>
+        <div class="step-expect" id="exp-J2">預期：數字有合理分佈，不全是 0 或相同數字</div>
+      </div>
+      <div class="step-controls">
+        <div class="btn-group">
+          <button class="btn btn-pass" onclick="mark('J2','pass')">✓ 通過</button>
+          <button class="btn btn-fail" onclick="mark('J2','fail')">✗ 問題</button>
+          <button class="btn btn-skip" onclick="mark('J2','skip')">— 跳過</button>
+        </div>
+        <textarea class="note-input" id="note-J2" placeholder="備註（可空白）" oninput="saveNote('J2')"></textarea>
+      </div>
+    </div>
+
+  </div>
 </div>
 
+<div class="footer">
+  大永蛋品系統｜v6.28｜2026-04-26｜測試完成後請將此 HTML 檔案回傳給開發端
+</div>
+
+<script>
+const STEPS = ['A1','A2','B1','B2','B3','C1','C2','C3','C4','C5','D1','D2','D3','D4','D5','E1','E2','F1','F2','F3','F4','F5','G1','G2','G3','G4','H1','H2','H3','I1','I2','J1','J2'];
+const SECTIONS = {
+  A:['A1','A2'], B:['B1','B2','B3'], C:['C1','C2','C3','C4','C5'],
+  D:['D1','D2','D3','D4','D5'], E:['E1','E2'],
+  F:['F1','F2','F3','F4','F5'], G:['G1','G2','G3','G4'],
+  H:['H1','H2','H3'], I:['I1','I2'], J:['J1','J2']
+};
+
+let results = {};
+let notes = {};
+
+// Load from localStorage
+try {
+  const saved = localStorage.getItem('dayone-uat-v628');
+  if (saved) { const d = JSON.parse(saved); results = d.results || {}; notes = d.notes || {}; }
+} catch(e) {}
+
+function save() {
+  try { localStorage.setItem('dayone-uat-v628', JSON.stringify({results, notes})); } catch(e) {}
+}
+
+function mark(id, state) {
+  results[id] = state;
+  save();
+  renderRow(id);
+  updateProgress();
+  updateSectionBadge(id[0]);
+}
+
+function saveNote(id) {
+  notes[id] = document.getElementById('note-'+id).value;
+  save();
+}
+
+function renderRow(id) {
+  const row = document.getElementById('row-'+id);
+  const exp = document.getElementById('exp-'+id);
+  row.className = 'step-row ' + (results[id] || '');
+  exp.className = 'step-expect ' + (results[id] || '');
+  // update button active state
+  ['pass','fail','skip'].forEach(s => {
+    const btn = row.querySelector('.btn-'+s);
+    if (btn) btn.classList.toggle('active', results[id] === s);
+  });
+}
+
+function updateProgress() {
+  const total = STEPS.length;
+  const done = STEPS.filter(s => results[s] && results[s] !== 'pend').length;
+  const pass = STEPS.filter(s => results[s] === 'pass').length;
+  const fail = STEPS.filter(s => results[s] === 'fail').length;
+  const skip = STEPS.filter(s => results[s] === 'skip').length;
+  const pend = total - done;
+  document.getElementById('cnt-pass').textContent = pass;
+  document.getElementById('cnt-fail').textContent = fail;
+  document.getElementById('cnt-skip').textContent = skip;
+  document.getElementById('cnt-pend').textContent = pend;
+  const pct = total ? Math.round(done/total*100) : 0;
+  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('progressText').textContent = done + ' / ' + total;
+}
+
+function updateSectionBadge(sec) {
+  const steps = SECTIONS[sec];
+  const pass = steps.filter(s => results[s] === 'pass').length;
+  const fail = steps.filter(s => results[s] === 'fail').length;
+  const badge = document.getElementById('badge-'+sec);
+  if (fail > 0) { badge.className = 'section-badge'; badge.textContent = fail + ' 項問題'; badge.style.background='#7f1d1d'; badge.style.color='#fca5a5'; }
+  else if (pass === steps.length) { badge.className = 'section-badge done'; badge.textContent = '✓ 全通過'; badge.style.background=''; badge.style.color=''; }
+  else { badge.className = 'section-badge'; badge.textContent = pass + ' / ' + steps.length + ' 通過'; badge.style.background=''; badge.style.color=''; }
+}
+
+function toggleSection(sec) {
+  const body = document.getElementById('body-'+sec);
+  body.classList.toggle('collapsed');
+}
+
+function resetAll() {
+  if (!confirm('確定要清除所有測試結果？')) return;
+  results = {}; notes = {};
+  localStorage.removeItem('dayone-uat-v628');
+  STEPS.forEach(id => {
+    renderRow(id);
+    document.getElementById('note-'+id).value = '';
+  });
+  Object.keys(SECTIONS).forEach(s => updateSectionBadge(s));
+  updateProgress();
+}
+
+function exportResult() {
+  let lines = ['大永蛋品系統｜親測驗收結果 v6.28', '匯出時間：' + new Date().toLocaleString('zh-TW'), ''];
+  Object.keys(SECTIONS).forEach(sec => {
+    const steps = SECTIONS[sec];
+    lines.push('=== ' + sec + ' 區塊 ===');
+    steps.forEach(id => {
+      const state = results[id] || '未測';
+      const note = notes[id] || '';
+      const label = state === 'pass' ? '✓通過' : state === 'fail' ? '✗問題' : state === 'skip' ? '—跳過' : '⏳未測';
+      lines.push(id + ' ' + label + (note ? ' | 備註: ' + note : ''));
+    });
+    lines.push('');
+  });
+  const pass = STEPS.filter(s => results[s]==='pass').length;
+  const fail = STEPS.filter(s => results[s]==='fail').length;
+  const skip = STEPS.filter(s => results[s]==='skip').length;
+  const pend = STEPS.length - pass - fail - skip;
+  lines.push('==== 總計 ====');
+  lines.push('通過: ' + pass + '  問題: ' + fail + '  跳過: ' + skip + '  未測: ' + pend);
+  const text = lines.join('\n');
+  navigator.clipboard.writeText(text).then(() => alert('已複製到剪貼簿！可貼到 LINE 或回傳給開發端。')).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    alert('已複製到剪貼簿！');
+  });
+}
+
+// Init
+function init() {
+  STEPS.forEach(id => {
+    renderRow(id);
+    const ni = document.getElementById('note-'+id);
+    if (ni && notes[id]) ni.value = notes[id];
+  });
+  Object.keys(SECTIONS).forEach(s => updateSectionBadge(s));
+  updateProgress();
+}
+init();
+</script>
 </body>
 </html>
