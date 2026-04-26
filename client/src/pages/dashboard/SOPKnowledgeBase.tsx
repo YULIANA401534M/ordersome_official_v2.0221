@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import {
   DndContext,
   closestCenter,
@@ -21,7 +21,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import BackButton from "@/components/BackButton";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import RichTextEditor from "@/components/RichTextEditor";
+const RichTextEditor = lazy(() => import("@/components/RichTextEditor"));
 import { toast } from "sonner";
 import {
   BookOpen, Edit2, Plus, CheckCircle, Eye, EyeOff,
@@ -459,7 +459,9 @@ export default function SOPKnowledgeBase() {
 
           <div style={{ background: "var(--os-surface)", border: "1px solid var(--os-border)", borderRadius: 12, padding: 20 }}>
             <h3 style={{ fontSize: 13, fontWeight: 700, color: "var(--os-text-2)", marginBottom: 12 }}>文件內容（WYSIWYG 編輯器）</h3>
-            <RichTextEditor content={editContent} onChange={setEditContent} placeholder="在此輸入 SOP 內容..." />
+            <Suspense fallback={<div style={{ height: 200, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--os-text-3)", fontSize: 13 }}>載入編輯器...</div>}>
+              <RichTextEditor content={editContent} onChange={setEditContent} placeholder="在此輸入 SOP 內容..." />
+            </Suspense>
           </div>
         </div>
       </div>

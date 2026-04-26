@@ -163,7 +163,8 @@ function Router() {
     <>
       {/* Google Analytics 4 Tracking */}
       <Analytics />
-      
+
+      <Suspense fallback={null}>
       <Switch>
       {/* Landing Page */}
       <Route path="/" component={Home} />
@@ -307,6 +308,7 @@ function Router() {
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
+    </Suspense>
     </>
   );
 }

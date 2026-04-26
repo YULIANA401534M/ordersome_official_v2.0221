@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { trpc } from "../../lib/trpc";
-import RichTextEditor from "@/components/RichTextEditor";
+const RichTextEditor = lazy(() => import("@/components/RichTextEditor"));
 import { Save, ArrowLeft, Eye } from "lucide-react";
 import { useLocation, useRoute } from "wouter";
 
@@ -181,7 +181,9 @@ export default function ContentEditor() {
           {/* Content */}
           <div>
             <label style={labelSt}>內容 *</label>
-            <RichTextEditor content={content} onChange={(html) => setContent(html)} placeholder="撰寫文章內容..." />
+            <Suspense fallback={<div style={{ height: 200, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--os-text-3)", fontSize: 13 }}>載入編輯器...</div>}>
+              <RichTextEditor content={content} onChange={(html) => setContent(html)} placeholder="撰寫文章內容..." />
+            </Suspense>
             <p style={{ fontSize: 11, color: "var(--os-text-3)", marginTop: 6 }}>支援富文本格式（粗體、標題、列表、圖片、連結等）</p>
           </div>
 

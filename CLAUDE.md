@@ -1,6 +1,6 @@
 # CLAUDE.md — OrderSome 專案主腦
 
-> 版本 v6.25｜最後更新：2026-04-26
+> 版本 v6.26｜最後更新：2026-04-26
 
 ---
 
@@ -289,7 +289,7 @@ Hero 圖片規則：
 - [ ] 太平東/北屯等多店的門市成本分攤問題
 - [ ] 異常採購品項的成本追蹤
 - [ ] 供應商對帳：目前為手動流程
-- [ ] chunk size 優化：index.js 約 6500kB，需 code splitting
+- [x] chunk size 優化（v6.26）：xlsx/RichTextEditor/DayoneARContent 全改動態載入，頁面 chunk 已精簡
 
 **P3 備用**
 - [ ] BOM 建立：整合品項主檔 + `os_products`（類似 CA 表功能）
@@ -702,6 +702,7 @@ check().catch(console.error);
 ### Chunk 策略
 
 - 白畫面事故後已移除所有 `manualChunks`，回退保守單一 chunk 策略
+- v6.26 已對重型靜態 import 改用動態載入：xlsx（OSAccounting/OSPurchasing/OSScheduling/DayoneARContent）、RichTextEditor/tiptap（ContentEditor/SOPKnowledgeBase），以及 App.tsx Router 內層加 `<Suspense fallback={null}>` 避免頁面切換時全屏白畫面
 - 若未來再做 chunk 優化：先確認 Railway 部署與瀏覽器 runtime log，不可直接重上 manualChunks，任何拆包都必須先驗證首頁與 `/dayone/*` 不白畫面
 
 ### 對下一個對話框的提醒

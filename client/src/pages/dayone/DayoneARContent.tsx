@@ -9,7 +9,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import * as XLSX from "xlsx";
 
 function fmtMoney(value: number | string | null | undefined) {
   const amount = Number(value ?? 0);
@@ -782,8 +781,9 @@ function MonthlyStatementTab({ tenantId }: { tenantId: number }) {
     window.print();
   }
 
-  function handleExcel() {
+  async function handleExcel() {
     if (!statement) return;
+    const XLSX = await import("xlsx");
 
     const rows: any[] = [];
     rows.push(["大永蛋品月結對帳單", yearMonth]);
