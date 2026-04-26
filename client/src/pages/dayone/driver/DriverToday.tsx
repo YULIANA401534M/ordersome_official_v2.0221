@@ -25,7 +25,7 @@ const STATUS_TONE: Record<string, string> = {
 
 export default function DriverToday() {
   const [, navigate] = useLocation();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
   const { data: orders = [], isLoading } = trpc.dayone.driver.getMyTodayOrders.useQuery({
     tenantId: TENANT_ID,

@@ -55,12 +55,12 @@ export const dyTenantUsersRouter = router({
       );
       const newUserId = (result as any).insertId;
 
-      // 若 role=driver，同步新增 dy_drivers 記錄
+      // 若 role=driver，同步新增 dy_drivers 記錄（含 userId 讓司機 APP 能識別身份）
       if (input.role === "driver") {
         await client.execute(
-          `INSERT INTO dy_drivers (tenantId, name, phone, status, createdAt)
-           VALUES (?, ?, ?, 'active', NOW())`,
-          [input.tenantId, input.name, input.phone ?? ""]
+          `INSERT INTO dy_drivers (tenantId, userId, name, phone, status, createdAt)
+           VALUES (?, ?, ?, ?, 'active', NOW())`,
+          [input.tenantId, newUserId, input.name, input.phone ?? ""]
         );
       }
 

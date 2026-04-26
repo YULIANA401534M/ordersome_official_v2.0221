@@ -15,7 +15,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export default function DriverOrders() {
-  const todayDate = new Date().toISOString().slice(0, 10);
+  const todayDate = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const { data: orders = [], isLoading } = trpc.dayone.driver.getMyTodayOrders.useQuery({
     tenantId: TENANT_ID,
     deliveryDate: todayDate,

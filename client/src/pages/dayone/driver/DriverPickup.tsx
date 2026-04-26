@@ -7,7 +7,7 @@ const TENANT_ID = 90004;
 
 export default function DriverPickup() {
   const utils = trpc.useUtils();
-  const todayDate = new Date().toISOString().slice(0, 10);
+  const todayDate = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
   const { data: orders = [], isLoading } = trpc.dayone.driver.getMyTodayOrders.useQuery({
     tenantId: TENANT_ID,

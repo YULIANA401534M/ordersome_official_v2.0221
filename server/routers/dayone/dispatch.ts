@@ -250,18 +250,34 @@ export const dyDispatchRouter = router({
         [input.id, input.tenantId]
       );
 
+      // per-stop products (keyed by orderId for frontend grouping)
       const [productRows] = await client.execute(
-        `SELECT oi.productId, p.name AS productName, p.unit, SUM(oi.qty) AS shippedQty
+        `SELECT di.orderId, oi.productId, p.name AS productName, p.unit, SUM(oi.qty) AS shippedQty
          FROM dy_dispatch_items di
          JOIN dy_order_items oi ON oi.orderId = di.orderId
          JOIN dy_products p ON p.id = oi.productId
          WHERE di.dispatchOrderId=? AND di.tenantId=?
-         GROUP BY oi.productId, p.name, p.unit
-         ORDER BY p.code, p.name`,
+         GROUP BY di.orderId, oi.productId, p.name, p.unit
+         ORDER BY di.stopSequence, p.code, p.name`,
         [input.id, input.tenantId]
       );
 
-      return { ...dispatchOrder, items: itemRows as any[], products: productRows as any[] };
+      // aggregate totals across all stops (for剩貨回庫)
+      const productTotals: Record<number, any> = {};
+      for (const row of productRows as any[]) {
+        const pid = Number(row.productId);
+        if (!productTotals[pid]) {
+          productTotals[pid] = { productId: pid, productName: row.productName, unit: row.unit, shippedQty: 0 };
+        }
+        productTotals[pid].shippedQty += Number(row.shippedQty ?? 0);
+      }
+
+      return {
+        ...dispatchOrder,
+        items: itemRows as any[],
+        products: Object.values(productTotals),
+        productsByOrder: productRows as any[],
+      };
     }),
 
   markPrinted: dyAdminProcedure

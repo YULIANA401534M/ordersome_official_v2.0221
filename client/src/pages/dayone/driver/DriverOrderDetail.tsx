@@ -24,7 +24,7 @@ export default function DriverOrderDetail() {
   const [note, setNote] = useState("");
   const sigRef = useRef<SignatureCanvas>(null);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const utils = trpc.useUtils();
   const { data: orders = [] } = trpc.dayone.driver.getMyTodayOrders.useQuery({
     tenantId: TENANT_ID,

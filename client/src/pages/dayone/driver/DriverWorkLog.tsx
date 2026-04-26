@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 const TENANT_ID = 90004;
 
 export default function DriverWorkLog() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const utils = trpc.useUtils();
   const [startTime, setStartTime] = useState("08:00");
   const [endTime, setEndTime] = useState("");

@@ -327,6 +327,7 @@ function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onCl
 
   const items = detail?.items ?? [];
   const products = detail?.products ?? [];
+  const productsByOrder: any[] = detail?.productsByOrder ?? [];
   const totals = useMemo(() => {
     return {
       deliverBoxes: items.reduce((sum: number, item: any) => sum + Number(item.deliverBoxes ?? 0), 0),
@@ -479,9 +480,7 @@ function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onCl
                   </thead>
                   <tbody>
                     {items.map((item: any) => {
-                      const itemProducts = detail.products?.filter((p: any) =>
-                        item.orderId ? true : false
-                      ) ?? [];
+                      const stopProducts = productsByOrder.filter((p: any) => Number(p.orderId) === Number(item.orderId));
                       const payLabel: Record<string, string> = { monthly: "月結", weekly: "週結", unpaid: "現收", paid: "已收", partial: "部份" };
                       return (
                         <tr key={item.id} style={{borderBottom:"1px solid #e5e7eb", verticalAlign:"top"}}>
@@ -489,13 +488,9 @@ function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onCl
                           <td style={{...tdStyle, fontWeight:"600", paddingTop:"8px"}}>{item.customerName}</td>
                           <td style={{...tdStyle, fontSize:"11px", color:"#555", paddingTop:"8px"}}>{item.customerAddress ?? "—"}</td>
                           <td style={{...tdStyle, paddingTop:"6px", paddingBottom:"6px"}}>
-                            {/* per-order items listed here — pulled from orderNo detail */}
-                            {item.orderNo && (
-                              <div style={{fontSize:"10px", color:"#888", marginBottom:"2px"}}>訂單 {item.orderNo}</div>
-                            )}
-                            {detail.products && detail.products.length > 0 ? (
+                            {stopProducts.length > 0 ? (
                               <div style={{color:"#374151"}}>
-                                {detail.products.map((p: any, pi: number) => (
+                                {stopProducts.map((p: any, pi: number) => (
                                   <div key={pi} style={{display:"flex", gap:"4px"}}>
                                     <span style={{flex:1}}>{p.productName}</span>
                                     <span style={{minWidth:"40px", textAlign:"right", fontVariantNumeric:"tabular-nums"}}>{p.shippedQty} {p.unit || ""}</span>
@@ -503,7 +498,7 @@ function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onCl
                                 ))}
                               </div>
                             ) : (
-                              <span style={{color:"#9ca3af"}}>—</span>
+                              <span style={{color:"#9ca3af", fontSize:"11px"}}>—</span>
                             )}
                           </td>
                           <td style={{...tdStyle, textAlign:"right", fontWeight:"600", paddingTop:"8px"}}>{Number(item.orderAmount ?? 0).toLocaleString()}</td>
