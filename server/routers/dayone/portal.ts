@@ -1,24 +1,15 @@
 import { z } from "zod";
-import { router, publicProcedure, protectedProcedure } from "../../_core/trpc";
+import { router, publicProcedure } from "../../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../../db";
 import { hashPassword, verifyPassword } from "../../lib/password";
 import { COOKIE_NAME } from "@shared/const";
+import { TENANTS } from "@shared/access-control";
 import { getSessionCookieOptions } from "../../_core/cookies";
 import { sendMail } from "../../mail";
+import { dayonePortalCustomerProcedure as portalCustomerProcedure } from "./procedures";
 
-const PORTAL_TENANT_ID = 90004;
-
-/** Portal 客戶 procedure：要求 tenantId=90004 且已綁定 dyCustomerId */
-const portalCustomerProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (
-    ctx.user.tenantId !== PORTAL_TENANT_ID ||
-    (ctx.user as any).dyCustomerId == null
-  ) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "需要大永客戶帳號" });
-  }
-  return next({ ctx });
-});
+const PORTAL_TENANT_ID = TENANTS.DAYONE;
 
 async function createPortalSession(ctx: any, user: { openId: string; id: number; name: string | null; email: string | null; role: string; tenantId: number | null }) {
   const { sdk } = await import("../../_core/sdk");

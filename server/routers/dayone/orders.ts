@@ -1,22 +1,10 @@
 import { z } from "zod";
-import { router, protectedProcedure } from "../../_core/trpc";
+import { router } from "../../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../../db";
+import { dayoneAdminProcedure as dyAdminProcedure, dayoneDriverProcedure as dyDriverProcedure } from "./procedures";
 
-const dyAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== "super_admin" && ctx.user.role !== "manager") {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Dayone admin access required" });
-  }
-  return next({ ctx });
-});
 
-const dyDriverProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const role = ctx.user.role;
-  if (!["super_admin", "manager", "driver"].includes(role)) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Driver access required" });
-  }
-  return next({ ctx });
-});
 
 function calcDueDate(deliveryDate: string, settlementCycle?: string | null, overdueDays?: number | null) {
   const date = new Date(deliveryDate);
@@ -174,7 +162,7 @@ export const dyOrdersRouter = router({
       return { success: true };
     }),
 
-  confirmDelivery: protectedProcedure
+  confirmDelivery: dyDriverProcedure
     .input(
       z.object({
         id: z.number(),

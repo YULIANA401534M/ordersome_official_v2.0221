@@ -9,27 +9,35 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "../../_core/hooks/useAuth";
+import {
+  FRANCHISEE_FEATURE_KEYS,
+  ORDER_SOME_PERMISSION_DEFINITIONS,
+  ORDER_SOME_PERMISSIONS,
+  normalizeOrderSomePermissions,
+  type OrderSomePermission,
+} from "@shared/access-control";
 
 type UserRole = "super_admin" | "manager" | "franchisee" | "staff" | "store_manager" | "customer" | "driver" | "portal_customer";
 type UserStatus = "active" | "suspended";
 
-const PERMISSIONS = [
-  { key: "view_finance", label: "查看財務報表" },
-  { key: "manage_users", label: "管理用戶" },
-  { key: "manage_franchise", label: "管理加盟主" },
-  { key: "publish_content", label: "發布內容" },
-  { key: "manage_sop", label: "管理 SOP" },
-  { key: "manage_products", label: "管理商城商品" },
-];
+const PERMISSIONS = ORDER_SOME_PERMISSIONS.map((key) => ({
+  key,
+  ...ORDER_SOME_PERMISSION_DEFINITIONS[key],
+}));
 
-const FRANCHISEE_FEATURES = [
-  { key: "daily_report_readonly", label: "門市日報（唯讀）" },
-  { key: "purchasing_readonly",   label: "叫貨紀錄（唯讀）" },
-  { key: "product_pricing",       label: "品項批價" },
-  { key: "profit_overview",       label: "損益概況" },
-  { key: "ar_summary",            label: "帳款往來" },
-  { key: "contract_documents",    label: "合約文件" },
-] as const;
+const FRANCHISEE_FEATURE_LABELS: Record<(typeof FRANCHISEE_FEATURE_KEYS)[number], string> = {
+  daily_report_readonly: "門市日報（唯讀）",
+  purchasing_readonly: "叫貨紀錄（唯讀）",
+  product_pricing: "品項批價",
+  profit_overview: "損益概況",
+  ar_summary: "帳款往來",
+  contract_documents: "合約文件",
+};
+
+const FRANCHISEE_FEATURES = FRANCHISEE_FEATURE_KEYS.map((key) => ({
+  key,
+  label: FRANCHISEE_FEATURE_LABELS[key],
+}));
 
 const ROLE_LABELS: Record<UserRole, string> = {
   super_admin:     "超級管理員",
@@ -69,15 +77,16 @@ function RoleBadge({ role }: { role: UserRole }) {
   );
 }
 
-function PermissionBadges({ permissions }: { permissions: string[] }) {
-  if (!permissions || permissions.length === 0) {
+function PermissionBadges({ permissions }: { permissions: unknown }) {
+  const permissionList = normalizeOrderSomePermissions(permissions);
+  if (permissionList.length === 0) {
     return <span style={{ fontSize: 12, color: "var(--os-text-3)" }}>無特殊權限</span>;
   }
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-      {permissions.map((perm) => (
+      {permissionList.map((perm) => (
         <span key={perm} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 4, background: "var(--os-info-bg)", color: "var(--os-info)", whiteSpace: "nowrap" }}>
-          {PERMISSIONS.find((p) => p.key === perm)?.label || perm}
+          {ORDER_SOME_PERMISSION_DEFINITIONS[perm].label}
         </span>
       ))}
     </div>
@@ -161,7 +170,7 @@ export default function AdminUsers() {
   const handleUpdateUser = async () => {
     const updates: any = {
       name: editingUser.name, email: editingUser.email, role: editingUser.role,
-      status: editingUser.status, permissions: editingUser.permissions || [],
+      status: editingUser.status, permissions: normalizeOrderSomePermissions(editingUser.permissions),
       has_procurement_access: !!editingUser.has_procurement_access,
     };
     if (editingUser.phone) updates.phone = editingUser.phone;
@@ -460,14 +469,17 @@ export default function AdminUsers() {
                       {PERMISSIONS.map((perm) => (
                         <label key={perm.key} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
                           <input type="checkbox"
-                            checked={editingUser.permissions?.includes(perm.key) || false}
+                            checked={normalizeOrderSomePermissions(editingUser.permissions).includes(perm.key)}
                             onChange={(e) => {
-                              const cur = editingUser.permissions || [];
-                              const next = e.target.checked ? [...cur, perm.key] : cur.filter((p: string) => p !== perm.key);
+                              const cur = normalizeOrderSomePermissions(editingUser.permissions);
+                              const next = e.target.checked ? [...cur, perm.key as OrderSomePermission] : cur.filter((p) => p !== perm.key);
                               setEditingUser({ ...editingUser, permissions: next });
                             }}
                             style={{ width: 15, height: 15, accentColor: "var(--os-amber)" }} />
                           <span style={{ fontSize: 13, color: "var(--os-text-1)" }}>{perm.label}</span>
+                          <span style={{ fontSize: 11, color: "var(--os-text-3)" }}>
+                            聯動：{perm.routes.join("、")}
+                          </span>
                         </label>
                       ))}
                     </div>

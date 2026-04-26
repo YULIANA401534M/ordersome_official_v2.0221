@@ -91,7 +91,7 @@ const stores = [
   },
   {
     name: "來點什麼 南屯林新店",
-    address: "台中市南屯區大墩十一街453號",
+    address: "台中市南屯區惠中路三段54號",
     phone: "(04) 2380-2780",
     openingHours: "06:30–13:30",
     latitude: 24.1423,

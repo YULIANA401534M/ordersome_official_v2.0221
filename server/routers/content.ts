@@ -1,31 +1,9 @@
 import { z } from "zod";
-import { router, protectedProcedure, publicProcedure } from "../_core/trpc";
+import { adminProcedure, contentProcedure, publicProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import * as db from "../db";
 import { posts } from "../../drizzle/schema";
 import { eq, desc, and, or, isNull, lte, sql } from "drizzle-orm";
-
-// Content management procedure (super_admin, manager, or users with publish_content permission)
-const contentProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const user = ctx.user;
-  const hasPermission =
-    user.role === "super_admin" ||
-    user.role === "manager" ||
-    (user.permissions && user.permissions.includes("publish_content"));
-
-  if (!hasPermission) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "需要內容發布權限" });
-  }
-  return next({ ctx });
-});
-
-// Admin procedure (super_admin or manager only)
-const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== "super_admin" && ctx.user.role !== "manager") {
-    throw new TRPCError({ code: "FORBIDDEN", message: "需要管理員權限" });
-  }
-  return next({ ctx });
-});
 
 export const contentRouter = router({
   /**

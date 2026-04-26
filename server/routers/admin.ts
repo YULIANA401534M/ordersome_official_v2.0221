@@ -1,35 +1,11 @@
 import { z } from "zod";
-import { router, protectedProcedure } from "../_core/trpc";
+import { router, adminProcedure, superAdminProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import * as db from "../db";
 import { users, franchiseeFeatureFlags } from "../../drizzle/schema";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
-
-// Admin procedure (super_admin and manager only)
-const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== 'super_admin' && ctx.user.role !== 'manager') {
-    throw new TRPCError({ code: 'FORBIDDEN', message: '需要管理員權限' });
-  }
-  return next({ ctx });
-});
-
-// Super admin only
-const superAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== 'super_admin') {
-    throw new TRPCError({ code: 'FORBIDDEN', message: '需要超級管理員權限' });
-  }
-  return next({ ctx });
-});
-
-const FRANCHISEE_FEATURE_KEYS = [
-  'daily_report_readonly',
-  'purchasing_readonly',
-  'product_pricing',
-  'profit_overview',
-  'ar_summary',
-  'contract_documents',
-] as const;
+import { FRANCHISEE_FEATURE_KEYS, normalizeOrderSomePermissions } from "@shared/access-control";
 
 export const adminRouter = router({
   /**
@@ -77,6 +53,9 @@ export const adminRouter = router({
       const database = await db.getDb();
       if (!database) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: '資料庫連線失敗' });
       const { userId, ...updates } = input;
+      if (updates.permissions) {
+        updates.permissions = normalizeOrderSomePermissions(updates.permissions);
+      }
       await database.update(users).set(updates).where(eq(users.id, userId));
       return { success: true };
     }),
@@ -134,7 +113,7 @@ export const adminRouter = router({
         passwordHash: hashedPassword,
         phone: input.phone,
         storeId: input.storeId,
-        permissions: input.permissions || [],
+        permissions: normalizeOrderSomePermissions(input.permissions || []),
         loginMethod: 'email',
         status: 'active',
       });
@@ -151,7 +130,7 @@ export const adminRouter = router({
       const database = await db.getDb();
       if (!database) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: '資料庫連線失敗' });
 
-      if (input.userId === ctx.user.id) {
+      if (input.userId === ctx.user!.id) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: '無法刪除自己的帳號' });
       }
 
@@ -200,7 +179,7 @@ export const adminRouter = router({
         `INSERT INTO franchisee_feature_flags (user_id, tenant_id, feature_key, is_enabled, updated_by, updated_at)
          VALUES (?, 1, ?, ?, ?, NOW())
          ON DUPLICATE KEY UPDATE is_enabled=?, updated_by=?, updated_at=NOW()`,
-        [input.userId, input.featureKey, input.isEnabled, ctx.user.id, input.isEnabled, ctx.user.id]
+        [input.userId, input.featureKey, input.isEnabled, ctx.user!.id, input.isEnabled, ctx.user!.id]
       );
       return { success: true };
     }),
@@ -217,7 +196,7 @@ export const adminRouter = router({
         .from(users)
         .where(eq(users.role, 'franchisee'));
       const allFlags = await database.select().from(franchiseeFeatureFlags);
-      return franchisees.map((u) => {
+      return franchisees.map((u: any) => {
         const flagMap: Record<string, boolean> = Object.fromEntries(
           FRANCHISEE_FEATURE_KEYS.map((k) => [k, false])
         );

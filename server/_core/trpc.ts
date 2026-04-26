@@ -1,4 +1,5 @@
 import { NOT_ADMIN_ERR_MSG, UNAUTHED_ERR_MSG } from '@shared/const';
+import { hasAnyRole, hasPermission, isAdminUser, isSuperAdminUser } from '@shared/access-control';
 import { initTRPC, TRPCError } from "@trpc/server";
 import type { TrpcContext } from "./context";
 
@@ -32,15 +33,16 @@ export const protectedProcedure = t.procedure.use(requireUser);
 export const adminProcedure = t.procedure.use(
   t.middleware(async opts => {
     const { ctx, next } = opts;
+    const user = ctx.user;
 
-    if (!ctx.user || (ctx.user.role !== 'super_admin' && ctx.user.role !== 'manager')) {
+    if (!user || !isAdminUser(user)) {
       throw new TRPCError({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
     }
 
     return next({
       ctx: {
         ...ctx,
-        user: ctx.user,
+        user,
       },
     });
   }),
@@ -49,15 +51,16 @@ export const adminProcedure = t.procedure.use(
 export const superAdminProcedure = t.procedure.use(
   t.middleware(async opts => {
     const { ctx, next } = opts;
+    const user = ctx.user;
 
-    if (!ctx.user || ctx.user.role !== 'super_admin') {
+    if (!user || !isSuperAdminUser(user)) {
       throw new TRPCError({ code: "FORBIDDEN", message: '僅 super_admin 可執行此操作' });
     }
 
     return next({
       ctx: {
         ...ctx,
-        user: ctx.user,
+        user,
       },
     });
   }),
@@ -70,11 +73,26 @@ export const superAdminProcedure = t.procedure.use(
 export const franchiseeOrAdminProcedure = t.procedure.use(
   t.middleware(async opts => {
     const { ctx, next } = opts;
-    const allowed = ['super_admin', 'manager', 'franchisee'];
-    if (!ctx.user || !allowed.includes(ctx.user.role)) {
+    const user = ctx.user;
+    if (!user || !hasAnyRole(user, ['super_admin', 'manager', 'franchisee'])) {
       throw new TRPCError({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
     }
-    return next({ ctx: { ...ctx, user: ctx.user } });
+    return next({ ctx: { ...ctx, user } });
+  }),
+);
+
+/**
+ * contentProcedure: 允許 super_admin / manager / publish_content 細權限
+ * 供文章、品牌內容、排程發布等內容管理功能使用
+ */
+export const contentProcedure = t.procedure.use(
+  t.middleware(async opts => {
+    const { ctx, next } = opts;
+    const user = ctx.user;
+    if (!user || (!isAdminUser(user) && !hasPermission(user, 'publish_content'))) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "需要內容發布權限" });
+    }
+    return next({ ctx: { ...ctx, user } });
   }),
 );
 

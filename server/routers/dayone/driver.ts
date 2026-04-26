@@ -1,16 +1,10 @@
 import { z } from "zod";
-import { router, protectedProcedure } from "../../_core/trpc";
+import { router } from "../../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../../db";
 import { storagePut } from "../../storage";
+import { dayoneDriverProcedure as driverProcedure } from "./procedures";
 
-const driverProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowed = ["driver", "manager", "super_admin"];
-  if (!allowed.includes(ctx.user.role ?? "")) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Driver access required" });
-  }
-  return next({ ctx });
-});
 
 function calcDueDate(deliveryDate: string, settlementCycle?: string | null, overdueDays?: number | null) {
   const date = new Date(deliveryDate);

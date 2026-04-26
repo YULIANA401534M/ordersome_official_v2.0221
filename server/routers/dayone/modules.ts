@@ -1,25 +1,13 @@
 import { z } from "zod";
-import { router, protectedProcedure } from "../../_core/trpc";
+import { router, adminProcedure, superAdminProcedure } from "../../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../../db";
 
-const superAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== 'super_admin') {
-    throw new TRPCError({ code: 'FORBIDDEN', message: '需要超級管理員權限' });
-  }
-  return next({ ctx });
-});
 
-const dyAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== 'super_admin' && ctx.user.role !== 'manager') {
-    throw new TRPCError({ code: 'FORBIDDEN', message: '需要管理員權限' });
-  }
-  return next({ ctx });
-});
 
 export const dyModulesRouter = router({
   // Get modules for a tenant
-  list: dyAdminProcedure
+  list: adminProcedure
     .input(z.object({ tenantId: z.number() }))
     .query(async ({ input }) => {
       const db = await getDb();
@@ -51,7 +39,7 @@ export const dyModulesRouter = router({
     }),
 
   // Check if a specific module is enabled
-  isEnabled: dyAdminProcedure
+  isEnabled: adminProcedure
     .input(z.object({ tenantId: z.number(), moduleKey: z.string() }))
     .query(async ({ input }) => {
       const db = await getDb();
@@ -96,7 +84,7 @@ export const dyModulesRouter = router({
     }),
 
   // 取得特定租戶已開通模組（含定義資訊）
-  listWithDefinitions: dyAdminProcedure
+  listWithDefinitions: adminProcedure
     .input(z.object({ tenantId: z.number() }))
     .query(async ({ input }) => {
       const db = await getDb();

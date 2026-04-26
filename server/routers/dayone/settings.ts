@@ -1,14 +1,9 @@
 import { z } from "zod";
-import { router, protectedProcedure } from "../../_core/trpc";
+import { router } from "../../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../../db";
+import { dayoneAdminProcedure as dyAdminProcedure } from "./procedures";
 
-const dyAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== "super_admin" && ctx.user.role !== "manager") {
-    throw new TRPCError({ code: "FORBIDDEN", message: "需要管理員權限" });
-  }
-  return next({ ctx });
-});
 
 export const dayoneSettingsRouter = router({
   get: dyAdminProcedure

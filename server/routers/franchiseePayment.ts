@@ -1,14 +1,7 @@
 import { z } from 'zod';
-import { router, adminProcedure, protectedProcedure } from '../_core/trpc';
+import { adminProcedure, router, superAdminProcedure } from '../_core/trpc';
 import { TRPCError } from '@trpc/server';
 import { getDb } from '../db';
-
-const superAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== 'super_admin') {
-    throw new TRPCError({ code: 'FORBIDDEN', message: '需要最高管理員權限' });
-  }
-  return next({ ctx });
-});
 
 export const franchiseePaymentRouter = router({
 

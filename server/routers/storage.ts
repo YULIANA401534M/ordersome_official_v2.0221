@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { router, protectedProcedure } from "../_core/trpc";
+import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { r2Put } from "../lib/r2";
 
@@ -52,18 +52,14 @@ export const storageRouter = router({
   /**
    * Upload PDF to Manus Forge storage (for SOP documents)
    */
-  uploadPdf: protectedProcedure
+  uploadPdf: adminProcedure
     .input(
       z.object({
         fileName: z.string(),
         fileData: z.string(), // Base64 encoded PDF data
       })
     )
-    .mutation(async ({ input, ctx }) => {
-      // Only managers can upload PDFs
-      if (ctx.user.role !== "super_admin" && ctx.user.role !== "manager") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "需要管理員權限" });
-      }
+    .mutation(async ({ input }) => {
       try {
         const base64Data = input.fileData.replace(/^data:[^;]+;base64,/, "");
         const buffer = Buffer.from(base64Data, "base64");

@@ -1,7 +1,7 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { adminProcedure, franchiseeOrAdminProcedure as franchiseeProcedure, publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import * as db from "./db";
@@ -28,22 +28,6 @@ import { accountingRouter } from "./routers/accounting";
 import { sendMail } from "./mail";
 import { users, orderAuditLogs } from "../drizzle/schema";
 import { inArray } from "drizzle-orm";
-
-// Admin procedure
-const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== 'super_admin' && ctx.user.role !== 'manager') {
-    throw new TRPCError({ code: 'FORBIDDEN', message: '需要管理員權限' });
-  }
-  return next({ ctx });
-});
-
-// Franchisee procedure (franchisee or admin)
-const franchiseeProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== 'franchisee' && ctx.user.role !== 'super_admin' && ctx.user.role !== 'manager') {
-    throw new TRPCError({ code: 'FORBIDDEN', message: '需要加盟主或管理員權限' });
-  }
-  return next({ ctx });
-});
 
 export const appRouter = router({
   system: systemRouter,
@@ -497,7 +481,7 @@ export const appRouter = router({
               .select({ email: users.email })
               .from(users)
               .where(inArray(users.role, ['super_admin', 'manager']));
-            const adminEmails = admins.map(u => u.email).filter(Boolean) as string[];
+            const adminEmails = admins.map((u: { email: string | null }) => u.email).filter(Boolean) as string[];
             if (adminEmails.length > 0) {
               const orderTime = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' });
               const html = `
@@ -743,7 +727,7 @@ export const appRouter = router({
           throw new TRPCError({ code: 'NOT_FOUND', message: '訂單不存在' });
         }
         const items = await db.getOrderItems(input.orderId);
-        const itemName = items.map(i => `${i.productName} x${i.quantity}`).join('#');
+        const itemName = items.map((i: { productName: string; quantity: number }) => `${i.productName} x${i.quantity}`).join('#');
         
         const baseUrl = process.env.VITE_APP_URL || 'https://example.com';
         // testAmount: 強制覆蓋金額（用於 1 元 E2E 測試）
@@ -770,7 +754,7 @@ export const appRouter = router({
           throw new TRPCError({ code: 'NOT_FOUND', message: '訂單不存在' });
         }
         const items = await db.getOrderItems(order.id);
-        const itemName = items.map(i => `${i.productName} x${i.quantity}`).join('#');
+        const itemName = items.map((i: { productName: string; quantity: number }) => `${i.productName} x${i.quantity}`).join('#');
         
         const baseUrl = process.env.VITE_APP_URL || 'https://example.com';
         const paymentData = createPaymentOrder({

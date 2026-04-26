@@ -3,26 +3,7 @@ import { trpc } from "../lib/trpc";
 import { User, Mail, Phone, MapPin, Save, ArrowLeft, Settings, Briefcase, UserCog, KeyRound } from "lucide-react";
 import { trackEvent } from "../components/Analytics";
 import ChangePasswordDialog from "../components/ChangePasswordDialog";
-
-// Helper function to safely check if user has a specific permission
-const hasPermission = (user: any, permission: string): boolean => {
-  if (!user || !user.permissions) return false;
-  
-  // Handle both string (JSON) and array formats
-  let permissions: string[] = [];
-  if (typeof user.permissions === 'string') {
-    try {
-      permissions = JSON.parse(user.permissions);
-    } catch (e) {
-      console.error('[Profile] Failed to parse permissions:', e);
-      return false;
-    }
-  } else if (Array.isArray(user.permissions)) {
-    permissions = user.permissions;
-  }
-  
-  return permissions.includes(permission);
-};
+import { hasPermission } from "@shared/access-control";
 
 export default function Profile() {
   const { data: user, isLoading } = trpc.auth.me.useQuery();

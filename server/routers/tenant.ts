@@ -1,17 +1,9 @@
 import { z } from "zod";
-import { router, protectedProcedure } from "../_core/trpc";
+import { router, superAdminProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import * as db from "../db";
 import { tenants } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
-
-// Super admin only procedure
-const superAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== "super_admin") {
-    throw new TRPCError({ code: "FORBIDDEN", message: "需要超級管理員權限" });
-  }
-  return next({ ctx });
-});
 
 export const tenantRouter = router({
   /**

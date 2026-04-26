@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { protectedProcedure, router } from "../_core/trpc";
+import { adminProcedure as managerProcedure, protectedProcedure, router } from "../_core/trpc";
+import { isAdminUser } from "@shared/access-control";
 import { getDb } from "../db";
 import {
   sopCategories,
@@ -15,14 +16,6 @@ import {
 import { eq, and, desc, asc, or, inArray } from "drizzle-orm";
 
 const MAKE_WEBHOOK_URL = "https://hook.us2.make.com/9lru5kvflpvyglz9dtpe9b02v97wkdd9";
-
-// 管理員 Procedure（super_admin 或 manager）
-const managerProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== "super_admin" && ctx.user.role !== "manager") {
-    throw new TRPCError({ code: "FORBIDDEN", message: "需要管理員權限" });
-  }
-  return next({ ctx });
-});
 
 export const sopRouter = router({
   // ===== SOP 分類 =====
@@ -74,7 +67,7 @@ export const sopRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-      const isManager = ctx.user.role === "super_admin" || ctx.user.role === "manager";
+      const isManager = isAdminUser(ctx.user);
 
       // 管理員可看所有 published，員工只看 isVisibleToStaff=true
       const baseConditions = isManager
@@ -120,7 +113,7 @@ export const sopRouter = router({
 
       // 員工不能看隱藏文件
       const doc = results[0];
-      const isManager = ctx.user.role === "super_admin" || ctx.user.role === "manager";
+      const isManager = isAdminUser(ctx.user);
       if (!isManager && !doc.isVisibleToStaff) {
         throw new TRPCError({ code: "FORBIDDEN", message: "此文件目前不對員工開放" });
       }
@@ -256,7 +249,7 @@ export const sopRouter = router({
   getRepairs: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-    if (ctx.user.role === "super_admin" || ctx.user.role === "manager") {
+      if (isAdminUser(ctx.user)) {
       return db.select().from(equipmentRepairs).orderBy(desc(equipmentRepairs.createdAt));
     }
     return db
@@ -335,7 +328,7 @@ export const sopRouter = router({
     .query(async ({ ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-      const isManager = ctx.user.role === "super_admin" || ctx.user.role === "manager";
+      const isManager = isAdminUser(ctx.user);
       if (isManager) {
         return db.select().from(dailyChecklists).orderBy(desc(dailyChecklists.createdAt)).limit(100);
       }
@@ -474,7 +467,7 @@ export const sopRouter = router({
   getAccessibleCategories: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-    const isManager = ctx.user.role === "super_admin" || ctx.user.role === "manager";
+      const isManager = isAdminUser(ctx.user);
     if (isManager) {
       return db.select().from(sopCategories).orderBy(sopCategories.displayOrder);
     }

@@ -2,6 +2,15 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import {
+  TENANTS,
+  canAccessTenant,
+  canSeeCostModules as userCanSeeCostModules,
+  hasAnyRole,
+  hasPermission as userHasPermission,
+  isAdminUser,
+  isSuperAdminUser,
+} from "@shared/access-control";
+import {
   UtensilsCrossed,
   LogOut,
   Menu,
@@ -213,18 +222,15 @@ export default function AdminDashboardLayout({
   }, [location]);
 
   // ── 所有 hooks 必須在任何 early return 之前 ──
-  const isSuperAdmin = user?.role === "super_admin";
+  const isSuperAdmin = isSuperAdminUser(user);
   const isManager = user?.role === "manager";
-  const isStoreManager = user?.role === "store_manager";
-  const isFranchisee = user?.role === "franchisee";
-  const isStaff = user?.role === "staff";
-  const hasAdminAccess = isSuperAdmin || isManager || isStoreManager || isFranchisee || isStaff;
-  const isOSTenant = isSuperAdmin || (user as any)?.tenantId === 1;
-  const isDYTenant = isSuperAdmin || (user as any)?.tenantId === 90004;
-  const canSeeCostModules = isSuperAdmin || user?.has_procurement_access === true;
+  const hasAdminAccess = hasAnyRole(user, ["super_admin", "manager", "store_manager", "franchisee", "staff"]);
+  const isOSTenant = canAccessTenant(user, TENANTS.ORDERSOME);
+  const isDYTenant = canAccessTenant(user, TENANTS.DAYONE);
+  const canSeeCostModules = userCanSeeCostModules(user);
 
   const { data: orderSomeModules } = trpc.dayone.modules.list.useQuery(
-    { tenantId: 1 },
+    { tenantId: TENANTS.ORDERSOME },
     {
       enabled: !!user && isOSTenant,
       staleTime: 0,
@@ -234,7 +240,7 @@ export default function AdminDashboardLayout({
     }
   );
   const { data: dayoneModules } = trpc.dayone.modules.list.useQuery(
-    { tenantId: 90004 },
+    { tenantId: TENANTS.DAYONE },
     {
       enabled: !!user && isDYTenant,
       staleTime: 0,
@@ -245,15 +251,15 @@ export default function AdminDashboardLayout({
   );
 
   const { data: overdueAR = [] } = trpc.dayone.ar.listReceivables.useQuery(
-    { tenantId: 90004, page: 1, status: "overdue" },
+    { tenantId: TENANTS.DAYONE, page: 1, status: "overdue" },
     { enabled: !!user && isDYTenant, refetchInterval: 60000 }
   );
   const { data: todayDispatch = [] } = trpc.dayone.dispatch.listDispatch.useQuery(
-    { tenantId: 90004 },
+    { tenantId: TENANTS.DAYONE },
     { enabled: !!user && isDYTenant, refetchInterval: 60000 }
   );
   const { data: pendingReceipts = [] } = trpc.dayone.purchaseReceipt.list.useQuery(
-    { tenantId: 90004, status: "pending" },
+    { tenantId: TENANTS.DAYONE, status: "pending" },
     { enabled: !!user && isDYTenant, refetchInterval: 60000 }
   );
   const overdueARCount = (overdueAR as any[]).length;
@@ -410,7 +416,7 @@ export default function AdminDashboardLayout({
   }
 
   // ── 大永 manager 訪問非 /dayone 路由時攔截 ──
-  if (isManager && (user as any)?.tenantId === 90004 && !location.startsWith("/dayone")) {
+  if (isManager && user?.tenantId === TENANTS.DAYONE && !location.startsWith("/dayone")) {
     window.location.replace("/dayone");
     return null;
   }
@@ -434,38 +440,27 @@ export default function AdminDashboardLayout({
     );
   }
 
-  const hasPermission = (permission: string) => {
-    if (!user) return false;
-    if (isSuperAdmin) return true;
-    if (isManager && isOSTenant) return true;
-    if (!user.permissions) return false;
-    const permissions =
-      typeof user.permissions === "string"
-        ? JSON.parse(user.permissions)
-        : user.permissions;
-    return Array.isArray(permissions) && permissions.includes(permission);
-  };
-  const hasOSModule = (key: string) => {
-    if (isSuperAdmin) return true;
-    if ((user as any)?.tenantId !== 1) return false;
-    return orderSomeModules?.some((m: any) => m.moduleKey === key && !!m.isEnabled) ?? false;
-  };
-
-  const hasDYModule = (key: string) => {
-    if (isSuperAdmin) return true;
-    if ((user as any)?.tenantId !== 90004) return false;
-    return dayoneModules?.some((m: any) => m.moduleKey === key && !!m.isEnabled) ?? false;
-  };
+  const hasPermission = (permission: string) =>
+    isAdminUser(user) && isOSTenant ? true : userHasPermission(user, permission);
 
   // ── 宇聯集團分組 ──
   const ecommerceItems = isOSTenant && hasPermission("manage_products")
     ? [
-        { icon: LayoutDashboard, label: "商城總覽", path: "/dashboard/admin/ecommerce" },
+        ...(hasPermission("manage_orders")
+          ? [
+              { icon: LayoutDashboard, label: "商城總覽", path: "/dashboard/admin/ecommerce" },
+              { icon: ShoppingCart, label: "訂單管理", path: "/dashboard/admin/orders" },
+            ]
+          : []),
         { icon: Package, label: "商品管理", path: "/dashboard/admin/products" },
         { icon: Tag, label: "分類管理", path: "/dashboard/admin/categories" },
-        { icon: ShoppingCart, label: "訂單管理", path: "/dashboard/admin/orders" },
       ]
-    : [];
+    : isOSTenant && hasPermission("manage_orders")
+      ? [
+          { icon: LayoutDashboard, label: "商城總覽", path: "/dashboard/admin/ecommerce" },
+          { icon: ShoppingCart, label: "訂單管理", path: "/dashboard/admin/orders" },
+        ]
+      : [];
 
   const contentItems = isOSTenant && hasPermission("publish_content")
     ? [

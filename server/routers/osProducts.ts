@@ -1,14 +1,7 @@
 import { z } from 'zod';
-import { router, adminProcedure, protectedProcedure } from '../_core/trpc';
-import { TRPCError } from '@trpc/server';
+import { adminProcedure, router, superAdminProcedure } from '../_core/trpc';
+import { canSeeCostModules } from '@shared/access-control';
 import { getDb } from '../db';
-
-const superAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== 'super_admin') {
-    throw new TRPCError({ code: 'FORBIDDEN', message: '需要超級管理員權限' });
-  }
-  return next({ ctx });
-});
 
 export const osProductsRouter = router({
 
@@ -201,8 +194,7 @@ export const osProductsRouter = router({
       const db = await getDb();
       if (!db) return [] as any[];
 
-      const hasCostAccess =
-        ctx.user.role === 'super_admin' || ctx.user.has_procurement_access === true;
+      const hasCostAccess = canSeeCostModules(ctx.user);
 
       let sql = `SELECT * FROM os_menu_items WHERE isActive=1`;
       const params: any[] = [];

@@ -1,14 +1,9 @@
 import { z } from "zod";
-import { router, protectedProcedure } from "../../_core/trpc";
+import { router } from "../../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../../db";
+import { dayoneAdminProcedure as dyAdminProcedure, dayoneDriverProcedure as driverProcedure } from "./procedures";
 
-const dyAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== "super_admin" && ctx.user.role !== "manager") {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Dayone admin access required" });
-  }
-  return next({ ctx });
-});
 
 export const dyDriversRouter = router({
   list: dyAdminProcedure
@@ -68,7 +63,7 @@ export const dyDriversRouter = router({
       return { success: true };
     }),
 
-  myOrders: protectedProcedure
+  myOrders: driverProcedure
     .input(z.object({ tenantId: z.number(), deliveryDate: z.string() }))
     .query(async ({ ctx, input }) => {
       const db = await getDb();
