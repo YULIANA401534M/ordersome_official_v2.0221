@@ -46,7 +46,7 @@ const dayoneMenuItems = [
   { icon: Package, label: "品項管理", path: "/dayone/products" },
   { icon: BarChart3, label: "庫存管理", path: "/dayone/inventory" },
   { icon: ShoppingCart, label: "進貨管理", path: "/dayone/purchase" },
-  { icon: MapPin, label: "行政區管理", path: "/dayone/districts" },
+  // { icon: MapPin, label: "行政區管理", path: "/dayone/districts" }, // 停用：改用客戶直接綁司機
 ];
 
 const superAdminItems = [

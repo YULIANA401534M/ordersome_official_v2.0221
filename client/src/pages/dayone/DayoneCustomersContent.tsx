@@ -53,7 +53,7 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
 
   const utils = trpc.useUtils();
   const { data: customers, isLoading } = trpc.dayone.customers.list.useQuery({ tenantId });
-  const { data: districts } = trpc.dayone.districts.list.useQuery({ tenantId });
+  // const { data: districts } = trpc.dayone.districts.list.useQuery({ tenantId }); // 停用
   const { data: groups } = trpc.dayone.customers.listGroups.useQuery({ tenantId });
   const { data: drivers } = trpc.dayone.drivers.list.useQuery({ tenantId });
 
@@ -384,7 +384,7 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
               <table className="dayone-table w-full text-sm">
                 <thead>
                   <tr>
-                    {["名稱", "電話", "預設司機", "頻率", "付款", "等級", "Portal", "狀態", "操作"].map((h) => (
+                    {["名稱", "電話", "預設司機", "送貨頻率", "付款", "等級", "Portal", "狀態", "操作"].map((h) => (
                       <th key={h}>{h}</th>
                     ))}
                   </tr>
@@ -541,18 +541,6 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>區域</Label>
-                <Select value={form.districtId ? String(form.districtId) : "none"} onValueChange={(v) => setForm((p) => ({ ...p, districtId: v === "none" ? undefined : Number(v) }))}>
-                  <SelectTrigger><SelectValue placeholder="選擇區域" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">未分配區域</SelectItem>
-                    {(districts as any[] ?? []).map((d: any) => (
-                      <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
               <div>
                 <Label>所屬群組</Label>
                 <Select value={form.groupId ? String(form.groupId) : "none"} onValueChange={(v) => setForm((p) => ({ ...p, groupId: v === "none" ? undefined : Number(v) }))}>

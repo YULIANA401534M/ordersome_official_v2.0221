@@ -257,3 +257,34 @@
 - **v5.70** `1bf182f`：退佣計算修正（rebateRate > 1 時除以100，os_suppliers 存百分比整數如10.71）、os_rebate_records 清空重算、profitLoss 補齊 channelSales/dailyTrend/procurementCost/isCostEstimated、退佣帳款頁新增 accounting.listRebates query 和「計算本月退佣」按鈕、OSDailyReport 月彙整 state 改名 viewYear/viewMonth
 - **v5.71** `d5868fd`：加盟主叫貨單權限——server/_core/trpc.ts 新增 franchiseeOrAdminProcedure、procurement list 改用新 procedure、franchisee 自動用 storeId→os_stores 取得 storeName 篩選（storeId 為 null 回傳空）、OSPurchasing 加 isFranchisee 隱藏店別篩選/批量刪除/所有 canEdit 操作按鈕、空狀態提示依角色切換
 - **v5.71** `7c877fe`：CLAUDE.md 新增兩個大任務規劃——集中式權限管理系統（os_user_permissions、permissionMiddleware，P2）、菜單成本 os_menu_items 表建置（P2）
+
+---
+
+## 2026-04-20 v6.01–v6.27 — 大永真資料閉環 + 後台改版啟動
+
+- **v6.01–v6.02**：TiDB LIMIT 參數化 bug 修正（`db.ts` inlineLimitOffsetParams patch）、連線確認
+- **v6.03**：前端官網改版全部完成（BrandHome/BrandMenu/BrandStores/BrandStory/BrandFranchise/BrandNews/BrandContact + CorporateAbout/CorporateBrands/CorporateCulture/CorporateFranchise/CorporateNews/CorporateContact），OKLCH 色彩規範建立
+- **v6.05–v6.21**：宇聯後台改版全部完成（AdminDashboardLayout → OSProducts → OSProcurement → OSInventory → OSDailyReport → OSProfitLoss → OSPurchasing → OSAccounting → OSRebate → OSDelivery → OSCustomers → Franchise* → Admin* → Content* → SOP/Checklist/Equipment/Scheduling）
+- **v6.21**：大永真資料閉環驗證通過（E2E-1777121064902），closure audit 全 0 錯誤
+- **v6.22–v6.24**：大永後台改版全部完成（DayoneLayout → DayoneDashboard → DayoneOrders → DayoneDispatch → DayonePurchaseReceipts → DayoneInventoryContent → DayoneARContent → DayoneCustomersContent → DayonePurchaseContent → DayoneLiffOrders → DayoneProducts → DayoneSettings → DayoneReports → DayoneUsers → DriverPickup → DriverLayout → DriverHome → DriverToday → DriverOrders → DriverDone → DriverOrderDetail → DriverWorkLog），v6.24 字體統一
+- **v6.25**：後台存取重構（shared/access-control.ts，集中式 role/tenant/module 常數，第一輪清除本地 middleware）
+- **v6.26**：Chunk 優化（xlsx/tiptap 改動態 import，App.tsx Router 加 Suspense），避免白畫面
+- **v6.27**：權限系統第三輪（ORDER_SOME_PERMISSION_DEFINITIONS，未知權限清理，AdminUsers/AdminPermissions 頁面路由顯示，全選/全移控制）
+
+---
+
+## 2026-04-21~27 v6.28–v6.51 — 大永落地 Bug 修正
+
+- **v6.28**：派車單列印空白 → handlePrint 開新視窗注入 `.print-target` HTML，繞過 Radix Portal 被 `body > *` print CSS 隱藏
+- **v6.29**：新增客戶失敗（settlementCycle `daily` 不在 DB enum，改 `per_delivery`）；庫存管理加「調整」按鈕（inline 編輯，type=adjust 設絕對值）；訂單狀態欄 `whitespace-nowrap`；訂單篩選加「單日/區間」切換（後端補 dateFrom/dateTo）；dayone/* 全站錯誤訊息中文化
+- **v6.30**：訂單新增表單加商品明細標題列、選商品自動帶預設價格、即時小計；訂單列表 ChevronDown 展開明細；庫存異動備註中文化；派車管理顯示未指派訂單橘色警示 + 指派司機按鈕（後端 `orders.setDriver`）；派車單重設計（screen 漸層卡片 + print 緊湊表格）
+- **v6.31**：客戶群組系統（`dy_customer_groups` 表，listGroups/upsertGroup/deleteGroup，customers.list 支援 groupId 篩選，群組管理面板 + 群組分組顯示 + 複製客戶按鈕）
+- **v6.43**：deleteOrder 已取消訂單可直接刪除（跳過派車單狀態檢查）；`dy_pending_returns` 刪除改為只刪特定 dispatchOrderId，不誤刪其他訂單
+- **v6.44**：帳務整合 DayoneARContent 五 tab（帳齡分析/信用警示/應付帳款獨立 tab/司機日報管理員確認/空箱台帳/月結改獨立列印視窗）；後端新增 ar.listBoxTransactions/boxBalanceSummary/agingReport、ap.dueSoonCount；listDispatch SQL 補 LEFT JOIN dy_work_logs
+- **v6.45**：DriverWorkLog 剩貨回庫送出後切換唯讀，修掉送出後 qty 跳回 shippedQty 的視覺錯誤
+- **v6.46**：撿貨單 shippedQty 移除 `.00` 小數；DayoneDispatch 移除管理端剩貨回庫 section；派車單已列印顯示綠色 badge（status !== draft 常駐）；列印按鈕改獨立動作不觸發 markPrinted；DriverPickup 改版為唯讀路線明細頁；DriverWorkLog defaultDispatchId 預設最新非完成派車單
+- **v6.47**：DriverWorkLog 回庫唯讀改從 `pendingReturnsByProduct` 取實際已回報數量；可填寫畫面預設值由 shippedQty 改為 0；dispatch.getDispatchDetail 回傳 pendingReturnsByProduct
+- **v6.48**：移除 ensureDyDispatchSchema/ensureDyPendingReturnsTable（每次查詢跑 ALTER TABLE），大幅提升查詢速度；listDispatch ORDER BY 改 `dispatchDate DESC, id ASC`；DriverWorkLog activeDispatchId 失效時自動回退 defaultDispatchId
+- **v6.49**：工作日誌改為任務導向（每張派車單各自日結）；dy_work_logs 新增 dispatchOrderId 欄位 + unique index；submitWorkLog dispatchOrderId 必填；getMyWorkLog 支援 dispatchOrderId 參數
+- **v6.50**：generateDispatch NOT EXISTS 補全 5 個 status（補上 in_progress/pending_handover），修掉重複派車單問題；清掉測試殘留 dispatch id 150001-150004
+- **v6.51**：前端 GenerateDialog 加 firedRef 防重複觸發；後端 generateDispatch 加「複用 draft」邏輯（同日同司機已有 draft 則複用，stopSequence 接續最大值）

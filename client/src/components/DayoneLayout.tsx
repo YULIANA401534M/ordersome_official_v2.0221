@@ -52,7 +52,7 @@ const NAV_GROUPS = [
     label: "人員與設定",
     items: [
       { icon: Truck, label: "司機管理", path: "/dayone/drivers", moduleKey: "driver_mgmt" },
-      { icon: MapPin, label: "區域管理", path: "/dayone/districts", moduleKey: "districts" },
+      // { icon: MapPin, label: "區域管理", path: "/dayone/districts", moduleKey: "districts" }, // 停用：改用客戶直接綁司機
       { icon: UserCog, label: "帳號管理", path: "/dayone/users", moduleKey: null },
       { icon: BarChart3, label: "報表分析", path: "/dayone/reports", moduleKey: null },
     ],

@@ -352,7 +352,7 @@ export default function AdminDashboardLayout({
         { key: "products",      icon: Egg,         label: "品項管理",   path: "/dayone/products" },
         { key: "inventory",     icon: Warehouse,   label: "庫存管理",   path: "/dayone/inventory" },
         { key: "purchasing",    icon: ShoppingBag, label: "進貨管理",   path: "/dayone/purchase" },
-        { key: "districts",     icon: Map,         label: "行政區管理", path: "/dayone/districts" },
+        // { key: "districts", icon: Map, label: "行政區管理", path: "/dayone/districts" }, // 停用：改用客戶直接綁司機
         { key: "liff_orders",        icon: Smartphone,  label: "LIFF 訂單",  path: "/dayone/liff-orders" },
         { key: "accounting",         icon: CreditCard,  label: "帳務管理",   path: "/dayone/ar" },
         { key: "dispatch",           icon: Truck,       label: "派車管理",   path: "/dayone/dispatch" },
