@@ -788,4 +788,95 @@ export const dyDispatchRouter = router({
         createdOrder: !!orderId,
       };
     }),
+
+  // 管理員點收確認：一鍵完成剩貨入庫 + 現收應收結清 + 派車單完成
+  confirmHandover: dyAdminProcedure
+    .input(z.object({
+      dispatchOrderId: z.number(),
+      tenantId: z.number(),
+      cashConfirmed: z.number().min(0),
+      adminNote: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      const client = (db as any).$client;
+
+      const [dispatchRows] = await client.execute(
+        `SELECT do2.*, d.name AS driverName, wl.totalCollected, wl.cashHandedOver, wl.handoverNote
+         FROM dy_dispatch_orders do2
+         JOIN dy_drivers d ON d.id = do2.driverId
+         LEFT JOIN dy_work_logs wl ON wl.driverId = do2.driverId AND wl.workDate = do2.dispatchDate AND wl.tenantId = do2.tenantId
+         WHERE do2.id=? AND do2.tenantId=? LIMIT 1`,
+        [input.dispatchOrderId, input.tenantId]
+      );
+      const dispatch = (dispatchRows as any[])[0];
+      if (!dispatch) throw new TRPCError({ code: "NOT_FOUND", message: "找不到派車單" });
+
+      // 1. 確認剩貨入庫（把 pending_returns 轉為 received，寫庫存）
+      const [pendingRows] = await client.execute(
+        `SELECT * FROM dy_pending_returns WHERE tenantId=? AND dispatchOrderId=? AND status='pending'`,
+        [input.tenantId, input.dispatchOrderId]
+      );
+      for (const ret of pendingRows as any[]) {
+        await client.execute(
+          `UPDATE dy_inventory SET currentQty = currentQty + ?, updatedAt=NOW()
+           WHERE tenantId=? AND productId=?`,
+          [Number(ret.qty), input.tenantId, ret.productId]
+        );
+        await client.execute(
+          `INSERT INTO dy_stock_movements (tenantId, productId, type, qty, refId, refType, note, createdAt)
+           VALUES (?,?,'in',?,?,'pending_return_confirmed',?,NOW())`,
+          [input.tenantId, ret.productId, Number(ret.qty), ret.id, `管理員點收確認回庫 #${input.dispatchOrderId}`]
+        );
+        await client.execute(
+          `UPDATE dy_pending_returns SET status='received', receivedBy=?, receivedAt=NOW(), updatedAt=NOW() WHERE id=?`,
+          [ctx.user.id, ret.id]
+        );
+      }
+
+      // 2. 現收應收帳款結清（只結 paymentMethod=cash 的 unpaid/partial）
+      const [cashArRows] = await client.execute(
+        `SELECT ar.id, ar.amount, ar.paidAmount
+         FROM dy_ar_records ar
+         JOIN dy_orders o ON o.id = ar.orderId
+         JOIN dy_dispatch_items di ON di.orderId = o.id
+         WHERE di.dispatchOrderId=? AND ar.tenantId=?
+           AND ar.status IN ('unpaid','partial')
+           AND o.paymentStatus IN ('paid','partial')`,
+        [input.dispatchOrderId, input.tenantId]
+      );
+
+      const noteText = input.adminNote
+        ? `管理員點收確認。備註：${input.adminNote}`
+        : `管理員點收確認，現金 NT$${input.cashConfirmed.toLocaleString()}`;
+
+      for (const ar of cashArRows as any[]) {
+        await client.execute(
+          `UPDATE dy_ar_records
+           SET paidAmount=amount, status='paid', paidAt=NOW(), paymentMethod='cash', adminNote=?, updatedAt=NOW()
+           WHERE id=? AND tenantId=?`,
+          [noteText, ar.id, input.tenantId]
+        );
+      }
+
+      // 3. 派車單標已完成
+      await client.execute(
+        `UPDATE dy_dispatch_orders
+         SET status='completed', handoverConfirmedAt=NOW(), handoverConfirmedBy=?, completedAt=NOW(), updatedAt=NOW()
+         WHERE id=? AND tenantId=?`,
+        [ctx.user.id, input.dispatchOrderId, input.tenantId]
+      );
+
+      const diff = input.cashConfirmed - Number(dispatch.totalCollected ?? 0);
+
+      return {
+        success: true,
+        pendingReturnCount: (pendingRows as any[]).length,
+        cashArSettled: (cashArRows as any[]).length,
+        cashConfirmed: input.cashConfirmed,
+        systemExpected: Number(dispatch.totalCollected ?? 0),
+        diff,
+      };
+    }),
 });

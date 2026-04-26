@@ -13,6 +13,8 @@ export default function DriverWorkLog() {
   const [startTime, setStartTime] = useState("08:00");
   const [endTime, setEndTime] = useState("");
   const [note, setNote] = useState("");
+  const [cashHandedOver, setCashHandedOver] = useState("");
+  const [handoverNote, setHandoverNote] = useState("");
   const [returnQtyByProduct, setReturnQtyByProduct] = useState<Record<number, number>>({});
   const [selectedDispatchId, setSelectedDispatchId] = useState<string>("");
 
@@ -231,13 +233,43 @@ export default function DriverWorkLog() {
                 </div>
               </div>
 
-              <div className="mt-4">
-                <label className="mb-1 block text-xs text-stone-500">備註</label>
+              <div className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 px-4 py-4 space-y-3">
+                <p className="text-xs font-semibold text-amber-800">現金繳回</p>
+                <div>
+                  <label className="mb-1 block text-xs text-stone-500">實際繳回現金（NT$）</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={cashHandedOver}
+                    onChange={(event) => setCashHandedOver(event.target.value)}
+                    placeholder={`系統應收 NT$ ${totalCollected.toLocaleString()}，填入實際繳回金額`}
+                    className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  />
+                </div>
+                {cashHandedOver && Number(cashHandedOver) !== totalCollected && (
+                  <div>
+                    <label className="mb-1 block text-xs text-stone-500">
+                      差額 NT$ {Math.abs(Number(cashHandedOver) - totalCollected).toLocaleString()}
+                      {Number(cashHandedOver) < totalCollected ? "（少收）" : "（多收）"}　說明原因
+                    </label>
+                    <input
+                      type="text"
+                      value={handoverNote}
+                      onChange={(event) => setHandoverNote(event.target.value)}
+                      placeholder="例如：A客戶少付100，說下次補"
+                      className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-3">
+                <label className="mb-1 block text-xs text-stone-500">其他備註</label>
                 <textarea
                   value={note}
                   onChange={(event) => setNote(event.target.value)}
-                  placeholder="例如：客戶臨時加單、剩貨狀況、現金差異說明"
-                  rows={4}
+                  placeholder="例如：客戶臨時加單、剩貨狀況"
+                  rows={3}
                   className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
                 />
               </div>
@@ -253,10 +285,13 @@ export default function DriverWorkLog() {
                     startTime: startTime || undefined,
                     endTime: endTime || undefined,
                     note: note || undefined,
+                    cashHandedOver: cashHandedOver ? Number(cashHandedOver) : undefined,
+                    handoverNote: handoverNote || undefined,
+                    dispatchOrderId: activeDispatchId || undefined,
                   })
                 }
               >
-                {submitLog.isPending ? "送出中..." : "送出今日日結"}
+                {submitLog.isPending ? "送出中..." : "送出今日日結，通知管理員點收"}
               </button>
             </>
           )}

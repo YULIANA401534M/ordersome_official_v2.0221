@@ -196,7 +196,16 @@ export const dyDriverRouter = router({
     }),
 
   submitWorkLog: driverProcedure
-    .input(z.object({ tenantId: z.number(), workDate: z.string(), startTime: z.string().optional(), endTime: z.string().optional(), note: z.string().optional() }))
+    .input(z.object({
+      tenantId: z.number(),
+      workDate: z.string(),
+      startTime: z.string().optional(),
+      endTime: z.string().optional(),
+      note: z.string().optional(),
+      cashHandedOver: z.number().min(0).optional(),
+      handoverNote: z.string().optional(),
+      dispatchOrderId: z.number().optional(),
+    }))
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
@@ -212,15 +221,29 @@ export const dyDriverRouter = router({
         [input.tenantId, driver.id, input.workDate]
       );
       const summary = (summaryRows as any[])[0];
+      const cashHandedOver = input.cashHandedOver ?? null;
 
       await client.execute(
-        `INSERT INTO dy_work_logs (tenantId, driverId, workDate, startTime, endTime, totalOrders, totalCollected, note, createdAt)
-         VALUES (?,?,?,?,?,?,?,?,NOW())
+        `INSERT INTO dy_work_logs (tenantId, driverId, workDate, startTime, endTime, totalOrders, totalCollected, cashHandedOver, handoverNote, note, createdAt)
+         VALUES (?,?,?,?,?,?,?,?,?,?,NOW())
          ON DUPLICATE KEY UPDATE startTime=VALUES(startTime), endTime=VALUES(endTime),
-         totalOrders=VALUES(totalOrders), totalCollected=VALUES(totalCollected), note=VALUES(note)`,
-        [input.tenantId, driver.id, input.workDate, input.startTime ?? null, input.endTime ?? null, summary?.totalOrders ?? 0, summary?.totalCollected ?? 0, input.note ?? null]
+         totalOrders=VALUES(totalOrders), totalCollected=VALUES(totalCollected),
+         cashHandedOver=VALUES(cashHandedOver), handoverNote=VALUES(handoverNote), note=VALUES(note)`,
+        [input.tenantId, driver.id, input.workDate, input.startTime ?? null, input.endTime ?? null,
+         summary?.totalOrders ?? 0, summary?.totalCollected ?? 0,
+         cashHandedOver, input.handoverNote ?? null, input.note ?? null]
       );
-      return { success: true, totalOrders: summary?.totalOrders ?? 0, totalCollected: summary?.totalCollected ?? 0 };
+
+      // Mark dispatch order as pending_handover so admin knows driver is back
+      if (input.dispatchOrderId) {
+        await client.execute(
+          `UPDATE dy_dispatch_orders SET status='pending_handover', updatedAt=NOW()
+           WHERE id=? AND tenantId=? AND driverId=? AND status='printed'`,
+          [input.dispatchOrderId, input.tenantId, driver.id]
+        );
+      }
+
+      return { success: true, totalOrders: summary?.totalOrders ?? 0, totalCollected: Number(summary?.totalCollected ?? 0) };
     }),
 
   uploadSignature: driverProcedure

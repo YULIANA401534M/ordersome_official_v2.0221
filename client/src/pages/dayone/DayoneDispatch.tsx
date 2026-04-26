@@ -33,6 +33,7 @@ const DISPATCH_STATUS: Record<string, { label: string; className: string }> = {
   draft: { label: "草稿", className: "bg-stone-100 text-stone-600" },
   printed: { label: "已列印", className: "bg-sky-100 text-sky-700" },
   in_progress: { label: "配送中", className: "bg-orange-100 text-orange-700" },
+  pending_handover: { label: "待點收", className: "bg-rose-100 text-rose-700" },
   completed: { label: "已完成", className: "bg-emerald-100 text-emerald-700" },
 };
 
@@ -299,6 +300,8 @@ function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onCl
   const utils = trpc.useUtils();
   const [showAddStop, setShowAddStop] = useState(false);
   const [returnQtyByProduct, setReturnQtyByProduct] = useState<Record<number, number>>({});
+  const [handoverCash, setHandoverCash] = useState("");
+  const [handoverAdminNote, setHandoverAdminNote] = useState("");
 
   const { data: detail, isLoading } = trpc.dayone.dispatch.getDispatchDetail.useQuery(
     { id: dispatchId, tenantId: TENANT_ID },
@@ -318,6 +321,21 @@ function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onCl
     onSuccess: () => {
       toast.success("剩貨已送出待驗");
       setReturnQtyByProduct({});
+      utils.dayone.dispatch.getDispatchDetail.invalidate();
+      utils.dayone.dispatch.listDispatch.invalidate();
+      utils.dayone.inventory.pendingReturns.invalidate();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const confirmHandover = trpc.dayone.dispatch.confirmHandover.useMutation({
+    onSuccess: (data) => {
+      const diffText = data.diff !== 0
+        ? `，差額 NT$ ${Math.abs(data.diff).toLocaleString()}${data.diff < 0 ? "（少收）" : "（多收）"}`
+        : "，金額吻合";
+      toast.success(`點收完成${diffText}。回庫 ${data.pendingReturnCount} 項，應收結清 ${data.cashArSettled} 筆`);
+      setHandoverCash("");
+      setHandoverAdminNote("");
       utils.dayone.dispatch.getDispatchDetail.invalidate();
       utils.dayone.dispatch.listDispatch.invalidate();
       utils.dayone.inventory.pendingReturns.invalidate();
@@ -624,6 +642,89 @@ function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onCl
                 </div>
               </section>
 
+              {detail.status === "pending_handover" && (
+                <section className="rounded-[28px] border-2 border-rose-300 bg-rose-50 p-5 shadow-[0_12px_24px_rgba(190,18,60,0.08)]">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
+                    <p className="text-sm font-semibold text-rose-800">司機已回倉，待管理員點收</p>
+                  </div>
+
+                  {(() => {
+                    const systemExpected = items.reduce((s: number, i: any) => {
+                      const amt = Number(i.orderAmount ?? 0);
+                      const pay = i.paymentStatus;
+                      return (pay === "unpaid" || pay === "partial") ? s + amt : s;
+                    }, 0);
+                    const driverCollected = items.reduce((s: number, i: any) => s + Number(i.orderCashCollected ?? i.cashCollected ?? 0), 0);
+                    const handoverNum = handoverCash !== "" ? Number(handoverCash) : driverCollected;
+                    const diff = handoverNum - driverCollected;
+                    return (
+                      <div className="mt-4 space-y-3">
+                        <div className="grid grid-cols-3 gap-2 text-center text-sm">
+                          <div className="rounded-2xl bg-white px-3 py-3 border border-rose-100">
+                            <p className="text-xs text-stone-400">現收應收</p>
+                            <p className="mt-1 font-semibold text-stone-900">NT$ {systemExpected.toLocaleString()}</p>
+                          </div>
+                          <div className="rounded-2xl bg-white px-3 py-3 border border-rose-100">
+                            <p className="text-xs text-stone-400">司機實收</p>
+                            <p className="mt-1 font-semibold text-amber-700">NT$ {driverCollected.toLocaleString()}</p>
+                          </div>
+                          <div className={`rounded-2xl px-3 py-3 border ${diff !== 0 ? "bg-rose-100 border-rose-300" : "bg-emerald-50 border-emerald-100"}`}>
+                            <p className="text-xs text-stone-400">管理員確認繳回</p>
+                            <p className={`mt-1 font-semibold ${diff !== 0 ? "text-rose-700" : "text-emerald-700"}`}>
+                              {handoverCash !== "" ? `NT$ ${handoverNum.toLocaleString()}` : "待填入"}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="mb-1 block text-xs text-stone-500">實際點收現金（NT$）</label>
+                          <input
+                            type="number"
+                            min={0}
+                            value={handoverCash}
+                            onChange={(e) => setHandoverCash(e.target.value)}
+                            placeholder={`司機帶回 NT$ ${driverCollected.toLocaleString()}`}
+                            className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-400"
+                          />
+                        </div>
+
+                        {diff !== 0 && handoverCash !== "" && (
+                          <div className="rounded-2xl bg-rose-100 px-3 py-2 text-xs font-semibold text-rose-700">
+                            差額 NT$ {Math.abs(diff).toLocaleString()}
+                            {diff < 0 ? "（少收）" : "（多收）"}
+                          </div>
+                        )}
+
+                        <div>
+                          <label className="mb-1 block text-xs text-stone-500">備註（差額說明等）</label>
+                          <input
+                            type="text"
+                            value={handoverAdminNote}
+                            onChange={(e) => setHandoverAdminNote(e.target.value)}
+                            placeholder="例如：A客戶少付100下次補"
+                            className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-400"
+                          />
+                        </div>
+
+                        <Button
+                          className="w-full bg-rose-600 text-white hover:bg-rose-700"
+                          disabled={confirmHandover.isPending || handoverCash === ""}
+                          onClick={() => confirmHandover.mutate({
+                            dispatchOrderId: dispatchId,
+                            tenantId: TENANT_ID,
+                            cashConfirmed: Number(handoverCash),
+                            adminNote: handoverAdminNote || undefined,
+                          })}
+                        >
+                          {confirmHandover.isPending ? "確認中..." : "確認點收，完成今日派車"}
+                        </Button>
+                      </div>
+                    );
+                  })()}
+                </section>
+              )}
+
               <section className="rounded-[28px] border border-stone-200/70 bg-white p-4 shadow-[0_12px_24px_rgba(120,53,15,0.05)]">
                 <div className="flex items-center gap-2">
                   <RotateCcw className="h-5 w-5 text-amber-600" />
@@ -848,7 +949,11 @@ export default function DayoneDispatch() {
                 return (
                   <article
                     key={dispatch.id}
-                    className="rounded-[30px] border border-stone-200/70 bg-white p-5 shadow-[0_14px_28px_rgba(120,53,15,0.05)]"
+                    className={`rounded-[30px] border p-5 shadow-[0_14px_28px_rgba(120,53,15,0.05)] ${
+                      dispatch.status === "pending_handover"
+                        ? "border-rose-300 bg-rose-50 shadow-[0_14px_28px_rgba(190,18,60,0.08)]"
+                        : "border-stone-200/70 bg-white"
+                    }`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
