@@ -127,7 +127,8 @@
 
 <!-- 匯出列 -->
 <div class="export-bar">
-  <button class="export-btn primary" onclick="exportResult()">📋 匯出測試結果（複製文字）</button>
+  <button class="export-btn primary" onclick="saveHtml()" style="background:#b45309;">💾 儲存檔案（含勾選結果）</button>
+  <button class="export-btn primary" onclick="exportResult()">📋 複製結果文字</button>
   <button class="export-btn secondary" onclick="resetAll()">🔄 全部重置</button>
   <button class="export-btn secondary" onclick="window.print()">🖨️ 列印</button>
 </div>
@@ -988,7 +989,40 @@ function init() {
   Object.keys(SECTIONS).forEach(s => updateSectionBadge(s));
   updateProgress();
 }
+// Restore from embedded payload (saved file) before init
+(function restoreFromEmbedded() {
+  const raw = document.documentElement.getAttribute('data-uat-saved');
+  if (!raw) return;
+  try {
+    const d = JSON.parse(raw.replace(/&quot;/g, '"'));
+    if (d.results && Object.keys(d.results).length > 0 && Object.keys(results).length === 0) {
+      results = d.results;
+      notes = d.notes || {};
+    }
+  } catch(e) {}
+})();
+
 init();
+
+function saveHtml() {
+  // Embed current results & notes into a data attribute on <html> so the saved file carries the state
+  const payload = JSON.stringify({ results, notes });
+  const original = document.documentElement.outerHTML;
+
+  // Strip any previous embedded payload, then inject fresh one
+  const cleaned = original
+    .replace(/ data-uat-saved="[^"]*"/, '')
+    .replace(/<html /, '<html data-uat-saved="' + payload.replace(/"/g, '&quot;') + '" ');
+
+  const blob = new Blob([cleaned], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'dayone-uat-result-' + new Date().toISOString().slice(0,10) + '.html';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 </script>
 </body>
 </html>
