@@ -1433,7 +1433,7 @@ export default function DayonePurchaseReceipts() {
               </div>
             ) : (
               <>
-                <div className="hidden overflow-hidden rounded-[28px] border border-stone-200 md:block">
+                <div className="hidden overflow-x-auto rounded-[28px] border border-stone-200 md:block">
                   <table className="w-full text-sm">
                     <thead className="bg-stone-50 text-stone-500">
                       <tr>
@@ -1593,7 +1593,7 @@ export default function DayonePurchaseReceipts() {
               </div>
             ) : (
               <>
-                <div className="hidden overflow-hidden rounded-[28px] border border-stone-200 md:block">
+                <div className="hidden overflow-x-auto rounded-[28px] border border-stone-200 md:block">
                   <table className="w-full text-sm">
                     <thead className="bg-stone-50 text-stone-500">
                       <tr>
