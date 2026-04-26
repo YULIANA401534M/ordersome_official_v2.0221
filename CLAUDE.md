@@ -1,38 +1,57 @@
 # CLAUDE.md — OrderSome 專案主腦
 
-## 2026-04-26 business-logic handoff entry
+> 版本 v6.24｜最後更新：2026-04-26
 
-When the next brain needs to understand Dayone, Yulian, or OrderSome from real-world operations instead of only code, start here:
+---
 
-- `docs/dayone-real-world-business-flow-2026-04-26.md`
-- `docs/business-logic-reverse-prompt-2026-04-26.md`
-- `docs/yulian-ordersome-wanwansia-business-map-2026-04-26.md`
-- `docs/backoffice-access-map-2026-04-26.md`
+## 業務邏輯交接入口（2026-04-26）
 
-Current decision: keep the reverse prompt as repo documentation for now, not a global Codex skill. It is still project-specific and should evolve with `CLAUDE.md`. Consider extracting it into a skill only after it proves stable across Dayone, Yulian ERP, OrderSome CRM, BOM, finance, and store operations.
+下一個對話若需要從真實業務角度理解大永、宇聯或 OrderSome，請先讀以下文件：
 
-Yulian / OrderSome / BowlHero handoff note: use a recency-first reading strategy. Do not try to read every historical Drive asset up front. Start from the latest edited folders/files, then backtrack only when a number, store, supplier, recipe, or workflow needs proof. For BowlHero / 碗碗俠 specifically, the latest user-confirmed sources as of 2026-04-26 are `C:\Users\barmy\Downloads\碗碗俠_試菜SOP記錄表_完整版_v2_20260424.xlsx` and `C:\Users\barmy\Downloads\碗碗俠_公司設立流程與開幕前準備_20260423.xlsx`; if they conflict with older planning PDFs, prefer these two files. 南屯林新店正確地址為「台中市南屯區惠中路三段54號」；舊表若出現「大墩十一街453號」視為舊資料。
+- `docs/dayone-real-world-business-flow-2026-04-26.md` — 大永業務流程（進貨→派車→收款）
+- `docs/business-logic-reverse-prompt-2026-04-26.md` — 業務邏輯反推指南
+- `docs/yulian-ordersome-wanwansia-business-map-2026-04-26.md` — 宇聯/來點什麼業務地圖
+- `docs/backoffice-access-map-2026-04-26.md` — 後台存取與權限重構細節
 
-Backoffice access refactor note: shared role/tenant/module constants live in `shared/access-control.ts`; core tRPC admin/superAdmin/franchisee/content guards use those helpers; Dayone routers use centralized guards from `server/routers/dayone/procedures.ts`. `server/routers/dayone/modules.ts` intentionally remains on generic core admin/superAdmin procedures because it serves both OrderSome tenant module toggles and Dayone module toggles. Second pass also removed OrderSome/Yulian local middleware from `server/routers.ts`, `ai-writer.ts`, `content.ts`, `franchiseePayment.ts`, `osProducts.ts`, `sop.ts`, `storage.ts`, and `tenant.ts`. `AdminDashboardLayout.tsx` now uses shared access helpers for role/tenant/permissions/cost access. Third pass added `ORDER_SOME_PERMISSION_DEFINITIONS`, sanitized unknown OrderSome permission strings on create/update, and made AdminUsers/AdminPermissions show the page routes linked to each permission plus add-all/remove-all controls. Run `node scripts/audit-access-control.mjs` before continuing permission work; the next targets are shared sidebar route matrix, `has_procurement_access` migration, and permission audit logs.
+這些文件目前留在 repo 作為專案文件，不提取為全局 skill。它會隨 CLAUDE.md 一起演進。建議閱讀策略：**最新優先**，從最近更新的資料夾/檔案開始，只在需要確認數字或供應商/門市/流程時回頭查舊資料。
 
+**BowlHero / 碗碗俠**：最新確認來源（截至 2026-04-26）為 `C:\Users\barmy\Downloads\碗碗俠_試菜SOP記錄表_完整版_v2_20260424.xlsx` 與 `C:\Users\barmy\Downloads\碗碗俠_公司設立流程與開幕前準備_20260423.xlsx`；若與較舊的計劃 PDF 衝突，以這兩份為準。南屯林新店正確地址：「台中市南屯區惠中路三段54號」（舊表出現「大墩十一街453號」視為舊資料）。
 
-### Dayone 真資料閉環交接（2026-04-25 v6.21 / app v1.1.0）
+---
 
-**這輪已完成**
-- 已直接連線 TiDB `ordersome`，確認 Dayone 租戶為 `tenantId=90004 / dayone-eggs`
-- 已用真資料完成進貨 -> 供應商簽收 -> 入倉 -> 派車 -> 列印扣庫 -> 司機收現/送達 -> 回庫待驗 -> 管理確認 -> AP/AR 結清整條閉環
-- 已補齊 `dy_pending_returns` 真表驗證、AP/AR 同步、庫存異動、司機日結與頁面聯動
-- `/dayone/*` 與 `/driver/*` 主要路由已做登入後頁面審查，無新增 console/page error
+## 後台存取重構備忘
 
-**這輪修掉的真 bug**
+- 共用的 role/tenant/module 常數放在 `shared/access-control.ts`
+- 核心 tRPC 的 admin/superAdmin/franchisee/content 守衛使用這些 helper
+- Dayone 路由使用 `server/routers/dayone/procedures.ts` 的集中守衛
+- `server/routers/dayone/modules.ts` 刻意保留在通用核心 admin/superAdmin procedures，因為它同時服務 OrderSome 和 Dayone 的模組切換
+- 第二輪清除了 `server/routers.ts`、`ai-writer.ts`、`content.ts`、`franchiseePayment.ts`、`osProducts.ts`、`sop.ts`、`storage.ts`、`tenant.ts` 裡的本地 middleware
+- `AdminDashboardLayout.tsx` 現在使用共用 access helpers 處理 role/tenant/permissions/cost
+- 第三輪新增了 `ORDER_SOME_PERMISSION_DEFINITIONS`，對建立/更新時的未知權限字串做清理，並讓 AdminUsers/AdminPermissions 顯示與每個權限關聯的頁面路由，加入全選/全移控制
+- 繼續做權限工作前請先執行 `node scripts/audit-access-control.mjs`；下一步目標：共用側邊欄路由矩陣、`has_procurement_access` migration、權限稽核日誌
+
+---
+
+## 大永後台真資料閉環交接（v6.21 / app v1.1.0）
+
+### 本輪已完成
+
+- 直接連線 TiDB `ordersome`，確認大永租戶為 `tenantId=90004 / dayone-eggs`
+- 以真資料完成**進貨 → 供應商簽收 → 入倉 → 派車 → 列印扣庫 → 司機收現/送達 → 回庫待驗 → 管理確認 → AP/AR 結清**整條閉環
+- 補齊 `dy_pending_returns` 真表驗證、AP/AR 同步、庫存異動、司機日結與頁面聯動
+- `/dayone/*` 與 `/driver/*` 主要路由登入後頁面審查，無新增 console/page error
+
+### 本輪修掉的真實 Bug
+
 - `dayone.ar.markPaid` 現在會同步回寫 `dy_orders.paidAmount/paymentStatus`，不再出現 AR 已收清但訂單仍是 partial
 - `dayone.dispatch.generateDispatch` 現在只抓可派車且未進過派車單的訂單，避免同日重複派車把舊單打回 `picked`
 - `driver.recordCashPayment` 與 `dispatch.updateDispatchItem` 不會再對未送達訂單提前建立 AR，避免流程中斷留下髒帳
 - `purchaseReceipt.receiveToWarehouse` 已補 `dy_inventory.unit` 寫入
-- `dy_purchase_receipts.status` 與 `dy_dispatch_items.paymentStatus` 已在路由層補 schema 對齊，避免 TiDB enum 與程式邏輯脫節
+- `dy_purchase_receipts.status` 與 `dy_dispatch_items.paymentStatus` 已在路由層補 schema 對齊
 - 本地開發缺 R2 憑證時，`server/storage.ts` 會回退到 `public/` 本地檔案，不阻斷簽名測試
 
-**本輪新增腳本**
+### 驗證腳本（僅本地使用）
+
 - `scripts/dayone-tidb-live-verify.mjs`
 - `scripts/dayone-live-closure-audit.mjs`
 - `scripts/dayone-live-repair.mjs`
@@ -41,44 +60,40 @@ Backoffice access refactor note: shared role/tenant/module constants live in `sh
 - `scripts/dayone-playwright-route-audit.mjs`
 - `scripts/dayone-e2e-closure-test.mjs`
 
-**已驗證結果**
+### 已驗證結果
+
 - 真資料 E2E 腳本通過，最新保留案例 tag：`E2E-1777121064902`
 - closure audit 乾淨：`signedReceiptsMissingAp=0`、`deliveredOrdersMissingAr=0`、`printedDispatchMissingStockOut=0`、`completedDispatchMissingCashReport=0`、`arRecordsOnUndeliveredOrders=0`
 - `npm run build` 已通過
 
-**目前庫內保留狀態**
-- 已清掉舊的 `E2E-*` 測試殘留，只保留一組最新完整案例，方便下一個大腦對照頁面與 TiDB
-- 不要手動刪除這組案例，除非下一輪要先重建基線
+**庫內保留狀態**：已清掉舊 `E2E-*` 測試殘留，只保留一組最新完整案例，方便下一輪對照頁面與 TiDB。不要手動刪除這組案例，除非下一輪要先重建基線。
 
-**下一輪若要接著做**
-- 以 `scripts/dayone-e2e-closure-test.mjs` 重跑完整閉環
-- 以 `scripts/dayone-live-closure-audit.mjs` 檢查整庫是否再次出現缺 AP / 缺 AR / 缺庫存異動 / 未送達 AR
-- 若要擴充規格，優先往多司機、多派車單、跨日月結對帳與更多異常情境測
+---
 
+## 後台改版任務（v6.05 起）
 
-### 後台改版任務（v6.05 起，目前進行中）
+### 背景
 
-**背景**
-使用者確認：宇聯後台 + 大永後台 + 商城，三個系統都需要前端改版。
-這是下一個主要任務階段，優先於後端新功能開發。
+宇聯後台、大永後台、商城三系統皆需前端改版。
 
-**改版方向**
 | 系統 | 風格定位 | 關鍵問題 |
 |------|---------|---------|
-| 宇聯後台 `/dashboard/` | 暖色系、高質感、好閱讀、讓工作變快樂 | 各頁面風格不一致、RWD 跑版、按鈕/輸入框沒有連動、欄位名稱錯誤 |
-| 大永後台 `/dayone/` | 沿用現有深色系但需統一，dispatch 頁是目前最好的參考 | 字型/間距/排版/RWD 問題，各頁面不統一 |
-| 商城 `/shop/` | 貼近品牌暖黃，乾淨購物體驗 | 尚未開始改版 |
+| 宇聯後台 `/dashboard/` | 暖色系、高質感、好閱讀 | 各頁面風格不一致、RWD 跑版 |
+| 大永後台 `/dayone/` | 沿用現有深色系但需統一，dispatch 頁是最佳參考 | 字型/間距/排版/RWD 各頁不統一 |
+| 商城 `/shop/` | 貼近品牌暖黃，乾淨購物體驗 | 尚未開始 |
 
-**執行策略**
-1. 先用 `/impeccable teach` 建立三套設計規範（宇聯後台 / 大永後台 / 商城），寫入 PRODUCT.md + DESIGN.md
-2. 宇聯後台先改 Layout Shell（`AdminDashboardLayout.tsx`），確立全局 token 後再頁面逐一套用
+### 執行策略
+
+1. 先用 `/impeccable teach` 建立三套設計規範，寫入 PRODUCT.md + DESIGN.md
+2. 宇聯後台先改 Layout Shell（`AdminDashboardLayout.tsx`），確立全局 token 後再逐頁套用
 3. 大永後台以 `DayoneLayout.tsx` + `/dayone/dispatch` 為基準，對齊其他頁面
 4. 商城最後處理
 
-**宇聯後台頁面改版順序（tRPC 查詢邏輯和 Link href 路由一律不動）**
+### 宇聯後台頁面改版進度（tRPC 查詢邏輯和路由一律不動）
+
 | 優先 | 頁面 | 路由 | 狀態 |
 |------|------|------|------|
-| 1 | AdminDashboardLayout.tsx | （全域 Shell） | done（v6.05 Warm Paper 暖色側邊欄+OKLCH token） |
+| 1 | AdminDashboardLayout.tsx | 全域 Shell | done（v6.05 Warm Paper 暖色側邊欄+OKLCH token） |
 | 2 | OSProducts.tsx | /dashboard/products | done（v6.08） |
 | 3 | OSProcurement.tsx | /dashboard/procurement | done（v6.09） |
 | 4 | OSInventory.tsx | /dashboard/inventory | done（v6.10） |
@@ -94,10 +109,11 @@ Backoffice access refactor note: shared role/tenant/module constants live in `sh
 | 14 | ContentManagement / ContentEditor / AIWriter | /dashboard/content* | done（v6.20） |
 | 15 | SOPKnowledgeBase / DailyChecklist / EquipmentRepairs / OSScheduling | 其餘 | done（v6.21） |
 
-**大永後台頁面改版順序**
+### 大永後台頁面改版進度
+
 | 優先 | 頁面 | 路由 | 狀態 |
 |------|------|------|------|
-| 1 | DayoneLayout.tsx | （全域 Shell） | pending |
+| 1 | DayoneLayout.tsx | 全域 Shell | pending |
 | 2 | DayoneDashboard.tsx | /dayone | done（v6.24 字體統一） |
 | 3 | DayoneOrders.tsx | /dayone/orders | pending |
 | 4 | DayoneDispatch.tsx | /dayone/dispatch | done（v6.24 字體統一） |
@@ -108,9 +124,10 @@ Backoffice access refactor note: shared role/tenant/module constants live in `sh
 | 9 | DayonePurchaseContent.tsx | /dayone/purchase | done（v6.24 字體統一） |
 | 10 | DayoneLiffOrders.tsx / DayoneProducts.tsx | /dayone/liff-orders, /dayone/products | done（v6.24 字體統一） |
 | 11 | DayoneSettings / DayoneReports | /dayone/settings, /dayone/reports | done（v6.23 + v6.24 字體統一） |
-| 12 | 其餘 dayone 頁面 | driver/* / portal/* | pending |
+| 12 | 其餘頁面 | driver/* / portal/* | pending |
 
-**商城頁面改版順序**
+### 商城頁面改版進度
+
 | 優先 | 頁面 | 路由 | 狀態 |
 |------|------|------|------|
 | 1 | ShopHome.tsx | /shop | pending |
@@ -118,7 +135,8 @@ Backoffice access refactor note: shared role/tenant/module constants live in `sh
 | 3 | ProductDetail.tsx | /shop/product/* | pending |
 | 4 | Cart / Checkout / OrderComplete | /shop/cart* | pending |
 
-**設計規則（後台通用，所有頁面必須遵守）**
+### 設計規則（後台通用）
+
 - tRPC 查詢邏輯和 Link href 路由一律不動，只改 JSX 結構與樣式
 - 每頁改完必須 `npm run build` 通過再 commit
 - 禁止 gradient text、bounce easing、卡片套卡片、圓角 icon 在標題上方
@@ -128,96 +146,92 @@ Backoffice access refactor note: shared role/tenant/module constants live in `sh
 
 ---
 
-### 前端官網改版進度快照（2026-04-25 v6.03）
+## 前端官網改版進度（v6.03）
 
-**設計規範（品牌系列）**
-- 色彩全用 OKLCH：暖黃 oklch(0.75 0.18 70)，奶白背景 oklch(0.97 0.02 85)，深色文字 oklch(0.18 0.02 60)
-- 字型：--font-brand（JF-Kamabit）用於大標題，內文用系統字
-- 動畫：Framer Motion，EASE_OUT_EXPO [0.16, 1, 0.3, 1]，須包 prefers-reduced-motion
-- 絕對禁止：gradient text（bg-clip-text）、bounce/elastic easing、卡片套卡片、每個標題上方放圓角 icon
-- 非同步資料頁：文章/門市卡片不可用 useInView 控制 animate，改用直接 animate
-- tRPC 查詢邏輯和 Link href 路由一律不動
-- 每次改完必須 npm run build 確認通過再 commit & push
+### 品牌設計規範
 
-**品牌子頁面（全部完成）**
+- 色彩全用 OKLCH：暖黃 `oklch(0.75 0.18 70)`，奶白背景 `oklch(0.97 0.02 85)`，深色文字 `oklch(0.18 0.02 60)`
+- 字型：`--font-brand`（JF-Kamabit）用於大標題，內文用系統字
+- 動畫：Framer Motion，EASE_OUT_EXPO `[0.16, 1, 0.3, 1]`，須包 `prefers-reduced-motion`
+- 禁止：gradient text、bounce/elastic easing、卡片套卡片、每個標題上方放圓角 icon
+- 非同步資料頁：文章/門市卡片不可用 `useInView` 控制 `animate`，改用直接 `animate`
+- tRPC 查詢與路由不動，每次改完必須 `npm run build` 通過再 commit
+
+### 品牌子頁面（全部完成）
+
 | 頁面 | 狀態 | 特色 |
 |------|------|------|
 | BrandHome.tsx | done | 視差 Hero「今天，來點什麼？」，食物照片牆，門市數字條 |
 | BrandMenu.tsx | done | 菜單圖片貼紙標籤，分類 Tab + 圖片磚格子 |
-| BrandStores.tsx | done | 地圖全寬，auto-fill minmax(260px,1fr) 格子，useInView 時序修正 |
+| BrandStores.tsx | done | 地圖全寬，auto-fill minmax(260px,1fr) 格子 |
 | BrandStory.tsx | done | 視差 Hero，暗底引言帶，四里程碑時間軸，三大理念橫線，暖黃願景帶 |
 | BrandFranchise.tsx | done | 深色 Hero，四大優勢橫線，暖黃引言帶，六步驟格子，FAQ，深色表單 |
 | BrandNews.tsx | done | 視差 Hero，分類 tab，非同步文章格子（直接 animate），空狀態大字 |
-| BrandContact.tsx | done | 深色 Hero，雙欄（聯絡資訊橫線 / 表單），hover 暖黃按鈕 |
+| BrandContact.tsx | done | 深色 Hero，雙欄（聯絡資訊橫線/表單），hover 暖黃按鈕 |
 
-**企業子頁面 — 深暖碳黑 + 品牌金銅色系**
-色彩 token（正確版，勿用 hue 250 冷藍灰）：
-- 背景：oklch(0.12 0.01 60)，淺色段：oklch(0.97 0.02 85)
-- 文字：oklch(0.95 0.01 80)，次要：oklch(0.60 0.025 75)
-- 強調金銅：oklch(0.72 0.14 78)，強調暗：oklch(0.26 0.06 78)
-- 分隔線：oklch(0.22 0.02 70)
+### 企業子頁面（深暖碳黑＋品牌金銅色系）
+
+色彩 token：
+- 背景：`oklch(0.12 0.01 60)`，淺色段：`oklch(0.97 0.02 85)`
+- 文字：`oklch(0.95 0.01 80)`，次要：`oklch(0.60 0.025 75)`
+- 強調金銅：`oklch(0.72 0.14 78)`，強調暗：`oklch(0.26 0.06 78)`
+- 分隔線：`oklch(0.22 0.02 70)`
 
 Hero 圖片規則：
-- 一律用 /images/logo-intro-dark.png（深色背景金黃筆刷∞，天生融入）
-- position:absolute 右半滿版，object-fit:cover object-left
-- 左側漸層 linear-gradient(to right, bg 0%, transparent 40%)
-- 底部漸層 linear-gradient(to top, bg 0%, transparent 35%)
-- 絕對不用 corporate-logo.png（白底 PNG 放深色背景會破圖）
+- 一律用 `/images/logo-intro-dark.png`（深色背景金黃筆刷∞）
+- `position:absolute` 右半滿版，`object-fit:cover object-left`
+- 左側漸層 `linear-gradient(to right, bg 0%, transparent 40%)`
+- 底部漸層 `linear-gradient(to top, bg 0%, transparent 35%)`
+- 禁用 `corporate-logo.png`（白底 PNG 放深色背景會破圖）
 
-| 頁面 | 狀態 | 備註 |
-|------|------|------|
-| CorporateAbout.tsx | done | 深暖碳黑+金銅，Hero logo-intro-dark 滿版，橫線數字帶，願景使命橫線，五大價值觀 |
-| CorporateBrands.tsx | done | Hero 視差+右半logo，主品牌全版展示（橫線三特色+數字帶+CTA），食物小圖六格，即將推出三欄，引言帶 BRANDS |
-| CorporateCulture.tsx | done | Hero 視差+右半logo，核心宣言帶，八大行動準則橫線，職場三承諾雙欄，引言帶 CULTURE，CTA底帶 |
-| CorporateFranchise.tsx | done | Hero 視差+右半logo，四大企業優勢橫線，費用結構雙欄，六步驟格子，引言帶FRANCHISE，深色表單，聯絡資訊橫線 |
-| CorporateNews.tsx | done | 深色Hero+NEWS水印，分類Tab，精選首篇橫版，三欄格子（直接animate），空狀態大字，分頁，CTA底帶 |
-| CorporateContact.tsx | done | 視差Hero+右半logo，四大聯絡資訊橫線，CONTACT水印引言帶，B2B詢問類型pills，深色表單，CTA底帶 |
-
-使用設計 skill：/impeccable craft CorporateBrands 等指令觸發。
+| 頁面 | 狀態 |
+|------|------|
+| CorporateAbout.tsx | done |
+| CorporateBrands.tsx | done |
+| CorporateCulture.tsx | done |
+| CorporateFranchise.tsx | done |
+| CorporateNews.tsx | done |
+| CorporateContact.tsx | done |
 
 ---
 
 ## 參考文件
 
-詳細業務邏輯請看 BUSINESS.md；完整技術棧與 API 清單請看 CLAUDE_REFERENCE.md；歷史變更請看 DEVELOPMENT_LOG.md
+詳細業務邏輯請看 `BUSINESS.md`；完整技術棧與 API 清單請看 `CLAUDE_REFERENCE.md`；歷史變更請看 `DEVELOPMENT_LOG.md`。
 
 ---
 
-## 安全守則（高優先）
+## 安全守則（最高優先）
 
 - **絕對不能把 DATABASE_URL、API Key 寫死進任何 .ts / .mjs / .bat / .js 檔案**
 - 敏感資料一律走 `.env`，部署走 Railway Variables（production）
 - `.env` 已在 `.gitignore`，不可 commit；`.mjs` / `.bat` 也注意不要硬寫
-- script 檔案裡的連線資訊一律用 `process.env.DATABASE_URL`
-- 2026-04-24 已清除含敏感資訊的 migrate_temp.mjs / tidb-check-and-sync.mjs / start-dev.bat，不要再重建
+- 腳本裡的連線資訊一律用 `process.env.DATABASE_URL`
+- 2026-04-24 已清除含敏感資訊的 `migrate_temp.mjs`、`tidb-check-and-sync.mjs`、`start-dev.bat`，不要再重建
 
 ---
 
 ## 每次 commit 前的標準流程
 
-1. 每次 commit 前**先更新 CLAUDE.md**，版號 +0.01
+1. **先更新 CLAUDE.md**，版號 +0.01
 2. CLAUDE.md 要讓下一個接手的 Claude 看完就能掌握全局
-3. 版號格式 v5.XX
-4. 確認 TS 無錯誤再 commit
-5. 每次 commit 後也要更新 docs/ordersome_module_map_v1.html（每個功能模組的狀態 status-pill）
-   - done：完整可用
-   - partial：部分功能可用
-   - running：開發中
-   - pending：尚未開始
-6. **前端設計工作**：使用 impeccable skill，skill name = `impeccable`
+3. 版號格式 v6.XX（目前已到 v6.24）
+4. 確認 TypeScript 無錯誤再 commit
+5. 每次 commit 後也要更新 `docs/ordersome_module_map_v1.html`（每個功能模組的 status-pill）
+6. **前端設計工作**：使用 `impeccable` skill
 
 ---
 
 ## 待辦（後端功能）
 
-1. **RWD 優化**：部分手機/桌面版面跑版
+1. **RWD 優化**：部分手機/桌面版面跑版，需全站驗證
 2. **細粒度權限**：目前只有 super_admin 和 manager 兩層
-3. **鞈查**：補完所有後台功能的 DB 欄位驗證
-4. **稽核日誌**：所有重要操作寫入 os_audit_logs，包含庫存異動寫入 os_inventory_logs
-5. **供應商匹配**：模糊比對 os_products.name，補完 aliases JSON 機制
-6. **商品名稱對照**：目前 A 供應商用「大盒蛋」，進貨用 aliases JSON 對照
-7. **庫存盤點**：目前手動調整沒有完整 DB 紀錄
-8. **多租戶架構**：宇聯 ERP（os_）+ dayone（dy_）+ server/_core/ 分開
+3. **欄位驗證**：補完所有後台功能的 DB 欄位驗證
+4. **稽核日誌**：所有重要操作寫入 `os_audit_logs`，包含庫存異動寫入 `os_inventory_logs`
+5. **供應商匹配**：模糊比對 `os_products.name`，補完 aliases JSON 機制
+6. **商品名稱對照**：A 供應商用「大盒蛋」，進貨用 aliases JSON 對照
+7. **庫存盤點**：手動調整目前沒有完整 DB 紀錄
+8. **多租戶架構**：宇聯 ERP（os_）、大永（dy_）、server/_core/ 分開管理
 
 ---
 
@@ -231,32 +245,34 @@ Hero 圖片規則：
 | os_inventory_logs | 706 | 含3/31期初盤點入庫165筆 + 4/1起正常進出81筆 |
 | os_payables | 27 | 25筆大買進貨月結應付，另2筆對帳中 |
 | os_products | 704 | 啟用67 + 大買進貨匯入137筆 needsReview=1 |
-| os_stores | 12 | 靘?隞暻?2間門市，2026-04-19更新 |
-| os_suppliers | 9+ | 撱??/鋆?/大買/蝐唾健/頂好/大永蛋行/摰/摰_望暑，含嗡嗡蜂 |
+| os_stores | 12 | 來點什麼門市，2026-04-19更新 |
+| os_suppliers | 20+ | 廣弘、裕展、韓濟、凱田、大買、宇聯_配合、美食家、米谷、立墩、三柳、凱蒂、永豐、壯佳果、藍格等 |
 
 ### 已知資料異常
 
 - `os_procurement_orders.storeId`：6筆 storeId=NULL，storeName 欄位有值但無對應門市，待追蹤
-- `os_procurement_items.unitPrice=0`：376筆，採購梯"項目在2026-02以前的閒置舊料
+- `os_procurement_items.unitPrice=0`：376筆，採購單項目在 2026-02 以前的閒置舊料
 - `os_products.needsReview=1`：137筆大買進貨匯入商品，需在 /dashboard/products 逐一審核
 - 商品重複計算問題：部分品項在不同供應商下重複，待梳理
 
-### os_stores 門市清單（tenantId=1）
+### os_stores 門市清單（tenantId=1，來點什麼）
 
 | 門市名稱 | 簡稱 |
 |---------|------|
-| 來點什麼 東勢店(創始店)  | 東勢店 |
-| 來點什麼 逢甲旗艦店(直營店) | 逢甲旗艦店 |
-| 來點什麼 東山店(直營店) | 東山店 |
-| 來點什麼 大里店(加盟店) | 大里店 |
-| 來點什麼 草屯中山店(加盟店) | 草屯店 |
-| 來點什麼 北區永興店(加盟店) | 永興店 |
-| 來點什麼 財神店(加盟店) | 財神店 |
-| 來點什麼 民權店(加盟店) | 民權店 |
-| 來點什麼 西屯福上店(加盟店) | 福上店 |
-| 來點什麼 瀋陽梅川店(加盟店) | 瀋陽梅川店 |
-| 來點什麼 來點什麼 北屯昌平店(加盟店) | 昌平店 |
-| 來點什麼-來點什麼 南屯林新店(加盟店) | 林新店 |
+| 來點什麼 東勢店（創始店） | 東勢店 |
+| 來點什麼 逢甲旗艦店（直營店） | 逢甲旗艦店 |
+| 來點什麼 東山店（直營店） | 東山店 |
+| 來點什麼 大里店（加盟店） | 大里店 |
+| 來點什麼 草屯中山店（加盟店） | 草屯店 |
+| 來點什麼 北區永興店（加盟店） | 永興店 |
+| 來點什麼 財神店（加盟店） | 財神店 |
+| 來點什麼 民權店（加盟店） | 民權店 |
+| 來點什麼 西屯福上店（加盟店） | 福上店 |
+| 來點什麼 瀋陽梅川店（加盟店） | 瀋陽梅川店 |
+| 來點什麼 北屯昌平店（加盟店） | 昌平店 |
+| 來點什麼 南屯林新店（加盟店） | 林新店 |
+
+> 注意：目前**沒有**豐原店。完整名稱格式：`來點什麼-{shortName}`，例如 `來點什麼-東勢店`。
 
 ---
 
@@ -267,32 +283,32 @@ Hero 圖片規則：
 **P1 需要盡快修的**
 - [ ] **帳務核對**：/dashboard/purchasing、/dashboard/inventory、/dashboard/accounting 各有不完整功能待補
 - [ ] **needsReview 商品審核**：137筆待審商品在 /dashboard/products 逐一確認
-- [ ] **日報彙總功能**：os_daily_reports 目前各門市梯?資料格式不統一，彙總計算有誤
+- [ ] **日報彙總功能**：`os_daily_reports` 目前各門市資料格式不統一，彙總計算有誤
 
 **P2 重要**
 - [ ] 太平東/北屯等多店的門市成本分攤問題
-- [ ] 瘣曇???採購品項的成本追蹤
-- [ ] 供應商蝝啣??澆??舀：目前唳撘?
-- [ ] chunk size 優化：index.js ~6500kB，需 code splitting
+- [ ] 異常採購品項的成本追蹤
+- [ ] 供應商對帳：目前為手動流程
+- [ ] chunk size 優化：index.js 約 6500kB，需 code splitting
 
 **P3 備用**
-- [ ] BOM 建立：撌交?隞塚??∟頃鞈?蝛拙? + os_products 皞?
+- [ ] BOM 建立：整合品項主檔 + `os_products`（類似 CA 表功能）
 - [ ] 大永 LIFF 功能：liffId 尚未上線
 - [ ] 加盟商 RWD 優化
-- [ ] 商品蝞∠??∪極鞈??臬
+- [ ] 商品搜尋與篩選
 
-**已完成事項（2026-04-19）**
+**已完成（2026-04-19）**
 - [x] 3/31 期初盤點入庫，165筆（B類4+嗡嗡蜂141）
-- [x] 大買進貨匯入閮?臬，453筆 2025/12~2026/04
-- [x] 撱?採購梯"?臬，5筆隞董甈橘? 2026-02~04
-- [x] v5.63 撣喳?銝?修正
+- [x] 大買進貨匯入 453筆（2025/12~2026/04）
+- [x] 廣弘採購單 5筆（2026-02~04）
+- [x] v5.63 應付帳修正
 - [x] v5.64 加盟商月結修正
-- [x] v5.65 損益銵冽修正 + 餈?0筆規則
-- [x] v5.67 進貨/撣喳?蝞∠?修正 + profitLoss 撌脫 + OSInventory deleteMut 修正
-- [x] v5.68 manager 甈??B規則 + 商品30筆 + 商品50筆needsReview + 撣喳???敦
-- [x] v5.69 鋆?修正 + OSProfitLoss redirect + 異常修正 + 商品+庫存隤踵
-- [x] v5.70 rebateRate > 1 支誑100 + profitLoss 撌脫 channelSales/dailyTrend/procurementCost + OSDailyReport viewYear/viewMonth
-- [x] v5.71 加盟商採購列表 franchiseeOrAdminProcedure，franchisee 限 storeId + storeName 顯示
+- [x] v5.65 損益報表修正 + 零筆規則
+- [x] v5.67 進貨/應付表單修正 + profitLoss 補完 + OSInventory deleteMut 修正
+- [x] v5.68 manager 模組規則 + 商品30筆 + 商品50筆needsReview + 應付帳細項
+- [x] v5.69 韓濟修正 + OSProfitLoss redirect + 異常修正 + 商品/庫存更新
+- [x] v5.70 rebateRate > 1 支援100倍 + profitLoss 補完 channelSales/dailyTrend/procurementCost + OSDailyReport viewYear/viewMonth
+- [x] v5.71 加盟商採購列表 franchiseeOrAdminProcedure，franchisee 限 storeId
 
 ---
 
@@ -300,80 +316,86 @@ Hero 圖片規則：
 
 | 資料 | 需要提供 | 格式 | 用途 | 狀態 |
 |------|----------|------|------|------|
-| 3/31 期初盤點 | 盤點人員簽核 | Excel | 庫存入庫基準 | 已撌脣完成 |
-| 大買進貨匯入 | 大買進貨憑單 | Excel | 進貨匯入閮? | 已撌脣 2025/12起 |
-| 撱?採購梯" | 大買進貨帶來的 | Excel | 進貨梯"撣單狡 | 已撌脣 2026-02起 |
-| 盤點?箄疏蝞∠?（2025全年） | 大買進貨脣憑函恣 | Excel | 2025進貨鋆? | 尚未提供，只有2025/12起 |
-| 供應商蝝堆???堆? | 唳?銵雯??臬 | xlsx | 供應商撣? | 尚未提供，靘?中 |
+| 3/31 期初盤點 | 盤點人員簽核 | Excel | 庫存入庫基準 | 已完成 |
+| 大買進貨匯入 | 大買進貨憑單 | Excel | 進貨匯入 | 已完成 2025/12起 |
+| 廣弘採購單 | 大買進貨帶來的 | Excel | 進貨對帳 | 已完成 2026-02起 |
+| 盤點初期表單（2025全年） | 大買進貨憑函 | Excel | 2025進貨核對 | 尚未提供，只有2025/12起 |
+| 供應商月結帳期 | 合約/憑單 | xlsx | 供應商對帳 | 尚未提供，處理中 |
 
 ---
 
-## 採購流程詳細紀錄（給 Claude 看）
+## 採購流程詳細紀錄
 
-### 靘?供應商分類
+### 供應商分類
 
-**A類（直接進貨）**：撱??/鋆?/大買/蝐唾健/鋆?/大永蛋行
-  進貨後狀態 received → 自動結算月結應付
+**A類（直接進貨）**：廣弘、裕展、大買、凱田、韓濟、大永蛋行
+- 進貨後狀態 received → 自動結算月結應付
 
-**B類（大永自配）**：大永/摰_望暑/蝡?/銝?瘜?撅/瘞貉?
-  進貨後 received → 庫存增加 + 月結應付
-  瘣曇???signed → 庫存減少 + 門市應付
-  用 `os_suppliers.deliveryType='yulian'` 判斷是否大永配送
-  > **重要**：供應商可能跨類，需在 os_suppliers 維護清楚配送類型
+**B類（大永自配）**：大永、椪椪（嗡嗡蜂）、長春騰、米谷、藍格
+- 進貨後 received → 庫存增加 + 月結應付
+- 簽收 signed → 庫存減少 + 門市應付
+- 用 `os_suppliers.deliveryType='yulian'` 判斷是否大永配送
+- **重要**：供應商可能跨類，需在 `os_suppliers` 維護清楚配送類型
 
 ### 庫存異動邏輯
-- **期初盤點**：2026-03-31 盤點，reason='3/31期初盤點入庫'
-- 進貨 received：os_inventory currentQty +，寫 os_inventory_logs(in)
-- 瘣曇???signed：os_inventory currentQty -，寫 os_inventory_logs(out)
-- 手動調整：需填原因，寫入 os_inventory_logs(adjust)
-- **重要限制**：庫存 AND orderDate >= 2026-04-01，3/31以前的盤點不要閫貊
+
+- **期初盤點**：2026-03-31，reason='3/31期初盤點入庫'
+- 進貨 received：`os_inventory currentQty +`，寫 `os_inventory_logs(in)`
+- 簽收 signed：`os_inventory currentQty -`，寫 `os_inventory_logs(out)`
+- 手動調整：需填原因，寫入 `os_inventory_logs(adjust)`
+- **重要限制**：庫存 AND orderDate >= 2026-04-01，3/31 以前的盤點不要回算
 
 ### 進貨資料來源標記
+
 - `os_procurement_orders.sourceType = 'damai_import'`：大買進貨匯入
 - `os_payables.sourceType = 'damai_import'`：大買進貨應付帳
 - `os_inventory_logs.reason LIKE '大買%'` 或 `'3/31期初%'`：識別進貨來源
 - 去重機制：比對 externalOrderId，重複用 supplierName+yearMonth+sourceType 組合
 
-### 撣喳?帳務邏輯
-- 進貨 received → os_payables 月結（generateMonthlyPayables）
-- 供應商蝝啣????autoMatchTransactions 功能尚未完成
-- rebate 規則：大永繩1.12撌桅? / 大永蛋行撌桀 / 其他菔疏甈橘? os_rebate_rules 存DB
-- 轉帳疏理 billTransfers → os_franchisee_payments
+### 應付帳務邏輯
+
+- 進貨 received → `os_payables` 月結（generateMonthlyPayables）
+- 供應商對帳的自動比對功能（autoMatchTransactions）尚未完成
+- rebate 規則：大永約 1.12 折 / 大永蛋行另算 / 其他依 `os_rebate_rules` 存 DB
+- 轉帳費用 billTransfers → `os_franchisee_payments`
 
 ### 商品名稱對照問題
-- 採購：採購閬/閮?梯"，商品不一定對，需要 supplierName
-- 問題：A供應商用「大盒蛋」，大買進貨用 aliases JSON 對照
-- needsReview=1：大買進貨匯入待審核商品，不能自動信任
+
+- 採購單/發票，商品名稱不一定對齊，需要 supplierName
+- A 供應商用「大盒蛋」，大買進貨用 aliases JSON 對照
+- `needsReview=1`：大買進貨匯入待審核商品，不能自動信任
 
 ### os_stores 門市命名規則
-- 完整名稱格式：`靘?隞暻?{門市簡稱}`，例如：靘?隞暻?豐原店
-- 目前前端 name 用 CONCAT('靘?隞暻?', shortName) 顯示
-- storeName：前端顯示用，storeId 才是 FK
+
+- 完整名稱格式：`來點什麼-{門市簡稱}`，例如：`來點什麼-東勢店`
+- storeName 前端顯示用，storeId 才是 FK
+- **目前沒有豐原店**（已向使用者確認）
 
 ---
 
-## 已知 Bug 與修法（給 Claude 看）
+## 已知 Bug 與修法
 
-**TiDB + drizzle-orm LIMIT 問題（v6.02 真正修好）**
+**TiDB + drizzle-orm LIMIT 問題（v6.02 修好）**
+
 - 症狀：登入頁出現 "Incorrect arguments to LIMIT" / "Failed query: select ... LIMIT ?" 錯誤
 - 原因：drizzle-orm 0.44.x 把 LIMIT/OFFSET 數字當成 `?` params 傳給 mysql2 `query()`，TiDB 不支援 `LIMIT ?` 參數化語法
-- **錯誤修法（v6.01）**：`createPool` 加 `prepare: false` — 對 `query()` 路徑無效，只影響 `execute()` 路徑
-- **正確修法（v6.02）**：在 `server/db.ts` 的 `getDb()` 中 patch `pool.query` 攔截器，把結尾的純整數 params inline 進 SQL 字串（`LIMIT ?` → `LIMIT 1`）再送給 TiDB
+- **錯誤修法（v6.01）**：`createPool` 加 `prepare: false`，對 `query()` 路徑無效
+- **正確修法（v6.02）**：在 `server/db.ts` 的 `getDb()` 中 patch `pool.query` 攔截器，把純整數 params inline 進 SQL（`LIMIT ?` → `LIMIT 1`）再送給 TiDB
 - 已修 commit：6942480
-- **注意**：升級 drizzle-orm / mysql2 後若再出現，確認 `inlineLimitOffsetParams` 邏輯在 `db.ts` 仍存在即可
+- 升級 drizzle-orm / mysql2 後若再出現，確認 `inlineLimitOffsetParams` 邏輯在 `db.ts` 仍存在即可
 
-**時區問題（v5.77 已修）**
+**時區問題（v5.77 修）**
+
 - Railway 部署的 Node.js 時區是 UTC
-- `new Date()` 在 Node.js 回傳 UTC，不是台灣時間 UTC+8
 - 前端顯示：`toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })`
-- datetime-local **讀取**時：`new Date(utcString).getTime() + 8*60*60*1000` 加8小時，再 `toISOString().slice(0,16)`
-- datetime-local **儲存**時：直接補 `:00+08:00`，例如 `"2026-04-24T15:00"` 變 `"2026-04-24T15:00:00+08:00"`，讓 `new Date()` 正確解析 UTC
-- scheduledAt 查詢邏輯：`getPublishedPosts` WHERE 條件用 `or(isNull(scheduledAt), lte(scheduledAt, now))`，不需要 cron，但注意DB存UTC
-- 時區問題會影響所有排程相關功能
+- `datetime-local` 讀取時：`new Date(utcString).getTime() + 8*60*60*1000`
+- `datetime-local` 儲存時：直接補 `:00+08:00`，讓 `new Date()` 正確解析
+- `scheduledAt` 查詢邏輯：WHERE 條件用 `or(isNull(scheduledAt), lte(scheduledAt, now))`
 
-**shadcn Dialog 捲動問題（v5.81 已解）**
-- shadcn `DialogContent` 預設 className 是 `grid`，加了 `flex flex-col` 會被 tailwind-merge 覆蓋 display，導致 flex sizing 失效
-- **正確做法**：把 Header + 內容 + Footer 包在 `DialogContent` 裡面額外加一個 `div`：
+**shadcn Dialog 捲動問題（v5.81 修）**
+
+- `DialogContent` 預設 className 是 `grid`，加了 `flex flex-col` 會被 tailwind-merge 覆蓋
+- 正確做法：把 Header + 內容 + Footer 包在 `DialogContent` 裡的額外 `div`：
   ```tsx
   <DialogContent className="!max-w-2xl p-0 gap-0 max-h-[90vh]">
     <div className="flex flex-col h-full max-h-[90vh]">
@@ -383,64 +405,42 @@ Hero 圖片規則：
     </div>
   </DialogContent>
   ```
-- `DialogContent` 自帶圓角，不要在外層 div 加
-- `ScrollArea` 必須給 `min-h-0`，否則 flex 容器壓不住，Footer 會消失
-- `overflow-hidden` **不能加在 `DialogContent`**，會破壞 ScrollArea 捲動
-- 圓角圖片問題：`rounded-*` 和 `overflow-hidden` 要加在**最內層 div**，不是 img，img 用 `w-full h-full object-cover object-center`
+- `ScrollArea` 必須給 `min-h-0`，否則 Footer 會消失
+- `overflow-hidden` 不能加在 `DialogContent`，會破壞 ScrollArea
 
 **Make 連動**
-- 每天 14:55 自動觸發，走 /api/procurement/import
-- secret: ordersome-sync-2026
-- 如果失敗去查 Railway log 找 `[Procurement Import]` 即可
+
+- 每天 14:55 自動觸發，走 `/api/procurement/import`
+- secret：`ordersome-sync-2026`
+- 失敗時查 Railway log 找 `[Procurement Import]`
 
 **Email 發送**
+
 - Railway 上跑 SMTP，用 nodemailer 發信
-- 目前沒有設定靽殷，任何時間都會發
+- 目前沒有設定寄送時段限制
 
 **DB 業務邏輯備忘**
-- os_payables.netPayable = totalAmount - rebateAmount；generateMonthlyPayables 計算的是 totalAmount，calculateRebates 再 offset 計算
-- profitLoss 是讀 os_rebates.netRebate，不是 os_rebate_records
-- profitLoss 帳目：os_payables 裡有採購帳，採購帳的利潤約 35%，不是精確數字
-- profitLoss.ts 要注意 tenantId（camelCase），storeId 要是字串，os_monthly_reports 有 storeId 欄位
-- profitLoss 要從 os_payables WHERE month=YYYY-MM 取資料，沒資料才 fallback 35%
-- OSInventory.tsx deleteMut 是 inventory.deleteItem，deleteTarget/deleteReason state 要清空
-- 進貨蝞∠?每次提交有表單驗證，券、敹恍?祇??祆?/銝?/券???冽?撓?亙椰?都要驗
-- 撣喳?蝞∠? month 表單驗證，mutation（generatePayables/calcRebates/autoMatch/billTransfers）month 不能空
-- manager 模組開關：isModuleDefs 的 managerAllowed 欄位，managerAllowed:true 的路由讓 manager 可以進入
-- 商品清單用 useEffect role 切換，super_admin 要有 has_procurement_access 才能進 /dashboard
-- 庫存蝞∠?商品超過 30 筆限制時要分頁
-- 商品清單超過 50 筆 + needsReview 分頁，OSProducts.productList input 有 needsReview: z.boolean().optional()
-- 採購撣單狡瘥????dz 連結到 /dashboard/purchasing?supplier=撱???
-- OSPurchasing.tsx 讀 URL ?supplier= 參數，用 useSearch + useEffect 帶入篩選
-- os_products 共 704 筆，v5.57 起從大買進貨匯入，有37筆 needsReview=1
-- os_products 有 `temperature` 欄位但目前沒在用，改走 `category2`
-- **採購撣單狡修正（v5.92）**：procurement.updateStatus received → upsert os_payables，撱?+遢蝝臬? totalAmount，netPayable=totalAmount-rebateAmount，不再靠獨立的 generateMonthlyPayables 去補
-- **rebate 梁絞銝（v5.86）**：OSRebate.tsx 的按鈕走 accounting 路由，listRebates/calculateRebates/updateRebate + listPayables/markPayablePaid，osRebate router 重新整理，Ⅱ隤甈?dialog 修正，rebate 靘摩鈭箏極頛詨
-- os_delivery_orders.toStoreId 目前為 NULL
-- os_franchisee_payments.userId 目前為 NULL
-- packCost = 大買進貨脰疏?對??湔撠?，用 unitQty × unit_cost 計算
-- os_daily_reports 欄位（camelCase）：tenantId, reportDate, instoreSales, uberSales, pandaSales, guestInstore, guestUber, guestPanda, phoneOrderAmount, deliveryOrderAmount
-- os_monthly_reports 欄位（camelCase）：tenantId, electricityFee, waterFee, staffSalaryCost, performanceReview, monthlyPlan
-- profitLoss 的 totalSales = instoreSales+uberSales+pandaSales+phoneOrderAmount+deliveryOrderAmount
-- os_inventory.itemValue = currentQty × unitCost，閰Ｘ?閮?時撖阡?甈?
-- profitLoss 要有 dailyTrend（日趨勢），channelSales（通路銷售），procurementCost/isCostEstimated
-- osRebate.calculate：rebateRate > 1 就除以 100，os_suppliers 存的是真實數字，10.71 = 10.71%
-- procurement list 走 franchiseeOrAdminProcedure，在 server/_core/trpc.ts 定義；franchisee 只顯示自己 storeId 的 os_stores 門市名稱
-- OSPurchasing.tsx：isFranchisee = user.role==='franchisee'，加盟商看不到其他門市/進貨/月結/庫存/筆數，canEdit 只在非 franchisee 時有效
-- OSRebate.tsx 用 accounting.listRebates 查 os_rebates，accounting.calculateRebates 計算再神入 os_rebates
-- OSDailyReport MonthlyOverviewTab 有獨立 state 控 viewYear/viewMonth，select 要帶入正確值
-- OSProfitLoss 用 recharts：AreaChart 瘥頞典，PieChart 通路銷售，BarChart 鞎餌蝯?
-- **scheduledAt 時區問題（v5.76 修正）**：getPublishedPosts WHERE 條件用 `or(isNull(scheduledAt), lte(scheduledAt, now))`；status=published 不夠用，要加時間判斷；排程發布不需要 cron，但注意 DB 存 UTC+8，Node.js 解析 UTC，要在儲存時補 +08:00
-- os_inventory.updatedAt 用來顯示最後盤點日期，等同 lastCountDate
-- products.salesCountOffset（v5.85）：蝞∠?累計銷量用，實際銷量 = 訂單銷量 + offset，migration 0028 在 Railway 是 ADD COLUMN IF NOT EXISTS
-- getHistory LIMIT 調整為 10，historyDialog 最多顯示 10 筆
+
+- `os_payables.netPayable = totalAmount - rebateAmount`
+- `profitLoss` 讀 `os_rebates.netRebate`，不是 `os_rebate_records`
+- `profitLoss.ts` 注意 tenantId（camelCase），storeId 要是字串
+- 進貨表單每次提交有驗證：供應商、門市、商品、數量、金額都要填
+- 應付帳表單 month 欄位不能空（generatePayables/calcRebates/autoMatch/billTransfers）
+- manager 模組開關：`isModuleDefs` 的 `managerAllowed` 欄位
+- 庫存表單商品超過 30 筆限制時要分頁
+- `osRebate.calculate`：rebateRate > 1 就除以 100，`os_suppliers` 存的是真實數字（10.71 = 10.71%）
+- `os_daily_reports` 欄位（camelCase）：tenantId, reportDate, instoreSales, uberSales, pandaSales, guestInstore, guestUber, guestPanda, phoneOrderAmount, deliveryOrderAmount
+- `os_monthly_reports` 欄位（camelCase）：tenantId, electricityFee, waterFee, staffSalaryCost, performanceReview, monthlyPlan
+- `profitLoss` 的 `totalSales = instoreSales+uberSales+pandaSales+phoneOrderAmount+deliveryOrderAmount`
+- `products.salesCountOffset`（v5.85）：調整累計銷量用，實際銷量 = 訂單銷量 + offset
 
 **os_stores Schema**
+
 ```sql
 id INT AUTO_INCREMENT PRIMARY KEY
 tenantId INT NOT NULL
-name VARCHAR(100) NOT NULL        -- 完整名稱，例如「靘?隞暻?豐原店」
-shortName VARCHAR(50)             -- 簡稱，例如「豐原」
+name VARCHAR(100) NOT NULL        -- 完整名稱，例如「來點什麼-東勢店」
+shortName VARCHAR(50)             -- 簡稱，例如「東勢店」
 storeCode VARCHAR(20)             -- 系統門市編號
 isActive TINYINT DEFAULT 1
 createdAt DATETIME
@@ -448,39 +448,31 @@ updatedAt DATETIME
 INDEX idx_tenant_name (tenantId, name)
 ```
 
-**採購流程觸發點**
-- 進貨 confirmed → 進貨蝞∠?觸發配送，連結到 /dashboard/delivery
-- 瘣曇???signed → 庫存減少 + os_franchisee_payments 建立
-- 撣喳?蝞∠? Tab1 的撣單狡篩選，頝唾?進貨蝞∠?帶入預選供應商
-
-**每次 commit 前標準確認**
-1. `git status` clean
-2. `npm run build` 成功
-3. CLAUDE.md 版號更新
-
 ---
 
 ## 環境變數清單
 
-| 變數 | 值 | 說明 |
-|------|----|------|
-| `HQ_STORE_ID` | `401534` | 總部 storeId，訂單特判用 |
-| `SYNC_SECRET` | `ordersome-sync-2026` | Make Webhook 驗證 |
-| `DAYONE_TENANT_ID` | `90004` | 大永的 tenantId |
-| `OS_TENANT_ID` | `1` | 靘?隞暻?的 tenantId |
-| `GMAIL_APP_PASSWORD` | Railway 設定裡看 | SMTP 發信用，sendMail 才會用到 |
+| 變數 | 說明 |
+|------|------|
+| `HQ_STORE_ID` | `401534`，總部 storeId，訂單特判用 |
+| `SYNC_SECRET` | `ordersome-sync-2026`，Make Webhook 驗證 |
+| `DAYONE_TENANT_ID` | `90004`，大永的 tenantId |
+| `OS_TENANT_ID` | `1`，來點什麼的 tenantId |
+| `GMAIL_APP_PASSWORD` | Railway 設定裡看，SMTP 發信用 |
 
 ---
 
 ## 系統架構備忘
 
 **多租戶架構**
+
 ```
-宇聯（OrderSome）：tenantId=1，目前12間門市
+宇聯（OrderSome）：tenantId=1，目前12間來點什麼門市
 大永（Dayone）：tenantId=90004，獨立 SaaS 架構
 ```
 
 **部署資訊**
+
 - 網址：https://ordersome.com.tw
 - 部署：Railway，自動 CI/CD，push 後 2-3 分鐘上線
 - 資料庫：TiDB Cloud（MySQL 相容）
@@ -488,16 +480,18 @@ INDEX idx_tenant_name (tenantId, name)
 - Git 規則：commit 只 add 指定檔案，不用 `git add -A`
 
 **注意事項**
+
 - `has_procurement_access` 目前用 any cast 暫解，需要等正式 permissions 系統完成
-- 大永/靘?隞暻?ERP 的 table 用 `dy_`/`os_` 前綴區分，在 `schema.ts` 管理，不走 raw SQL
+- 大永/來點什麼 ERP 的 table 用 `dy_`/`os_` 前綴區分，在 `schema.ts` 管理，不走 raw SQL
 - 圖片目前寄放在 R2，路徑如 `client/public/images/menu/korean-roll/`
-- chunk size 警告：index.js 6453kB，後續再規劃 code splitting
+- chunk size 警告：index.js 約 6453kB，後續再規劃 code splitting
 
 ---
 
 ## Migration 注意事項
 
-每次跑 migration 前**務必**先 DESCRIBE 確認欄位存在（TiDB 不支援 IF NOT EXISTS 版本）：
+每次跑 migration 前**務必**先 DESCRIBE 確認欄位存在（TiDB 不支援 IF NOT EXISTS 某些版本）：
+
 ```bash
 node -e "
 const mysql = require('mysql2/promise');
@@ -518,7 +512,7 @@ check().catch(console.error);
 "
 ```
 
-> **注意**：2026-04-18 跑 0023 migration 時有問題，TiDB 的 `has_procurement_access` / `last_login_at` 欄位，不能直接照 SQL 語法加，必須先查有沒有再決定要不要跑
+> 注意：2026-04-18 跑 0023 migration 時有問題，`has_procurement_access` / `last_login_at` 欄位必須先查有沒有再決定要不要跑。
 
 ---
 
@@ -541,7 +535,7 @@ check().catch(console.error);
 ## 大永（Dayone）未完成功能
 
 - LIFF 功能：liffId 尚未設定，`client/src/pages/liff/LiffOrder.tsx` 連結不上
-- 蝛? LINE 通知：cron 排程尚未建立
+- LINE 通知：cron 排程尚未建立
 - Portal 找回密碼：email 發送尚未串接 Resend
 
 ---
@@ -557,43 +551,38 @@ check().catch(console.error);
 
 ## 細粒度權限系統（待開發）
 
-**現況**：role 欄位只有粗粒度的角色判斷，進階的 module 開關 hardcode 在前端
+**現況**：role 欄位只有粗粒度角色判斷，進階模組開關 hardcode 在前端
 
-**計劃做法**
-1. DB 新增 `os_user_permissions` 資料表
-   - `userId, moduleKey, canView, canEdit, canDelete`
+**計劃做法**：
+1. DB 新增 `os_user_permissions`（userId, moduleKey, canView, canEdit, canDelete）
 2. 後端新增 `permissionMiddleware`，擴充 adminProcedure/managerAllowed
 3. 前端改用動態讀取 permissions API，不要 hardcode 功能開關
-4. `AdminDashboardLayout` 從 permissions API 動態生成側邊欄，不再 hardcode
-5. 統一 `isSuperAdmin`/`isManager`/`canSeeCost` 判斷改走 permissions 表
+4. `AdminDashboardLayout` 從 permissions API 動態生成側邊欄
+5. `isSuperAdmin`/`isManager`/`canSeeCost` 改走 permissions 表
 
-**優先順序**：2，等 UAT fix 穩定後再做
-**關鍵檔案**：`AdminDashboardLayout.tsx`、`OSERP 相關`、`trpc.ts`
+**優先順序**：P2，等 UAT fix 穩定後再做
 
 ---
 
 ## os_menu_items 待建
 
-**問題**：`os_menu_items` 欄位在 TiDB 沒有，OSCaMenu 功能目前不完整
-
-**計劃**
-1. 補 migration 建立 `os_menu_items` 和 `os_menu_item_ingredients` 資料表
-2. 補後端對應的查詢
-3. 補 `os_products.unitCost` 計算
-
-**優先順序**：2，目前功能暫缺
+- `os_menu_items` 欄位在 TiDB 尚未建立，OSCaMenu 功能目前不完整
+- 計劃：補 migration 建立 `os_menu_items` 和 `os_menu_item_ingredients`，補後端查詢，補 `os_products.unitCost` 計算
+- 優先順序：P2
 
 ---
 
-## Dayone 系統完整紀錄
+## 大永系統完整紀錄
 
-### 視覺系統規範（已建立）
+### 視覺系統規範
+
 - `docs/backoffice-visual-system-v1.md`：後台視覺規範文件
 - 後台主標題用穩定可讀的 UI 字體，不用強勢品牌字
 - 色彩：暖白 / 石墨 / amber，強調色只用在重點
-- 同一套規範可延伸到宇聯後台
+- CSS class 規範：`dayone-page-title`（1.35rem/700）、`dayone-page-subtitle`（0.8125rem）、`dayone-kpi-value`（clamp 動態縮放/tabular-nums）、`dayone-page-header`（flex justify-between）
 
-### 已重寫完成的頁面（2026-04-24）
+### 已完成頁面（2026-04-24 起，v6.24 字體統一）
+
 - `client/src/components/DayoneLayout.tsx`
 - `client/src/pages/dayone/DayoneDashboard.tsx`
 - `client/src/pages/dayone/DayoneOrders.tsx`
@@ -605,6 +594,9 @@ check().catch(console.error);
 - `client/src/pages/dayone/DayoneUsers.tsx`
 - `client/src/pages/dayone/DayonePurchaseReceipts.tsx`
 - `client/src/pages/dayone/DayoneARContent.tsx`
+- `client/src/pages/dayone/DayoneDispatch.tsx`
+- `client/src/pages/dayone/DayoneSettings.tsx`
+- `client/src/pages/dayone/DayoneReports.tsx`
 - `client/src/pages/dayone/driver/DriverPickup.tsx`
 - `client/src/pages/dayone/driver/DriverLayout.tsx`
 - `client/src/pages/dayone/driver/DriverHome.tsx`
@@ -613,29 +605,46 @@ check().catch(console.error);
 - `client/src/pages/dayone/driver/DriverDone.tsx`
 - `client/src/pages/dayone/driver/DriverOrderDetail.tsx`
 - `client/src/pages/dayone/driver/DriverWorkLog.tsx`
-- `client/src/pages/dayone/DayoneDispatch.tsx`
 
 ### 後端補強（2026-04-24）
-- `server/routers/dayone/dispatch.ts`：manualAddStop 可建立 dispatch_supplement 補單，含 dy_order_items
+
+- `server/routers/dayone/dispatch.ts`：manualAddStop 可建立補單含 `dy_order_items`
 - `server/routers/dayone/driver.ts`：delivered 後更新 AR
 - `server/routers/dayone/orders.ts`：confirmDelivery 補 paidAmount 判斷 paymentStatus，upsert AR
-- `server/routers/dayone/ap.ts`：markPaid 改累加式付款（不再覆蓋前次）；新增 dayone.ap.summary（供應商月度 AP 彙總）
-- `server/routers/dayone/ar.ts`：markPaid 改累加式收款（不再覆蓋前次）
-- `server/routers/dayone/purchaseReceipt.ts`：新增 reconcileAnomaly（進貨異常對帳）
+- `server/routers/dayone/ap.ts`：markPaid 改累加式付款；新增 `dayone.ap.summary`
+- `server/routers/dayone/ar.ts`：markPaid 改累加式收款
+- `server/routers/dayone/purchaseReceipt.ts`：新增 `reconcileAnomaly`
 
-### 已補的文件
-- `docs/system-boundary-matrix-v1.md`：宇聯 / 來點什麼 / 大永系統邊界
-- `docs/dayone-smoke-test-and-stock-plan-2026-04-24.md`：smoke test 規劃與庫存三段式計劃
+### 進貨庫存邏輯（2026-04-25 確認）
+
+- 供應商簽名 = 進貨確認 → 建立 AP，**不應**增加可賣庫存
+- 可賣庫存增加 = 貨品回到大永倉庫且管理員確認入倉後
+- `purchaseReceipt.sign`：只建 AP，不寫 `dy_inventory`
+- `purchaseReceipt.receiveToWarehouse`：管理員確認入倉，寫庫存異動（refType: `purchase_receipt_warehouse`）
+- 狀態流：`pending → signed（待入倉）→ warehoused（已入倉）`
+
+### 回庫待驗流程（Phase 1，2026-04-25）
+
+- `dispatch.returnInventory` 不再直接寫 `dy_inventory`，改建立 `dy_pending_returns` 紀錄
+- `inventory.pendingReturns` + `inventory.confirmPendingReturn`（含 transaction + row lock）
+- `/dayone/inventory` 頁面顯示待驗回庫，管理員可確認入庫
+- 司機/派車 UI 文字改為「剩貨回庫待驗」
+
+### 三段式庫存視圖（已實作）
+
+- `可賣庫存` = `dy_inventory.currentQty`
+- `待入倉進貨` = 已簽收但尚未入倉的進貨單
+- `回庫待驗` = `dy_pending_returns`
 
 ### Dayone 頁面地圖
 
 **管理端**
 - `/dayone`：今日訂單、待簽收進貨、已送達、異常、金額與庫存警示
-- `/dayone/orders`：訂單池（LIFF/Portal/代建單，統一進 dy_orders）
+- `/dayone/orders`：訂單池（LIFF/Portal/代建單）
 - `/dayone/customers`：客戶主檔（商家、電話、地址、月結條件、區域）
-- `/dayone/drivers`：司機主檔（司機、車牌、聯絡方式、帳號）
+- `/dayone/drivers`：司機主檔
 - `/dayone/products`：品項主檔（蛋品品項、單位、價格、啟用）
-- `/dayone/inventory`：庫存總覽（現有庫存、警示、異動紀錄）
+- `/dayone/inventory`：庫存總覽（現有庫存、警示、異動紀錄、待驗回庫）
 - `/dayone/purchase`：採購與供應商管理
 - `/dayone/districts`：區域與配送星期規則
 - `/dayone/liff-orders`：LIFF 訂單入口查核
@@ -657,51 +666,46 @@ check().catch(console.error);
 
 ### 真實作業流程
 
-1. **上游進貨**：建單 → 供應商簽名 → 入庫 → 建 AP 明細 → AP 可付款核銷
-2. **下游訂單**：LIFF/Portal/人工代建 → 統一進 dy_orders → 管理端整併派車
+1. **上游進貨**：建單 → 供應商簽名 → 管理員確認入倉 → 建 AP 明細 → AP 可付款核銷
+2. **下游訂單**：LIFF/Portal/人工代建 → 統一進 `dy_orders` → 管理端整併派車
 3. **派車出車**：依日期/區域/司機生成派車單 → 列印時扣庫存 → 司機撿貨出車
 4. **配送簽收**：客戶簽名、現收或月結 → 送達後形成/更新 AR
-5. **剩貨回庫**：車上剩貨回倉 → 庫存增加 → 寫庫存異動 → 保留日結痕跡
+5. **剩貨回庫**：車上剩貨建立待驗回庫紀錄 → 管理員確認 → 庫存增加
 
 ### 後續新增節點規則
-每次新增節點前，必須先寫清楚這五件事：
+
+每次新增節點前必須先說明：
 1. 節點屬於哪條主線（訂單/進貨/派車配送/帳務）
 2. 觸發時點（建立、列印、簽名、送達、回庫）
 3. 影響哪些資料表
 4. 是否影響庫存數量
 5. 是否影響 AR / AP
 
-Dayone 主線 Table 對照：
+**Dayone 主線 Table 對照：**
 - 訂單主線：`dy_orders`
 - 派車配送主線：`dy_dispatch_orders`, `dy_dispatch_items`
 - 進貨主線：`dy_purchase_receipts`
 - 庫存主線：`dy_inventory`, `dy_stock_movements`
+- 待驗回庫：`dy_pending_returns`
 - 下游應收：`dy_ar_records`
 - 上游應付：`dy_ap_records`
 
-### Dayone 目前已完成 vs 尚未完成
+### 尚未完成
 
-**較完整的部分**
-- 上游進貨：建單 → 供應商簽名 → 入庫 → 建 AP → 可付款核銷
-- 下游應收：送達後形成/更新 AR → 可分次收款
-- 司機流程：撿貨 → 配送 → 簽收/收款 → 剩貨回庫 → 日結
-- 進貨頁可直接看供應商月度 AP 聚合
-
-**尚未完成**
 - 逐頁完整人工 smoke test
-- 臨時加貨補單與差異對帳（dispatch.ts 已加 manualAddStop，但端對端未驗）
-- 庫存三段式狀態：可用 / 已派車 / 回庫待驗（只有計劃，未實作）
+- 臨時加貨補單與差異對帳（dispatch.ts 已加 manualAddStop，端對端未驗）
 - 供應商付款單完整閉環
+- 全站 RWD 驗證
 - 低頻頁面殘留舊樣式清理
+- `DriverSign.tsx` 目前為 legacy/未掛載狀態，現行簽名路徑是 `DriverOrderDetail.tsx -> dayone.driver.uploadSignature`
 
 ### Chunk 策略
-- 白畫面事故後已移除所有 manualChunks，回退保守單一 chunk 策略
+
+- 白畫面事故後已移除所有 `manualChunks`，回退保守單一 chunk 策略
 - 若未來再做 chunk 優化：先確認 Railway 部署與瀏覽器 runtime log，不可直接重上 manualChunks，任何拆包都必須先驗證首頁與 `/dayone/*` 不白畫面
 
-### 最新 Dayone Commit
-- `1242b34` feat: strengthen dayone payment workflows（2026-04-24 最後已 push）
-
 ### 對下一個對話框的提醒
+
 - 不要碰高風險 chunk / lazy route 拆包
 - 不要自作主張大改視覺，優先邏輯閉環
 - 不能說系統 100% 沒問題，要區分「已驗證」和「尚未驗證」
@@ -709,157 +713,14 @@ Dayone 主線 Table 對照：
 - 使用者非常在意：有沒有 commit、有沒有 push、有沒有更新 CLAUDE.md
 - 回報要誠實，build 有過 ≠ 全站驗證完
 
-### Dayone 最新 progress（本輪）
-- Static route review covered: /dayone, /dayone/orders, /dayone/customers, /dayone/dispatch, /dayone/purchase-receipts, /dayone/ar, /driver/*
-- dispatch.ts 的 manualAddStop 可建 dispatch_supplement
-- purchaseReceipt.ts 新增 reconcileAnomaly
-- DayoneDispatch.tsx 加了臨時補貨輸入，沒動 chunk 結構
-- DayoneDashboard.tsx 修正 anomaly KPI 用 status === 'anomaly'
-- npm run build 通過
+---
 
+## 大永進貨與 AP 邏輯確認（2026-04-25）
 
+- 供應商簽名 = 進貨確認且應建立 AP，**但不應**增加可賣倉庫庫存
+- 可賣庫存增加只在：貨品返回大永倉庫且管理員確認入倉後
+- `purchase.receive` 現已封鎖（加了明確錯誤訊息），導向進貨簽收＋入倉確認流程
+- `dispatch.returnInventory` 不再直接寫 `dy_inventory`，改用 `dy_pending_returns`
+- AR 建立/更新仍有多個入口，後續需統一
 
-## Dayone 2026-04-25 logic re-check note
-- Re-checked last round's Dayone supplement / receipt flow instead of assuming build == fully verified.
-- Confirmed and fixed one real supplement-order risk:
-  - If a dispatch was already printed or in_progress, manualAddStop with supplement items could create dy_orders / dy_order_items without consuming inventory.
-  - dispatch.ts now consumes inventory immediately for supplement items on printed/in_progress dispatches and blocks adding stops on completed dispatches.
-  - Supplement orders created after dispatch print now use picked status instead of assigned.
-- Confirmed and fixed purchase receipt state-safety gaps:
-  - purchaseReceipt.sign now only allows pending receipts.
-  - purchaseReceipt.markAnomaly now only allows pending receipts.
-  - purchaseReceipt.reconcileAnomaly now only allows anomaly receipts.
-  - sign now checks existing AP by purchaseReceiptId before insert to avoid duplicate AP records on repeated signing.
-- DayoneDispatch.tsx now disables add-stop action when dispatch status is completed so UI matches backend guard.
-
-### Verified this round
-- End-to-end code-path review was re-done for supplement dispatch and purchase receipt state flow.
-- npm run build passed after the logic fixes above.
-
-### Still not fully verified
-- No full browser click-through across all Dayone and /driver routes yet.
-- No live DB scenario replay was run for supplement order after printed dispatch.
-- Existing mojibake/text-encoding issues still exist in some Dayone UI copy and were not cleaned in this logic round.
-
-## Dayone 2026-04-25 stock and AP logic note
-- User-confirmed Dayone purchase rule:
-  - Supplier signature means purchase is confirmed and AP should be created.
-  - Supplier signature does NOT mean salable warehouse inventory should increase yet.
-  - Salable inventory should increase only after goods return to Dayone warehouse and admin confirms warehouse receipt.
-- New doc:
-  - `docs/dayone-stock-accounting-logic-2026-04-25.md`
-- This round's implementation:
-  - `purchaseReceipt.sign` keeps supplier-sign + AP creation, but no longer writes into `dy_inventory`.
-  - Added `purchaseReceipt.receiveToWarehouse` for manager/admin warehouse confirmation.
-  - Warehouse confirmation writes inventory-in movement with refType `purchase_receipt_warehouse`.
-  - Dayone purchase receipt UI now shows `signed => 待入倉`, adds `warehoused => 已入倉`, and exposes a manager-side warehouse-confirm action.
-- Verified this round:
-  - Code-path review completed for `purchaseReceipt.sign` and `purchaseReceipt.receiveToWarehouse`.
-  - `npm run build` passed after the warehouse-receipt changes.
-- Not yet implemented:
-  - Driver leftover return still needs the separate `回庫待驗 -> 管理確認 -> 可賣庫存` flow.
-  - Full Dayone route-by-route browser review and manual testing are still pending.
-- Dayone 2026-04-25 commercial logic review note
-  - Re-reviewed Dayone from a commercial-use angle instead of only closing the current code loop.
-  - Rebuilt the Dayone logic docs into business-operable rules, page jump matrix, role matrix, and next-step risk list.
-  - Rewritten / added docs:
-    - `docs/dayone-stock-accounting-logic-2026-04-25.md`
-    - `docs/dayone-gpt-handoff-rules-2026-04-25.md`
-  - Newly confirmed logic risks:
-    - `server/routers/dayone/purchase.ts -> receive` still directly increases `dy_inventory` and conflicts with the newer supplier-sign -> warehouse-confirm rule.
-    - `server/routers/dayone/dispatch.ts -> returnInventory` still directly writes back into `dy_inventory` and conflicts with the agreed pending-return rule.
-    - AR creation / update still has multiple entry points and should be further unified.
-    - Dayone permissions are still coarse-grained and not yet a full production-grade role x module x page x API matrix.
-  - This round focused on logic completeness and handoff continuity, not UI redesign.
-- Dayone 2026-04-25 purchase receive guard
-  - `server/routers/dayone/purchase.ts -> receive` had no active Dayone UI entry but still contained the old direct-inventory write path.
-- To avoid a second conflicting inventory-entry rule, `purchase.receive` is now blocked with an explicit error directing usage back to purchase receipts + warehouse confirmation.
-- This is a guard step, not the final data-model cleanup.
-- Dayone 2026-04-25 pending-return phase 1
-  - `server/routers/dayone/dispatch.ts -> returnInventory` no longer writes directly into `dy_inventory`.
-  - Added `server/routers/dayone/pendingReturns.ts` to provision `dy_pending_returns`.
-  - Added `server/routers/dayone/inventory.ts -> pendingReturns` and `confirmPendingReturn`.
-  - `/dayone/inventory` now shows pending returns and manager-side confirm-in actions.
-  - Driver / dispatch UI copy now says submit to pending return review instead of immediate inventory return.
-  - New doc: `docs/dayone-return-pending-phase1-2026-04-25.md`
-  - Verified: `npm run build`
-  - Not yet verified: full route-by-route browser click-through and live data replay for pending-return flow.
-- Dayone 2026-04-25 pending-return logic re-check
-  - Re-reviewed whether the new return-review flow had hard-coded or fragile logic.
-  - Fixed one real placement mistake:
-    - `ensureDyPendingReturnsTable` had been added on the wrong path and is now called in `dispatch.returnInventory`.
-  - Fixed one real safety gap:
-    - `inventory.confirmPendingReturn` now runs in a transaction with row lock (`FOR UPDATE`) so status change, inventory write, and stock movement stay in one commit.
-  - Static route review finding:
-    - `client/src/pages/dayone/driver/DriverSign.tsx` still exists but is not mounted in `App.tsx`.
-    - Current live signature path is `DriverOrderDetail.tsx -> dayone.driver.uploadSignature`.
-    - This old page is currently treated as legacy/unmounted and was not exposed again in this round.
-  - Verified: `npm run build`
-- Dayone 2026-04-25 route review and truthful stock view
-  - Continued static route review for:
-    - `/dayone`
-    - `/dayone/orders`
-    - `/dayone/customers`
-    - `/dayone/dispatch`
-    - `/dayone/purchase-receipts`
-    - `/dayone/ar`
-    - `/driver/*`
-  - Confirmed in `client/src/App.tsx`:
-    - The main Dayone and driver routes above are mounted.
-    - `client/src/pages/dayone/driver/DriverSign.tsx` remains legacy/unmounted and is not part of the live route tree.
-  - Important logic finding:
-    - Current Dayone data is still not enough to truthfully calculate per-product `車上庫存`.
-    - This round intentionally does NOT fake truck-stock numbers.
-    - The truthful three-state view currently shown is:
-      - `可賣庫存` = `dy_inventory.currentQty`
-      - `待入倉進貨` = signed receipts not yet warehoused
-      - `回庫待驗` = `dy_pending_returns`
-  - Safety fix:
-    - `server/routers/dayone/purchaseReceipt.ts -> create` no longer silently falls back to the first tenant driver.
-    - It now validates selected / linked active Dayone driver and blocks creation when no valid driver is available.
-    - `client/src/pages/dayone/DayonePurchaseReceipts.tsx` now requires explicit driver selection before submit.
-  - Page updates:
-    - `client/src/pages/dayone/DayoneInventoryContent.tsx` adds `待入倉進貨`.
-    - `client/src/pages/dayone/DayoneDashboard.tsx` adds `待入倉進貨` and `回庫待驗` KPI cards.
-  - Verified:
-    - `npm run build`
-  - Not yet verified:
-    - No full browser click-through across the reviewed routes yet.
-    - No live-data replay yet for signed receipt -> warehouse receipt -> inventory dashboard.
-    - No full AR entry-point unification yet.
-- Dayone 2026-04-25 live TiDB verification + repair note
-  - This round did not stop at static review. Live TiDB verification was run against:
-    - DB: `ordersome`
-    - tenantId: `90004`
-    - tenant slug: `dayone-eggs`
-  - Added local-only verification / repair scripts:
-    - `scripts/dayone-tidb-live-verify.mjs`
-    - `scripts/dayone-live-closure-audit.mjs`
-    - `scripts/dayone-live-repair.mjs`
-  - Live DB facts confirmed:
-    - Dayone currently has 28 `dy_` tables in TiDB after provisioning `dy_pending_returns`.
-    - Rollback write test succeeded on TiDB, proving current credentials can safely write and rollback.
-    - Safe write-test candidates confirmed: `dy_pending_returns`, `dy_stock_movements`, `dy_ap_records`, `dy_ar_records`, `dy_driver_cash_reports`.
-  - Live data repairs applied in TiDB:
-    - Provisioned `dy_pending_returns` into the real Dayone database.
-    - Backfilled missing AP rows for signed purchase receipts `#2 #3 #4`.
-    - Removed one premature AR row that existed before delivery.
-    - Backfilled one printed dispatch stock-out movement and synced that order status from `pending` to `picked`.
-  - Backend closure fix:
-    - `server/routers/dayone/driver.ts -> recordCashPayment` now also upserts `dy_ar_records`, so driver-side cash collection no longer leaves order and AR out of sync.
-    - `server/routers/dayone/purchaseReceipt.ts -> sign` now uses receipt date + 30 days for AP due date instead of `CURDATE()`.
-  - Driver-side route review finding:
-    - `client/src/pages/dayone/driver/DriverWorkLog.tsx` previously only allowed leftover return reporting for the first dispatch of the day.
-    - It now supports switching between same-day dispatch orders before sending pending-return items.
-  - UI wording alignment:
-    - Dispatch / driver worklog copy now says leftover stock goes to `回庫待驗`, not immediate inventory return.
-  - Verified after repair:
-    - `npm run build`
-    - Live closure audit result:
-      - no signed receipts missing AP
-      - no printed dispatch missing stock-out
-      - no AR rows attached to undelivered orders
-      - `dy_pending_returns` exists in real TiDB
-  - Still not fully done:
-    - Full browser click-through / manual test across `/dayone/*` and `/driver/*` is still pending.
-    - Live delivery -> cash collection -> AR -> driver cash report full scenario replay is still pending.
+**最新 Dayone Commit**：`1242b34` feat: strengthen dayone payment workflows（2026-04-24）
