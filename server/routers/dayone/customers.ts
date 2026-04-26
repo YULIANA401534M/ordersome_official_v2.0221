@@ -6,18 +6,86 @@ import { dayoneAdminProcedure as dyAdminProcedure } from "./procedures";
 
 
 export const dyCustomersRouter = router({
-  list: dyAdminProcedure
+  // ─── Groups ──────────────────────────────────────────────────────────
+  listGroups: dyAdminProcedure
     .input(z.object({ tenantId: z.number() }))
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const [rows] = await (db as any).$client.execute(
-        `SELECT c.*, d.name as districtName 
-         FROM dy_customers c 
-         LEFT JOIN dy_districts d ON c.districtId = d.id 
-         WHERE c.tenantId = ? ORDER BY c.name`,
+        `SELECT g.*, COUNT(c.id) as memberCount
+         FROM dy_customer_groups g
+         LEFT JOIN dy_customers c ON c.groupId = g.id AND c.tenantId = g.tenantId
+         WHERE g.tenantId = ?
+         GROUP BY g.id
+         ORDER BY g.name`,
         [input.tenantId]
       );
+      return rows as any[];
+    }),
+
+  upsertGroup: dyAdminProcedure
+    .input(z.object({
+      id: z.number().optional(),
+      tenantId: z.number(),
+      name: z.string().min(1).max(100),
+      note: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
+      const client = (db as any).$client;
+      if (input.id) {
+        await client.execute(
+          `UPDATE dy_customer_groups SET name=?, note=?, updatedAt=NOW() WHERE id=? AND tenantId=?`,
+          [input.name, input.note ?? null, input.id, input.tenantId]
+        );
+        return { id: input.id };
+      } else {
+        const [result] = await client.execute(
+          `INSERT INTO dy_customer_groups (tenantId, name, note, createdAt, updatedAt) VALUES (?,?,?,NOW(),NOW())`,
+          [input.tenantId, input.name, input.note ?? null]
+        );
+        return { id: (result as any).insertId };
+      }
+    }),
+
+  deleteGroup: dyAdminProcedure
+    .input(z.object({ id: z.number(), tenantId: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
+      const client = (db as any).$client;
+      // Unlink customers in this group first
+      await client.execute(
+        `UPDATE dy_customers SET groupId=NULL WHERE groupId=? AND tenantId=?`,
+        [input.id, input.tenantId]
+      );
+      await client.execute(
+        `DELETE FROM dy_customer_groups WHERE id=? AND tenantId=?`,
+        [input.id, input.tenantId]
+      );
+      return { success: true };
+    }),
+
+  // ─── Customers ───────────────────────────────────────────────────────
+  list: dyAdminProcedure
+    .input(z.object({ tenantId: z.number(), groupId: z.number().optional() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
+      let sql = `SELECT c.*, d.name as districtName, g.name as groupName
+                 FROM dy_customers c
+                 LEFT JOIN dy_districts d ON c.districtId = d.id
+                 LEFT JOIN dy_customer_groups g ON c.groupId = g.id
+                 WHERE c.tenantId = ?`;
+      const params: any[] = [input.tenantId];
+      if (input.groupId) {
+        sql += ' AND c.groupId = ?';
+        params.push(input.groupId);
+      }
+      sql += ' ORDER BY g.name IS NULL, g.name, c.name';
+      const [rows] = await (db as any).$client.execute(sql, params);
       return rows as any[];
     }),
 
@@ -29,6 +97,7 @@ export const dyCustomersRouter = router({
       phone: z.string().max(20).optional(),
       address: z.string().optional(),
       districtId: z.number().optional(),
+      groupId: z.number().optional(),
       paymentType: z.enum(['monthly', 'weekly', 'cash']).default('monthly'),
       creditLimit: z.number().default(0),
       status: z.enum(['active', 'suspended']).default('active'),
@@ -45,11 +114,11 @@ export const dyCustomersRouter = router({
       const client = (db as any).$client;
       if (input.id) {
         await client.execute(
-          `UPDATE dy_customers SET name=?, phone=?, address=?, districtId=?, paymentType=?, creditLimit=?, status=?,
+          `UPDATE dy_customers SET name=?, phone=?, address=?, districtId=?, groupId=?, paymentType=?, creditLimit=?, status=?,
            customerLevel=?, settlementCycle=?, overdueDays=?, loginEmail=?, isPortalActive=?, portalNote=?, updatedAt=NOW()
            WHERE id=? AND tenantId=?`,
-          [input.name, input.phone ?? null, input.address ?? null, input.districtId ?? null, input.paymentType,
-           input.creditLimit, input.status,
+          [input.name, input.phone ?? null, input.address ?? null, input.districtId ?? null, input.groupId ?? null,
+           input.paymentType, input.creditLimit, input.status,
            input.customerLevel ?? 'retail', input.settlementCycle ?? 'monthly', input.overdueDays ?? 30,
            input.loginEmail ?? null, input.isPortalActive ? 1 : 0, input.portalNote ?? null,
            input.id, input.tenantId]
@@ -57,10 +126,10 @@ export const dyCustomersRouter = router({
         return { id: input.id };
       } else {
         const [result] = await client.execute(
-          `INSERT INTO dy_customers (tenantId, name, phone, address, districtId, paymentType, creditLimit, outstandingAmount, status,
+          `INSERT INTO dy_customers (tenantId, groupId, name, phone, address, districtId, paymentType, creditLimit, outstandingAmount, status,
            customerLevel, settlementCycle, overdueDays, loginEmail, isPortalActive, portalNote, createdAt, updatedAt)
-           VALUES (?,?,?,?,?,?,?,0,?,?,?,?,?,?,?,NOW(),NOW())`,
-          [input.tenantId, input.name, input.phone ?? null, input.address ?? null, input.districtId ?? null,
+           VALUES (?,?,?,?,?,?,?,?,0,?,?,?,?,?,?,?,NOW(),NOW())`,
+          [input.tenantId, input.groupId ?? null, input.name, input.phone ?? null, input.address ?? null, input.districtId ?? null,
            input.paymentType, input.creditLimit, input.status,
            input.customerLevel ?? 'retail', input.settlementCycle ?? 'monthly', input.overdueDays ?? 30,
            input.loginEmail ?? null, input.isPortalActive ? 1 : 0, input.portalNote ?? null]
@@ -75,7 +144,6 @@ export const dyCustomersRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const client = (db as any).$client;
-      // 檢查該客戶是否有關聯訂單
       const [orderRows] = await client.execute(
         `SELECT COUNT(*) as cnt FROM dy_orders WHERE customerId=? AND tenantId=?`,
         [input.id, input.tenantId]
@@ -97,10 +165,10 @@ export const dyCustomersRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const [rows] = await (db as any).$client.execute(
-        `SELECT cp.*, p.name as productName, p.code, p.unit 
-         FROM dy_customer_prices cp 
-         JOIN dy_products p ON cp.productId = p.id 
-         WHERE cp.customerId = ? AND cp.tenantId = ? 
+        `SELECT cp.*, p.name as productName, p.code, p.unit
+         FROM dy_customer_prices cp
+         JOIN dy_products p ON cp.productId = p.id
+         WHERE cp.customerId = ? AND cp.tenantId = ?
          ORDER BY p.code`,
         [input.customerId, input.tenantId]
       );

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, Phone, MapPin, Globe } from "lucide-react";
+import { Plus, Pencil, Trash2, Phone, MapPin, Globe, Copy, Users, ChevronDown, ChevronRight, Folder, FolderOpen } from "lucide-react";
 import { toast } from "sonner";
 
 const EMPTY_FORM = {
@@ -14,6 +14,7 @@ const EMPTY_FORM = {
   phone: "",
   address: "",
   districtId: undefined as number | undefined,
+  groupId: undefined as number | undefined,
   paymentType: "monthly" as "monthly" | "weekly" | "cash",
   creditLimit: 0,
   status: "active" as "active" | "suspended",
@@ -23,6 +24,11 @@ const EMPTY_FORM = {
   loginEmail: "",
   isPortalActive: false,
   portalNote: "",
+};
+
+const EMPTY_GROUP_FORM = {
+  name: "",
+  note: "",
 };
 
 const paymentTypeLabel: Record<string, string> = {
@@ -36,10 +42,17 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
   const [editId, setEditId] = useState<number | undefined>();
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [search, setSearch] = useState("");
+  const [filterGroupId, setFilterGroupId] = useState<number | "all">("all");
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(["ungrouped", "all"]));
+
+  const [groupDialogOpen, setGroupDialogOpen] = useState(false);
+  const [editGroupId, setEditGroupId] = useState<number | undefined>();
+  const [groupForm, setGroupForm] = useState({ ...EMPTY_GROUP_FORM });
 
   const utils = trpc.useUtils();
   const { data: customers, isLoading } = trpc.dayone.customers.list.useQuery({ tenantId });
   const { data: districts } = trpc.dayone.districts.list.useQuery({ tenantId });
+  const { data: groups } = trpc.dayone.customers.listGroups.useQuery({ tenantId });
 
   const upsert = trpc.dayone.customers.upsert.useMutation({
     onSuccess: () => {
@@ -58,6 +71,25 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
     onError: () => toast.error("刪除失敗，請重試"),
   });
 
+  const upsertGroup = trpc.dayone.customers.upsertGroup.useMutation({
+    onSuccess: () => {
+      toast.success(editGroupId ? "群組已更新" : "群組已建立");
+      setGroupDialogOpen(false);
+      utils.dayone.customers.listGroups.invalidate();
+      utils.dayone.customers.list.invalidate();
+    },
+    onError: () => toast.error("群組操作失敗，請重試"),
+  });
+
+  const deleteGroup = trpc.dayone.customers.deleteGroup.useMutation({
+    onSuccess: () => {
+      toast.success("群組已刪除，成員移至未分組");
+      utils.dayone.customers.listGroups.invalidate();
+      utils.dayone.customers.list.invalidate();
+    },
+    onError: () => toast.error("刪除失敗，請重試"),
+  });
+
   function openNew() {
     setEditId(undefined);
     setForm({ ...EMPTY_FORM });
@@ -71,6 +103,7 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
       phone: c.phone ?? "",
       address: c.address ?? "",
       districtId: c.districtId ?? undefined,
+      groupId: c.groupId ?? undefined,
       paymentType: c.paymentType ?? "monthly",
       creditLimit: Number(c.creditLimit ?? 0),
       status: c.status ?? "active",
@@ -84,12 +117,32 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
     setOpen(true);
   }
 
+  function openCopy(c: any) {
+    setEditId(undefined);
+    setForm({
+      name: `${c.name}-副本`,
+      phone: c.phone ?? "",
+      address: c.address ?? "",
+      districtId: c.districtId ?? undefined,
+      groupId: c.groupId ?? undefined,
+      paymentType: c.paymentType ?? "monthly",
+      creditLimit: Number(c.creditLimit ?? 0),
+      status: c.status ?? "active",
+      customerLevel: c.customerLevel ?? "retail",
+      settlementCycle: c.settlementCycle ?? "monthly",
+      overdueDays: Number(c.overdueDays ?? 30),
+      loginEmail: "",
+      isPortalActive: false,
+      portalNote: c.portalNote ?? "",
+    });
+    setOpen(true);
+  }
+
   function handleSave() {
     if (!form.name.trim()) {
       toast.error("請輸入客戶名稱");
       return;
     }
-
     upsert.mutate({
       id: editId,
       tenantId,
@@ -97,6 +150,7 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
       phone: form.phone || undefined,
       address: form.address || undefined,
       districtId: form.districtId,
+      groupId: form.groupId,
       paymentType: form.paymentType,
       creditLimit: form.creditLimit,
       status: form.status,
@@ -109,14 +163,113 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
     });
   }
 
-  const filtered = (customers as any[] ?? []).filter((c: any) => !search || c.name?.includes(search) || c.phone?.includes(search));
+  function openNewGroup() {
+    setEditGroupId(undefined);
+    setGroupForm({ ...EMPTY_GROUP_FORM });
+    setGroupDialogOpen(true);
+  }
+
+  function openEditGroup(g: any) {
+    setEditGroupId(g.id);
+    setGroupForm({ name: g.name ?? "", note: g.note ?? "" });
+    setGroupDialogOpen(true);
+  }
+
+  function handleSaveGroup() {
+    if (!groupForm.name.trim()) {
+      toast.error("請輸入群組名稱");
+      return;
+    }
+    upsertGroup.mutate({
+      id: editGroupId,
+      tenantId,
+      name: groupForm.name,
+      note: groupForm.note || undefined,
+    });
+  }
+
+  function toggleGroup(key: string) {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  const allCustomers: any[] = customers as any[] ?? [];
+  const allGroups: any[] = groups as any[] ?? [];
+
+  const filtered = allCustomers.filter((c: any) => {
+    const matchSearch = !search || c.name?.includes(search) || c.phone?.includes(search);
+    const matchGroup = filterGroupId === "all" || (filterGroupId === 0 ? !c.groupId : c.groupId === filterGroupId);
+    return matchSearch && matchGroup;
+  });
+
+  // Build grouped structure
+  const groupedMap: Record<string | number, any[]> = {};
+  for (const c of filtered) {
+    const key = c.groupId ?? "ungrouped";
+    if (!groupedMap[key]) groupedMap[key] = [];
+    groupedMap[key].push(c);
+  }
+
+  const groupRows: { key: string; label: string; note?: string; members: any[]; groupObj?: any }[] = [];
+  for (const g of allGroups) {
+    if (groupedMap[g.id]) {
+      groupRows.push({ key: String(g.id), label: g.name, note: g.note, members: groupedMap[g.id], groupObj: g });
+    }
+  }
+  if (groupedMap["ungrouped"]?.length) {
+    groupRows.push({ key: "ungrouped", label: "未分組", members: groupedMap["ungrouped"] });
+  }
+
+  const CustomerRow = ({ c }: { c: any }) => (
+    <tr key={c.id}>
+      <td className="font-medium">{c.name}</td>
+      <td className="text-stone-600">{c.phone ?? "-"}</td>
+      <td className="text-stone-600">{c.districtName ?? "-"}</td>
+      <td className="text-stone-600">{paymentTypeLabel[c.paymentType] ?? c.paymentType}</td>
+      <td className="text-stone-600">{c.customerLevel === "store" ? "門市" : c.customerLevel === "supplier" ? "供應商" : "零售"}</td>
+      <td>
+        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${c.isPortalActive ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-500"}`}>
+          {c.isPortalActive ? "已啟用" : "未啟用"}
+        </span>
+      </td>
+      <td>
+        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${c.status === "active" ? "bg-blue-100 text-blue-700" : "bg-red-100 text-red-700"}`}>
+          {c.status === "active" ? "啟用中" : "停用"}
+        </span>
+      </td>
+      <td>
+        <div className="flex gap-1">
+          <Button variant="ghost" size="sm" title="複製客戶" onClick={() => openCopy(c)}>
+            <Copy className="h-4 w-4 text-stone-400" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => openEdit(c)}>
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-red-500 hover:bg-red-50 hover:text-red-700"
+            onClick={() => {
+              if (confirm(`確定要刪除客戶「${c.name}」嗎？`)) del.mutate({ id: c.id, tenantId });
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </td>
+    </tr>
+  );
 
   return (
     <div className="space-y-6">
       <div className="dayone-page-header">
         <div className="min-w-0">
           <h1 className="dayone-page-title">客戶管理</h1>
-          <p className="dayone-page-subtitle">管理下游商家、付款條件、信用額度與 Portal 權限，手機上改為卡片排版避免左右滑動。</p>
+          <p className="dayone-page-subtitle">管理下游商家、付款條件、信用額度與 Portal 權限。</p>
         </div>
         <Button className="dayone-action gap-2 rounded-2xl bg-amber-600 text-white hover:bg-amber-700" onClick={openNew}>
           <Plus className="w-4 h-4" />
@@ -124,31 +277,97 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
         </Button>
       </div>
 
+      {/* Groups management panel */}
       <Card className="dayone-surface-card rounded-[30px]">
         <CardContent className="p-4 md:p-5">
-          <Input
-            placeholder="用名稱或電話搜尋"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="max-w-sm"
-          />
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-amber-600" />
+              <span className="text-sm font-medium text-stone-800">群組管理</span>
+              <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-500">{allGroups.length} 個群組</span>
+            </div>
+            <Button variant="outline" size="sm" className="gap-1.5 rounded-xl text-xs" onClick={openNewGroup}>
+              <Plus className="h-3.5 w-3.5" />
+              新增群組
+            </Button>
+          </div>
+          {allGroups.length === 0 ? (
+            <p className="text-xs text-stone-400">尚無群組。可將同一品牌的多間門市歸入同一群組方便管理。</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {allGroups.map((g: any) => (
+                <div key={g.id} className="flex items-center gap-1.5 rounded-2xl border border-stone-200 bg-stone-50 px-3 py-1.5">
+                  <Folder className="h-3.5 w-3.5 text-amber-500" />
+                  <span className="text-sm font-medium text-stone-700">{g.name}</span>
+                  <span className="text-xs text-stone-400">{g.memberCount ?? 0} 位</span>
+                  <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={() => openEditGroup(g)}>
+                    <Pencil className="h-3 w-3 text-stone-400" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 w-5 p-0"
+                    onClick={() => {
+                      if (confirm(`刪除群組「${g.name}」？成員將移至未分組。`)) {
+                        deleteGroup.mutate({ id: g.id, tenantId });
+                      }
+                    }}
+                  >
+                    <Trash2 className="h-3 w-3 text-red-400" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
+      {/* Search + group filter */}
+      <Card className="dayone-surface-card rounded-[30px]">
+        <CardContent className="p-4 md:p-5">
+          <div className="flex flex-wrap gap-3">
+            <Input
+              placeholder="用名稱或電話搜尋"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="max-w-xs"
+            />
+            <Select
+              value={filterGroupId === "all" ? "all" : String(filterGroupId)}
+              onValueChange={(v) => setFilterGroupId(v === "all" ? "all" : v === "0" ? 0 : Number(v))}
+            >
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="篩選群組" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部群組</SelectItem>
+                <SelectItem value="0">未分組</SelectItem>
+                {allGroups.map((g: any) => (
+                  <SelectItem key={g.id} value={String(g.id)}>{g.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Customer table */}
       <div className="dayone-table-shell">
         {isLoading ? (
           <div className="dayone-empty-state min-h-[260px]">載入中...</div>
         ) : !filtered.length ? (
-          <div className="dayone-empty-state min-h-[260px]">目前沒有客戶資料。</div>
+          <div className="dayone-empty-state min-h-[260px]">目前沒有符合條件的客戶。</div>
         ) : (
           <>
             <div className="dayone-table-header">
               <div>
                 <h2 className="dayone-table-title">客戶清單</h2>
-                <p className="dayone-table-note">下游商家、付款條件與 Portal 權限集中管理，保持清楚可讀的桌面與手機視圖。</p>
+                <p className="dayone-table-note">依群組分類顯示，點擊群組列可展開或收合。</p>
               </div>
               <span className="dayone-chip">共 {filtered.length} 位</span>
             </div>
+
+            {/* Desktop table */}
             <div className="hidden overflow-x-auto md:block">
               <table className="dayone-table w-full text-sm">
                 <thead>
@@ -159,95 +378,112 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((c: any) => (
-                    <tr key={c.id}>
-                      <td className="font-medium">{c.name}</td>
-                      <td className="text-stone-600">{c.phone ?? "-"}</td>
-                      <td className="text-stone-600">{c.districtName ?? "-"}</td>
-                      <td className="text-stone-600">{paymentTypeLabel[c.paymentType] ?? c.paymentType}</td>
-                      <td className="text-stone-600">{c.customerLevel === "store" ? "門市" : c.customerLevel === "supplier" ? "供應商" : "零售"}</td>
-                      <td>
-                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${c.isPortalActive ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-500"}`}>
-                          {c.isPortalActive ? "已啟用" : "未啟用"}
-                        </span>
-                      </td>
-                      <td>
-                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${c.status === "active" ? "bg-blue-100 text-blue-700" : "bg-red-100 text-red-700"}`}>
-                          {c.status === "active" ? "啟用中" : "停用"}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => openEdit(c)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-500 hover:bg-red-50 hover:text-red-700"
-                            onClick={() => {
-                              if (confirm(`確定要刪除客戶「${c.name}」嗎？`)) del.mutate({ id: c.id, tenantId });
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
+                  {groupRows.map(({ key, label, note, members, groupObj }) => (
+                    <>
+                      <tr
+                        key={`group-${key}`}
+                        className="cursor-pointer bg-stone-50 hover:bg-stone-100"
+                        onClick={() => toggleGroup(key)}
+                      >
+                        <td colSpan={8} className="py-2 pl-3">
+                          <div className="flex items-center gap-2">
+                            {expandedGroups.has(key) ? (
+                              <FolderOpen className="h-4 w-4 text-amber-500" />
+                            ) : (
+                              <Folder className="h-4 w-4 text-amber-500" />
+                            )}
+                            <span className="font-semibold text-stone-700">{label}</span>
+                            {note && <span className="text-xs text-stone-400">{note}</span>}
+                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">{members.length} 位</span>
+                            {expandedGroups.has(key) ? (
+                              <ChevronDown className="ml-auto mr-4 h-4 w-4 text-stone-400" />
+                            ) : (
+                              <ChevronRight className="ml-auto mr-4 h-4 w-4 text-stone-400" />
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                      {expandedGroups.has(key) && members.map((c: any) => (
+                        <CustomerRow key={c.id} c={c} />
+                      ))}
+                    </>
                   ))}
                 </tbody>
               </table>
             </div>
 
+            {/* Mobile cards */}
             <div className="dayone-mobile-list p-4 md:hidden">
-              {filtered.map((c: any) => (
-                <article key={c.id} className="dayone-mobile-card p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <h2 className="text-lg font-semibold text-stone-900">{c.name}</h2>
-                      <p className="mt-1 text-sm text-stone-500">
-                        {paymentTypeLabel[c.paymentType] ?? c.paymentType} / {c.customerLevel === "store" ? "門市" : c.customerLevel === "supplier" ? "供應商" : "零售"}
-                      </p>
-                    </div>
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${c.status === "active" ? "bg-blue-100 text-blue-700" : "bg-red-100 text-red-700"}`}>
-                      {c.status === "active" ? "啟用中" : "停用"}
-                    </span>
-                  </div>
-
-                  <div className="mt-4 space-y-3 text-sm">
-                    <div className="flex items-start gap-3">
-                      <Phone className="mt-0.5 h-4 w-4 text-stone-400" />
-                      <span className="text-stone-700">{c.phone ?? "-"}</span>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <MapPin className="mt-0.5 h-4 w-4 text-stone-400" />
-                      <span className="text-stone-700">{c.districtName ?? "未分配區域"}</span>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <Globe className="mt-0.5 h-4 w-4 text-stone-400" />
-                      <span className="text-stone-700">{c.isPortalActive ? `Portal 已啟用${c.loginEmail ? ` / ${c.loginEmail}` : ""}` : "Portal 未啟用"}</span>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-2 gap-2">
-                    <Button variant="outline" className="rounded-2xl" onClick={() => openEdit(c)}>編輯</Button>
-                    <Button
-                      variant="outline"
-                      className="rounded-2xl text-red-600 hover:text-red-700"
-                      onClick={() => {
-                        if (confirm(`確定要刪除客戶「${c.name}」嗎？`)) del.mutate({ id: c.id, tenantId });
-                      }}
-                    >
-                      刪除
-                    </Button>
-                  </div>
-                </article>
+              {groupRows.map(({ key, label, note, members }) => (
+                <div key={`mgroup-${key}`} className="mb-4">
+                  <button
+                    className="mb-2 flex w-full items-center gap-2 rounded-2xl bg-stone-100 px-4 py-2.5 text-left"
+                    onClick={() => toggleGroup(key)}
+                  >
+                    {expandedGroups.has(key) ? (
+                      <FolderOpen className="h-4 w-4 text-amber-500" />
+                    ) : (
+                      <Folder className="h-4 w-4 text-amber-500" />
+                    )}
+                    <span className="font-semibold text-stone-700">{label}</span>
+                    {note && <span className="text-xs text-stone-400">{note}</span>}
+                    <span className="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">{members.length} 位</span>
+                    {expandedGroups.has(key) ? (
+                      <ChevronDown className="ml-auto h-4 w-4 text-stone-400" />
+                    ) : (
+                      <ChevronRight className="ml-auto h-4 w-4 text-stone-400" />
+                    )}
+                  </button>
+                  {expandedGroups.has(key) && members.map((c: any) => (
+                    <article key={c.id} className="dayone-mobile-card mb-2 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h2 className="text-lg font-semibold text-stone-900">{c.name}</h2>
+                          <p className="mt-1 text-sm text-stone-500">
+                            {paymentTypeLabel[c.paymentType] ?? c.paymentType} / {c.customerLevel === "store" ? "門市" : c.customerLevel === "supplier" ? "供應商" : "零售"}
+                          </p>
+                        </div>
+                        <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${c.status === "active" ? "bg-blue-100 text-blue-700" : "bg-red-100 text-red-700"}`}>
+                          {c.status === "active" ? "啟用中" : "停用"}
+                        </span>
+                      </div>
+                      <div className="mt-4 space-y-3 text-sm">
+                        <div className="flex items-start gap-3">
+                          <Phone className="mt-0.5 h-4 w-4 text-stone-400" />
+                          <span className="text-stone-700">{c.phone ?? "-"}</span>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <MapPin className="mt-0.5 h-4 w-4 text-stone-400" />
+                          <span className="text-stone-700">{c.districtName ?? "未分配區域"}</span>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <Globe className="mt-0.5 h-4 w-4 text-stone-400" />
+                          <span className="text-stone-700">{c.isPortalActive ? `Portal 已啟用${c.loginEmail ? ` / ${c.loginEmail}` : ""}` : "Portal 未啟用"}</span>
+                        </div>
+                      </div>
+                      <div className="mt-4 grid grid-cols-3 gap-2">
+                        <Button variant="outline" className="rounded-2xl text-xs" onClick={() => openCopy(c)}>複製</Button>
+                        <Button variant="outline" className="rounded-2xl text-xs" onClick={() => openEdit(c)}>編輯</Button>
+                        <Button
+                          variant="outline"
+                          className="rounded-2xl text-xs text-red-600 hover:text-red-700"
+                          onClick={() => {
+                            if (confirm(`確定要刪除客戶「${c.name}」嗎？`)) del.mutate({ id: c.id, tenantId });
+                          }}
+                        >
+                          刪除
+                        </Button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
               ))}
             </div>
           </>
         )}
       </div>
 
+      {/* Customer upsert dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -266,17 +502,31 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
               <Label>地址</Label>
               <Input value={form.address} onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))} />
             </div>
-            <div>
-              <Label>區域</Label>
-              <Select value={form.districtId ? String(form.districtId) : "none"} onValueChange={(v) => setForm((p) => ({ ...p, districtId: v === "none" ? undefined : Number(v) }))}>
-                <SelectTrigger><SelectValue placeholder="選擇區域" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">未分配區域</SelectItem>
-                  {(districts as any[] ?? []).map((d: any) => (
-                    <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>區域</Label>
+                <Select value={form.districtId ? String(form.districtId) : "none"} onValueChange={(v) => setForm((p) => ({ ...p, districtId: v === "none" ? undefined : Number(v) }))}>
+                  <SelectTrigger><SelectValue placeholder="選擇區域" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">未分配區域</SelectItem>
+                    {(districts as any[] ?? []).map((d: any) => (
+                      <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>所屬群組</Label>
+                <Select value={form.groupId ? String(form.groupId) : "none"} onValueChange={(v) => setForm((p) => ({ ...p, groupId: v === "none" ? undefined : Number(v) }))}>
+                  <SelectTrigger><SelectValue placeholder="選擇群組" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">未分組</SelectItem>
+                    {allGroups.map((g: any) => (
+                      <SelectItem key={g.id} value={String(g.id)}>{g.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -366,6 +616,36 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
 
           <Button className="w-full bg-amber-600 hover:bg-amber-700" onClick={handleSave} disabled={upsert.isPending}>
             {upsert.isPending ? "儲存中..." : editId ? "更新客戶" : "建立客戶"}
+          </Button>
+        </DialogContent>
+      </Dialog>
+
+      {/* Group upsert dialog */}
+      <Dialog open={groupDialogOpen} onOpenChange={setGroupDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{editGroupId ? "編輯群組" : "新增群組"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div>
+              <Label>群組名稱 *</Label>
+              <Input
+                value={groupForm.name}
+                onChange={(e) => setGroupForm((p) => ({ ...p, name: e.target.value }))}
+                placeholder="例如：全家便利商店"
+              />
+            </div>
+            <div>
+              <Label>備註</Label>
+              <Input
+                value={groupForm.note}
+                onChange={(e) => setGroupForm((p) => ({ ...p, note: e.target.value }))}
+                placeholder="選填備註"
+              />
+            </div>
+          </div>
+          <Button className="w-full bg-amber-600 hover:bg-amber-700" onClick={handleSaveGroup} disabled={upsertGroup.isPending}>
+            {upsertGroup.isPending ? "儲存中..." : editGroupId ? "更新群組" : "建立群組"}
           </Button>
         </DialogContent>
       </Dialog>

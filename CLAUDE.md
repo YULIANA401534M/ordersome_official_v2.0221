@@ -1,6 +1,6 @@
 # CLAUDE.md — OrderSome 專案主腦
 
-> 版本 v6.30｜最後更新：2026-04-26
+> 版本 v6.31｜最後更新：2026-04-26
 
 ---
 
@@ -167,6 +167,7 @@ Hero 圖片規則：
 - 庫存異動備註中文化（v6.30）：dispatch.ts 的 `Dispatch print for order` 改為「派車單列印扣庫」，inventory.ts 的 `Confirmed truck return` 改為「管理員確認剩貨回庫」，DayoneDispatch.tsx 的 `Admin return` 也改為中文。
 - 派車管理未指派訂單（v6.30）：派車工作台顯示當日未指派司機的 pending 訂單清單（橘色警示），可直接在派車頁面指派司機後再建立派車單；後端新增 `orders.setDriver` mutation。
 - 派車單重新設計（v6.30）：screen view 保留漸層卡片，print-target 改為緊湊表格版（客戶/地址/商品明細/金額/結帳/箱數/實收/簽名欄），有 footer 合計列與備註區塊。
+- 客戶群組系統（v6.31）：後端新增 `dy_customer_groups` 表與 `listGroups/upsertGroup/deleteGroup` procedures；`customers.list` 支援 `groupId` 篩選並回傳 `groupName`；`customers.upsert` 支援 `groupId`。前端完整實作：群組管理面板（新增/編輯/刪除群組、顯示人數）、客戶列表依群組分組顯示並可折疊、群組篩選下拉、新增/編輯表單加「所屬群組」選擇、複製客戶按鈕（預填所有欄位並自動加「-副本」後綴）。
 
 **大永落地驗收條件（需要真人跑過）：**
 1. 建訂單 → 派車 → 列印派車單有內容（v6.28 已修）
