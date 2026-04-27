@@ -280,4 +280,77 @@ export const liffRouter = router({
 
       return { success: true, orderId, orderNo };
     }),
+
+  // 客戶查詢自己的訂單（用 lineId 免登入）
+  getMyOrders: publicProcedure
+    .input(z.object({
+      lineId: z.string().min(1),
+      tenant: z.string().optional(),
+      mode: z.enum(["today", "month"]).default("today"),
+    }))
+    .query(async ({ input }) => {
+      const tenantId = resolveTenantId(input.tenant);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      const client = (db as any).$client;
+
+      // 查客戶
+      const [custRows] = await client.execute(
+        `SELECT id, name FROM dy_customers WHERE tenantId = ? AND lineId = ? AND status = 'active' LIMIT 1`,
+        [tenantId, input.lineId]
+      );
+      const customer = (custRows as any[])[0];
+      if (!customer) throw new TRPCError({ code: "NOT_FOUND", message: "查無客戶綁定，請先完成綁定" });
+
+      // 計算日期範圍（台灣時間 UTC+8）
+      const nowTW = new Date(Date.now() + 8 * 60 * 60 * 1000);
+      const todayStr = nowTW.toISOString().slice(0, 10);
+      const monthStart = todayStr.slice(0, 7) + "-01";
+
+      const dateFrom = input.mode === "today" ? todayStr : monthStart;
+      const dateTo = todayStr;
+
+      // 查訂單
+      const [orderRows] = await client.execute(
+        `SELECT o.id, o.orderNo, o.deliveryDate, o.status, o.totalAmount, o.paidAmount, o.paymentStatus, o.createdAt
+         FROM dy_orders o
+         WHERE o.tenantId = ? AND o.customerId = ?
+           AND o.deliveryDate >= ? AND o.deliveryDate <= ?
+           AND o.status != 'cancelled'
+         ORDER BY o.deliveryDate DESC, o.id DESC`,
+        [tenantId, customer.id, dateFrom, dateTo]
+      );
+      const orders = orderRows as any[];
+
+      // 查每筆訂單的品項
+      const result = [];
+      for (const order of orders) {
+        const [itemRows] = await client.execute(
+          `SELECT oi.qty, oi.unitPrice, oi.subtotal, p.name as productName, p.unit
+           FROM dy_order_items oi
+           JOIN dy_products p ON p.id = oi.productId
+           WHERE oi.orderId = ? AND oi.tenantId = ?`,
+          [order.id, tenantId]
+        );
+        result.push({
+          orderId: order.id as number,
+          orderNo: order.orderNo as string,
+          deliveryDate: order.deliveryDate as string,
+          status: order.status as string,
+          totalAmount: Number(order.totalAmount),
+          paidAmount: Number(order.paidAmount),
+          paymentStatus: order.paymentStatus as string,
+          createdAt: order.createdAt as string,
+          items: (itemRows as any[]).map((i) => ({
+            productName: i.productName as string,
+            unit: i.unit as string,
+            qty: Number(i.qty),
+            unitPrice: Number(i.unitPrice),
+            subtotal: Number(i.subtotal),
+          })),
+        });
+      }
+
+      return { customerName: customer.name as string, orders: result };
+    }),
 });

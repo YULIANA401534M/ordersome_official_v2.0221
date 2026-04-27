@@ -132,6 +132,7 @@ const DriverWorkLog = lazy(() => import("./pages/dayone/driver/DriverWorkLog"));
 const SuperAdminTenants = lazy(() => import("./pages/dayone/SuperAdminTenants"));
 const SuperAdminModules = lazy(() => import("./pages/dayone/SuperAdminModules"));
 const LiffOrder = lazy(() => import("./pages/liff/LiffOrder"));
+const LiffMyOrders = lazy(() => import("./pages/liff/LiffMyOrders"));
 
 function Router() {
   const [location] = useLocation();
@@ -293,6 +294,7 @@ function Router() {
       <Route path="/driver/profile" component={DriverProfile} />
       {/* LIFF Routes */}
       <Route path="/liff/order" component={LiffOrder} />
+      <Route path="/liff/my-orders" component={LiffMyOrders} />
       {/* Super Admin Routes */}
       <Route path="/super-admin/tenants">
         <AdminDashboardLayout><SuperAdminTenants /></AdminDashboardLayout>
