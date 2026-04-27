@@ -29,6 +29,7 @@ export const dyProductsRouter = router({
       unit: z.string().max(20),
       defaultPrice: z.number().min(0),
       isActive: z.boolean().default(true),
+      imageUrl: z.string().max(500).nullable().optional(),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -36,14 +37,14 @@ export const dyProductsRouter = router({
       const client = (db as any).$client;
       if (input.id) {
         await client.execute(
-          `UPDATE dy_products SET code=?, name=?, unit=?, defaultPrice=?, isActive=?, updatedAt=NOW() WHERE id=? AND tenantId=?`,
-          [input.code, input.name, input.unit, input.defaultPrice, input.isActive, input.id, input.tenantId]
+          `UPDATE dy_products SET code=?, name=?, unit=?, defaultPrice=?, isActive=?, imageUrl=?, updatedAt=NOW() WHERE id=? AND tenantId=?`,
+          [input.code, input.name, input.unit, input.defaultPrice, input.isActive, input.imageUrl ?? null, input.id, input.tenantId]
         );
         return { id: input.id };
       } else {
         const [result] = await client.execute(
-          `INSERT INTO dy_products (tenantId, code, name, unit, defaultPrice, isActive, createdAt, updatedAt) VALUES (?,?,?,?,?,?,NOW(),NOW())`,
-          [input.tenantId, input.code, input.name, input.unit, input.defaultPrice, input.isActive]
+          `INSERT INTO dy_products (tenantId, code, name, unit, defaultPrice, isActive, imageUrl, createdAt, updatedAt) VALUES (?,?,?,?,?,?,?,NOW(),NOW())`,
+          [input.tenantId, input.code, input.name, input.unit, input.defaultPrice, input.isActive, input.imageUrl ?? null]
         );
         return { id: (result as any).insertId };
       }
