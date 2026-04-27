@@ -43,7 +43,7 @@ function SupplementOrderDialog({ onClose }: { onClose: () => void }) {
   const activeDispatch = (dispatches as any[]).find((d: any) => ["printed", "in_progress"].includes(d.status ?? ""));
 
   const { data: routeCustomers = [] } = trpc.dayone.driver.getMyRouteCustomers.useQuery({ tenantId: TENANT_ID, deliveryDate: today });
-  const { data: products = [] } = trpc.dayone.products.list.useQuery({ tenantId: TENANT_ID });
+  const { data: products = [] } = trpc.dayone.products.listForDriver.useQuery({ tenantId: TENANT_ID });
 
   // 選客戶後自動帶入定價
   const selectedCustomer = (routeCustomers as any[]).find((c: any) => String(c.id) === customerId);

@@ -2,12 +2,24 @@ import { z } from "zod";
 import { router } from "../../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../../db";
-import { dayoneAdminProcedure as dyAdminProcedure } from "./procedures";
+import { dayoneAdminProcedure as dyAdminProcedure, dayoneDriverProcedure as dyDriverProcedure } from "./procedures";
 import { tenantModules } from "../../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 
 
 export const dyProductsRouter = router({
+  listForDriver: dyDriverProcedure
+    .input(z.object({ tenantId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
+      const [rows] = await (db as any).$client.execute(
+        `SELECT id, code, name, unit, defaultPrice FROM dy_products WHERE tenantId = ? AND isActive = 1 ORDER BY code`,
+        [input.tenantId]
+      );
+      return rows as any[];
+    }),
+
   list: dyAdminProcedure
     .input(z.object({ tenantId: z.number() }))
     .query(async ({ input }) => {
