@@ -6,6 +6,14 @@ import { storagePut } from "../../storage";
 import { dayoneDriverProcedure as driverProcedure } from "./procedures";
 import { calcDueDate, todayTW, upsertArRecord } from "./utils";
 
+function cashCollectedStatus(cash: number, total: number, cycle: string): string {
+  if (cycle === "monthly") return "monthly";
+  if (cycle === "weekly") return "weekly";
+  if (cash >= total && total > 0) return "paid";
+  if (cash > 0) return "partial";
+  return "unpaid";
+}
+
 async function getDriverByUser(client: any, userId: number, tenantId: number) {
   const [rows] = await client.execute(
     `SELECT id FROM dy_drivers WHERE userId = ? AND tenantId = ? LIMIT 1`,
@@ -243,6 +251,150 @@ export const dyDriverRouter = router({
         [input.tenantId, input.orderId, url, driver.id]
       );
       return { success: true, signatureUrl: url };
+    }),
+
+  // 司機今日路線上的客戶清單（補單用）
+  getMyRouteCustomers: driverProcedure
+    .input(z.object({ tenantId: z.number(), deliveryDate: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      const client = (db as any).$client;
+      const driver = await getDriverByUser(client, ctx.user.id, input.tenantId);
+      if (!driver) throw new TRPCError({ code: "NOT_FOUND", message: "Driver not linked" });
+      const date = input.deliveryDate ?? todayTW();
+
+      // 今日路線上的客戶（不重複）
+      const [rows] = await client.execute(
+        `SELECT DISTINCT c.id, c.name, c.phone, c.address, c.settlementCycle
+         FROM dy_orders o
+         JOIN dy_customers c ON c.id = o.customerId
+         WHERE o.tenantId=? AND o.driverId=? AND o.deliveryDate=?
+         ORDER BY c.name ASC`,
+        [input.tenantId, driver.id, date]
+      );
+      return rows as any[];
+    }),
+
+  // 臨時加貨補單（司機現場）
+  addSupplementOrder: driverProcedure
+    .input(z.object({
+      tenantId: z.number(),
+      dispatchOrderId: z.number(),
+      // 客戶：選現有客戶 or 填臨時名稱
+      customerId: z.number().optional(),
+      tempCustomerName: z.string().optional(),
+      tempCustomerNote: z.string().optional(),
+      // 品項
+      items: z.array(z.object({
+        productId: z.number(),
+        qty: z.number().positive(),
+        unitPrice: z.number().nonnegative(),
+      })),
+      // 收款
+      cashCollected: z.number().min(0).default(0),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      const client = (db as any).$client;
+      const driver = await getDriverByUser(client, ctx.user.id, input.tenantId);
+      if (!driver) throw new TRPCError({ code: "FORBIDDEN", message: "Driver not linked" });
+
+      const [dispatchRows] = await client.execute(
+        `SELECT id, driverId, dispatchDate, status FROM dy_dispatch_orders WHERE id=? AND tenantId=? LIMIT 1`,
+        [input.dispatchOrderId, input.tenantId]
+      );
+      const dispatch = (dispatchRows as any[])[0];
+      if (!dispatch) throw new TRPCError({ code: "NOT_FOUND", message: "Dispatch not found" });
+      if (Number(dispatch.driverId) !== Number(driver.id)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "此派車單不屬於你" });
+      }
+      if (!["printed", "in_progress"].includes(dispatch.status)) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "只有已列印或配送中的派車單可加補單" });
+      }
+      if (!input.customerId && !input.tempCustomerName) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "需選擇客戶或填臨時客戶名稱" });
+      }
+
+      let customerId = input.customerId;
+      let settlementCycle = "per_delivery";
+
+      if (customerId) {
+        const [cRows] = await client.execute(
+          `SELECT id, settlementCycle, districtId FROM dy_customers WHERE id=? AND tenantId=? LIMIT 1`,
+          [customerId, input.tenantId]
+        );
+        const c = (cRows as any[])[0];
+        if (!c) throw new TRPCError({ code: "NOT_FOUND", message: "Customer not found" });
+        settlementCycle = c.settlementCycle ?? "per_delivery";
+      } else {
+        // 建立臨時客戶
+        const [cResult] = await client.execute(
+          `INSERT INTO dy_customers (tenantId, name, settlementCycle, status, creditLimit, outstandingAmount, createdAt, updatedAt)
+           VALUES (?,?,'per_delivery','active',0,0,NOW(),NOW())`,
+          [input.tenantId, input.tempCustomerName!.trim()]
+        );
+        customerId = Number((cResult as any).insertId);
+        // 在客戶備註記管理員可見的說明
+        if (input.tempCustomerNote) {
+          await client.execute(
+            `UPDATE dy_customers SET portalNote=? WHERE id=?`,
+            [`[臨時客戶] ${input.tempCustomerNote}`, customerId]
+          );
+        }
+      }
+
+      const totalAmount = input.items.reduce((s, i) => s + i.qty * i.unitPrice, 0);
+      const paymentStatus = cashCollectedStatus(input.cashCollected, totalAmount, settlementCycle);
+      const orderNo = `SUPP${Date.now()}`;
+
+      const [orderResult] = await client.execute(
+        `INSERT INTO dy_orders
+         (tenantId, orderNo, customerId, driverId, deliveryDate, status, totalAmount,
+          paidAmount, paymentStatus, cashCollected, orderType, orderSource, createdAt, updatedAt)
+         VALUES (?,?,?,?,?,'delivered',?,?,?,?,'supplement','driver_app',NOW(),NOW())`,
+        [
+          input.tenantId, orderNo, customerId, driver.id, dispatch.dispatchDate,
+          totalAmount, input.cashCollected, paymentStatus, input.cashCollected,
+        ]
+      );
+      const orderId = Number((orderResult as any).insertId);
+
+      for (const item of input.items) {
+        await client.execute(
+          `INSERT INTO dy_order_items (tenantId, orderId, productId, qty, unitPrice, subtotal, returnQty)
+           VALUES (?,?,?,?,?,?,0)`,
+          [input.tenantId, orderId, item.productId, item.qty, item.unitPrice, item.qty * item.unitPrice]
+        );
+      }
+
+      // 加入派車單站點
+      const [seqRows] = await client.execute(
+        `SELECT COALESCE(MAX(stopSequence),0) AS maxSeq FROM dy_dispatch_items WHERE dispatchOrderId=?`,
+        [input.dispatchOrderId]
+      );
+      const nextSeq = Number((seqRows as any[])[0]?.maxSeq ?? 0) + 1;
+      await client.execute(
+        `INSERT INTO dy_dispatch_items
+         (dispatchOrderId, tenantId, orderId, customerId, stopSequence,
+          prevBoxes, deliverBoxes, returnBoxes, remainBoxes, paymentStatus, cashCollected, createdAt)
+         VALUES (?,?,?,?,?,0,0,0,0,?,?,NOW())`,
+        [input.dispatchOrderId, input.tenantId, orderId, customerId, nextSeq, paymentStatus, input.cashCollected]
+      );
+
+      // AR（補單已是 delivered 狀態，直接建 AR）
+      const dueDate = calcDueDate(dispatch.dispatchDate, settlementCycle, 30);
+      await upsertArRecord(client, {
+        tenantId: input.tenantId,
+        orderId,
+        customerId: customerId!,
+        amount: totalAmount,
+        paidAmount: input.cashCollected,
+        dueDate,
+      });
+
+      return { success: true, orderId, orderNo, totalAmount };
     }),
 
   getMyWorkLog: driverProcedure

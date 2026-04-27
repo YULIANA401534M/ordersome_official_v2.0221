@@ -441,6 +441,26 @@ export const dyDispatchRouter = router({
         [input.id, input.tenantId]
       );
 
+      // 扣備用箱庫存
+      const [extraRows] = await client.execute(
+        `SELECT productId, qty FROM dy_dispatch_extra_items WHERE dispatchOrderId=? AND tenantId=?`,
+        [input.id, input.tenantId]
+      );
+      for (const extra of extraRows as any[]) {
+        await client.execute(
+          `UPDATE dy_inventory
+           SET currentQty = GREATEST(0, currentQty - ?), updatedAt=NOW()
+           WHERE tenantId=? AND productId=?`,
+          [extra.qty, input.tenantId, extra.productId]
+        );
+        await client.execute(
+          `INSERT INTO dy_stock_movements
+           (tenantId, productId, type, qty, refId, refType, note, createdAt)
+           VALUES (?,?,'out',?,?,'dispatch_extra',?,NOW())`,
+          [input.tenantId, extra.productId, extra.qty, input.id, `備用箱出車扣庫 派車單#${input.id}`]
+        );
+      }
+
       await client.execute(
         `UPDATE dy_dispatch_orders
          SET status='printed', printedAt=NOW(), updatedAt=NOW()
@@ -604,6 +624,7 @@ export const dyDispatchRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST", message: "Draft dispatch cannot return stock to inventory" });
       }
 
+      // 訂單品項帶出量
       const [shippedRows] = await client.execute(
         `SELECT oi.productId, SUM(oi.qty) AS shippedQty
          FROM dy_dispatch_items di
@@ -614,6 +635,16 @@ export const dyDispatchRouter = router({
       );
       const shippedQtyByProduct = new Map<number, number>(
         (shippedRows as any[]).map((row) => [Number(row.productId), Number(row.shippedQty ?? 0)])
+      );
+
+      // 備用箱帶出量（列印時已扣庫存）
+      const [extraRows] = await client.execute(
+        `SELECT productId, qty AS extraQty
+         FROM dy_dispatch_extra_items WHERE dispatchOrderId=? AND tenantId=?`,
+        [input.dispatchOrderId, input.tenantId]
+      );
+      const extraQtyByProduct = new Map<number, number>(
+        (extraRows as any[]).map((row) => [Number(row.productId), Number(row.extraQty ?? 0)])
       );
 
       const [reportedRows] = await client.execute(
@@ -627,9 +658,16 @@ export const dyDispatchRouter = router({
         (reportedRows as any[]).map((row) => [Number(row.productId), Number(row.reportedQty ?? 0)])
       );
 
+      // 合計帶出量（訂單品項 + 備用箱）
+      const allProductIds = new Set([...shippedQtyByProduct.keys(), ...extraQtyByProduct.keys()]);
+      const totalOutByProduct = new Map<number, number>();
+      for (const pid of allProductIds) {
+        totalOutByProduct.set(pid, (shippedQtyByProduct.get(pid) ?? 0) + (extraQtyByProduct.get(pid) ?? 0));
+      }
+
       for (const item of input.items) {
-        const shippedQty = Number(shippedQtyByProduct.get(Number(item.productId)) ?? 0);
-        if (shippedQty <= 0) {
+        const totalOut = Number(totalOutByProduct.get(Number(item.productId)) ?? 0);
+        if (totalOut <= 0) {
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: `Product ${item.productId} was not part of this dispatch`,
@@ -638,10 +676,10 @@ export const dyDispatchRouter = router({
 
         const alreadyReportedQty = Number(reportedQtyByProduct.get(Number(item.productId)) ?? 0);
         const requestedQty = Number(item.qty ?? 0);
-        if (alreadyReportedQty + requestedQty > shippedQty) {
+        if (alreadyReportedQty + requestedQty > totalOut) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: `Returned qty for product ${item.productId} exceeds shipped qty`,
+            message: `Returned qty for product ${item.productId} exceeds total shipped qty`,
           });
         }
 
@@ -668,7 +706,38 @@ export const dyDispatchRouter = router({
         [input.dispatchOrderId, input.tenantId]
       );
 
-      return { success: true, returnedItemCount: input.items.length, pendingReview: true };
+      // 差異驗算：帶出 - 補單動用 - 回庫 = 差異
+      // 補單動用量（orderType='supplement' 的品項）
+      const [suppRows] = await client.execute(
+        `SELECT oi.productId, SUM(oi.qty) AS suppQty
+         FROM dy_dispatch_items di
+         JOIN dy_orders o ON o.id = di.orderId
+         JOIN dy_order_items oi ON oi.orderId = o.id
+         WHERE di.dispatchOrderId=? AND di.tenantId=? AND o.orderType='supplement'
+         GROUP BY oi.productId`,
+        [input.dispatchOrderId, input.tenantId]
+      );
+      const suppQtyByProduct = new Map<number, number>(
+        (suppRows as any[]).map((row) => [Number(row.productId), Number(row.suppQty ?? 0)])
+      );
+
+      const discrepancies: { productId: number; productName: string; totalOut: number; supplementUsed: number; returned: number; diff: number }[] = [];
+      for (const pid of extraQtyByProduct.keys()) {
+        const totalOut = Number(totalOutByProduct.get(pid) ?? 0);
+        const suppUsed = Number(suppQtyByProduct.get(pid) ?? 0);
+        const thisReturn = input.items.find((i) => Number(i.productId) === pid)?.qty ?? 0;
+        const alreadyReported = Number(reportedQtyByProduct.get(pid) ?? 0);
+        const totalReturned = alreadyReported + thisReturn;
+        const diff = totalOut - suppUsed - totalReturned;
+        if (Math.abs(diff) > 0.01) {
+          // 取 productName
+          const [pRows] = await client.execute(`SELECT name FROM dy_products WHERE id=? LIMIT 1`, [pid]);
+          const pName = (pRows as any[])[0]?.name ?? String(pid);
+          discrepancies.push({ productId: pid, productName: pName, totalOut, supplementUsed: suppUsed, returned: totalReturned, diff });
+        }
+      }
+
+      return { success: true, returnedItemCount: input.items.length, pendingReview: true, discrepancies };
     }),
 
   completeDispatch: driverProcedure
@@ -985,5 +1054,81 @@ export const dyDispatchRouter = router({
         systemExpected: Number(dispatch.totalCollected ?? 0),
         diff,
       };
+    }),
+
+  // ── 備用箱登記（管理員） ─────────────────────────────────────────────
+  upsertExtraItems: dyAdminProcedure
+    .input(z.object({
+      dispatchOrderId: z.number(),
+      tenantId: z.number(),
+      items: z.array(z.object({
+        productId: z.number(),
+        qty: z.number().positive(),
+        note: z.string().optional(),
+      })),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      const client = (db as any).$client;
+
+      const [dispatchRows] = await client.execute(
+        `SELECT status FROM dy_dispatch_orders WHERE id=? AND tenantId=? LIMIT 1`,
+        [input.dispatchOrderId, input.tenantId]
+      );
+      const dispatch = (dispatchRows as any[])[0];
+      if (!dispatch) throw new TRPCError({ code: "NOT_FOUND", message: "Dispatch order not found" });
+      if (!["draft"].includes(dispatch.status)) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "只有草稿狀態的派車單可修改備用箱" });
+      }
+
+      // 清除舊的再重寫（每次整批儲存）
+      await client.execute(
+        `DELETE FROM dy_dispatch_extra_items WHERE dispatchOrderId=? AND tenantId=?`,
+        [input.dispatchOrderId, input.tenantId]
+      );
+      for (const item of input.items) {
+        await client.execute(
+          `INSERT INTO dy_dispatch_extra_items (dispatchOrderId, tenantId, productId, qty, note, createdAt, updatedAt)
+           VALUES (?,?,?,?,?,NOW(),NOW())`,
+          [input.dispatchOrderId, input.tenantId, item.productId, item.qty, item.note ?? null]
+        );
+      }
+      return { success: true, count: input.items.length };
+    }),
+
+  getExtraItems: dyAdminProcedure
+    .input(z.object({ dispatchOrderId: z.number(), tenantId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      const client = (db as any).$client;
+      const [rows] = await client.execute(
+        `SELECT ei.*, p.name AS productName, p.unit
+         FROM dy_dispatch_extra_items ei
+         JOIN dy_products p ON p.id = ei.productId
+         WHERE ei.dispatchOrderId=? AND ei.tenantId=?
+         ORDER BY ei.id ASC`,
+        [input.dispatchOrderId, input.tenantId]
+      );
+      return rows as any[];
+    }),
+
+  // 司機/管理員都可查（用於回庫頁面帶出備用箱清單）
+  getExtraItemsForReturn: driverProcedure
+    .input(z.object({ dispatchOrderId: z.number(), tenantId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      const client = (db as any).$client;
+      const [rows] = await client.execute(
+        `SELECT ei.*, p.name AS productName, p.unit
+         FROM dy_dispatch_extra_items ei
+         JOIN dy_products p ON p.id = ei.productId
+         WHERE ei.dispatchOrderId=? AND ei.tenantId=?
+         ORDER BY ei.id ASC`,
+        [input.dispatchOrderId, input.tenantId]
+      );
+      return rows as any[];
     }),
 });

@@ -1,7 +1,13 @@
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "../../../lib/trpc";
 import DriverLayout from "./DriverLayout";
-import { CheckCircle2, MapPin, Package, Phone, ChevronRight, Truck } from "lucide-react";
+import { CheckCircle2, MapPin, Package, Phone, ChevronRight, Truck, Plus, ShoppingCart } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
 
 const TENANT_ID = 90004;
 
@@ -23,8 +29,156 @@ const STATUS_TONE: Record<string, string> = {
   returned:   "bg-rose-100 text-rose-700",
 };
 
+function SupplementOrderDialog({ onClose }: { onClose: () => void }) {
+  const today = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const utils = trpc.useUtils();
+  const [customerId, setCustomerId] = useState("");
+  const [tempName, setTempName] = useState("");
+  const [tempNote, setTempNote] = useState("");
+  const [useTempCustomer, setUseTempCustomer] = useState(false);
+  const [items, setItems] = useState([{ productId: "", qty: "1", unitPrice: "" }]);
+  const [cashCollected, setCashCollected] = useState("0");
+
+  const { data: dispatches = [] } = trpc.dayone.dispatch.listDispatch.useQuery({ tenantId: TENANT_ID, dispatchDate: today });
+  const activeDispatch = (dispatches as any[]).find((d: any) => ["printed", "in_progress"].includes(d.status ?? ""));
+
+  const { data: routeCustomers = [] } = trpc.dayone.driver.getMyRouteCustomers.useQuery({ tenantId: TENANT_ID, deliveryDate: today });
+  const { data: products = [] } = trpc.dayone.products.list.useQuery({ tenantId: TENANT_ID });
+
+  // 選客戶後自動帶入定價
+  const selectedCustomer = (routeCustomers as any[]).find((c: any) => String(c.id) === customerId);
+
+  const addSupplementOrder = trpc.dayone.driver.addSupplementOrder.useMutation({
+    onSuccess: (data) => {
+      toast.success(`補單已建立，金額 NT$ ${data.totalAmount.toLocaleString()}，訂單號 ${data.orderNo}`);
+      utils.dayone.driver.getMyTodayOrders.invalidate();
+      onClose();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const totalAmt = items.reduce((s, i) => s + (Number(i.qty) || 0) * (Number(i.unitPrice) || 0), 0);
+  const payLabel = !customerId && !useTempCustomer ? "—" :
+    selectedCustomer?.settlementCycle === "monthly" ? "月結" :
+    selectedCustomer?.settlementCycle === "weekly" ? "週結" : "現收";
+
+  function handleSubmit() {
+    if (!activeDispatch) { toast.error("找不到今日有效派車單（需已列印）"); return; }
+    if (!useTempCustomer && !customerId) { toast.error("請選擇客戶"); return; }
+    if (useTempCustomer && !tempName.trim()) { toast.error("請填臨時客戶名稱"); return; }
+    const validItems = items.filter((i) => i.productId && Number(i.qty) > 0);
+    if (validItems.length === 0) { toast.error("請至少填一項商品"); return; }
+    addSupplementOrder.mutate({
+      tenantId: TENANT_ID,
+      dispatchOrderId: activeDispatch.id,
+      customerId: !useTempCustomer && customerId ? Number(customerId) : undefined,
+      tempCustomerName: useTempCustomer ? tempName.trim() : undefined,
+      tempCustomerNote: useTempCustomer && tempNote.trim() ? tempNote.trim() : undefined,
+      items: validItems.map((i) => ({ productId: Number(i.productId), qty: Number(i.qty), unitPrice: Number(i.unitPrice) || 0 })),
+      cashCollected: Number(cashCollected) || 0,
+    });
+  }
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-sm rounded-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>臨時加貨補單</DialogTitle>
+        </DialogHeader>
+        {!activeDispatch && (
+          <div className="rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">目前沒有已列印的派車單，無法補單。</div>
+        )}
+        <div className="space-y-3 text-sm">
+          {/* 客戶選擇 */}
+          <div>
+            <div className="mb-1.5 flex items-center gap-3">
+              <button type="button" onClick={() => setUseTempCustomer(false)}
+                className={`text-xs px-3 py-1 rounded-full border ${!useTempCustomer ? "bg-amber-600 text-white border-amber-600" : "border-stone-200 text-stone-500"}`}>
+                路線客戶
+              </button>
+              <button type="button" onClick={() => setUseTempCustomer(true)}
+                className={`text-xs px-3 py-1 rounded-full border ${useTempCustomer ? "bg-amber-600 text-white border-amber-600" : "border-stone-200 text-stone-500"}`}>
+                臨時客戶
+              </button>
+            </div>
+            {!useTempCustomer ? (
+              <Select value={customerId} onValueChange={setCustomerId}>
+                <SelectTrigger className="rounded-2xl"><SelectValue placeholder="選擇客戶" /></SelectTrigger>
+                <SelectContent>
+                  {(routeCustomers as any[]).map((c: any) => (
+                    <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="space-y-2">
+                <Input placeholder="客戶名稱（必填）" className="rounded-2xl" value={tempName} onChange={(e) => setTempName(e.target.value)} />
+                <Input placeholder="備註（管理員可見）" className="rounded-2xl" value={tempNote} onChange={(e) => setTempNote(e.target.value)} />
+              </div>
+            )}
+            {selectedCustomer && (
+              <p className="mt-1 text-xs text-stone-400">結帳方式：{payLabel}</p>
+            )}
+          </div>
+
+          {/* 品項 */}
+          <div>
+            <div className="mb-1.5 flex items-center justify-between">
+              <span className="text-xs font-medium text-stone-600">補貨品項</span>
+              <button type="button" className="text-xs text-amber-600"
+                onClick={() => setItems((s) => [...s, { productId: "", qty: "1", unitPrice: "" }])}>
+                + 新增品項
+              </button>
+            </div>
+            {items.map((item, idx) => (
+              <div key={idx} className="mb-1.5 grid grid-cols-[1fr_52px_68px_auto] gap-1.5 items-center">
+                <Select value={item.productId} onValueChange={(v) => {
+                  setItems((s) => s.map((r, i) => i === idx ? { ...r, productId: v, unitPrice: "" } : r));
+                }}>
+                  <SelectTrigger className="rounded-xl h-8 text-xs"><SelectValue placeholder="商品" /></SelectTrigger>
+                  <SelectContent>
+                    {(products as any[]).map((p: any) => (
+                      <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input type="number" min={1} value={item.qty} className="rounded-xl h-8 text-xs text-center"
+                  onChange={(e) => setItems((s) => s.map((r, i) => i === idx ? { ...r, qty: e.target.value } : r))} />
+                <Input type="number" min={0} placeholder="單價" value={item.unitPrice} className="rounded-xl h-8 text-xs text-right"
+                  onChange={(e) => setItems((s) => s.map((r, i) => i === idx ? { ...r, unitPrice: e.target.value } : r))} />
+                <button type="button" className="text-stone-400 hover:text-rose-500 px-0.5 text-xs"
+                  onClick={() => setItems((s) => s.length === 1 ? [{ productId: "", qty: "1", unitPrice: "" }] : s.filter((_, i) => i !== idx))}>✕</button>
+              </div>
+            ))}
+            <div className="text-right text-xs text-stone-500 mt-1">合計：<strong className="text-stone-800">NT$ {totalAmt.toLocaleString()}</strong>　{payLabel}</div>
+          </div>
+
+          {/* 現收金額（僅現收客戶） */}
+          {(!selectedCustomer || (!["monthly","weekly"].includes(selectedCustomer.settlementCycle))) && (
+            <div>
+              <label className="mb-1 block text-xs font-medium text-stone-600">現場收款</label>
+              <Input type="number" min={0} className="rounded-2xl" value={cashCollected}
+                onChange={(e) => setCashCollected(e.target.value)} />
+            </div>
+          )}
+
+          <div className="flex gap-2 pt-1">
+            <Button variant="outline" className="flex-1 rounded-2xl" onClick={onClose}>取消</Button>
+            <Button className="flex-1 rounded-2xl bg-amber-600 text-white hover:bg-amber-700"
+              disabled={addSupplementOrder.isPending || !activeDispatch}
+              onClick={handleSubmit}>
+              {addSupplementOrder.isPending ? "建立中..." : "確認補單"}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function DriverToday() {
   const [, navigate] = useLocation();
+  const [showSupplement, setShowSupplement] = useState(false);
   const today = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
   const { data: orders = [], isLoading } = trpc.dayone.driver.getMyTodayOrders.useQuery({
@@ -59,6 +213,22 @@ export default function DriverToday() {
               <p className="mt-1 text-xs text-emerald-600">已送達</p>
             </div>
           </section>
+
+          {/* 臨時加貨按鈕 */}
+          <button
+            type="button"
+            onClick={() => setShowSupplement(true)}
+            className="flex w-full items-center gap-3 rounded-[26px] border border-dashed border-amber-300 bg-amber-50 px-5 py-3.5 text-left active:scale-[0.99] transition-transform"
+          >
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-100">
+              <ShoppingCart className="h-4 w-4 text-amber-700" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-amber-800">臨時加貨</p>
+              <p className="text-xs text-amber-600">客戶現場追加，補單並連結此派車</p>
+            </div>
+            <Plus className="h-4 w-4 text-amber-500 shrink-0" />
+          </button>
 
           {/* Today's cash summary */}
           {done.length > 0 && (
@@ -157,6 +327,8 @@ export default function DriverToday() {
           )}
         </div>
       )}
+
+      {showSupplement && <SupplementOrderDialog onClose={() => setShowSupplement(false)} />}
     </DriverLayout>
   );
 }

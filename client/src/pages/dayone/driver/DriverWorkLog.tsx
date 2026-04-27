@@ -58,8 +58,20 @@ export default function DriverWorkLog() {
   });
 
   const returnInventory = trpc.dayone.dispatch.returnInventory.useMutation({
-    onSuccess: () => {
-      toast.success("剩貨已送出待驗，等管理員確認入庫");
+    onSuccess: (data) => {
+      const discrepancies = (data as any).discrepancies ?? [];
+      if (discrepancies.length > 0) {
+        toast.success("剩貨已送出待驗");
+        for (const d of discrepancies) {
+          toast.warning(
+            `⚠️ 備用箱差異：${d.productName} 帶出 ${d.totalOut} 箱，補單動用 ${d.supplementUsed} 箱，回庫 ${d.returned} 箱，差 ${Math.abs(d.diff)} 箱`,
+            { duration: 12000 }
+          );
+        }
+      } else {
+        toast.success("剩貨已送出待驗，等管理員確認入庫");
+      }
+      setReturnQtyByProduct({});
       utils.dayone.dispatch.getDispatchDetail.invalidate();
       utils.dayone.dispatch.listDispatch.invalidate();
       utils.dayone.inventory.pendingReturns.invalidate();
@@ -78,23 +90,53 @@ export default function DriverWorkLog() {
   const totalCollected = deliveredOrders.reduce((sum: number, order: any) => sum + Number(order.cashCollected ?? 0), 0);
   const pendingReturnsByProduct: Record<number, number> = (dispatchDetail as any)?.pendingReturnsByProduct ?? {};
 
-  const returnItems = useMemo(
-    () =>
-      (dispatchDetail?.products ?? [])
-        .map((product: any) => {
-          const pid = Number(product.productId);
-          const shipped = Math.round(Number(product.shippedQty ?? 0));
-          // 可填寫模式：預設 0（全部送出去），司機只填車上有剩的數量
-          const qty = returnQtyByProduct[pid] !== undefined
-            ? Number(returnQtyByProduct[pid])
-            : 0;
-          // 唯讀模式：從 pendingReturnsByProduct 取實際已回報量
-          const reportedQty = Math.round(Number(pendingReturnsByProduct[pid] ?? 0));
-          return { productId: pid, productName: product.productName, unit: product.unit, shippedQty: shipped, qty, reportedQty };
-        })
-        .filter((item: any) => item.shippedQty > 0),
-    [dispatchDetail?.products, returnQtyByProduct, pendingReturnsByProduct]
+  // 備用箱清單（加入回庫列表）
+  const { data: extraItems = [] } = trpc.dayone.dispatch.getExtraItemsForReturn.useQuery(
+    { dispatchOrderId: activeDispatchId, tenantId: TENANT_ID },
+    { enabled: !!activeDispatchId }
   );
+
+  const returnItems = useMemo(() => {
+    const orderItems = (dispatchDetail?.products ?? []).map((product: any) => {
+      const pid = Number(product.productId);
+      return {
+        productId: pid,
+        productName: product.productName,
+        unit: product.unit,
+        shippedQty: Math.round(Number(product.shippedQty ?? 0)),
+        extraQty: 0,
+        qty: returnQtyByProduct[pid] !== undefined ? Number(returnQtyByProduct[pid]) : 0,
+        reportedQty: Math.round(Number(pendingReturnsByProduct[pid] ?? 0)),
+        isExtra: false,
+      };
+    }).filter((item: any) => item.shippedQty > 0);
+
+    // 合入備用箱（只列出訂單品項裡沒出現的備用箱品項）
+    const existingPids = new Set(orderItems.map((i: any) => i.productId));
+    const extraOnly = (extraItems as any[])
+      .filter((e: any) => !existingPids.has(Number(e.productId)))
+      .map((e: any) => {
+        const pid = Number(e.productId);
+        return {
+          productId: pid,
+          productName: e.productName,
+          unit: e.unit,
+          shippedQty: 0,
+          extraQty: Number(e.qty),
+          qty: returnQtyByProduct[pid] !== undefined ? Number(returnQtyByProduct[pid]) : 0,
+          reportedQty: Math.round(Number(pendingReturnsByProduct[pid] ?? 0)),
+          isExtra: true,
+        };
+      });
+
+    // 訂單品項也要加入備用箱數量（同商品）
+    const withExtra = orderItems.map((item: any) => {
+      const ex = (extraItems as any[]).find((e: any) => Number(e.productId) === item.productId);
+      return { ...item, extraQty: ex ? Number(ex.qty) : 0 };
+    });
+
+    return [...withExtra, ...extraOnly];
+  }, [dispatchDetail?.products, returnQtyByProduct, pendingReturnsByProduct, extraItems]);
 
   useEffect(() => {
     setReturnQtyByProduct({});
@@ -196,8 +238,17 @@ export default function DriverWorkLog() {
                     <div key={item.productId} className="rounded-2xl border border-stone-200/80 bg-stone-50 px-4 py-3">
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="text-sm font-semibold text-stone-900">{item.productName}</p>
-                          <p className="mt-1 text-xs text-stone-500">今日帶出 {item.shippedQty} {item.unit || "單位"}　回庫幾{item.unit || "箱"}？</p>
+                          <p className="text-sm font-semibold text-stone-900">
+                            {item.productName}
+                            {item.isExtra && <span className="ml-1.5 text-xs rounded-full bg-sky-100 text-sky-700 px-1.5 py-0.5">備用</span>}
+                          </p>
+                          <p className="mt-1 text-xs text-stone-500">
+                            {item.isExtra
+                              ? `備用帶出 ${item.extraQty} ${item.unit || "箱"}　回庫幾箱？`
+                              : item.extraQty > 0
+                                ? `訂單 ${item.shippedQty} + 備用 ${item.extraQty} = ${item.shippedQty + item.extraQty} ${item.unit || "箱"}　回庫幾箱？`
+                                : `今日帶出 ${item.shippedQty} ${item.unit || "箱"}　回庫幾箱？`}
+                          </p>
                         </div>
                         <input
                           type="number"
