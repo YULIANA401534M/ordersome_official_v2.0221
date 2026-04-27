@@ -510,7 +510,7 @@ body { margin: 0; padding: 16px; background: white; font-family: 'Noto Sans TC',
                   </div>
                   <div className="rounded-2xl bg-white/10 px-4 py-3 backdrop-blur">
                     <p className="text-xs text-white/60">預設備用箱</p>
-                    <p className="mt-1 text-base font-semibold">{detail.extraBoxes ?? 20}</p>
+                    <p className="mt-1 text-base font-semibold">{detail.extraBoxes ?? 0}</p>
                   </div>
                   <div className="rounded-2xl bg-white/10 px-4 py-3 backdrop-blur">
                     <p className="text-xs text-white/60">建立時間</p>
@@ -628,7 +628,7 @@ body { margin: 0; padding: 16px; background: white; font-family: 'Noto Sans TC',
                       <div>
                         <div style={{fontSize:"18px", fontWeight:"800", letterSpacing:"0.05em"}}>大永蛋行　出貨彙總表</div>
                         <div style={{fontSize:"11px", color:"#555", marginTop:"3px"}}>
-                          {fmtDate(detail.dispatchDate)}　司機：{detail.driverName}　路線：{detail.routeCode}　共 {items.length} 站　備用箱 {detail.extraBoxes ?? 20} 箱
+                          {fmtDate(detail.dispatchDate)}　司機：{detail.driverName}　路線：{detail.routeCode}　共 {new Set(items.map((i: any) => i.customerId)).size} 客　備用箱 {detail.extraBoxes ?? 0} 箱
                         </div>
                       </div>
                       <div style={{fontSize:"11px", color:"#888", textAlign:"right"}}>
@@ -665,47 +665,83 @@ body { margin: 0; padding: 16px; background: white; font-family: 'Noto Sans TC',
                         </tr>
                       </thead>
                       <tbody>
-                        {items.map((item: any) => {
-                          const stopProducts = productsByOrder.filter((p: any) => Number(p.orderId) === Number(item.orderId));
-                          const amt = Number(item.orderAmount ?? 0);
-                          const isSettled = item.paymentStatus === "monthly" || item.paymentStatus === "weekly";
+                        {(() => {
+                          // 同一個客戶的多筆訂單合併成一行（依第一筆的 stopSequence 排序）
+                          const customerMap = new Map<number, {
+                            customerId: number; customerName: string; customerPhone: string;
+                            customerAddress: string; firstStopSeq: number;
+                            totalAmt: number; isSettled: boolean; paymentStatus: string;
+                            prevBoxes: number; products: Map<string, { name: string; qty: number; unit: string }>;
+                            notes: string[];
+                          }>();
+                          for (const item of items as any[]) {
+                            const cid = Number(item.customerId);
+                            if (!customerMap.has(cid)) {
+                              customerMap.set(cid, {
+                                customerId: cid,
+                                customerName: item.customerName,
+                                customerPhone: item.customerPhone ?? "",
+                                customerAddress: item.customerAddress ?? "",
+                                firstStopSeq: Number(item.stopSequence),
+                                totalAmt: 0,
+                                isSettled: item.paymentStatus === "monthly" || item.paymentStatus === "weekly",
+                                paymentStatus: item.paymentStatus,
+                                prevBoxes: Number(item.prevBoxes ?? 0),
+                                products: new Map(),
+                                notes: [],
+                              });
+                            }
+                            const entry = customerMap.get(cid)!;
+                            entry.totalAmt += Number(item.orderAmount ?? 0);
+                            if (item.note) entry.notes.push(item.note);
+                            // 合併品項
+                            const stopProds = (productsByOrder as any[]).filter((p: any) => Number(p.orderId) === Number(item.orderId));
+                            for (const p of stopProds) {
+                              const key = String(p.productId);
+                              if (!entry.products.has(key)) {
+                                entry.products.set(key, { name: p.productName, qty: 0, unit: p.unit || "" });
+                              }
+                              entry.products.get(key)!.qty += Number(p.shippedQty ?? 0);
+                            }
+                          }
+                          const rows = Array.from(customerMap.values()).sort((a, b) => a.firstStopSeq - b.firstStopSeq);
                           const payLabel: Record<string, string> = { monthly: "月結", weekly: "週結" };
-                          return (
-                            <tr key={item.id} style={{borderBottom:"1px solid #ddd", verticalAlign:"top"}}>
-                              <td style={{...tdStyle, textAlign:"center", fontWeight:"700", paddingTop:"7px"}}>{item.stopSequence}</td>
+                          return rows.map((entry, idx) => (
+                            <tr key={entry.customerId} style={{borderBottom:"1px solid #ddd", verticalAlign:"top"}}>
+                              <td style={{...tdStyle, textAlign:"center", fontWeight:"700", paddingTop:"7px"}}>{idx + 1}</td>
                               <td style={{...tdStyle, fontWeight:"600", paddingTop:"7px"}}>
-                                {item.customerName}
-                                {item.customerPhone && <div style={{fontSize:"10px", color:"#666", fontWeight:"400"}}>{item.customerPhone}</div>}
+                                {entry.customerName}
+                                {entry.customerPhone && <div style={{fontSize:"10px", color:"#666", fontWeight:"400"}}>{entry.customerPhone}</div>}
                               </td>
-                              <td style={{...tdStyle, fontSize:"10px", color:"#555", paddingTop:"7px"}}>{item.customerAddress ?? "—"}</td>
+                              <td style={{...tdStyle, fontSize:"10px", color:"#555", paddingTop:"7px"}}>{entry.customerAddress || "—"}</td>
                               <td style={{...tdStyle, paddingTop:"5px", paddingBottom:"5px", fontSize:"11px"}}>
-                                {stopProducts.length > 0 ? (
+                                {entry.products.size > 0 ? (
                                   <div style={{display:"flex", flexWrap:"wrap", gap:"2px 8px"}}>
-                                    {stopProducts.map((p: any, pi: number) => (
+                                    {Array.from(entry.products.values()).map((p, pi) => (
                                       <span key={pi} style={{whiteSpace:"nowrap"}}>
-                                        {p.productName} <strong>{Math.round(Number(p.shippedQty))}</strong>{p.unit || ""}
+                                        {p.name} <strong>{Math.round(p.qty)}</strong>{p.unit}
                                       </span>
                                     ))}
                                   </div>
                                 ) : <span style={{color:"#aaa"}}>—</span>}
                               </td>
                               <td style={{...tdStyle, textAlign:"right", fontWeight:"700", paddingTop:"7px"}}>
-                                {isSettled ? <span style={{color:"#2563eb"}}>{payLabel[item.paymentStatus]}</span> : amt.toLocaleString()}
+                                {entry.isSettled ? <span style={{color:"#2563eb"}}>{payLabel[entry.paymentStatus] ?? entry.paymentStatus}</span> : entry.totalAmt.toLocaleString()}
                               </td>
                               <td style={{...tdStyle, textAlign:"right", paddingTop:"7px", color:"#16a34a"}}>
-                                {isSettled ? "" : "＿＿＿＿"}
+                                {entry.isSettled ? "" : "＿＿＿＿"}
                               </td>
                               <td style={{...tdStyle, textAlign:"right", paddingTop:"7px", color:"#dc2626"}}>
-                                {isSettled ? "" : "＿＿＿＿"}
+                                {entry.isSettled ? "" : "＿＿＿＿"}
                               </td>
-                              <td style={{...tdStyle, textAlign:"center", paddingTop:"7px", color:"#666"}}>{item.prevBoxes ?? "＿"}</td>
+                              <td style={{...tdStyle, textAlign:"center", paddingTop:"7px", color:"#666"}}>{entry.prevBoxes || "＿"}</td>
                               <td style={{...tdStyle, textAlign:"center", paddingTop:"7px", color:"#aaa"}}>＿</td>
                               <td style={{...tdStyle, paddingTop:"7px", fontSize:"10px", color:"#aaa"}}>
-                                {item.note || ""}
+                                {entry.notes.join("；") || ""}
                               </td>
                             </tr>
-                          );
-                        })}
+                          ));
+                        })()}
                       </tbody>
                       <tfoot>
                         <tr style={{borderTop:"2px solid #111", background:"#f9fafb"}}>
@@ -1245,7 +1281,7 @@ export default function DayoneDispatch() {
             <div className="rounded-3xl border border-stone-200/70 bg-white p-4 shadow-[0_12px_24px_rgba(120,53,15,0.05)]">
               <Package className="h-5 w-5 text-amber-600" />
               <p className="mt-5 dayone-kpi-value text-stone-900">
-                {dispatches.reduce((sum: number, dispatch: any) => sum + Number(dispatch.extraBoxes ?? 20), 0)}
+                {dispatches.reduce((sum: number, dispatch: any) => sum + Number(dispatch.extraBoxes ?? 0), 0)}
               </p>
               <p className="mt-1 text-sm text-stone-500">預設備用箱</p>
             </div>

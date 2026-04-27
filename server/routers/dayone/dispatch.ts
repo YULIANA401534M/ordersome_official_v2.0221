@@ -253,6 +253,7 @@ export const dyDispatchRouter = router({
                          JOIN dy_orders o ON o.id=di.orderId
                          WHERE di.dispatchOrderId=do2.id AND o.status='delivered'
                            AND o.cashCollected < o.totalAmount AND o.totalAmount > 0) AS shortfallStops,
+                        (SELECT COALESCE(SUM(qty),0) FROM dy_dispatch_extra_items WHERE dispatchOrderId=do2.id AND tenantId=do2.tenantId) AS extraBoxes,
                         wl.totalCollected AS wlTotalCollected,
                         wl.cashHandedOver AS wlCashHandedOver,
                         wl.handoverNote AS wlHandoverNote
@@ -352,8 +353,17 @@ export const dyDispatchRouter = router({
         pendingReturnsByProduct[Number(row.productId)] = Number(row.returnedQty ?? 0);
       }
 
+      // 備用箱實際登記總量（取代硬寫的預設值）
+      const [extraSumRows] = await client.execute(
+        `SELECT COALESCE(SUM(qty), 0) AS totalExtraBoxes
+         FROM dy_dispatch_extra_items WHERE dispatchOrderId=? AND tenantId=?`,
+        [input.id, input.tenantId]
+      );
+      const totalExtraBoxes = Number((extraSumRows as any[])[0]?.totalExtraBoxes ?? 0);
+
       return {
         ...dispatchOrder,
+        extraBoxes: totalExtraBoxes,
         items: itemRows as any[],
         products: Object.values(productTotals),
         productsByOrder: productRows as any[],
