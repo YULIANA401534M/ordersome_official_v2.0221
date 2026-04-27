@@ -258,19 +258,22 @@ export default function LiffOrder() {
     {
       enabled: appState === "checking" && lineId !== "",
       retry: false,
-      onSuccess(data) {
-        if (data.bound) {
-          setCustomerName(data.customerName ?? "");
-          setAppState("ordering");
-        } else {
-          setAppState("binding");
-        }
-      },
-      onError() {
-        setAppState("binding");
-      },
     }
   );
+
+  useEffect(() => {
+    if (appState !== "checking") return;
+    if (checkBinding.isSuccess) {
+      if (checkBinding.data.bound) {
+        setCustomerName(checkBinding.data.customerName ?? "");
+        setAppState("ordering");
+      } else {
+        setAppState("binding");
+      }
+    } else if (checkBinding.isError) {
+      setAppState("binding");
+    }
+  }, [appState, checkBinding.isSuccess, checkBinding.isError, checkBinding.data]);
 
   // ---------- 錯誤畫面 ----------
   if (liffError) {

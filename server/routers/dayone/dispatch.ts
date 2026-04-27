@@ -99,7 +99,6 @@ export const dyDispatchRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
       const client = (db as any).$client;
-      await ensureDyDispatchSchema(client);
 
       const [orderRows] = await client.execute(
         `SELECT o.*, c.settlementCycle, c.overdueDays, c.address AS customerAddress,
