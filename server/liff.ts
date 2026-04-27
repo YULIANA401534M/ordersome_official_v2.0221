@@ -108,14 +108,16 @@ export const liffRouter = router({
       return { success: true, customerId: matched.id as number, customerName: matched.name as string };
     }),
 
-  // 公開查詢：取得指定租戶所有上架商品（供 LIFF 下單頁使用）
+  // 公開查詢：取得指定租戶所有上架商品，帶入 lineId 後顯示該客戶適用價格
   getProducts: publicProcedure
-    .input(z.object({ tenant: z.string().optional() }))
+    .input(z.object({ tenant: z.string().optional(), lineId: z.string().optional() }))
     .query(async ({ input }) => {
     const tenantId = resolveTenantId(input.tenant);
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const [rows] = await (db as any).$client.execute(
+    const client = (db as any).$client;
+
+    const [rows] = await client.execute(
       `SELECT p.id, p.code, p.name, p.unit, p.defaultPrice, p.imageUrl,
               COALESCE(i.currentQty, -1) AS currentQty
        FROM dy_products p
@@ -124,14 +126,56 @@ export const liffRouter = router({
        ORDER BY p.code`,
       [tenantId]
     );
-    return (rows as any[]).map((r) => ({
-      id: r.id as number,
-      code: r.code as string,
-      name: r.name as string,
-      unit: r.unit as string,
-      defaultPrice: Number(r.defaultPrice),
-      imageUrl: (r.imageUrl as string | null) ?? null,
-      currentQty: Number(r.currentQty), // -1 = 未設定庫存（不限制）, 0 = 補貨中
+    const products = rows as any[];
+
+    // 若帶了 lineId，查出客戶的客製定價與分級定價，覆蓋顯示價格
+    let customerId: number | null = null;
+    let customerLevel: string = "retail";
+
+    if (input.lineId) {
+      const [custRows] = await client.execute(
+        `SELECT id, customerLevel FROM dy_customers WHERE tenantId=? AND lineId=? AND status='active' LIMIT 1`,
+        [tenantId, input.lineId]
+      );
+      const cust = (custRows as any[])[0];
+      if (cust) {
+        customerId = cust.id;
+        customerLevel = cust.customerLevel ?? "retail";
+      }
+    }
+
+    return await Promise.all(products.map(async (r) => {
+      let displayPrice = Number(r.defaultPrice);
+
+      if (customerId !== null) {
+        // 第一優先：客製定價
+        const [cpRows] = await client.execute(
+          `SELECT price FROM dy_customer_prices WHERE tenantId=? AND customerId=? AND productId=? ORDER BY effectiveDate DESC LIMIT 1`,
+          [tenantId, customerId, r.id]
+        );
+        const cp = (cpRows as any[])[0];
+        if (cp) {
+          displayPrice = Number(cp.price);
+        } else {
+          // 第二優先：分級定價
+          const [lpRows] = await client.execute(
+            `SELECT price FROM dy_level_prices WHERE tenantId=? AND level=? AND productId=? ORDER BY effectiveDate DESC LIMIT 1`,
+            [tenantId, customerLevel, r.id]
+          );
+          const lp = (lpRows as any[])[0];
+          if (lp) displayPrice = Number(lp.price);
+        }
+      }
+
+      return {
+        id: r.id as number,
+        code: r.code as string,
+        name: r.name as string,
+        unit: r.unit as string,
+        defaultPrice: displayPrice, // 已套用客製/分級價
+        imageUrl: (r.imageUrl as string | null) ?? null,
+        currentQty: Number(r.currentQty),
+      };
     }));
   }),
 

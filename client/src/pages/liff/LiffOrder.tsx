@@ -317,10 +317,10 @@ export default function LiffOrder() {
     }
   }, [appState, checkBinding.isSuccess, checkBinding.isError, checkBinding.data]);
 
-  // Step 3: 取商品（進入下單頁才啟用）
+  // Step 3: 取商品（進入下單頁才啟用，帶 lineId 讓後端回傳該客戶適用價格）
   const productsQuery = trpc.dayone.liff.getProducts.useQuery(
-    { tenant: config.slug ?? undefined },
-    { enabled: appState === "ordering" }
+    { tenant: config.slug ?? undefined, lineId: lineId || undefined },
+    { enabled: appState === "ordering" && lineId !== "" }
   );
 
   // Step 4: 建立訂單
