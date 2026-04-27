@@ -1,11 +1,12 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Link, useLocation } from "wouter";
-import { ClipboardList, Package, User, Home, BookOpen } from "lucide-react";
+import { ClipboardList, Package, User, Home, BookOpen, Truck } from "lucide-react";
 
 const NAV = [
   { href: "/driver", icon: Home, label: "首頁" },
   { href: "/driver/today", icon: ClipboardList, label: "今日" },
   { href: "/driver/orders", icon: Package, label: "訂單" },
+  { href: "/driver/purchase-receipt", icon: Truck, label: "進貨" },
   { href: "/driver/worklog", icon: BookOpen, label: "日結" },
   { href: "/driver/profile", icon: User, label: "我的" },
 ];

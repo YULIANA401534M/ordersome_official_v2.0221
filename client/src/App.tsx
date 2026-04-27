@@ -129,6 +129,7 @@ const DriverProfile = lazy(() => import("./pages/dayone/driver/DriverProfile"));
 const DriverToday = lazy(() => import("./pages/dayone/driver/DriverToday"));
 const DriverOrderDetail = lazy(() => import("./pages/dayone/driver/DriverOrderDetail"));
 const DriverWorkLog = lazy(() => import("./pages/dayone/driver/DriverWorkLog"));
+const DriverPurchaseReceipt = lazy(() => import("./pages/dayone/driver/DriverPurchaseReceipt"));
 const SuperAdminTenants = lazy(() => import("./pages/dayone/SuperAdminTenants"));
 const SuperAdminModules = lazy(() => import("./pages/dayone/SuperAdminModules"));
 const LiffOrder = lazy(() => import("./pages/liff/LiffOrder"));
@@ -291,6 +292,7 @@ function Router() {
       <Route path="/driver/pickup" component={DriverPickup} />
       <Route path="/driver/done" component={DriverDone} />
       <Route path="/driver/worklog" component={DriverWorkLog} />
+      <Route path="/driver/purchase-receipt" component={DriverPurchaseReceipt} />
       <Route path="/driver/profile" component={DriverProfile} />
       {/* LIFF Routes */}
       <Route path="/liff/order" component={LiffOrder} />

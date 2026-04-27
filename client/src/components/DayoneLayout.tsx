@@ -31,7 +31,7 @@ const NAV_GROUPS = [
       { icon: LayoutDashboard, label: "總覽", path: "/dayone", moduleKey: null },
       { icon: ShoppingCart, label: "訂單管理", path: "/dayone/orders", moduleKey: "delivery" },
       { icon: ClipboardCheck, label: "派車管理", path: "/dayone/dispatch", moduleKey: "dispatch" },
-      { icon: Truck, label: "進貨簽收", path: "/dayone/purchase-receipts", moduleKey: "purchase_receipts" },
+      { icon: Truck, label: "進貨管理", path: "/dayone/purchase-receipts", moduleKey: "purchase_receipts" },
     ],
   },
   {

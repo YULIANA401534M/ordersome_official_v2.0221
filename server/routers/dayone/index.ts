@@ -19,6 +19,7 @@ import { dyDispatchRouter } from "./dispatch";
 import { dyPortalRouter } from "./portal";
 import { dyTenantUsersRouter } from "./tenantUsers";
 import { dayoneSettingsRouter } from "./settings";
+import { dyEggPriceRouter } from "./eggPrice";
 
 export const dayoneRouter = router({
   products: dyProductsRouter,
@@ -41,4 +42,5 @@ export const dayoneRouter = router({
   portal: dyPortalRouter,
   tenantUsers: dyTenantUsersRouter,
   settings: dayoneSettingsRouter,
+  eggPrice: dyEggPriceRouter,
 });
