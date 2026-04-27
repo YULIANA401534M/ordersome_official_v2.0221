@@ -336,7 +336,9 @@ export const dyDispatchRouter = router({
       const scopedDriverId = await resolveDriverScope(client, input.tenantId, ctx.user.id, ctx.user.role ?? "");
 
       const [itemRows] = await client.execute(
-        `SELECT di.*, ddo.dispatchDate, ddo.driverId, o.status AS orderStatus, o.totalAmount, c.settlementCycle, c.overdueDays
+        `SELECT di.*, ddo.dispatchDate, ddo.driverId, o.status AS orderStatus,
+                o.totalAmount, o.customerId AS orderCustomerId, o.deliveryDate AS orderDeliveryDate,
+                c.settlementCycle, c.overdueDays
          FROM dy_dispatch_items di
          LEFT JOIN dy_dispatch_orders ddo ON ddo.id = di.dispatchOrderId
          LEFT JOIN dy_orders o ON di.orderId = o.id
@@ -396,8 +398,6 @@ export const dyDispatchRouter = router({
         );
       }
 
-      // AR 記錄由 driver.updateOrderStatus / orders.confirmDelivery 唯一負責產生
-      // 這裡只同步 dy_orders 的箱數與現金欄位
       if (item.orderId) {
         await client.execute(
           `UPDATE dy_orders
@@ -413,6 +413,23 @@ export const dyDispatchRouter = router({
             input.tenantId,
           ]
         );
+
+        // 同步更新 AR（避免帳務頁與訂單付款狀態不一致）
+        if (item.orderDeliveryDate && item.orderCustomerId) {
+          const dueDate = calcDueDate(
+            item.orderDeliveryDate,
+            item.settlementCycle,
+            item.overdueDays
+          );
+          await upsertArRecord(client, {
+            tenantId: input.tenantId,
+            orderId: Number(item.orderId),
+            customerId: Number(item.orderCustomerId),
+            amount: Number(item.totalAmount ?? 0),
+            paidAmount: Number(input.cashCollected),
+            dueDate,
+          });
+        }
       }
 
       return { success: true, remainBoxes };

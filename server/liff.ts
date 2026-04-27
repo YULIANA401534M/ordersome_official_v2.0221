@@ -384,7 +384,6 @@ export const liffRouter = router({
           totalAmount: Number(order.totalAmount),
           paidAmount: Number(order.paidAmount),
           paymentStatus: order.paymentStatus as string,
-          createdAt: order.createdAt as string,
           items: (itemRows as any[]).map((i) => ({
             productName: i.productName as string,
             unit: i.unit as string,
