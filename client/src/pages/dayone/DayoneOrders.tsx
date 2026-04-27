@@ -113,7 +113,7 @@ export default function DayoneOrders() {
 
   const filtered = (orders as any[] ?? []).filter((o: any) => !search || o.customerName?.includes(search) || o.orderNo?.includes(search));
 
-  function EditableOrderItems({ orderId, colSpan = 7, mobile = false }: { orderId: number; colSpan?: number; mobile?: boolean }) {
+  function EditableOrderItems({ orderId, orderStatus, colSpan = 7, mobile = false }: { orderId: number; orderStatus: string; colSpan?: number; mobile?: boolean }) {
     const utils = trpc.useUtils();
     const { data, isLoading } = trpc.dayone.orders.getWithItems.useQuery({ id: orderId, tenantId: TENANT_ID });
     const [editing, setEditing] = useState(false);
@@ -235,13 +235,18 @@ export default function DayoneOrders() {
                 取消
               </Button>
             </>
-          ) : (
-            <Button size="sm" variant="outline" className="h-7 rounded-xl gap-1 text-xs text-amber-700 border-amber-300 hover:bg-amber-50"
-              onClick={startEdit}>
-              <Pencil className="h-3 w-3" />
-              補填金額 / 修改數量
-            </Button>
-          )}
+          ) : (() => {
+            const locked = ["delivered", "returned", "cancelled"].includes(orderStatus);
+            return locked ? (
+              <span className="text-xs text-stone-400">此訂單狀態（{STATUS_MAP[orderStatus]?.label ?? orderStatus}）不可修改</span>
+            ) : (
+              <Button size="sm" variant="outline" className="h-7 rounded-xl gap-1 text-xs text-amber-700 border-amber-300 hover:bg-amber-50"
+                onClick={startEdit}>
+                <Pencil className="h-3 w-3" />
+                補填金額 / 修改數量
+              </Button>
+            );
+          })()}
         </div>
       </div>
     );
@@ -250,12 +255,12 @@ export default function DayoneOrders() {
     return <tr><td colSpan={colSpan} className="bg-amber-50/40 px-8 py-3">{inner}</td></tr>;
   }
 
-  function MobileOrderItems({ orderId }: { orderId: number }) {
-    return <EditableOrderItems orderId={orderId} mobile />;
+  function MobileOrderItems({ orderId, orderStatus }: { orderId: number; orderStatus: string }) {
+    return <EditableOrderItems orderId={orderId} orderStatus={orderStatus} mobile />;
   }
 
-  function OrderItems({ orderId }: { orderId: number }) {
-    return <EditableOrderItems orderId={orderId} colSpan={7} />;
+  function OrderItems({ orderId, orderStatus }: { orderId: number; orderStatus: string }) {
+    return <EditableOrderItems orderId={orderId} orderStatus={orderStatus} colSpan={7} />;
   }
 
   return (
@@ -549,7 +554,7 @@ export default function DayoneOrders() {
                                 </div>
                               </td>
                             </tr>
-                            {isExpanded && <OrderItems orderId={o.id} />}
+                            {isExpanded && <OrderItems orderId={o.id} orderStatus={o.status} />}
                           </React.Fragment>
                         );
                       })}
@@ -619,7 +624,7 @@ export default function DayoneOrders() {
                         </button>
 
                         {isExpanded && (
-                          <MobileOrderItems orderId={o.id} />
+                          <MobileOrderItems orderId={o.id} orderStatus={o.status} />
                         )}
 
                         <div className="mt-4 space-y-2">

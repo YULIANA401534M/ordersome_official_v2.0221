@@ -103,7 +103,7 @@ export const dyDispatchRouter = router({
                AND di.orderId = o.id
                AND ddo.status IN ('draft', 'printed', 'in_progress', 'pending_handover', 'completed')
            )
-         ORDER BY o.driverId, dist.sortOrder, o.id`,
+         ORDER BY o.driverId, o.customerId, dist.sortOrder, o.id`,
         [input.tenantId, input.dispatchDate]
       );
       const orders = orderRows as any[];
@@ -129,6 +129,11 @@ export const dyDispatchRouter = router({
         let dispatchOrderId: number;
         if ((existingRows as any[]).length > 0) {
           dispatchOrderId = Number((existingRows as any[])[0].id);
+          // 同步更新 routeCode（司機資料可能已更改）
+          await client.execute(
+            `UPDATE dy_dispatch_orders SET routeCode=?, updatedAt=NOW() WHERE id=? AND tenantId=? AND status='draft'`,
+            [routeCode, dispatchOrderId, input.tenantId]
+          );
         } else {
           const [dispatchResult] = await client.execute(
             `INSERT INTO dy_dispatch_orders
