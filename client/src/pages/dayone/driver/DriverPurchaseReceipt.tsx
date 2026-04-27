@@ -332,7 +332,7 @@ export default function DriverPurchaseReceipt() {
             className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none focus:border-amber-400"
           >
             <option value="">選擇牧場...</option>
-            {(suppliers as any[]).filter((s: any) => s.status === "active").map((s: any) => (
+            {(suppliers as any[]).map((s: any) => (
               <option key={Number(s.id)} value={String(s.id)}>{s.name}</option>
             ))}
           </select>
