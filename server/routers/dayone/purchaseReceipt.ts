@@ -45,7 +45,14 @@ export const dyPurchaseReceiptRouter = router({
       sql += " ORDER BY pr.receiptDate DESC LIMIT 50";
 
       const [rows] = await (db as any).$client.execute(sql, params);
-      return rows as any[];
+      return (rows as any[]).map((r) => ({
+        ...r,
+        id: Number(r.id),
+        supplierId: Number(r.supplierId),
+        driverId: Number(r.driverId),
+        totalQty: Number(r.totalQty ?? 0),
+        totalAmount: Number(r.totalAmount ?? 0),
+      }));
     }),
 
   // 2. 取得單一進貨單（管理員）

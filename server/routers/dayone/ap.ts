@@ -45,7 +45,14 @@ export const dyApRouter = router({
       sql += ` ORDER BY ap.dueDate ASC LIMIT 20 OFFSET ${offset}`;
 
       const [rows] = await (db as any).$client.execute(sql, params);
-      return rows as any[];
+      return (rows as any[]).map((r) => ({
+        ...r,
+        id: Number(r.id),
+        supplierId: Number(r.supplierId),
+        purchaseReceiptId: r.purchaseReceiptId != null ? Number(r.purchaseReceiptId) : null,
+        amount: Number(r.amount ?? 0),
+        paidAmount: Number(r.paidAmount ?? 0),
+      }));
     }),
 
   // 本週到期預警數量（sidebar badge 用）
@@ -131,20 +138,35 @@ export const dyApRouter = router({
         params
       );
 
-      return {
-        month: input.month ?? null,
-        overview: (overviewRows as any[])[0] ?? {
-          payableCount: 0,
-          supplierCount: 0,
-          totalAmount: 0,
-          paidAmount: 0,
-          unpaidAmount: 0,
-          paidCount: 0,
-          openCount: 0,
-          overdueCount: 0,
-        },
-        suppliers: supplierRows as any[],
-      };
+      const rawOverview = (overviewRows as any[])[0];
+      const overview = rawOverview
+        ? {
+            payableCount: Number(rawOverview.payableCount ?? 0),
+            supplierCount: Number(rawOverview.supplierCount ?? 0),
+            totalAmount: Number(rawOverview.totalAmount ?? 0),
+            paidAmount: Number(rawOverview.paidAmount ?? 0),
+            unpaidAmount: Number(rawOverview.unpaidAmount ?? 0),
+            paidCount: Number(rawOverview.paidCount ?? 0),
+            openCount: Number(rawOverview.openCount ?? 0),
+            overdueCount: Number(rawOverview.overdueCount ?? 0),
+          }
+        : { payableCount: 0, supplierCount: 0, totalAmount: 0, paidAmount: 0, unpaidAmount: 0, paidCount: 0, openCount: 0, overdueCount: 0 };
+
+      const suppliers = (supplierRows as any[]).map((r) => ({
+        supplierId: Number(r.supplierId),
+        supplierName: r.supplierName,
+        payableCount: Number(r.payableCount ?? 0),
+        receiptCount: Number(r.receiptCount ?? 0),
+        totalAmount: Number(r.totalAmount ?? 0),
+        paidAmount: Number(r.paidAmount ?? 0),
+        unpaidAmount: Number(r.unpaidAmount ?? 0),
+        overdueCount: Number(r.overdueCount ?? 0),
+        firstReceiptDate: r.firstReceiptDate ?? null,
+        lastReceiptDate: r.lastReceiptDate ?? null,
+        latestDueDate: r.latestDueDate ?? null,
+      }));
+
+      return { month: input.month ?? null, overview, suppliers };
     }),
 
   markPaid: dyAdminProcedure
