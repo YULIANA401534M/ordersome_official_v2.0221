@@ -1,0 +1,2085 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>大永系統後台 全面驗收清單</title>
+<style>
+  :root {
+    --bg: oklch(0.97 0.01 80);
+    --bg2: oklch(0.95 0.015 75);
+    --card: oklch(1 0 0);
+    --border: oklch(0.88 0.02 75);
+    --amber: oklch(0.72 0.15 70);
+    --amber-light: oklch(0.95 0.05 80);
+    --amber-dark: oklch(0.55 0.16 65);
+    --text: oklch(0.22 0.02 60);
+    --text2: oklch(0.48 0.02 70);
+    --ok: oklch(0.55 0.15 150);
+    --ok-bg: oklch(0.95 0.05 150);
+    --fail: oklch(0.52 0.18 25);
+    --fail-bg: oklch(0.96 0.04 25);
+    --skip: oklch(0.60 0.01 70);
+    --skip-bg: oklch(0.93 0.01 75);
+    --warn: oklch(0.65 0.14 55);
+    --warn-bg: oklch(0.96 0.05 75);
+    --shadow: 0 2px 12px oklch(0.22 0.02 60 / 0.07);
+    --radius: 14px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 32px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    box-shadow: var(--shadow);
+  }
+
+  header h1 {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+
+  header .sub {
+    font-size: 0.8rem;
+    color: var(--text2);
+  }
+
+  .progress-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+    flex-wrap: wrap;
+  }
+
+  .progress-bar-outer {
+    width: 200px;
+    height: 8px;
+    background: var(--border);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+
+  .progress-bar-inner {
+    height: 100%;
+    background: var(--amber);
+    border-radius: 99px;
+    transition: width 0.3s ease;
+  }
+
+  .progress-label {
+    font-size: 0.8rem;
+    color: var(--text2);
+    white-space: nowrap;
+  }
+
+  .btn-save {
+    background: var(--amber);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 7px 16px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .btn-save:hover { background: var(--amber-dark); }
+
+  /* ── Layout ── */
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 28px 24px 60px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+
+  /* ── Section ── */
+  .section {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .section-header {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .section-header:hover { background: var(--amber-light); }
+
+  .section-icon {
+    font-size: 1.1rem;
+    width: 28px;
+    text-align: center;
+  }
+
+  .section-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    flex: 1;
+  }
+
+  .section-role {
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 99px;
+    background: var(--amber-light);
+    color: var(--amber-dark);
+  }
+
+  .section-stats {
+    font-size: 0.75rem;
+    color: var(--text2);
+    white-space: nowrap;
+  }
+
+  .collapse-icon {
+    font-size: 0.75rem;
+    color: var(--text2);
+    transition: transform 0.2s;
+  }
+
+  .section.collapsed .collapse-icon { transform: rotate(-90deg); }
+  .section.collapsed .section-body { display: none; }
+
+  .section-body {
+    padding: 0;
+  }
+
+  /* ── Group ── */
+  .group {
+    border-bottom: 1px solid var(--border);
+  }
+
+  .group:last-child { border-bottom: none; }
+
+  .group-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text2);
+    padding: 10px 20px 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: oklch(0.98 0.005 80);
+  }
+
+  /* ── Item ── */
+  .item {
+    display: grid;
+    grid-template-columns: 26px 1fr auto;
+    align-items: start;
+    gap: 10px;
+    padding: 11px 20px;
+    border-bottom: 1px solid oklch(0.93 0.01 80);
+    transition: background 0.15s;
+  }
+
+  .item:last-child { border-bottom: none; }
+  .item:hover { background: oklch(0.985 0.008 80); }
+
+  .item.status-ok { background: var(--ok-bg); }
+  .item.status-fail { background: var(--fail-bg); }
+  .item.status-skip { background: var(--skip-bg); }
+  .item.status-warn { background: var(--warn-bg); }
+
+  .item-check {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    border: 2px solid var(--border);
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-top: 1px;
+    transition: all 0.15s;
+  }
+
+  .item-check:checked {
+    background: var(--ok);
+    border-color: var(--ok);
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 10 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 4l3 3 5-6' stroke='white' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 10px;
+  }
+
+  .item-main {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .item-label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  .item-desc {
+    font-size: 0.775rem;
+    color: var(--text2);
+    line-height: 1.5;
+  }
+
+  .item-path {
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 0.72rem;
+    color: var(--amber-dark);
+    background: var(--amber-light);
+    padding: 1px 6px;
+    border-radius: 4px;
+    display: inline-block;
+  }
+
+  .item-tag {
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 5px;
+    display: inline-block;
+    margin-left: 4px;
+  }
+
+  .tag-edge { background: oklch(0.93 0.06 290); color: oklch(0.40 0.10 290); }
+  .tag-critical { background: oklch(0.93 0.06 25); color: oklch(0.45 0.15 25); }
+  .tag-auto { background: oklch(0.93 0.03 200); color: oklch(0.40 0.08 200); }
+
+  /* ── Status select ── */
+  .item-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+    min-width: 120px;
+  }
+
+  .status-select {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 7px;
+    border: 1.5px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    cursor: pointer;
+    width: 100%;
+  }
+
+  .status-select:focus { outline: 2px solid var(--amber); }
+
+  /* ── Note textarea ── */
+  .item-note {
+    width: 100%;
+    font-size: 0.75rem;
+    font-family: inherit;
+    border: 1.5px solid var(--border);
+    border-radius: 7px;
+    padding: 5px 8px;
+    resize: vertical;
+    min-height: 36px;
+    background: oklch(0.99 0.005 80);
+    color: var(--text);
+    line-height: 1.5;
+    transition: border-color 0.2s;
+  }
+
+  .item-note:focus { outline: none; border-color: var(--amber); }
+  .item-note::placeholder { color: var(--text2); }
+
+  /* ── Summary bar ── */
+  .summary {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 14px 20px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+  }
+
+  .summary-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+  }
+
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .dot-ok { background: var(--ok); }
+  .dot-fail { background: var(--fail); }
+  .dot-warn { background: var(--warn); }
+  .dot-skip { background: var(--skip); }
+  .dot-total { background: var(--border); }
+
+  /* ── Export / notes section ── */
+  .global-note-wrap {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+  }
+
+  .global-note-wrap h3 {
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+
+  .global-note {
+    width: 100%;
+    font-size: 0.82rem;
+    font-family: inherit;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    resize: vertical;
+    min-height: 80px;
+    background: oklch(0.99 0.005 80);
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  .global-note:focus { outline: none; border-color: var(--amber); }
+
+  /* ── Save toast ── */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--ok);
+    color: #fff;
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 10px 18px;
+    border-radius: 10px;
+    box-shadow: 0 4px 16px oklch(0.22 0.02 60 / 0.2);
+    display: none;
+    z-index: 9999;
+    animation: fadeup 0.25s ease;
+  }
+
+  @keyframes fadeup {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>大永系統後台 — 全面驗收清單</h1>
+    <div class="sub">版本 v6.71 ｜ 驗收日期：<span id="qa-date"></span>｜ 驗收人：_______________</div>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-bar-outer"><div class="progress-bar-inner" id="progress-bar" style="width:0%"></div></div>
+    <div class="progress-label" id="progress-label">0 / 0</div>
+    <button class="btn-save" onclick="saveAll()">💾 存檔</button>
+    <button class="btn-save" style="background:var(--amber-dark)" onclick="exportReport()">📋 匯出報告</button>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Summary -->
+  <div class="summary" id="summary-bar">
+    <div class="summary-item"><div class="dot dot-ok"></div><span>通過：<strong id="cnt-ok">0</strong></span></div>
+    <div class="summary-item"><div class="dot dot-fail"></div><span>失敗：<strong id="cnt-fail">0</strong></span></div>
+    <div class="summary-item"><div class="dot dot-warn"></div><span>有疑慮：<strong id="cnt-warn">0</strong></span></div>
+    <div class="summary-item"><div class="dot dot-skip"></div><span>略過：<strong id="cnt-skip">0</strong></span></div>
+    <div class="summary-item"><div class="dot dot-total"></div><span>未測：<strong id="cnt-pending">0</strong></span></div>
+    <div class="summary-item" style="margin-left:auto;font-weight:700;color:var(--amber-dark)">完成度：<span id="pct">0%</span></div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       A. 管理員 — 訂單管理
+  ════════════════════════════════════════ -->
+  <div class="section" id="sec-orders">
+    <div class="section-header" onclick="toggleSection('sec-orders')">
+      <div class="section-icon">📋</div>
+      <div class="section-title">A. 訂單管理</div>
+      <div class="section-role">管理員 / 行政</div>
+      <div class="section-stats" id="stats-sec-orders">─</div>
+      <div class="collapse-icon">▾</div>
+    </div>
+    <div class="section-body">
+
+      <div class="group">
+        <div class="group-title">常規情境</div>
+
+        <div class="item" id="item-A01">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">A01 — 手動建立新訂單</div>
+            <div class="item-desc">進入訂單管理，點「新增訂單」，選擇客戶、商品、送貨日期，送出後訂單出現在列表。</div>
+            <div><span class="item-path">/dayone/orders</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-A01')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註（錯誤訊息、截圖說明…）"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-A02">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">A02 — 訂單列表篩選（日期、客戶、司機、狀態）</div>
+            <div class="item-desc">各篩選條件獨立運作，組合篩選結果正確。</div>
+            <div><span class="item-path">/dayone/orders</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-A02')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-A03">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">A03 — 單筆換司機（pending / assigned 狀態）</div>
+            <div class="item-desc">訂單在 pending 或 assigned 時可點換司機，確認後列表立即更新。</div>
+            <div><span class="item-path">/dayone/orders</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-A03')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-A04">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">A04 — 刪除訂單（pending 狀態）</div>
+            <div class="item-desc">確認刪除後訂單從列表消失，相關 pending_returns 未誤刪。</div>
+            <div><span class="item-path">/dayone/orders</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-A04')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-A05">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">A05 — LIFF 訂單列表（liff-orders 頁）</div>
+            <div class="item-desc">LINE 下單的訂單出現在 /dayone/liff-orders，資訊正確。</div>
+            <div><span class="item-path">/dayone/liff-orders</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-A05')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="group-title">邊界 / 例外情境</div>
+
+        <div class="item" id="item-A06">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">A06 — 建訂單超過信用額度<span class="item-tag tag-edge">邊界</span></div>
+            <div class="item-desc">超額時出現 toast 警告，但訂單仍可送出（軟性警示，不阻擋）。</div>
+            <div><span class="item-path">/dayone/orders</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-A06')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-A07">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">A07 — 已派車訂單不可換司機<span class="item-tag tag-edge">邊界</span></div>
+            <div class="item-desc">已派車狀態下換司機按鈕應灰掉或隱藏，操作無效。</div>
+            <div><span class="item-path">/dayone/orders</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-A07')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-A08">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">A08 — 庫存不足時建訂單<span class="item-tag tag-edge">邊界</span></div>
+            <div class="item-desc">庫存為 0 時仍可建訂單（訂單先存），派車時才實際扣庫存，確認系統行為符合預期。</div>
+            <div><span class="item-path">/dayone/orders</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-A08')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       B. 管理員 — 派車工作台
+  ════════════════════════════════════════ -->
+  <div class="section" id="sec-dispatch">
+    <div class="section-header" onclick="toggleSection('sec-dispatch')">
+      <div class="section-icon">🚛</div>
+      <div class="section-title">B. 派車工作台</div>
+      <div class="section-role">管理員 / 行政</div>
+      <div class="section-stats" id="stats-sec-dispatch">─</div>
+      <div class="collapse-icon">▾</div>
+    </div>
+    <div class="section-body">
+
+      <div class="group">
+        <div class="group-title">常規情境</div>
+
+        <div class="item" id="item-B01">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">B01 — 生成派車單<span class="item-tag tag-critical">關鍵</span></div>
+            <div class="item-desc">選擇日期與司機，點「生成派車單」，今日訂單被合併成派車單，狀態變 draft。</div>
+            <div><span class="item-path">/dayone/dispatch</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-B01')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-B02">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">B02 — 列印派車單有內容<span class="item-tag tag-critical">關鍵</span></div>
+            <div class="item-desc">點列印後開啟列印預覽，確認客戶名、商品品項、數量、地址均完整顯示，無空白。</div>
+            <div><span class="item-path">/dayone/dispatch</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-B02')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-B03">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">B03 — 列印後庫存扣減<span class="item-tag tag-critical">關鍵</span><span class="item-tag tag-auto">系統自動</span></div>
+            <div class="item-desc">列印後到 /dayone/inventory 確認庫存已扣減，數字與派車單品項一致，不出現負數。</div>
+            <div><span class="item-path">/dayone/dispatch → /dayone/inventory</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-B03')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-B04">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">B04 — 手動加站（manualAddStop）</div>
+            <div class="item-desc">已有派車單後補加一筆停靠點，新站出現在派車單內容中。</div>
+            <div><span class="item-path">/dayone/dispatch</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-B04')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="group-title">邊界 / 例外情境</div>
+
+        <div class="item" id="item-B05">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">B05 — 重複生成派車單防護<span class="item-tag tag-edge">邊界</span></div>
+            <div class="item-desc">同一天同一司機重複點「生成」，系統不應產生重複派車單（已有 draft/printed/in_progress/pending_handover/completed 狀態時排除）。</div>
+            <div><span class="item-path">/dayone/dispatch</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-B05')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-B06">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">B06 — 無訂單日生成派車單<span class="item-tag tag-edge">邊界</span></div>
+            <div class="item-desc">選一個沒有訂單的日期，生成按鈕後系統不崩潰，給出合適提示。</div>
+            <div><span class="item-path">/dayone/dispatch</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-B06')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       C. 司機端
+  ════════════════════════════════════════ -->
+  <div class="section" id="sec-driver">
+    <div class="section-header" onclick="toggleSection('sec-driver')">
+      <div class="section-icon">🧑‍✈️</div>
+      <div class="section-title">C. 司機端</div>
+      <div class="section-role">司機</div>
+      <div class="section-stats" id="stats-sec-driver">─</div>
+      <div class="collapse-icon">▾</div>
+    </div>
+    <div class="section-body">
+
+      <div class="group">
+        <div class="group-title">常規情境</div>
+
+        <div class="item" id="item-C01">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">C01 — 今日任務列表<span class="item-tag tag-critical">關鍵</span></div>
+            <div class="item-desc">司機登入後 /driver/today 顯示今日派車單所有停靠點，客戶、品項、地址正確。</div>
+            <div><span class="item-path">/driver/today</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-C01')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-C02">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">C02 — 標記送達<span class="item-tag tag-critical">關鍵</span></div>
+            <div class="item-desc">進入訂單詳情，點送達，狀態更新為 delivered，AR 應收自動建立。</div>
+            <div><span class="item-path">/driver/order/:id</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-C02')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-C03">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">C03 — 現金收款<span class="item-tag tag-critical">關鍵</span></div>
+            <div class="item-desc">送達後填入現收金額，確認後 dy_orders.paidAmount 與 dy_ar_records 同步更新，/dayone/ar 付款狀態一致。</div>
+            <div><span class="item-path">/driver/order/:id → /dayone/ar</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-C03')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-C04">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">C04 — 客戶簽名</div>
+            <div class="item-desc">簽名板可正常手寫，上傳後簽名圖顯示在訂單詳情（Cloudflare R2）。</div>
+            <div><span class="item-path">/driver/order/:id</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-C04')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-C05">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">C05 — 剩貨回報（worklog）<span class="item-tag tag-critical">關鍵</span></div>
+            <div class="item-desc">司機在 /driver/worklog 填入剩貨品項與數量，送出後 dy_pending_returns 出現待驗紀錄。</div>
+            <div><span class="item-path">/driver/worklog</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-C05')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-C06">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">C06 — 日結（每張派車單各自日結）</div>
+            <div class="item-desc">worklog 日結按鈕可依派車單分別結帳，現金、剩貨回庫數字正確。</div>
+            <div><span class="item-path">/driver/worklog</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-C06')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-C07">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">C07 — 撿貨唯讀路線</div>
+            <div class="item-desc">/driver/pickup 顯示今日撿貨清單，只能查看不能修改。</div>
+            <div><span class="item-path">/driver/pickup</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-C07')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="group-title">邊界 / 例外情境</div>
+
+        <div class="item" id="item-C08">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">C08 — 無任務日進入 /driver/today<span class="item-tag tag-edge">邊界</span></div>
+            <div class="item-desc">今日無派車單時顯示空狀態提示，不崩潰。</div>
+            <div><span class="item-path">/driver/today</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-C08')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-C09">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">C09 — 部分付款（現收金額 ≠ 應收金額）<span class="item-tag tag-edge">邊界</span></div>
+            <div class="item-desc">填入部分金額，AR 狀態應為 partial，剩餘未收金額正確。</div>
+            <div><span class="item-path">/driver/order/:id → /dayone/ar</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-C09')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-C10">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">C10 — 司機無法看到其他司機的訂單<span class="item-tag tag-edge">邊界</span></div>
+            <div class="item-desc">司機 A 登入後看不到司機 B 的派車任務。</div>
+            <div><span class="item-path">/driver/today</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-C10')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       D. 進貨 / 庫存
+  ════════════════════════════════════════ -->
+  <div class="section" id="sec-inventory">
+    <div class="section-header" onclick="toggleSection('sec-inventory')">
+      <div class="section-icon">📦</div>
+      <div class="section-title">D. 進貨 & 庫存管理</div>
+      <div class="section-role">管理員 / 倉管</div>
+      <div class="section-stats" id="stats-sec-inventory">─</div>
+      <div class="collapse-icon">▾</div>
+    </div>
+    <div class="section-body">
+
+      <div class="group">
+        <div class="group-title">進貨流程</div>
+
+        <div class="item" id="item-D01">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">D01 — 建立進貨收貨單</div>
+            <div class="item-desc">選供應商、填品項數量，送出後出現在進貨列表，狀態為 pending。</div>
+            <div><span class="item-path">/dayone/purchase-receipts</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-D01')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-D02">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">D02 — 供應商簽名 → AP 建立<span class="item-tag tag-critical">關鍵</span><span class="item-tag tag-auto">系統自動</span></div>
+            <div class="item-desc">完成供應商簽名後，狀態變 signed，dy_ap_records 新增一筆應付，庫存此時不動。</div>
+            <div><span class="item-path">/dayone/purchase-receipts → /dayone/ar (AP tab)</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-D02')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-D03">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">D03 — 管理員確認入倉 → 庫存增加<span class="item-tag tag-critical">關鍵</span><span class="item-tag tag-auto">系統自動</span></div>
+            <div class="item-desc">管理員點確認入倉，狀態變 warehoused，dy_inventory.currentQty 增加，dy_stock_movements 有紀錄。</div>
+            <div><span class="item-path">/dayone/purchase-receipts → /dayone/inventory</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-D03')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="group-title">庫存 & 回庫流程</div>
+
+        <div class="item" id="item-D04">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">D04 — 庫存三段式視圖正確</div>
+            <div class="item-desc">可賣庫存（currentQty）、待入倉進貨、回庫待驗三欄數字獨立且正確。</div>
+            <div><span class="item-path">/dayone/inventory</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-D04')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-D05">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">D05 — 管理員確認回庫 → 可賣庫存回補<span class="item-tag tag-critical">關鍵</span></div>
+            <div class="item-desc">在回庫待驗列表點確認，dy_pending_returns 狀態更新，dy_inventory.currentQty 增加。</div>
+            <div><span class="item-path">/dayone/inventory</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-D05')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-D06">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">D06 — 手動庫存調整</div>
+            <div class="item-desc">手動填入原因與絕對值，調整後 dy_inventory_logs 有紀錄，currentQty 正確。</div>
+            <div><span class="item-path">/dayone/inventory</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-D06')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="group-title">邊界情境</div>
+
+        <div class="item" id="item-D07">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">D07 — 供應商簽名後庫存未動（驗規則）<span class="item-tag tag-edge">邊界</span></div>
+            <div class="item-desc">簽名後立即到 /dayone/inventory 確認庫存數字沒有改變，等入倉確認後才動。</div>
+            <div><span class="item-path">/dayone/purchase-receipts → /dayone/inventory</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-D07')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-D08">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">D08 — 庫存不負數保護<span class="item-tag tag-edge">邊界</span></div>
+            <div class="item-desc">列印派車單時庫存不足，currentQty 最低降至 0（GREATEST(0, currentQty - qty)），不出現負數。</div>
+            <div><span class="item-path">/dayone/inventory</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-D08')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       E. 帳務 (AR / AP)
+  ════════════════════════════════════════ -->
+  <div class="section" id="sec-ar">
+    <div class="section-header" onclick="toggleSection('sec-ar')">
+      <div class="section-icon">💰</div>
+      <div class="section-title">E. 帳務（AR 應收 / AP 應付）</div>
+      <div class="section-role">管理員</div>
+      <div class="section-stats" id="stats-sec-ar">─</div>
+      <div class="collapse-icon">▾</div>
+    </div>
+    <div class="section-body">
+
+      <div class="group">
+        <div class="group-title">AR 應收</div>
+
+        <div class="item" id="item-E01">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">E01 — 送達後 AR 自動建立<span class="item-tag tag-critical">關鍵</span><span class="item-tag tag-auto">系統自動</span></div>
+            <div class="item-desc">司機標記送達後，/dayone/ar 的應收 tab 出現對應 AR 筆數，金額 = 訂單總金額。</div>
+            <div><span class="item-path">/dayone/ar</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-E01')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-E02">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">E02 — 現收後 AR 同步（updateDispatchItem 修復驗證）<span class="item-tag tag-critical">關鍵</span></div>
+            <div class="item-desc">司機在派車工作台填現收金額後，帳務頁 AR 應收金額同步更新（v6.71 bug fix）。</div>
+            <div><span class="item-path">/dayone/ar</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-E02')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-E03">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">E03 — 管理員手動標記收款</div>
+            <div class="item-desc">AR 列表點「標記已收」，狀態變 paid，訂單 paymentStatus 同步。</div>
+            <div><span class="item-path">/dayone/ar</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-E03')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-E04">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">E04 — 月結客戶 AR 狀態</div>
+            <div class="item-desc">月結客戶送達後 AR 狀態應為 unpaid（不自動收現），月底對帳單可列印。</div>
+            <div><span class="item-path">/dayone/ar</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-E04')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-E05">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">E05 — 月結對帳單日期正確<span class="item-tag tag-edge">邊界</span></div>
+            <div class="item-desc">月底最後一天的 AR 對帳日期計算正確（大月31日、小月28/29/30日）。</div>
+            <div><span class="item-path">/dayone/ar</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-E05')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="group-title">AP 應付</div>
+
+        <div class="item" id="item-E06">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">E06 — AP 列表顯示<span class="item-tag tag-critical">關鍵</span></div>
+            <div class="item-desc">/dayone/ar 的 AP tab 顯示進貨簽名後建立的應付紀錄，金額與進貨單一致。</div>
+            <div><span class="item-path">/dayone/ar (AP tab)</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-E06')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-E07">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">E07 — 司機日報 tab</div>
+            <div class="item-desc">司機日報 tab 顯示每日收現總計，與 worklog 日結數字一致。</div>
+            <div><span class="item-path">/dayone/ar (司機日報 tab)</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-E07')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       F. 客戶管理 & 定價
+  ════════════════════════════════════════ -->
+  <div class="section" id="sec-customers">
+    <div class="section-header" onclick="toggleSection('sec-customers')">
+      <div class="section-icon">👥</div>
+      <div class="section-title">F. 客戶管理 & 定價</div>
+      <div class="section-role">管理員</div>
+      <div class="section-stats" id="stats-sec-customers">─</div>
+      <div class="collapse-icon">▾</div>
+    </div>
+    <div class="section-body">
+
+      <div class="group">
+        <div class="group-title">客戶資料</div>
+
+        <div class="item" id="item-F01">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">F01 — 新增 / 編輯客戶</div>
+            <div class="item-desc">填入客戶名、電話、地址、結帳方式、預設司機、送貨頻率，儲存後資料正確。</div>
+            <div><span class="item-path">/dayone/customers</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-F01')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-F02">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">F02 — 信用額度設定</div>
+            <div class="item-desc">設定信用額度後，建訂單超額時 toast 警告出現（軟性）。</div>
+            <div><span class="item-path">/dayone/customers</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-F02')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="group-title">三段式定價</div>
+
+        <div class="item" id="item-F03">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">F03 — 客製定價（🏷 按鈕）</div>
+            <div class="item-desc">客戶管理頁點🏷按鈕，新增客製價後該客戶下單價格套用客製價，歷史紀錄保留。</div>
+            <div><span class="item-path">/dayone/customers</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-F03')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-F04">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">F04 — 分級定價管理</div>
+            <div class="item-desc">/dayone/level-prices 可設定 retail / store / supplier 各等級價格，儲存後生效。</div>
+            <div><span class="item-path">/dayone/level-prices</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-F04')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-F05">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">F05 — 定價優先序正確（客製 > 分級 > 主檔）<span class="item-tag tag-critical">關鍵</span></div>
+            <div class="item-desc">同時設定客製價與分級價時，LIFF 及後台建單一律以客製價優先，其次分級，最後主檔。</div>
+            <div><span class="item-path">/dayone/orders + LIFF</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-F05')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       G. LIFF (客戶 LINE 端)
+  ════════════════════════════════════════ -->
+  <div class="section" id="sec-liff">
+    <div class="section-header" onclick="toggleSection('sec-liff')">
+      <div class="section-icon">📱</div>
+      <div class="section-title">G. LIFF 客戶 LINE 端</div>
+      <div class="section-role">客戶</div>
+      <div class="section-stats" id="stats-sec-liff">─</div>
+      <div class="collapse-icon">▾</div>
+    </div>
+    <div class="section-body">
+
+      <div class="group">
+        <div class="group-title">首次綁定</div>
+
+        <div class="item" id="item-G01">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">G01 — 首次開啟 LIFF → 輸入手機號碼綁定<span class="item-tag tag-critical">關鍵</span></div>
+            <div class="item-desc">未綁定的 LINE 帳號進入 LIFF 出現綁定畫面，輸入手機號碼後比對 dy_customers.phone，成功綁定 lineId。</div>
+            <div><span class="item-path">LIFF 2009700774-rWyJ27md</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-G01')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-G02">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">G02 — 手機號碼不存在時的錯誤提示<span class="item-tag tag-edge">邊界</span></div>
+            <div class="item-desc">輸入未建檔的手機號碼，顯示友善錯誤提示，不崩潰。</div>
+            <div><span class="item-path">LIFF 綁定頁</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-G02')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="group-title">下單流程</div>
+
+        <div class="item" id="item-G03">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">G03 — 商品列表顯示正確定價<span class="item-tag tag-critical">關鍵</span></div>
+            <div class="item-desc">已綁定客戶的 LIFF 商品列表顯示客製定價（無客製則分級，再無則主檔），非 defaultPrice。</div>
+            <div><span class="item-path">LIFF 下單頁</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-G03')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-G04">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">G04 — 庫存不足商品反灰</div>
+            <div class="item-desc">庫存為 0 的商品顯示反灰 / 無法加入購物車。</div>
+            <div><span class="item-path">LIFF 下單頁</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-G04')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-G05">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">G05 — 08:00 截單 + 配送日推算<span class="item-tag tag-critical">關鍵</span></div>
+            <div class="item-desc">08:00 前下單配送日為今日（依送貨頻率），超過 08:00 則推至下一個送貨日，頁面顯示正確日期。</div>
+            <div><span class="item-path">LIFF 下單頁</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-G05')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-G06">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">G06 — 下單成功畫面有明細</div>
+            <div class="item-desc">送出訂單後成功畫面顯示品項、數量、總金額，配送日期正確。</div>
+            <div><span class="item-path">LIFF 下單頁</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-G06')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-G07">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">G07 — LIFF 下單 → 後台訂單出現<span class="item-tag tag-critical">關鍵</span></div>
+            <div class="item-desc">客戶透過 LINE 下單後，管理員在 /dayone/liff-orders 或 /dayone/orders 看得到這筆訂單。</div>
+            <div><span class="item-path">LIFF → /dayone/liff-orders</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-G07')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="group-title">訂單查詢（my-orders）</div>
+
+        <div class="item" id="item-G08">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">G08 — 客戶查看自己的歷史訂單<span class="item-tag tag-critical">關鍵</span></div>
+            <div class="item-desc">LIFF 訂單查詢頁（LIFF ID: 2009700774-0nJKIzne）只顯示該 lineId 的訂單，切換單日/區間正常。</div>
+            <div><span class="item-path">LIFF 2009700774-0nJKIzne</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-G08')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-G09">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">G09 — 每筆訂單明細展開 + 付款狀態</div>
+            <div class="item-desc">點展開顯示品項明細，付款狀態（未付/部分/已付）顯示正確。</div>
+            <div><span class="item-path">LIFF 訂單查詢頁</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-G09')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       H. 商品主檔
+  ════════════════════════════════════════ -->
+  <div class="section" id="sec-products">
+    <div class="section-header" onclick="toggleSection('sec-products')">
+      <div class="section-icon">🥚</div>
+      <div class="section-title">H. 商品主檔</div>
+      <div class="section-role">管理員</div>
+      <div class="section-stats" id="stats-sec-products">─</div>
+      <div class="collapse-icon">▾</div>
+    </div>
+    <div class="section-body">
+
+      <div class="group">
+        <div class="group-title">常規情境</div>
+
+        <div class="item" id="item-H01">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">H01 — 新增 / 編輯商品</div>
+            <div class="item-desc">填入品名、單位、主檔價，儲存後出現在列表，LIFF 商品選單可看到。</div>
+            <div><span class="item-path">/dayone/products</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-H01')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-H02">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">H02 — 商品圖片上傳（imageUrl）</div>
+            <div class="item-desc">上傳圖片後儲存，LIFF 商品列表顯示圖片，imageUrl 存入 dy_products。</div>
+            <div><span class="item-path">/dayone/products → LIFF</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-H02')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-H03">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">H03 — 停用商品不顯示在 LIFF</div>
+            <div class="item-desc">將商品 isActive 設為 false，LIFF 商品列表不再顯示該品項。</div>
+            <div><span class="item-path">/dayone/products → LIFF</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-H03')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       I. 整體端對端完整流程
+  ════════════════════════════════════════ -->
+  <div class="section" id="sec-e2e">
+    <div class="section-header" onclick="toggleSection('sec-e2e')">
+      <div class="section-icon">🔁</div>
+      <div class="section-title">I. 完整端對端流程驗收</div>
+      <div class="section-role">全角色</div>
+      <div class="section-stats" id="stats-sec-e2e">─</div>
+      <div class="collapse-icon">▾</div>
+    </div>
+    <div class="section-body">
+
+      <div class="group">
+        <div class="group-title">一日完整作業流</div>
+
+        <div class="item" id="item-I01">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">I01 — 建訂單 → 生成派車單 → 列印有內容<span class="item-tag tag-critical">關鍵</span></div>
+            <div class="item-desc">管理員建訂單、生成派車、列印，確認列印內容完整。</div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-I01')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-I02">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">I02 — 司機送達 → AR 應收出現<span class="item-tag tag-critical">關鍵</span></div>
+            <div class="item-desc">司機標記送達，/dayone/ar 的應收立即出現，金額正確。</div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-I02')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-I03">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">I03 — 司機收現 → 付款狀態同步<span class="item-tag tag-critical">關鍵</span></div>
+            <div class="item-desc">填現收後 dy_orders.paidAmount、dy_ar_records.paidAmount、paymentStatus 三者一致。</div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-I03')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-I04">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">I04 — 剩貨回庫 → 管理員確認 → 庫存增加<span class="item-tag tag-critical">關鍵</span></div>
+            <div class="item-desc">司機回報剩貨、管理員確認後，dy_inventory.currentQty 增加正確數量。</div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-I04')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-I05">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">I05 — 進貨簽收 → AP 出現 → 確認入倉 → 庫存增加<span class="item-tag tag-critical">關鍵</span></div>
+            <div class="item-desc">建進貨單、完成供應商簽名後 AP 出現，管理員確認入倉後庫存增加，AP 金額正確。</div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-I05')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="group-title">LIFF 完整鏈路</div>
+
+        <div class="item" id="item-I06">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">I06 — 客戶 LINE 下單 → 派車 → 送達 → AR → 收款<span class="item-tag tag-critical">關鍵</span></div>
+            <div class="item-desc">從 LINE LIFF 下單起，跑完整個流程到帳務收款，每個環節均正確。</div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-I06')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       J. 系統儀表板 & 供應商
+  ════════════════════════════════════════ -->
+  <div class="section" id="sec-misc">
+    <div class="section-header" onclick="toggleSection('sec-misc')">
+      <div class="section-icon">🏠</div>
+      <div class="section-title">J. 儀表板 & 供應商管理</div>
+      <div class="section-role">管理員</div>
+      <div class="section-stats" id="stats-sec-misc">─</div>
+      <div class="collapse-icon">▾</div>
+    </div>
+    <div class="section-body">
+
+      <div class="group">
+        <div class="group-title">常規情境</div>
+
+        <div class="item" id="item-J01">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">J01 — 今日儀表板數字</div>
+            <div class="item-desc">/dayone 顯示今日訂單數、待派車、應收總額等 KPI，數字與後台查詢一致。</div>
+            <div><span class="item-path">/dayone</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-J01')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-J02">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">J02 — 供應商管理（新增 / 編輯）</div>
+            <div class="item-desc">/dayone/purchase 可新增或編輯供應商資料，儲存後資料正確。</div>
+            <div><span class="item-path">/dayone/purchase</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-J02')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+
+        <div class="item" id="item-J03">
+          <input type="checkbox" class="item-check" onchange="onCheck(this)">
+          <div class="item-main">
+            <div class="item-label">J03 — 登入 / 登出 & 角色守衛</div>
+            <div class="item-desc">管理員、司機各自只能看到自己角色的頁面，直接輸入對方 URL 被擋回登入頁。</div>
+            <div><span class="item-path">全站</span></div>
+          </div>
+          <div class="item-controls">
+            <select class="status-select" onchange="onStatus(this,'item-J03')">
+              <option value="">— 未測 —</option>
+              <option value="ok">✅ 通過</option>
+              <option value="fail">❌ 失敗</option>
+              <option value="warn">⚠️ 有疑慮</option>
+              <option value="skip">⏭ 略過</option>
+            </select>
+            <textarea class="item-note" placeholder="備註…"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Global note -->
+  <div class="global-note-wrap">
+    <h3>整體驗收備註 / 待修清單</h3>
+    <textarea class="global-note" id="global-note" placeholder="在這裡記錄整體觀察、跨頁面的問題、或需要追蹤的項目…"></textarea>
+  </div>
+
+</div>
+
+<div class="toast" id="toast">已存檔 ✓</div>
+
+<script>
+// ── 初始化 ──────────────────────────────────────
+const SAVE_KEY = 'dayone_qa_v671';
+
+document.getElementById('qa-date').textContent = new Date().toLocaleDateString('zh-TW');
+
+// 取得所有 item id
+function getAllItemIds() {
+  return Array.from(document.querySelectorAll('.item[id]')).map(el => el.id);
+}
+
+// ── 載入存檔 ────────────────────────────────────
+function loadSave() {
+  const raw = localStorage.getItem(SAVE_KEY);
+  if (!raw) return;
+  try {
+    const data = JSON.parse(raw);
+    // global note
+    if (data.globalNote !== undefined) {
+      document.getElementById('global-note').value = data.globalNote;
+    }
+    // items
+    for (const id of getAllItemIds()) {
+      if (!data[id]) continue;
+      const el = document.getElementById(id);
+      if (!el) continue;
+      const { checked, status, note } = data[id];
+      el.querySelector('.item-check').checked = !!checked;
+      const sel = el.querySelector('.status-select');
+      sel.value = status || '';
+      el.querySelector('.item-note').value = note || '';
+      applyStatus(el, status);
+    }
+  } catch(e) {}
+  updateAll();
+}
+
+// ── 儲存 ────────────────────────────────────────
+function saveAll() {
+  const data = { globalNote: document.getElementById('global-note').value };
+  for (const id of getAllItemIds()) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    data[id] = {
+      checked: el.querySelector('.item-check').checked,
+      status: el.querySelector('.status-select').value,
+      note: el.querySelector('.item-note').value,
+    };
+  }
+  localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+  const toast = document.getElementById('toast');
+  toast.style.display = 'block';
+  setTimeout(() => { toast.style.display = 'none'; }, 2000);
+}
+
+// ── 自動存 ──────────────────────────────────────
+document.addEventListener('change', () => saveAll());
+document.addEventListener('input', () => saveAll());
+
+// ── 狀態更新 ────────────────────────────────────
+function applyStatus(el, status) {
+  el.classList.remove('status-ok','status-fail','status-skip','status-warn');
+  if (status) el.classList.add('status-' + status);
+}
+
+function onStatus(sel, itemId) {
+  const el = document.getElementById(itemId);
+  applyStatus(el, sel.value);
+  // 自動打勾（ok/fail/warn/skip 都算測過）
+  if (sel.value) el.querySelector('.item-check').checked = true;
+  updateAll();
+}
+
+function onCheck(cb) {
+  updateAll();
+}
+
+// ── 更新統計 ────────────────────────────────────
+function updateAll() {
+  const ids = getAllItemIds();
+  let ok=0, fail=0, warn=0, skip=0, pending=0;
+
+  for (const id of ids) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    const v = el.querySelector('.status-select').value;
+    if (v === 'ok') ok++;
+    else if (v === 'fail') fail++;
+    else if (v === 'warn') warn++;
+    else if (v === 'skip') skip++;
+    else pending++;
+  }
+
+  const total = ids.length;
+  const done = ok + fail + warn + skip;
+  const pct = total ? Math.round(done / total * 100) : 0;
+
+  document.getElementById('cnt-ok').textContent = ok;
+  document.getElementById('cnt-fail').textContent = fail;
+  document.getElementById('cnt-warn').textContent = warn;
+  document.getElementById('cnt-skip').textContent = skip;
+  document.getElementById('cnt-pending').textContent = pending;
+  document.getElementById('pct').textContent = pct + '%';
+  document.getElementById('progress-label').textContent = done + ' / ' + total;
+  document.getElementById('progress-bar').style.width = pct + '%';
+
+  // per-section stats
+  const sections = document.querySelectorAll('.section[id]');
+  sections.forEach(sec => {
+    const items = sec.querySelectorAll('.item[id]');
+    let s_ok=0, s_fail=0, s_warn=0, s_skip=0, s_p=0;
+    items.forEach(item => {
+      const v = item.querySelector('.status-select').value;
+      if (v==='ok') s_ok++;
+      else if (v==='fail') s_fail++;
+      else if (v==='warn') s_warn++;
+      else if (v==='skip') s_skip++;
+      else s_p++;
+    });
+    const statsEl = document.getElementById('stats-' + sec.id);
+    if (statsEl) {
+      const parts = [];
+      if (s_ok) parts.push('✅' + s_ok);
+      if (s_fail) parts.push('❌' + s_fail);
+      if (s_warn) parts.push('⚠️' + s_warn);
+      if (s_skip) parts.push('⏭' + s_skip);
+      if (s_p) parts.push('○' + s_p);
+      statsEl.textContent = parts.join(' ');
+    }
+  });
+}
+
+// ── 展開/收合 ───────────────────────────────────
+function toggleSection(id) {
+  document.getElementById(id).classList.toggle('collapsed');
+}
+
+// ── 匯出報告 ────────────────────────────────────
+function exportReport() {
+  const ids = getAllItemIds();
+  const lines = ['大永系統後台驗收報告', '========================', '日期：' + new Date().toLocaleString('zh-TW'), ''];
+
+  const groups = {};
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    const section = el.closest('.section');
+    const sTitle = section.querySelector('.section-title').textContent.trim();
+    if (!groups[sTitle]) groups[sTitle] = [];
+    const label = el.querySelector('.item-label').textContent.trim();
+    const status = el.querySelector('.status-select').value || '未測';
+    const note = el.querySelector('.item-note').value.trim();
+    const statusLabel = { ok:'✅ 通過', fail:'❌ 失敗', warn:'⚠️ 有疑慮', skip:'⏭ 略過', '':'○ 未測' }[status] || status;
+    groups[sTitle].push(`  ${statusLabel}  ${label}${note ? '\n    備註：' + note : ''}`);
+  });
+
+  for (const [sec, items] of Object.entries(groups)) {
+    lines.push('【' + sec + '】');
+    lines.push(...items);
+    lines.push('');
+  }
+
+  const globalNote = document.getElementById('global-note').value.trim();
+  if (globalNote) {
+    lines.push('【整體備註】');
+    lines.push(globalNote);
+  }
+
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'dayone-qa-report-' + new Date().toISOString().slice(0,10) + '.txt';
+  a.click();
+}
+
+// ── 啟動 ────────────────────────────────────────
+loadSave();
+updateAll();
+</script>
+</body>
+</html>

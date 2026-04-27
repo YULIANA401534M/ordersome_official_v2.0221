@@ -24,7 +24,7 @@ export const dyApRouter = router({
 
       const offset = (input.page - 1) * 20;
       let sql = `SELECT ap.*, s.name AS supplierName,
-                        pr.receiptDate, pr.receiptNo
+                        pr.receiptDate
                  FROM dy_ap_records ap
                  JOIN dy_suppliers s ON ap.supplierId = s.id
                  LEFT JOIN dy_purchase_receipts pr ON ap.purchaseReceiptId = pr.id

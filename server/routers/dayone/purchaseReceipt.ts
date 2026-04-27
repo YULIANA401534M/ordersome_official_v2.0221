@@ -91,7 +91,7 @@ export const dyPurchaseReceiptRouter = router({
             productId: z.number(),
             name: z.string(),
             qty: z.number().positive(),
-            unitPrice: z.number().positive(),
+            unitPrice: z.number().min(0),
           })
         ),
         anomalyNote: z.string().optional(),

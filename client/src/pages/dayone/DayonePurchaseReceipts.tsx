@@ -102,6 +102,70 @@ const receiptStatusTone: Record<string, { label: string; className: string }> = 
   anomaly: { label: "異常", className: "bg-red-100 text-red-700" },
 };
 
+function printReceiptWindow(data: ReceiptMeta & { items: ReceiptItem[]; signatureUrl: string }) {
+  const totalQty = data.items.filter((i) => Number(i.qty) > 0).reduce((sum, i) => sum + Number(i.qty), 0);
+  const totalAmount = data.items.filter((i) => Number(i.qty) > 0).reduce((sum, i) => sum + Number(i.qty) * Number(i.unitPrice), 0);
+  const itemRows = data.items
+    .filter((i) => Number(i.qty) > 0)
+    .map(
+      (item) =>
+        `<tr>
+          <td style="padding:8px 12px;border-top:1px solid #e7e5e4">${item.name}</td>
+          <td style="padding:8px 12px;border-top:1px solid #e7e5e4;text-align:right">${item.qty} 箱</td>
+          <td style="padding:8px 12px;border-top:1px solid #e7e5e4;text-align:right">NT$ ${Number(item.unitPrice).toLocaleString("zh-TW")}</td>
+          <td style="padding:8px 12px;border-top:1px solid #e7e5e4;text-align:right;font-weight:600">NT$ ${(Number(item.qty) * Number(item.unitPrice)).toLocaleString("zh-TW")}</td>
+        </tr>`
+    )
+    .join("");
+  const sigHtml = data.signatureUrl
+    ? `<div style="margin-top:20px;border:1px solid #e7e5e4;border-radius:8px;padding:16px">
+        <p style="font-size:11px;color:#78716c;margin:0 0 10px">供應商簽名</p>
+        <img src="${data.signatureUrl}" style="max-height:120px;border:1px solid #e7e5e4;border-radius:6px;background:#fff" />
+       </div>`
+    : "";
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>進貨簽收單</title>
+    <style>
+      body{font-family:system-ui,-apple-system,sans-serif;font-size:13px;color:#1c1917;padding:24px;max-width:680px;margin:0 auto}
+      h1{font-size:18px;font-weight:700;margin:0 0 20px}
+      .meta{display:grid;grid-template-columns:1fr 1fr;gap:12px;background:#fafaf9;border:1px solid #e7e5e4;border-radius:8px;padding:16px;margin-bottom:20px}
+      .meta-label{font-size:11px;color:#78716c;margin:0 0 4px}
+      .meta-value{font-size:13px;font-weight:600;margin:0}
+      table{width:100%;border-collapse:collapse;border:1px solid #e7e5e4;border-radius:8px;overflow:hidden}
+      thead{background:#fafaf9}
+      th{padding:8px 12px;text-align:left;font-size:12px;color:#78716c;font-weight:500}
+      th:not(:first-child){text-align:right}
+      tfoot td{background:#fafaf9;font-weight:600;padding:8px 12px;border-top:1px solid #e7e5e4}
+      tfoot td:not(:first-child){text-align:right}
+      @media print{body{padding:0}}
+    </style></head><body>
+    <h1>進貨簽收單</h1>
+    <div class="meta">
+      <div><p class="meta-label">供應商</p><p class="meta-value">${data.supplierName}</p></div>
+      <div><p class="meta-label">收貨時間</p><p class="meta-value">${fmtDateTime(data.receiptDate)}</p></div>
+      <div><p class="meta-label">車牌</p><p class="meta-value">${data.licensePlate || "-"}</p></div>
+      <div><p class="meta-label">批次號</p><p class="meta-value">${data.batchNo || "-"}</p></div>
+    </div>
+    <table>
+      <thead><tr>
+        <th>品項</th><th style="text-align:right">數量</th><th style="text-align:right">單價</th><th style="text-align:right">小計</th>
+      </tr></thead>
+      <tbody>${itemRows}</tbody>
+      <tfoot><tr>
+        <td>合計</td><td>${totalQty} 箱</td><td></td><td>NT$ ${totalAmount.toLocaleString("zh-TW")}</td>
+      </tr></tfoot>
+    </table>
+    ${sigHtml}
+    <script>window.onload=function(){window.print();window.onafterprint=function(){window.close();};}<\/script>
+  </body></html>`;
+
+  const win = window.open("", "_blank", "width=720,height=900");
+  if (win) {
+    win.document.write(html);
+    win.document.close();
+  }
+}
+
 function ReceiptSummaryDialog({
   data,
   onClose,
@@ -119,7 +183,7 @@ function ReceiptSummaryDialog({
           <DialogTitle>進貨簽收完成</DialogTitle>
         </DialogHeader>
 
-        <div id="purchase-receipt-print-area" className="space-y-5 text-sm">
+        <div className="space-y-5 text-sm">
           <div className="rounded-3xl border border-amber-100 bg-amber-50 px-4 py-4">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700">簽收摘要</p>
             <div className="mt-3 grid gap-3 md:grid-cols-2">
@@ -185,29 +249,8 @@ function ReceiptSummaryDialog({
           ) : null}
         </div>
 
-        <style>{`
-          @media print {
-            body * {
-              visibility: hidden;
-            }
-            #purchase-receipt-print-area,
-            #purchase-receipt-print-area * {
-              visibility: visible;
-            }
-            #purchase-receipt-print-area {
-              position: absolute;
-              left: 0;
-              top: 0;
-              width: 100%;
-            }
-            .purchase-receipt-no-print {
-              display: none !important;
-            }
-          }
-        `}</style>
-
-        <div className="purchase-receipt-no-print flex gap-2">
-          <Button variant="outline" className="flex-1 rounded-2xl" onClick={() => window.print()}>
+        <div className="flex gap-2">
+          <Button variant="outline" className="flex-1 rounded-2xl" onClick={() => printReceiptWindow(data)}>
             列印收貨單
           </Button>
           <Button className="flex-1 rounded-2xl bg-amber-600 text-white hover:bg-amber-700" onClick={onClose}>
@@ -920,6 +963,8 @@ function SignatureSheet({
   );
 }
 
+const EGG_KEYWORDS = ["普白", "白蛋", "白殼"];
+
 function CreateReceiptDialog({
   onClose,
   onSignNeeded,
@@ -943,6 +988,7 @@ function CreateReceiptDialog({
     { tenantId: TENANT_ID, supplierId: Number(supplierId) },
     { enabled: !!supplierId }
   );
+  const { data: eggPrice } = trpc.dayone.eggPrice.today.useQuery();
 
   useEffect(() => {
     if (!products.length) return;
@@ -953,9 +999,18 @@ function CreateReceiptDialog({
     for (const sp of (supplierPrices ?? []) as any[]) {
       nextPrices[Number(sp.productId)] = Number(sp.price ?? 0);
     }
+    // MOA 蛋價自動填入：符合關鍵字的商品用農委會大運輸價
+    if (eggPrice?.price) {
+      for (const product of products as any[]) {
+        const name: string = product.name ?? "";
+        if (EGG_KEYWORDS.some((kw) => name.includes(kw))) {
+          nextPrices[Number(product.id)] = eggPrice.price!;
+        }
+      }
+    }
     setPrices(nextPrices);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [products.length, supplierId, supplierPrices]);
+  }, [products.length, supplierId, supplierPrices, eggPrice?.price]);
 
   const createReceipt = trpc.dayone.purchaseReceipt.create.useMutation({
     onSuccess: (data) => {
@@ -1117,6 +1172,11 @@ function CreateReceiptDialog({
                       <div className="min-w-0 flex-1">
                         <p className={`text-sm font-semibold ${active ? "text-stone-900" : "text-stone-600"}`}>
                           {product.name}
+                          {EGG_KEYWORDS.some((kw) => (product.name as string).includes(kw)) && eggPrice?.price ? (
+                            <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-normal text-emerald-700">
+                              農委會 {eggPrice.price}/箱
+                            </span>
+                          ) : null}
                         </p>
                         <div className="mt-2 flex items-center gap-2 text-xs text-stone-500">
                           <span>單價</span>
@@ -1604,7 +1664,7 @@ export default function DayonePurchaseReceipts() {
                         <th className="px-4 py-3 text-left font-medium">供應商</th>
                         <th className="px-4 py-3 text-left font-medium">司機</th>
                         <th className="px-4 py-3 text-left font-medium">車牌 / 批次號</th>
-                        <th className="px-4 py-3 text-right font-medium">總數量</th>
+                        <th className="px-4 py-3 text-left font-medium">收貨明細</th>
                         <th className="px-4 py-3 text-right font-medium">總金額</th>
                         <th className="px-4 py-3 text-center font-medium">狀態</th>
                         <th className="px-4 py-3 text-center font-medium">操作</th>
@@ -1613,6 +1673,7 @@ export default function DayonePurchaseReceipts() {
                     <tbody>
                       {receipts.map((receipt: any) => {
                         const statusTone = receiptStatusTone[receipt.status] ?? receiptStatusTone.pending;
+                        const receiptItems = parseItems(receipt.items).filter((item) => Number(item.qty) > 0);
                         return (
                           <tr key={Number(receipt.id)} className="border-t border-stone-200">
                             <td className="px-4 py-4 text-stone-700">{fmtDateTime(receipt.receiptDate)}</td>
@@ -1622,7 +1683,18 @@ export default function DayonePurchaseReceipts() {
                               <p>{receipt.licensePlate || "-"}</p>
                               <p className="mt-1 text-xs font-mono text-stone-400">{receipt.batchNo || "-"}</p>
                             </td>
-                            <td className="px-4 py-4 text-right text-stone-700">{Number(receipt.totalQty)} 箱</td>
+                            <td className="px-4 py-4">
+                              <div className="flex flex-wrap gap-1.5">
+                                {receiptItems.map((item, idx) => (
+                                  <span
+                                    key={idx}
+                                    className="rounded-full border border-stone-200 bg-stone-50 px-2.5 py-0.5 text-xs text-stone-700"
+                                  >
+                                    {item.name} ×{item.qty}
+                                  </span>
+                                ))}
+                              </div>
+                            </td>
                             <td className="px-4 py-4 text-right font-semibold text-stone-900">{fmtMoney(receipt.totalAmount)}</td>
                             <td className="px-4 py-4 text-center">
                               <Badge className={`border-0 ${statusTone.className}`}>{statusTone.label}</Badge>
@@ -1677,6 +1749,7 @@ export default function DayonePurchaseReceipts() {
                 <div className="space-y-3 md:hidden">
                   {receipts.map((receipt: any) => {
                     const statusTone = receiptStatusTone[receipt.status] ?? receiptStatusTone.pending;
+                    const receiptItems = parseItems(receipt.items).filter((item) => Number(item.qty) > 0);
                     return (
                       <article key={Number(receipt.id)} className="dayone-mobile-card p-4">
                         <div className="flex items-start justify-between gap-3">
@@ -1688,6 +1761,19 @@ export default function DayonePurchaseReceipts() {
                           </div>
                           <Badge className={`border-0 ${statusTone.className}`}>{statusTone.label}</Badge>
                         </div>
+
+                        {receiptItems.length > 0 ? (
+                          <div className="mt-3 flex flex-wrap gap-1.5">
+                            {receiptItems.map((item, idx) => (
+                              <span
+                                key={idx}
+                                className="rounded-full border border-stone-200 bg-stone-50 px-2.5 py-0.5 text-xs text-stone-700"
+                              >
+                                {item.name} ×{item.qty}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
 
                         <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                           <div>
