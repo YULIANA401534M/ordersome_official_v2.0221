@@ -1,6 +1,6 @@
 import { DayoneLayout, TENANT_ID } from "./DayoneLayout";
 import { trpc } from "@/lib/trpc";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,10 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Package2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Package2, ImagePlus, X } from "lucide-react";
 import { toast } from "sonner";
 
-const emptyForm = { name: "", code: "", unit: "箱", defaultPrice: 0, isActive: true };
+const emptyForm = { name: "", code: "", unit: "箱", defaultPrice: 0, isActive: true, imageUrl: null as string | null };
 
 export default function DayoneProducts() {
   const [open, setOpen] = useState(false);
@@ -21,10 +21,14 @@ export default function DayoneProducts() {
   const [unitOpen, setUnitOpen] = useState(false);
   const [unitForm, setUnitForm] = useState({ name: "", sortOrder: 0 });
   const [editingUnit, setEditingUnit] = useState<any>(null);
+  const [imageUploading, setImageUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const utils = trpc.useUtils();
   const { data: products = [], isLoading } = trpc.dayone.products.list.useQuery({ tenantId: TENANT_ID });
   const { data: units = [] } = trpc.dayone.units.list.useQuery({ tenantId: TENANT_ID });
+
+  const uploadImage = trpc.storage.uploadImage.useMutation();
 
   const upsertUnit = trpc.dayone.units.upsert.useMutation({
     onSuccess: () => {
@@ -77,8 +81,46 @@ export default function DayoneProducts() {
       unit: product.unit,
       defaultPrice: product.defaultPrice,
       isActive: product.isActive !== false,
+      imageUrl: product.imageUrl ?? null,
     });
     setOpen(true);
+  }
+
+  async function handleImageSelect(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("請選擇圖片檔案");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("圖片不能超過 5MB");
+      return;
+    }
+    setImageUploading(true);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          resolve(result.split(",")[1]);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const result = await uploadImage.mutateAsync({
+        fileName: `dy-product-${Date.now()}-${file.name}`,
+        fileData: base64,
+        contentType: file.type,
+      });
+      setForm((prev) => ({ ...prev, imageUrl: result.url }));
+      toast.success("圖片已上傳");
+    } catch {
+      toast.error("圖片上傳失敗");
+    } finally {
+      setImageUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   }
 
   return (
@@ -113,7 +155,7 @@ export default function DayoneProducts() {
               <table className="w-full text-sm">
                 <thead className="border-b bg-stone-50">
                   <tr>
-                    {["品項名稱", "代碼", "單位", "預設售價", "狀態", "操作"].map((heading) => (
+                    {["圖片", "品項名稱", "代碼", "單位", "預設售價", "狀態", "操作"].map((heading) => (
                       <th key={heading} className="px-4 py-3 text-left font-medium text-stone-500">{heading}</th>
                     ))}
                   </tr>
@@ -121,6 +163,15 @@ export default function DayoneProducts() {
                 <tbody>
                   {products.map((product: any) => (
                     <tr key={product.id} className="border-b transition-colors hover:bg-stone-50/80">
+                      <td className="px-4 py-3">
+                        {product.imageUrl ? (
+                          <img src={product.imageUrl} alt={product.name} className="h-10 w-10 rounded-lg object-cover" />
+                        ) : (
+                          <div className="h-10 w-10 rounded-lg bg-stone-100 flex items-center justify-center">
+                            <Package2 className="h-5 w-5 text-stone-300" />
+                          </div>
+                        )}
+                      </td>
                       <td className="px-4 py-3 font-medium text-stone-900">{product.name}</td>
                       <td className="px-4 py-3 font-mono text-xs text-stone-500">{product.code ?? "-"}</td>
                       <td className="px-4 py-3 text-stone-600">{product.unit}</td>
@@ -154,6 +205,48 @@ export default function DayoneProducts() {
               <DialogTitle>{editing ? "編輯品項" : "新增品項"}</DialogTitle>
             </DialogHeader>
             <div className="space-y-3">
+              <div>
+                <Label>品項圖片</Label>
+                <div className="mt-1 flex items-center gap-3">
+                  {form.imageUrl ? (
+                    <div className="relative">
+                      <img src={form.imageUrl} alt="品項圖片" className="h-16 w-16 rounded-xl object-cover border border-stone-200" />
+                      <button
+                        type="button"
+                        className="absolute -top-1.5 -right-1.5 rounded-full bg-rose-500 p-0.5 text-white"
+                        onClick={() => setForm((prev) => ({ ...prev, imageUrl: null }))}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="h-16 w-16 rounded-xl bg-stone-100 flex items-center justify-center border border-dashed border-stone-300">
+                      <Package2 className="h-7 w-7 text-stone-300" />
+                    </div>
+                  )}
+                  <div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageSelect}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="rounded-xl"
+                      disabled={imageUploading}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <ImagePlus className="mr-1.5 h-4 w-4" />
+                      {imageUploading ? "上傳中..." : "選擇圖片"}
+                    </Button>
+                    <p className="mt-1 text-xs text-stone-400">支援 JPG、PNG，最大 5MB</p>
+                  </div>
+                </div>
+              </div>
               <div>
                 <Label>品項名稱</Label>
                 <Input value={form.name} onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))} />
@@ -194,7 +287,7 @@ export default function DayoneProducts() {
             </div>
             <Button
               className="mt-2 w-full rounded-2xl bg-amber-600 text-white hover:bg-amber-700"
-              disabled={upsert.isPending}
+              disabled={upsert.isPending || imageUploading}
               onClick={() => {
                 if (!form.name.trim()) {
                   toast.error("請先填寫品項名稱");
@@ -208,6 +301,7 @@ export default function DayoneProducts() {
                   unit: form.unit,
                   defaultPrice: form.defaultPrice,
                   isActive: form.isActive,
+                  imageUrl: form.imageUrl ?? null,
                 });
               }}
             >

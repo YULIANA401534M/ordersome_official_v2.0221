@@ -18,6 +18,15 @@ interface CartItem {
   qty: number;
 }
 
+interface Product {
+  id: number;
+  name: string;
+  unit: string;
+  defaultPrice: number;
+  imageUrl: string | null;
+  currentQty: number;
+}
+
 // ---------- 子元件：商品卡片 ----------
 function ProductCard({
   product,
@@ -25,33 +34,64 @@ function ProductCard({
   onAdd,
   onRemove,
 }: {
-  product: { id: number; name: string; unit: string; defaultPrice: number };
+  product: Product;
   qty: number;
   onAdd: () => void;
   onRemove: () => void;
 }) {
   const selected = qty > 0;
+  const soldOut = product.currentQty === 0;
+
   return (
     <div
       className={`rounded-2xl shadow-sm border p-4 transition-colors ${
-        selected ? "bg-amber-50 border-amber-300" : "bg-white border-gray-100"
+        soldOut
+          ? "bg-gray-50 border-gray-100 opacity-60"
+          : selected
+          ? "bg-amber-50 border-amber-300"
+          : "bg-white border-gray-100"
       }`}
     >
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center gap-3">
+        {/* 商品圖片 */}
+        <div className="shrink-0">
+          {product.imageUrl ? (
+            <img
+              src={product.imageUrl}
+              alt={product.name}
+              className="w-16 h-16 rounded-xl object-cover"
+            />
+          ) : (
+            <div className="w-16 h-16 rounded-xl bg-stone-100 flex items-center justify-center">
+              <svg className="w-8 h-8 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+            </div>
+          )}
+        </div>
+
+        {/* 品名與價格 */}
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-gray-800 text-base leading-snug truncate">
-            {product.name}
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="font-semibold text-gray-800 text-base leading-snug truncate">
+              {product.name}
+            </p>
+            {soldOut && (
+              <span className="shrink-0 text-xs bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded-full">補貨中</span>
+            )}
+          </div>
           <p className="text-sm text-gray-400 mt-0.5">
             {product.defaultPrice > 0
               ? `NT$ ${product.defaultPrice} / ${product.unit}`
               : `依訂單確認 / ${product.unit}`}
           </p>
         </div>
+
+        {/* 數量控制 */}
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={onRemove}
-            disabled={qty === 0}
+            disabled={qty === 0 || soldOut}
             className="w-10 h-10 rounded-full flex items-center justify-center text-xl font-bold border transition-colors
               disabled:border-gray-200 disabled:text-gray-300 disabled:bg-gray-50
               enabled:border-amber-400 enabled:text-amber-600 enabled:bg-white enabled:active:bg-amber-50"
@@ -61,14 +101,17 @@ function ProductCard({
           </button>
           <span
             className={`w-8 text-center text-lg font-bold tabular-nums ${
-              selected ? "text-amber-700" : "text-gray-400"
+              selected && !soldOut ? "text-amber-700" : "text-gray-400"
             }`}
           >
             {qty}
           </span>
           <button
             onClick={onAdd}
-            className="w-10 h-10 rounded-full flex items-center justify-center text-xl font-bold border border-amber-400 text-amber-600 bg-white active:bg-amber-50 transition-colors"
+            disabled={soldOut}
+            className="w-10 h-10 rounded-full flex items-center justify-center text-xl font-bold border transition-colors
+              disabled:border-gray-200 disabled:text-gray-300 disabled:bg-gray-50
+              enabled:border-amber-400 enabled:text-amber-600 enabled:bg-white enabled:active:bg-amber-50"
             aria-label="增加數量"
           >
             +
@@ -80,7 +123,21 @@ function ProductCard({
 }
 
 // ---------- 成功畫面 ----------
-function SuccessScreen({ orderNo }: { orderNo: string }) {
+function SuccessScreen({
+  orderNo,
+  items,
+  products,
+}: {
+  orderNo: string;
+  items: { productId: number; qty: number }[];
+  products: Product[];
+}) {
+  const productMap = new Map(products.map((p) => [p.id, p]));
+  const totalAmount = items.reduce((sum, item) => {
+    const p = productMap.get(item.productId);
+    return sum + (p ? p.defaultPrice * item.qty : 0);
+  }, 0);
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-6 text-center">
       <div className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center mb-6">
@@ -90,9 +147,32 @@ function SuccessScreen({ orderNo }: { orderNo: string }) {
       </div>
       <h2 className="text-2xl font-bold text-gray-800 mb-2">訂單已送出！</h2>
       <p className="text-gray-500 text-sm mb-4">業務將盡快確認您的訂單</p>
-      <div className="bg-white border border-gray-200 rounded-xl px-6 py-4 w-full max-w-xs">
-        <p className="text-xs text-gray-400 mb-1">訂單編號</p>
-        <p className="font-mono font-bold text-gray-700 text-base tracking-wide break-all">{orderNo}</p>
+
+      <div className="bg-white border border-gray-200 rounded-2xl px-5 py-4 w-full max-w-xs text-left">
+        <p className="text-xs text-gray-400 mb-1 text-center">訂單編號</p>
+        <p className="font-mono font-bold text-gray-700 text-sm tracking-wide break-all text-center mb-4">{orderNo}</p>
+
+        <div className="border-t border-gray-100 pt-3 space-y-2">
+          {items.map((item) => {
+            const p = productMap.get(item.productId);
+            if (!p) return null;
+            return (
+              <div key={item.productId} className="flex justify-between text-sm">
+                <span className="text-gray-700">{p.name} × {item.qty}{p.unit}</span>
+                <span className="text-gray-500 shrink-0">
+                  {p.defaultPrice > 0 ? `NT$ ${(p.defaultPrice * item.qty).toLocaleString()}` : "待確認"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        {totalAmount > 0 && (
+          <div className="border-t border-gray-100 mt-3 pt-3 flex justify-between text-sm font-semibold">
+            <span className="text-gray-700">合計</span>
+            <span className="text-amber-700">NT$ {totalAmount.toLocaleString()}</span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -195,6 +275,7 @@ export default function LiffOrder() {
   const [customerName, setCustomerName] = useState<string>("");
   const [cart, setCart] = useState<Record<number, number>>({});
   const [submittedOrderNo, setSubmittedOrderNo] = useState<string | null>(null);
+  const [submittedItems, setSubmittedItems] = useState<{ productId: number; qty: number }[]>([]);
   const [orderErrorMsg, setOrderErrorMsg] = useState<string | null>(null);
 
   // Step 1: LIFF init → 取得 lineId
@@ -244,7 +325,13 @@ export default function LiffOrder() {
 
   // Step 4: 建立訂單
   const createOrder = trpc.dayone.liff.createOrder.useMutation({
-    onSuccess(data) { setSubmittedOrderNo(data.orderNo); },
+    onSuccess(data) {
+      const items = Object.entries(cart)
+        .filter(([, q]) => q > 0)
+        .map(([id, qty]) => ({ productId: Number(id), qty }));
+      setSubmittedItems(items);
+      setSubmittedOrderNo(data.orderNo);
+    },
     onError(err) { setOrderErrorMsg(err.message ?? "送出失敗，請稍後再試"); },
   });
 
@@ -274,10 +361,22 @@ export default function LiffOrder() {
   }
 
   if (submittedOrderNo) {
-    return <SuccessScreen orderNo={submittedOrderNo} />;
+    return (
+      <SuccessScreen
+        orderNo={submittedOrderNo}
+        items={submittedItems}
+        products={productsQuery.data ?? []}
+      />
+    );
   }
 
-  const products = productsQuery.data;
+  const products = productsQuery.data ?? [];
+
+  // 購物車總金額
+  const totalAmount = products.reduce((sum, p) => {
+    const qty = cart[p.id] ?? 0;
+    return sum + (p.defaultPrice > 0 ? p.defaultPrice * qty : 0);
+  }, 0);
   const totalItems = Object.values(cart).reduce((s, q) => s + q, 0);
 
   function add(id: number) {
@@ -319,14 +418,14 @@ export default function LiffOrder() {
       </div>
 
       {/* 商品列表 */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 pb-32">
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 pb-36">
         {productsQuery.isLoading && (
           <div className="text-center py-16 text-gray-400 text-sm">載入商品中…</div>
         )}
         {productsQuery.isError && (
           <div className="text-center py-16 text-red-400 text-sm">商品載入失敗，請重新整理</div>
         )}
-        {products?.map((p) => (
+        {products.map((p) => (
           <ProductCard
             key={p.id}
             product={p}
@@ -335,16 +434,25 @@ export default function LiffOrder() {
             onRemove={() => remove(p.id)}
           />
         ))}
-        {products && products.length === 0 && (
+        {!productsQuery.isLoading && products.length === 0 && (
           <div className="text-center py-16 text-gray-400 text-sm">目前沒有可訂購的商品</div>
         )}
       </div>
 
-      {/* 底部送出按鈕 */}
+      {/* 底部小計 + 送出按鈕 */}
       <div
-        className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-4 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]"
-        style={{ maxWidth: 480, margin: "0 auto", left: "50%", transform: "translateX(-50%)", width: "100%" }}
+        className="fixed bottom-0 bg-white border-t border-gray-100 px-4 pt-3 pb-5 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]"
+        style={{ maxWidth: 480, left: "50%", transform: "translateX(-50%)", width: "100%" }}
       >
+        {/* 小計列 */}
+        {totalItems > 0 && (
+          <div className="flex justify-between items-center mb-2 px-1">
+            <span className="text-sm text-gray-500">合計 {totalItems} 項</span>
+            <span className="text-base font-bold text-amber-700">
+              {totalAmount > 0 ? `NT$ ${totalAmount.toLocaleString()}` : "金額待確認"}
+            </span>
+          </div>
+        )}
         {orderErrorMsg && <p className="text-xs text-red-500 mb-2 text-center">{orderErrorMsg}</p>}
         <button
           onClick={handleSubmit}
