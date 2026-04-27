@@ -1,6 +1,6 @@
 # CLAUDE.md — OrderSome 專案主腦
 
-> 版本 v6.77｜最後更新：2026-04-28
+> 版本 v6.78｜最後更新：2026-04-28
 > **每次開始新對話請讀完這份文件**，然後視任務需要讀 `todo.md` 或 `docs/` 子頁。
 > 歷史變更記錄請看 `DEVELOPMENT_LOG.md`，不需要每次讀。
 
@@ -162,6 +162,17 @@
 ---
 
 ## 踩過的坑（必讀，避免重蹈）
+
+### TiDB BigInt 問題（v6.78 根治）
+
+- **症狀**：React Error #185、`JSON.stringify` 直接炸、頁面一載入就白畫面
+- **根本原因**：mysql2 預設把 AUTO_INCREMENT id / COUNT / SUM 欄位回傳成 JS BigInt
+- **根本修法**：`server/db.ts` createPool 加兩個選項，一次解決全站：
+  ```
+  supportBigNumbers: true,
+  bigNumberStrings: false,
+  ```
+- **錯誤做法**：在前端或各 router 個別加 `Number()` 包，治標不治本，漏一個就炸
 
 ### TiDB LIMIT 參數化問題（v6.02 已修）
 

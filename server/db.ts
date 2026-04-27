@@ -52,6 +52,8 @@ export async function getDb() {
         ssl: { rejectUnauthorized: true },
         waitForConnections: true,
         connectionLimit: 10,
+        supportBigNumbers: true,
+        bigNumberStrings: false,
       });
 
       // Patch pool.query to inline integer params (LIMIT/OFFSET) before sending to TiDB.
