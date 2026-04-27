@@ -1,6 +1,6 @@
 # CLAUDE.md — OrderSome 專案主腦
 
-> 版本 v6.72｜最後更新：2026-04-27
+> 版本 v6.73｜最後更新：2026-04-27
 > **每次開始新對話請讀完這份文件**，然後視任務需要讀 `todo.md` 或 `docs/` 子頁。
 > 歷史變更記錄請看 `DEVELOPMENT_LOG.md`，不需要每次讀。
 
@@ -203,6 +203,13 @@
 
 - 每次跑 migration 前先 DESCRIBE 確認欄位是否存在（TiDB 不支援 IF NOT EXISTS 某些版本）
 - `has_procurement_access` / `last_login_at` 等欄位要先查再跑
+
+### 大永 manager 側欄缺項（v6.73 已修）
+
+- **症狀**：大永管理員登入後，派車管理、進貨簽收、應收帳款不顯示
+- **原因**：`module_definitions` 和 `tenant_modules`（tenantId=90004）缺少 `dispatch`、`purchase_receipts`、`ar_management` 三個 key
+- **修法**：直接在 DB 補 INSERT — 不需要改程式，只需確保 tenant_modules 有對應的 key + isEnabled=1
+- **新增功能時的提醒**：側欄新增 moduleKey 後，要同步在 DB 的 `module_definitions` 和 `tenant_modules` 補上，否則 manager 看不到
 
 ### 每次查詢時不要做 schema 檢查
 
