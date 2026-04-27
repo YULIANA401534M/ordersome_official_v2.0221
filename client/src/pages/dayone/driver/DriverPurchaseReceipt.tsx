@@ -150,8 +150,8 @@ export default function DriverPurchaseReceipt() {
     for (const p of products as any[]) {
       const pid = Number(p.id);
       const isEgg = EGG_PRODUCT_KEYWORDS.some((kw) => (p.name as string).includes(kw));
-      if (isEgg && eggPrice?.price) {
-        next[pid] = eggPrice.price;
+      if (isEgg && eggPrice?.pricePerBox) {
+        next[pid] = eggPrice.pricePerBox;
       } else {
         next[pid] = Number(p.defaultPrice ?? p.price ?? 0);
       }
@@ -302,12 +302,12 @@ export default function DriverPurchaseReceipt() {
       <div className="space-y-5 pb-8">
 
         {/* 農委會今日蛋價 */}
-        {eggPrice?.price ? (
+        {eggPrice?.pricePerJin ? (
           <div className="flex items-center justify-between rounded-[20px] border border-amber-100 bg-amber-50 px-4 py-3">
             <div>
-              <p className="text-xs text-amber-600">今日雞蛋大運輸價（農委會）</p>
-              <p className="mt-0.5 text-lg font-bold text-amber-800">NT$ {eggPrice.price} / 台斤</p>
-              <p className="text-xs text-stone-400">資料日期：{eggPrice.date}</p>
+              <p className="text-xs text-amber-600">農委會大運輸價（資料日期：{eggPrice.date}）</p>
+              <p className="mt-0.5 text-lg font-bold text-amber-800">NT$ {eggPrice.pricePerJin} / 台斤</p>
+              <p className="text-xs text-stone-400">換算箱價：NT$ {eggPrice.pricePerBox} / 箱（20 台斤）</p>
             </div>
             <button
               type="button"
@@ -390,8 +390,8 @@ export default function DriverPurchaseReceipt() {
                           onChange={(e) => setPrices((c) => ({ ...c, [pid]: Number(e.target.value || 0) }))}
                           className="h-7 w-20 rounded-xl border border-stone-200 bg-white px-2 text-sm text-stone-700 outline-none"
                         />
-                        {isEgg && eggPrice?.price && (
-                          <span className="text-amber-600">（農委會時價）</span>
+                        {isEgg && eggPrice?.pricePerJin && (
+                          <span className="text-amber-600">（農委會 {eggPrice.pricePerJin}/台斤）</span>
                         )}
                       </div>
                     </div>

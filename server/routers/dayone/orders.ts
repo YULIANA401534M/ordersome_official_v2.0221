@@ -128,12 +128,43 @@ export const dyOrdersRouter = router({
           [input.tenantId, orderId, item.productId, item.qty, item.unitPrice, item.qty * item.unitPrice]
         );
       }
+
+      // 庫存不足檢查（不阻擋，回傳警告清單）
+      const lowStockWarnings: { productId: number; productName: string; ordered: number; currentQty: number }[] = [];
+      if (input.items.length) {
+        const productIds = input.items.map((i) => i.productId);
+        const placeholders = productIds.map(() => "?").join(",");
+        const [invRows] = await client.execute(
+          `SELECT i.productId, i.currentQty, p.name AS productName
+           FROM dy_inventory i
+           JOIN dy_products p ON i.productId = p.id
+           WHERE i.tenantId = ? AND i.productId IN (${placeholders})`,
+          [input.tenantId, ...productIds]
+        );
+        const invMap: Record<number, { currentQty: number; productName: string }> = {};
+        for (const row of invRows as any[]) {
+          invMap[Number(row.productId)] = { currentQty: Number(row.currentQty ?? 0), productName: row.productName };
+        }
+        for (const item of input.items) {
+          const inv = invMap[item.productId];
+          if (inv && item.qty > inv.currentQty) {
+            lowStockWarnings.push({
+              productId: item.productId,
+              productName: inv.productName,
+              ordered: item.qty,
+              currentQty: inv.currentQty,
+            });
+          }
+        }
+      }
+
       return {
         id: orderId,
         orderNo,
         overCredit,
         creditLimit,
         unpaidTotal: unpaidTotal + totalAmount,
+        lowStockWarnings,
       };
     }),
 
@@ -168,20 +199,58 @@ export const dyOrdersRouter = router({
     }),
 
   getLiffOrders: dyAdminProcedure
-    .input(z.object({ tenantId: z.number() }))
+    .input(z.object({
+      tenantId: z.number(),
+      dateFrom: z.string().optional(),
+      dateTo: z.string().optional(),
+    }))
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-      const [rows] = await (db as any).$client.execute(
-        `SELECT o.id as orderId, o.orderNo, o.createdAt, o.totalAmount, o.status,
-                c.name as customerName, c.phone as customerPhone
-         FROM dy_orders o
-         JOIN dy_customers c ON o.customerId = c.id
-         WHERE o.orderSource = 'liff' AND o.tenantId = ?
-         ORDER BY o.createdAt DESC`,
-        [input.tenantId]
-      );
-      return rows as any[];
+      const client = (db as any).$client;
+
+      let sql = `SELECT o.id as orderId, o.orderNo, o.createdAt, o.deliveryDate,
+                        o.totalAmount, o.paidAmount, o.status, o.paymentStatus, o.note,
+                        c.name as customerName, c.phone as customerPhone
+                 FROM dy_orders o
+                 JOIN dy_customers c ON o.customerId = c.id
+                 WHERE o.orderSource = 'liff' AND o.tenantId = ?`;
+      const params: any[] = [input.tenantId];
+      if (input.dateFrom) { sql += " AND DATE(o.createdAt) >= ?"; params.push(input.dateFrom); }
+      if (input.dateTo)   { sql += " AND DATE(o.createdAt) <= ?"; params.push(input.dateTo); }
+      sql += " ORDER BY o.createdAt DESC LIMIT 200";
+
+      const [rows] = await client.execute(sql, params);
+      const orderList = (rows as any[]).map((r) => ({
+        ...r,
+        orderId: Number(r.orderId),
+        totalAmount: Number(r.totalAmount ?? 0),
+        paidAmount: Number(r.paidAmount ?? 0),
+      }));
+
+      // 撈每筆訂單的 items
+      if (orderList.length) {
+        const ids = orderList.map((o: any) => o.orderId);
+        const placeholders = ids.map(() => "?").join(",");
+        const [itemRows] = await client.execute(
+          `SELECT oi.orderId, oi.qty, oi.unitPrice, oi.subtotal, p.name as productName
+           FROM dy_order_items oi
+           JOIN dy_products p ON oi.productId = p.id
+           WHERE oi.orderId IN (${placeholders}) AND oi.tenantId = ?`,
+          [...ids, input.tenantId]
+        );
+        const itemMap: Record<number, any[]> = {};
+        for (const item of itemRows as any[]) {
+          const oid = Number(item.orderId);
+          if (!itemMap[oid]) itemMap[oid] = [];
+          itemMap[oid].push({ ...item, orderId: oid, qty: Number(item.qty), unitPrice: Number(item.unitPrice), subtotal: Number(item.subtotal) });
+        }
+        for (const o of orderList) {
+          o.items = itemMap[o.orderId] ?? [];
+        }
+      }
+
+      return orderList;
     }),
 
   deleteOrder: dyAdminProcedure

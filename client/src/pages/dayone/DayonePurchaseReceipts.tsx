@@ -999,18 +999,18 @@ function CreateReceiptDialog({
     for (const sp of (supplierPrices ?? []) as any[]) {
       nextPrices[Number(sp.productId)] = Number(sp.price ?? 0);
     }
-    // MOA 蛋價自動填入：符合關鍵字的商品用農委會大運輸價
-    if (eggPrice?.price) {
+    // MOA 蛋價自動填入：符合關鍵字的商品用農委會大運輸價換算箱價（台斤價 × 20）
+    if (eggPrice?.pricePerBox) {
       for (const product of products as any[]) {
         const name: string = product.name ?? "";
         if (EGG_KEYWORDS.some((kw) => name.includes(kw))) {
-          nextPrices[Number(product.id)] = eggPrice.price!;
+          nextPrices[Number(product.id)] = eggPrice.pricePerBox!;
         }
       }
     }
     setPrices(nextPrices);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [products.length, supplierId, supplierPrices, eggPrice?.price]);
+  }, [products.length, supplierId, supplierPrices, eggPrice?.pricePerBox]);
 
   const createReceipt = trpc.dayone.purchaseReceipt.create.useMutation({
     onSuccess: (data) => {
@@ -1172,9 +1172,9 @@ function CreateReceiptDialog({
                       <div className="min-w-0 flex-1">
                         <p className={`text-sm font-semibold ${active ? "text-stone-900" : "text-stone-600"}`}>
                           {product.name}
-                          {EGG_KEYWORDS.some((kw) => (product.name as string).includes(kw)) && eggPrice?.price ? (
+                          {EGG_KEYWORDS.some((kw) => (product.name as string).includes(kw)) && eggPrice?.pricePerJin ? (
                             <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-normal text-emerald-700">
-                              農委會 {eggPrice.price}/箱
+                              農委會 {eggPrice.date?.slice(5).replace("/", "/")} 大運輸價 {eggPrice.pricePerJin}/台斤
                             </span>
                           ) : null}
                         </p>

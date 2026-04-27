@@ -72,6 +72,14 @@ export default function DayoneOrders() {
       } else {
         toast.success("訂單建立成功");
       }
+      if (data.lowStockWarnings && data.lowStockWarnings.length > 0) {
+        for (const w of data.lowStockWarnings) {
+          toast.warning(
+            `⚠️ 庫存不足：${w.productName} 下單 ${w.ordered} 箱，目前庫存僅 ${w.currentQty} 箱，請儘速補貨`,
+            { duration: 10000 }
+          );
+        }
+      }
       setCreateOpen(false);
       utils.dayone.orders.list.invalidate();
     },
