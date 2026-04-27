@@ -11,6 +11,13 @@ import { Label } from "@/components/ui/label";
 import { Plus, Search, Trash2, CalendarDays, Calendar, ChevronDown, ChevronUp, X } from "lucide-react";
 import { toast } from "sonner";
 
+function fmtDate(val: string | null | undefined): string {
+  if (!val) return "—";
+  const d = new Date(val);
+  if (isNaN(d.getTime())) return val;
+  return d.toLocaleDateString("zh-TW", { timeZone: "Asia/Taipei", year: "numeric", month: "2-digit", day: "2-digit" });
+}
+
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
   pending: { label: "待處理", color: "bg-gray-100 text-gray-700" },
   assigned: { label: "已指派", color: "bg-blue-100 text-blue-700" },
@@ -395,7 +402,7 @@ export default function DayoneOrders() {
                                   <span className="text-stone-600 text-xs">{o.driverName ?? "-"}</span>
                                 )}
                               </td>
-                              <td>{o.deliveryDate}</td>
+                              <td>{fmtDate(o.deliveryDate)}</td>
                               <td className="font-medium">${Number(o.totalAmount).toLocaleString()}</td>
                               <td>
                                 <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${st.color}`}>{st.label}</span>
@@ -469,7 +476,7 @@ export default function DayoneOrders() {
                         <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                           <div>
                             <div className="text-stone-400">送貨日期</div>
-                            <div className="font-medium text-stone-800">{o.deliveryDate}</div>
+                            <div className="font-medium text-stone-800">{fmtDate(o.deliveryDate)}</div>
                           </div>
                           <div>
                             <div className="text-stone-400">訂單金額</div>

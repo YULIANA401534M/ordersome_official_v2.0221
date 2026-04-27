@@ -172,6 +172,7 @@ export const liffRouter = router({
       }[] = [];
 
       for (const item of input.items) {
+        // 優先用客製定價，查不到就用商品主檔 defaultPrice，再查不到才存 null
         const [priceRows] = await client.execute(
           `SELECT price FROM dy_customer_prices
            WHERE tenantId = ? AND customerId = ? AND productId = ?
@@ -179,7 +180,20 @@ export const liffRouter = router({
           [tenantId, customerId, item.productId]
         );
         const priceRow = (priceRows as any[])[0];
-        const unitPrice: number | null = priceRow ? Number(priceRow.price) : null;
+
+        let unitPrice: number | null = priceRow ? Number(priceRow.price) : null;
+
+        if (unitPrice === null) {
+          const [productRows] = await client.execute(
+            `SELECT defaultPrice FROM dy_products WHERE tenantId = ? AND id = ? LIMIT 1`,
+            [tenantId, item.productId]
+          );
+          const productRow = (productRows as any[])[0];
+          if (productRow && Number(productRow.defaultPrice) > 0) {
+            unitPrice = Number(productRow.defaultPrice);
+          }
+        }
+
         resolvedItems.push({
           productId: item.productId,
           qty: item.qty,
