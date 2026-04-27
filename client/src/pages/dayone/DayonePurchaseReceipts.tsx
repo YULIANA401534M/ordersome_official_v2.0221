@@ -939,7 +939,7 @@ function CreateReceiptDialog({
   const { data: suppliers = [] } = trpc.dayone.suppliers.list.useQuery({ tenantId: TENANT_ID });
   const { data: drivers = [] } = trpc.dayone.drivers.list.useQuery({ tenantId: TENANT_ID });
   const { data: products = [] } = trpc.dayone.products.list.useQuery({ tenantId: TENANT_ID });
-  const { data: supplierPrices = [] } = trpc.dayone.ap.supplierPriceList.useQuery(
+  const { data: supplierPrices } = trpc.dayone.ap.supplierPriceList.useQuery(
     { tenantId: TENANT_ID, supplierId: Number(supplierId) },
     { enabled: !!supplierId }
   );
@@ -950,11 +950,12 @@ function CreateReceiptDialog({
     for (const product of products as any[]) {
       nextPrices[Number(product.id)] = Number(product.price ?? 0);
     }
-    for (const sp of supplierPrices as any[]) {
+    for (const sp of (supplierPrices ?? []) as any[]) {
       nextPrices[Number(sp.productId)] = Number(sp.price ?? 0);
     }
     setPrices(nextPrices);
-  }, [products, supplierPrices]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products.length, supplierId, supplierPrices]);
 
   const createReceipt = trpc.dayone.purchaseReceipt.create.useMutation({
     onSuccess: (data) => {
