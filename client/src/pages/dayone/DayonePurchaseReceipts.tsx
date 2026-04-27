@@ -484,7 +484,7 @@ function ReceiveWarehouseDialog({
           <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-700">
             <p className="font-semibold text-stone-900">{receipt.supplierName}</p>
             <p className="mt-1">進貨時間：{fmtDateTime(receipt.receiptDate)}</p>
-            <p className="mt-1">總數量：{receipt.totalQty} 箱</p>
+            <p className="mt-1">總數量：{Number(receipt.totalQty)} 箱</p>
             <p className="mt-1">總金額：{fmtMoney(receipt.totalAmount)}</p>
           </div>
 
@@ -592,7 +592,7 @@ function ReceiptDetailDialog({
               <tfoot className="bg-stone-50 font-semibold text-stone-900">
                 <tr>
                   <td className="px-4 py-3">合計</td>
-                  <td className="px-4 py-3 text-right">{receipt.totalQty} 箱</td>
+                  <td className="px-4 py-3 text-right">{Number(receipt.totalQty)} 箱</td>
                   <td className="px-4 py-3" />
                   <td className="px-4 py-3 text-right">{fmtMoney(receipt.totalAmount)}</td>
                 </tr>
@@ -1619,7 +1619,7 @@ export default function DayonePurchaseReceipts() {
                               <p>{receipt.licensePlate || "-"}</p>
                               <p className="mt-1 text-xs font-mono text-stone-400">{receipt.batchNo || "-"}</p>
                             </td>
-                            <td className="px-4 py-4 text-right text-stone-700">{receipt.totalQty} 箱</td>
+                            <td className="px-4 py-4 text-right text-stone-700">{Number(receipt.totalQty)} 箱</td>
                             <td className="px-4 py-4 text-right font-semibold text-stone-900">{fmtMoney(receipt.totalAmount)}</td>
                             <td className="px-4 py-4 text-center">
                               <Badge className={`border-0 ${statusTone.className}`}>{statusTone.label}</Badge>
@@ -1689,7 +1689,7 @@ export default function DayonePurchaseReceipts() {
                         <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                           <div>
                             <p className="text-xs text-stone-500">總數量</p>
-                            <p className="mt-1 font-semibold text-stone-900">{receipt.totalQty} 箱</p>
+                            <p className="mt-1 font-semibold text-stone-900">{Number(receipt.totalQty)} 箱</p>
                           </div>
                           <div>
                             <p className="text-xs text-stone-500">總金額</p>
