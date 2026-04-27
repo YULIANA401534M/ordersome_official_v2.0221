@@ -4,21 +4,7 @@ import { TRPCError } from "@trpc/server";
 import { getDb } from "../../db";
 import { storagePut } from "../../storage";
 import { dayoneDriverProcedure as driverProcedure } from "./procedures";
-
-
-function calcDueDate(deliveryDate: string, settlementCycle?: string | null, overdueDays?: number | null) {
-  const date = new Date(deliveryDate);
-  if (settlementCycle === "weekly") {
-    date.setDate(date.getDate() + 7);
-    return date.toISOString().slice(0, 10);
-  }
-  if (settlementCycle === "monthly") {
-    const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-    monthEnd.setDate(monthEnd.getDate() + Number(overdueDays ?? 5));
-    return monthEnd.toISOString().slice(0, 10);
-  }
-  return deliveryDate;
-}
+import { calcDueDate, todayTW, upsertArRecord } from "./utils";
 
 async function getDriverByUser(client: any, userId: number, tenantId: number) {
   const [rows] = await client.execute(
@@ -28,54 +14,13 @@ async function getDriverByUser(client: any, userId: number, tenantId: number) {
   return (rows as any[])[0];
 }
 
-async function upsertOrderReceivable(
-  client: any,
-  payload: {
-    tenantId: number;
-    orderId: number;
-    customerId: number;
-    deliveryDate: string;
-    settlementCycle?: string | null;
-    overdueDays?: number | null;
-    totalAmount: number;
-    paidAmount: number;
-  }
-) {
-  const dueDate = calcDueDate(payload.deliveryDate, payload.settlementCycle, payload.overdueDays);
-  const status = payload.paidAmount >= payload.totalAmount ? "paid" : payload.paidAmount > 0 ? "partial" : "unpaid";
-  const [existingRows] = await client.execute(
-    `SELECT id FROM dy_ar_records WHERE tenantId=? AND orderId=? LIMIT 1`,
-    [payload.tenantId, payload.orderId]
-  );
-  const existing = (existingRows as any[])[0];
-
-  if (existing) {
-    await client.execute(
-      `UPDATE dy_ar_records
-       SET amount=?, paidAmount=?, status=?, dueDate=?, paymentMethod=IF(? > 0, 'cash', paymentMethod),
-           paidAt=CASE WHEN ? >= ? THEN NOW() ELSE paidAt END, updatedAt=NOW()
-       WHERE id=? AND tenantId=?`,
-      [payload.totalAmount, payload.paidAmount, status, dueDate, payload.paidAmount, payload.paidAmount, payload.totalAmount, existing.id, payload.tenantId]
-    );
-    return existing.id;
-  }
-
-  const [result] = await client.execute(
-    `INSERT INTO dy_ar_records
-     (tenantId, orderId, customerId, amount, paidAmount, status, dueDate, paymentMethod, paidAt, createdAt, updatedAt)
-     VALUES (?,?,?,?,?,?,?,IF(? > 0, 'cash', NULL), CASE WHEN ? >= ? THEN NOW() ELSE NULL END, NOW(), NOW())`,
-    [payload.tenantId, payload.orderId, payload.customerId, payload.totalAmount, payload.paidAmount, status, dueDate, payload.paidAmount, payload.paidAmount, payload.totalAmount]
-  );
-  return (result as any).insertId;
-}
-
 export const dyDriverRouter = router({
   getMyTodayOrders: driverProcedure
     .input(z.object({ tenantId: z.number(), deliveryDate: z.string().optional() }))
     .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-      const date = input.deliveryDate ?? new Date().toISOString().slice(0, 10);
+      const date = input.deliveryDate ?? todayTW();
       const client = (db as any).$client;
 
       const driver = await getDriverByUser(client, ctx.user.id, input.tenantId);
@@ -164,15 +109,13 @@ export const dyDriverRouter = router({
         );
         const order = (orderRows as any[])[0];
         if (order) {
-          await upsertOrderReceivable(client, {
+          await upsertArRecord(client, {
             tenantId: input.tenantId,
             orderId: order.id,
             customerId: order.customerId,
-            deliveryDate: order.deliveryDate,
-            settlementCycle: order.settlementCycle,
-            overdueDays: order.overdueDays,
-            totalAmount: Number(order.totalAmount ?? 0),
+            amount: Number(order.totalAmount ?? 0),
             paidAmount: Number(order.paidAmount ?? 0),
+            dueDate: calcDueDate(order.deliveryDate, order.settlementCycle, order.overdueDays),
           });
         }
       }
@@ -207,15 +150,13 @@ export const dyDriverRouter = router({
       );
       const order = (orderRows as any[])[0];
       if (order && order.status === "delivered") {
-        await upsertOrderReceivable(client, {
+        await upsertArRecord(client, {
           tenantId: input.tenantId,
           orderId: order.id,
           customerId: order.customerId,
-          deliveryDate: order.deliveryDate,
-          settlementCycle: order.settlementCycle,
-          overdueDays: order.overdueDays,
-          totalAmount: Number(order.totalAmount ?? 0),
+          amount: Number(order.totalAmount ?? 0),
           paidAmount: Number(order.paidAmount ?? 0),
+          dueDate: calcDueDate(order.deliveryDate, order.settlementCycle, order.overdueDays),
         });
       }
 

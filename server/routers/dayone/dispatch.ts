@@ -4,77 +4,7 @@ import { TRPCError } from "@trpc/server";
 import { getDb } from "../../db";
 import { ensureDyPendingReturnsTable } from "./pendingReturns";
 import { dayoneAdminProcedure as dyAdminProcedure, dayoneDriverProcedure as driverProcedure } from "./procedures";
-
-
-
-async function ensureDyDispatchSchema(client: any) {
-  await client.execute(
-    `ALTER TABLE dy_dispatch_items
-     MODIFY COLUMN paymentStatus ENUM('paid','partial','unpaid','monthly','weekly') NOT NULL DEFAULT 'unpaid'`
-  );
-}
-
-function calcDueDate(dispatchDate: string, settlementCycle?: string | null, overdueDays?: number | null) {
-  const date = new Date(dispatchDate);
-  if (settlementCycle === "weekly") {
-    date.setDate(date.getDate() + 7);
-    return date.toISOString().slice(0, 10);
-  }
-  if (settlementCycle === "monthly") {
-    const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-    monthEnd.setDate(monthEnd.getDate() + Number(overdueDays ?? 5));
-    return monthEnd.toISOString().slice(0, 10);
-  }
-  return dispatchDate;
-}
-
-async function upsertReceivable(
-  client: any,
-  payload: {
-    tenantId: number;
-    orderId: number;
-    customerId: number;
-    amount: number;
-    paidAmount: number;
-    paymentStatus: string;
-    dueDate: string;
-  }
-) {
-  const [existingRows] = await client.execute(
-    `SELECT id FROM dy_ar_records WHERE tenantId=? AND orderId=? LIMIT 1`,
-    [payload.tenantId, payload.orderId]
-  );
-  const existing = (existingRows as any[])[0];
-
-  const paidAmount = Number(payload.paidAmount ?? 0);
-  const amount = Number(payload.amount ?? 0);
-  const normalizedStatus =
-    payload.paymentStatus === "paid" || paidAmount >= amount
-      ? "paid"
-      : paidAmount > 0
-        ? "partial"
-        : "unpaid";
-
-  if (existing) {
-    await client.execute(
-      `UPDATE dy_ar_records
-       SET amount=?, paidAmount=?, status=?, dueDate=?, paymentMethod=IF(? > 0, 'cash', paymentMethod),
-           paidAt=CASE WHEN ? = 'paid' OR ? >= ? THEN NOW() ELSE paidAt END,
-           updatedAt=NOW()
-       WHERE id=? AND tenantId=?`,
-      [amount, paidAmount, normalizedStatus, payload.dueDate, paidAmount, payload.paymentStatus, paidAmount, amount, existing.id, payload.tenantId]
-    );
-    return existing.id;
-  }
-
-  const [result] = await client.execute(
-    `INSERT INTO dy_ar_records
-     (tenantId, orderId, customerId, amount, paidAmount, status, dueDate, paymentMethod, paidAt, createdAt, updatedAt)
-     VALUES (?,?,?,?,?,?,?,IF(? > 0, 'cash', NULL), CASE WHEN ? = 'paid' OR ? >= ? THEN NOW() ELSE NULL END, NOW(), NOW())`,
-    [payload.tenantId, payload.orderId, payload.customerId, amount, paidAmount, normalizedStatus, payload.dueDate, paidAmount, payload.paymentStatus, paidAmount, amount]
-  );
-  return (result as any).insertId;
-}
+import { calcDueDate, upsertArRecord } from "./utils";
 
 async function resolveDriverScope(client: any, tenantId: number, userId: number, role: string) {
   if (role === "super_admin" || role === "manager") {
@@ -357,7 +287,7 @@ export const dyDispatchRouter = router({
       for (const item of itemRows as any[]) {
         await client.execute(
           `UPDATE dy_inventory
-           SET currentQty = currentQty - ?, updatedAt=NOW()
+           SET currentQty = GREATEST(0, currentQty - ?), updatedAt=NOW()
            WHERE tenantId=? AND productId=?`,
           [item.qty, input.tenantId, item.productId]
         );
@@ -466,24 +396,17 @@ export const dyDispatchRouter = router({
         );
       }
 
-      if (item.orderId && item.orderStatus === "delivered") {
-        await upsertReceivable(client, {
-          tenantId: input.tenantId,
-          orderId: item.orderId,
-          customerId: item.customerId,
-          amount: Number(item.totalAmount ?? 0),
-          paidAmount: Number(input.cashCollected ?? 0),
-          paymentStatus: input.paymentStatus,
-          dueDate: calcDueDate(item.dispatchDate ?? new Date().toISOString().slice(0, 10), item.settlementCycle, item.overdueDays),
-        });
-
+      // AR 記錄由 driver.updateOrderStatus / orders.confirmDelivery 唯一負責產生
+      // 這裡只同步 dy_orders 的箱數與現金欄位
+      if (item.orderId) {
         await client.execute(
           `UPDATE dy_orders
-           SET paidAmount=?, paymentStatus=?, returnBoxes=?, remainBoxes=?, updatedAt=NOW()
+           SET paidAmount=?, paymentStatus=IF(? >= totalAmount,'paid',IF(? > 0,'partial','unpaid')),
+               returnBoxes=?, remainBoxes=?, updatedAt=NOW()
            WHERE id=? AND tenantId=?`,
           [
             input.cashCollected,
-            input.paymentStatus === "paid" ? "paid" : input.cashCollected > 0 ? "partial" : "unpaid",
+            input.cashCollected, input.cashCollected,
             input.returnBoxes,
             remainBoxes,
             item.orderId,
@@ -870,15 +793,14 @@ export const dyDispatchRouter = router({
         );
       }
 
-      // 2. 現收應收帳款結清（只結 paymentMethod=cash 的 unpaid/partial）
+      // 2. 現收應收帳款結清（這張派車單下、AR 尚未付清的記錄，管理員點收現金後標為已付）
       const [cashArRows] = await client.execute(
         `SELECT ar.id, ar.amount, ar.paidAmount
          FROM dy_ar_records ar
          JOIN dy_orders o ON o.id = ar.orderId
          JOIN dy_dispatch_items di ON di.orderId = o.id
          WHERE di.dispatchOrderId=? AND ar.tenantId=?
-           AND ar.status IN ('unpaid','partial')
-           AND o.paymentStatus IN ('paid','partial')`,
+           AND ar.status IN ('unpaid','partial')`,
         [input.dispatchOrderId, input.tenantId]
       );
 

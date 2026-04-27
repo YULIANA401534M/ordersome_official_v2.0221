@@ -408,7 +408,8 @@ export const dyArRouter = router({
 
       const monthStr = String(input.month).padStart(2, "0");
       const startDate = `${input.year}-${monthStr}-01`;
-      const endDate = `${input.year}-${monthStr}-31`;
+      const lastDay = new Date(input.year, input.month, 0).getDate();
+      const endDate = `${input.year}-${monthStr}-${String(lastDay).padStart(2, "0")}`;
 
       // 客戶基本資料
       const [custRows] = await client.execute(

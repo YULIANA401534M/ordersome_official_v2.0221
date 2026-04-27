@@ -3,22 +3,7 @@ import { router } from "../../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../../db";
 import { dayoneAdminProcedure as dyAdminProcedure, dayoneDriverProcedure as dyDriverProcedure } from "./procedures";
-
-
-
-function calcDueDate(deliveryDate: string, settlementCycle?: string | null, overdueDays?: number | null) {
-  const date = new Date(deliveryDate);
-  if (settlementCycle === "weekly") {
-    date.setDate(date.getDate() + 7);
-    return date.toISOString().slice(0, 10);
-  }
-  if (settlementCycle === "monthly") {
-    const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-    monthEnd.setDate(monthEnd.getDate() + Number(overdueDays ?? 5));
-    return monthEnd.toISOString().slice(0, 10);
-  }
-  return deliveryDate;
-}
+import { calcDueDate, upsertArRecord } from "./utils";
 
 export const dyOrdersRouter = router({
   list: dyAdminProcedure
@@ -158,20 +143,22 @@ export const dyOrdersRouter = router({
       return { success: true };
     }),
 
-  getLiffOrders: dyAdminProcedure.query(async () => {
-    const db = await getDb();
-    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const [rows] = await (db as any).$client.execute(
-      `SELECT o.id as orderId, o.orderNo, o.createdAt, o.totalAmount, o.status,
-              c.name as customerName, c.phone as customerPhone
-       FROM dy_orders o
-       JOIN dy_customers c ON o.customerId = c.id
-       WHERE o.orderSource = 'liff' AND o.tenantId = 90004
-       ORDER BY o.createdAt DESC`,
-      []
-    );
-    return rows as any[];
-  }),
+  getLiffOrders: dyAdminProcedure
+    .input(z.object({ tenantId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      const [rows] = await (db as any).$client.execute(
+        `SELECT o.id as orderId, o.orderNo, o.createdAt, o.totalAmount, o.status,
+                c.name as customerName, c.phone as customerPhone
+         FROM dy_orders o
+         JOIN dy_customers c ON o.customerId = c.id
+         WHERE o.orderSource = 'liff' AND o.tenantId = ?
+         ORDER BY o.createdAt DESC`,
+        [input.tenantId]
+      );
+      return rows as any[];
+    }),
 
   deleteOrder: dyAdminProcedure
     .input(z.object({ id: z.number(), tenantId: z.number() }))
@@ -208,15 +195,27 @@ export const dyOrdersRouter = router({
 
       // 刪除應收帳款
       await client.execute(`DELETE FROM dy_ar_records WHERE orderId=? AND tenantId=?`, [input.id, input.tenantId]);
-      // 刪除此訂單所在派車單的待驗回庫（若訂單是該派車單唯一品項才會影響）
-      // 注意：pending_returns 是以 dispatchOrderId 為單位，共用派車單的其他訂單不受影響
+      // 只刪除與這筆訂單直接關聯的 pending_returns（不影響同派車單其他停點）
+      // pending_returns 沒有 orderId 欄位，以 dispatchOrderId + productId 比對訂單品項
       if ((diRows as any[]).length > 0) {
+        const [orderItemRows] = await client.execute(
+          `SELECT productId FROM dy_order_items WHERE orderId=? AND tenantId=?`,
+          [input.id, input.tenantId]
+        );
+        const productIds = (orderItemRows as any[]).map((r: any) => r.productId);
         const dispatchOrderIds = [...new Set((diRows as any[]).map((di: any) => di.dispatchOrderId))];
         for (const doid of dispatchOrderIds) {
-          await client.execute(
-            `DELETE FROM dy_pending_returns WHERE tenantId=? AND dispatchOrderId=? AND status='pending'`,
-            [input.tenantId, doid]
-          );
+          // 只刪除這張派車單下、對應這筆訂單品項的 pending_returns
+          // 若其他訂單也有同樣品項，仍以此保守策略刪除（比全部刪更安全）
+          if (productIds.length > 0) {
+            const placeholders = productIds.map(() => "?").join(",");
+            await client.execute(
+              `DELETE FROM dy_pending_returns
+               WHERE tenantId=? AND dispatchOrderId=? AND status='pending'
+                 AND productId IN (${placeholders})`,
+              [input.tenantId, doid, ...productIds]
+            );
+          }
         }
       }
       // 刪除訂單品項與訂單
@@ -258,35 +257,14 @@ export const dyOrdersRouter = router({
       );
       const order = (rows as any[])[0];
       if (order) {
-        const dueDate = calcDueDate(order.deliveryDate, order.settlementCycle, order.overdueDays);
-        const [existingRows] = await client.execute(
-          `SELECT id FROM dy_ar_records WHERE tenantId=? AND orderId=? LIMIT 1`,
-          [input.tenantId, input.id]
-        );
-        const existing = (existingRows as any[])[0];
-        const status =
-          Number(order.paidAmount ?? 0) >= Number(order.totalAmount ?? 0)
-            ? "paid"
-            : Number(order.paidAmount ?? 0) > 0
-              ? "partial"
-              : "unpaid";
-
-        if (existing) {
-          await client.execute(
-            `UPDATE dy_ar_records
-             SET amount=?, paidAmount=?, status=?, dueDate=?, paymentMethod=IF(? > 0, 'cash', paymentMethod),
-                 paidAt=CASE WHEN ? >= ? THEN NOW() ELSE paidAt END, updatedAt=NOW()
-             WHERE id=? AND tenantId=?`,
-            [order.totalAmount, order.paidAmount, status, dueDate, order.paidAmount, order.paidAmount, order.totalAmount, existing.id, input.tenantId]
-          );
-        } else {
-          await client.execute(
-            `INSERT INTO dy_ar_records
-             (tenantId, orderId, customerId, amount, paidAmount, status, dueDate, paymentMethod, paidAt, createdAt, updatedAt)
-             VALUES (?,?,?,?,?,?,?,IF(? > 0, 'cash', NULL), CASE WHEN ? >= ? THEN NOW() ELSE NULL END, NOW(), NOW())`,
-            [input.tenantId, order.id, order.customerId, order.totalAmount, order.paidAmount, status, dueDate, order.paidAmount, order.paidAmount, order.totalAmount]
-          );
-        }
+        await upsertArRecord(client, {
+          tenantId: input.tenantId,
+          orderId: order.id,
+          customerId: order.customerId,
+          amount: Number(order.totalAmount ?? 0),
+          paidAmount: Number(order.paidAmount ?? 0),
+          dueDate: calcDueDate(order.deliveryDate, order.settlementCycle, order.overdueDays),
+        });
       }
       return { success: true };
     }),

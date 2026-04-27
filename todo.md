@@ -1,6 +1,6 @@
 # todo.md — OrderSome 待辦清單
 
-> 上次更新：2026-04-28
+> 上次更新：2026-04-27
 > 有新想法就加在對應 P 等級下面。要開始做某件事，先把它標為 `[ 進行中 ]`，完成後打 `[x]`。
 > 已完成的項目定期移到底部「已完成」區。
 
@@ -8,7 +8,18 @@
 
 ## P1 — 影響正常作業（優先做）
 
-### 大永落地驗收
+### 大永後端帳務 Bug 修復（靜態審查發現，需修完才能真實驗收）
+
+- [ 進行中 ] **Bug 1（高）— AR 重複寫入 + 觸發路徑不一致**：`dispatch.ts:updateDispatchItem` 在管理員後台更新派車項目時會重複觸發 AR，且只有 `orderStatus === "delivered"` 才觸發，路徑混亂。需整理唯一觸發點。
+- [ 進行中 ] **Bug 2（高）— `confirmHandover` 結清條件錯誤**：`dispatch.ts:878` WHERE 條件寫 `o.paymentStatus IN ('paid','partial')` 邏輯反了，應為 `ar.status IN ('unpaid','partial')`，現在結清的是已付款的而非未付款的。
+- [ 進行中 ] **Bug 3（高）— `getMyTodayOrders` 用 UTC 日期**：`driver.ts:78` 用 `new Date().toISOString()` 是 UTC，台灣凌晨 0:00–7:59 司機 App 會看到昨天的單。需改為台灣時間（UTC+8）。
+- [ 進行中 ] **Bug 4（中）— `deleteOrder` 誤刪同派車單其他訂單的 pending_returns**：刪一筆訂單時 `DELETE FROM dy_pending_returns WHERE dispatchOrderId=?` 會連帶刪掉同派車單所有停點的待驗記錄。
+- [ 進行中 ] **Bug 5（中）— `markPrinted` 庫存可扣成負數**：`UPDATE dy_inventory SET currentQty = currentQty - ?` 沒有 `WHERE currentQty >= ?` 保護。
+- [ 進行中 ] **Bug 6（中）— 月結對帳單月底日期 hardcode 31**：`ar.ts:411` endDate 寫死 31，2月、4月等月份查詢結果不準。
+- [ 進行中 ] **Bug 7（低）— `getLiffOrders` tenantId hardcode 90004**：`orders.ts:169` tenantId 寫死，多租戶擴展會壞。
+- [ 進行中 ] **Bug 8（低）— `calcDueDate` 三份重複**：`dispatch.ts`、`orders.ts`、`driver.ts` 各自複製一份，應抽成共用。
+
+### 大永落地驗收（Bug 修完後跑）
 
 驗收條件（需要真人跑過完整一天）：
 - [ ] 建訂單 → 派車 → 列印派車單有內容
@@ -47,17 +58,6 @@
 
 ---
 
-## P2 補充 — 大永 LIFF 上線（接下來要做）
-
-> 這段完成就是整個系統 80% 了，很重要。
-
-- [ ] **LINE Developers 建 LIFF app**：去 developers.line.biz 建立 LIFF，Endpoint URL 設為 `https://ordersome.com.tw/liff`，拿到新 liffId 後換掉 code 裡的舊值
-- [ ] **客戶綁定流程**：`dy_customers` 有 `lineId` 欄位但前台沒有綁定入口。需在 LIFF 首次開啟時做「輸入手機號碼確認身份 → 系統寫入 lineId」的綁定流程（目前直接查 lineId 找不到會報錯）
-- [ ] **每個客戶填好預設司機 + 送貨頻率**：後台 `/dayone/customers` 編輯每筆客戶資料
-- [ ] **端對端測試**：用自己的 LINE 掃 QR Code → LIFF 下單 → 後台確認訂單有司機 → 早上建派車確認自動分配
-
----
-
 ## P3 — 備用（有空再做）
 
 - [ ] **商城前端改版**：ShopHome / ShopCategory / ProductDetail / Cart / Checkout / OrderComplete
@@ -68,6 +68,7 @@
 - [ ] **多車同日跨日庫存**：多車同一天、跨日累積後庫存數字驗證
 - [ ] **逐頁人工 smoke test**：完整人工測試所有頁面
 - [ ] **BOM 建立**：整合品項主檔 + `os_products`（CA 表功能）
+- [ ] **LIFF 下單說明文字**：下單頁加「今日收單截止 08:00，超過將排至下一個送貨日」提示
 
 ---
 
@@ -95,3 +96,7 @@
 - [x] 帳務整合 DayoneARContent 五 tab（v6.44）
 - [x] 工作日誌任務導向（每張派車單各自日結，v6.49）
 - [x] generateDispatch 防重複（v6.50–v6.51）
+- [x] LIFF 客戶綁定流程（v6.54–v6.56）
+- [x] LIFF 商品圖片、庫存反灰、金額小計、成功畫面明細（v6.61）
+- [x] LIFF 收單截止 08:00 配送日邏輯（v6.62）
+- [x] 後台品項管理圖片上傳（v6.61）

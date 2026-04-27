@@ -1,4 +1,4 @@
-import { DayoneLayout } from "./DayoneLayout";
+import { DayoneLayout, TENANT_ID } from "./DayoneLayout";
 import { trpc } from "@/lib/trpc";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -38,7 +38,7 @@ function formatMoney(value: number | string | null | undefined) {
 }
 
 export default function DayoneLiffOrders() {
-  const { data: orders, isLoading } = trpc.dayone.orders.getLiffOrders.useQuery();
+  const { data: orders, isLoading } = trpc.dayone.orders.getLiffOrders.useQuery({ tenantId: TENANT_ID });
 
   const orderList = Array.isArray(orders) ? orders : [];
   const totalOrders = orderList.length;
