@@ -150,7 +150,7 @@ export const liffRouter = router({
       if (customerId !== null) {
         // 第一優先：客製定價
         const [cpRows] = await client.execute(
-          `SELECT price FROM dy_customer_prices WHERE tenantId=? AND customerId=? AND productId=? ORDER BY effectiveDate DESC LIMIT 1`,
+          `SELECT price FROM dy_customer_prices WHERE tenantId=? AND customerId=? AND productId=? ORDER BY effectiveDate DESC, id DESC LIMIT 1`,
           [tenantId, customerId, r.id]
         );
         const cp = (cpRows as any[])[0];
@@ -228,7 +228,7 @@ export const liffRouter = router({
         const [priceRows] = await client.execute(
           `SELECT price FROM dy_customer_prices
            WHERE tenantId = ? AND customerId = ? AND productId = ?
-           ORDER BY effectiveDate DESC LIMIT 1`,
+           ORDER BY effectiveDate DESC, id DESC LIMIT 1`,
           [tenantId, customerId, item.productId]
         );
         const priceRow = (priceRows as any[])[0];
