@@ -116,7 +116,12 @@ export const liffRouter = router({
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
     const [rows] = await (db as any).$client.execute(
-      `SELECT id, code, name, unit, defaultPrice FROM dy_products WHERE tenantId = ? AND isActive = 1 ORDER BY code`,
+      `SELECT p.id, p.code, p.name, p.unit, p.defaultPrice, p.imageUrl,
+              COALESCE(i.currentQty, -1) AS currentQty
+       FROM dy_products p
+       LEFT JOIN dy_inventory i ON i.productId = p.id AND i.tenantId = p.tenantId
+       WHERE p.tenantId = ? AND p.isActive = 1
+       ORDER BY p.code`,
       [tenantId]
     );
     return (rows as any[]).map((r) => ({
@@ -125,6 +130,8 @@ export const liffRouter = router({
       name: r.name as string,
       unit: r.unit as string,
       defaultPrice: Number(r.defaultPrice),
+      imageUrl: (r.imageUrl as string | null) ?? null,
+      currentQty: Number(r.currentQty), // -1 = 未設定庫存（不限制）, 0 = 補貨中
     }));
   }),
 
@@ -215,17 +222,19 @@ export const liffRouter = router({
       function nextDeliveryDate(frequency: string): string {
         // Taiwan time = UTC+8
         const now = new Date(Date.now() + 8 * 60 * 60 * 1000);
+        const hourTW = now.getUTCHours(); // UTC 小時即台灣時間（已加 8h）
         const todayTW = new Date(now.toISOString().slice(0, 10) + "T00:00:00Z");
-        // 從明天開始找
-        for (let i = 1; i <= 7; i++) {
+        // 收單截止 08:00：08:00 前下單配送日從今天開始找，08:00 後從明天開始找
+        const startOffset = hourTW < 8 ? 0 : 1;
+        for (let i = startOffset; i <= startOffset + 6; i++) {
           const d = new Date(todayTW.getTime() + i * 86400000);
           const dayOfWeek = d.getUTCDay(); // 0=Sun,1=Mon,...,6=Sat
           if (frequency === "D1" && [1, 3, 5].includes(dayOfWeek)) return d.toISOString().slice(0, 10);
           if (frequency === "D2" && [2, 4, 6].includes(dayOfWeek)) return d.toISOString().slice(0, 10);
           if (frequency === "daily") return d.toISOString().slice(0, 10);
         }
-        // fallback: 明天
-        return new Date(todayTW.getTime() + 86400000).toISOString().slice(0, 10);
+        // fallback
+        return new Date(todayTW.getTime() + (startOffset) * 86400000).toISOString().slice(0, 10);
       }
 
       const deliveryDate = nextDeliveryDate(freq);
