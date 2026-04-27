@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Search, Trash2, CalendarDays, Calendar, ChevronDown, ChevronUp, X, Pencil, Check } from "lucide-react";
+import { Plus, Search, Trash2, CalendarDays, Calendar, ChevronDown, ChevronUp, X, Pencil, Check, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 function fmtDate(val: string | null | undefined): string {
@@ -112,6 +112,16 @@ export default function DayoneOrders() {
   });
 
   const filtered = (orders as any[] ?? []).filter((o: any) => !search || o.customerName?.includes(search) || o.orderNo?.includes(search));
+
+  // 今日未送達警示：狀態停在 picked / delivering，配送日期是今天
+  const { data: undeliveredToday = [] } = trpc.dayone.orders.list.useQuery({
+    tenantId: TENANT_ID,
+    deliveryDate: todayStr(),
+    status: undefined,
+  });
+  const undeliveredOrders = (undeliveredToday as any[]).filter(
+    (o: any) => o.status === "picked" || o.status === "delivering"
+  );
 
   function EditableOrderItems({ orderId, orderStatus, colSpan = 7, mobile = false }: { orderId: number; orderStatus: string; colSpan?: number; mobile?: boolean }) {
     const utils = trpc.useUtils();
@@ -453,6 +463,37 @@ export default function DayoneOrders() {
             </div>
           </CardContent>
         </Card>
+
+        {/* 今日未送達警示 */}
+        {undeliveredOrders.length > 0 && (
+          <div className="rounded-[28px] border border-red-200 bg-red-50 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle className="h-5 w-5 shrink-0 text-red-600" />
+              <p className="text-sm font-semibold text-red-700">
+                今日有 {undeliveredOrders.length} 筆訂單尚未送達
+              </p>
+            </div>
+            <div className="space-y-2">
+              {undeliveredOrders.map((o: any) => {
+                const st = STATUS_MAP[o.status] ?? { label: o.status, color: "bg-gray-100 text-gray-700" };
+                return (
+                  <div key={o.id} className="flex items-center justify-between rounded-2xl border border-red-100 bg-white px-4 py-3">
+                    <div>
+                      <p className="text-sm font-semibold text-stone-900">{o.customerName}</p>
+                      <p className="mt-0.5 text-xs text-stone-400">
+                        {o.driverName ?? "未指派"} · #{o.orderNo}
+                      </p>
+                    </div>
+                    <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${st.color}`}>
+                      {st.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="mt-3 text-xs text-red-500">請聯繫司機確認狀況，或手動更新訂單狀態。</p>
+          </div>
+        )}
 
         <Card className="dayone-table-shell">
           <CardContent className="p-0">

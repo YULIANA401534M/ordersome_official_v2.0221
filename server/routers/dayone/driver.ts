@@ -64,11 +64,10 @@ export const dyDriverRouter = router({
         tenantId: z.number(),
         status: z.enum(["picked", "delivering", "delivered", "returned"]),
         driverNote: z.string().optional(),
-        // Box counts recorded when driver arrives at customer
         inBoxes: z.number().int().min(0).optional(),
         returnBoxes: z.number().int().min(0).optional(),
-        // Cash collected at this stop (for delivered)
         cashCollected: z.number().min(0).optional(),
+        rejectNote: z.string().optional(), // 拒收原因
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -80,13 +79,17 @@ export const dyDriverRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "司機帳號未連結" });
       }
 
-      // Build dynamic SET clauses for optional fields
+      // 拒收時把原因合入 driverNote
+      const effectiveNote = input.rejectNote
+        ? `【拒收】${input.rejectNote}`
+        : (input.driverNote ?? null);
+
       const setParts = [
         "status=?",
         "driverNote=COALESCE(?, driverNote)",
         "updatedAt=NOW()",
       ];
-      const params: any[] = [input.status, input.driverNote ?? null];
+      const params: any[] = [input.status, effectiveNote];
 
       if (input.inBoxes !== undefined) {
         setParts.push("inBoxes=?");

@@ -43,11 +43,14 @@ export default function DriverOrderDetail() {
 
   // Delivery confirmation state
   const [cashInput, setCashInput] = useState("");
-  const [inBoxes, setInBoxes] = useState("");   // 客戶還回空箱
-  const [returnBoxes, setReturnBoxes] = useState(""); // 退貨/回收箱
+  const [inBoxes, setInBoxes] = useState("");
+  const [returnBoxes, setReturnBoxes] = useState("");
   const [driverNote, setDriverNote] = useState("");
   const [showSig, setShowSig] = useState(false);
   const sigRef = useRef<SignatureCanvas>(null);
+  // 拒收流程
+  const [showReject, setShowReject] = useState(false);
+  const [rejectNote, setRejectNote] = useState("");
 
   const today = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const utils = trpc.useUtils();
@@ -212,8 +215,51 @@ export default function DriverOrderDetail() {
           </button>
         )}
 
+        {/* ── 拒收按鈕（picked 或 delivering 都可以用） ── */}
+        {(order.status === "picked" || order.status === "delivering") && !showReject && (
+          <button type="button"
+            className="w-full rounded-2xl border-2 border-rose-200 bg-rose-50 py-3 text-sm font-semibold text-rose-700 active:scale-[0.98] transition-transform"
+            onClick={() => setShowReject(true)}>
+            客戶拒收
+          </button>
+        )}
+
+        {/* ── 拒收確認區塊 ── */}
+        {showReject && (order.status === "picked" || order.status === "delivering") && (
+          <section className="rounded-[28px] border-2 border-rose-200 bg-rose-50 p-5 space-y-4">
+            <p className="text-sm font-semibold text-rose-700">確認客戶拒收</p>
+            <p className="text-xs text-rose-600">此筆訂單將標記為「已回單」，不產生應收帳款。貨物請帶回倉庫，在「剩貨回庫」頁面回報。</p>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-stone-600">拒收原因（必填）</label>
+              <textarea
+                value={rejectNote}
+                onChange={(e) => setRejectNote(e.target.value)}
+                rows={2}
+                placeholder="例如：客戶臨時取消、無人在家、地址錯誤…"
+                className="w-full rounded-2xl border border-rose-200 bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-400"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button type="button"
+                className="flex-1 rounded-2xl border border-stone-200 bg-white py-3 text-sm font-medium text-stone-600"
+                onClick={() => { setShowReject(false); setRejectNote(""); }}>
+                取消
+              </button>
+              <button type="button"
+                className="flex-1 rounded-2xl bg-rose-600 py-3 text-sm font-bold text-white disabled:opacity-50"
+                disabled={!rejectNote.trim() || updateStatus.isPending}
+                onClick={() => updateStatus.mutate({
+                  id: orderId, tenantId: TENANT_ID, status: "returned",
+                  rejectNote: rejectNote.trim(),
+                })}>
+                {updateStatus.isPending ? "送出中…" : "確認拒收，帶貨回倉"}
+              </button>
+            </div>
+          </section>
+        )}
+
         {/* ── 送達確認區塊 ── */}
-        {order.status === "delivering" && (
+        {order.status === "delivering" && !showReject && (
           <section className="rounded-[28px] border border-amber-200 bg-amber-50 p-5 space-y-4">
             <p className="text-sm font-semibold text-amber-800">到達客戶端 — 填完再按確認送達</p>
 
@@ -365,6 +411,20 @@ export default function DriverOrderDetail() {
               <p className="text-xs text-stone-500">備註：{order.driverNote}</p>
             )}
             <p className="text-xs text-emerald-700/70 text-center">回倉後在「剩貨回庫 / 日結」頁面完成今日結算</p>
+          </section>
+        )}
+
+        {/* ── 已回單（拒收）狀態 ── */}
+        {order.status === "returned" && (
+          <section className="rounded-3xl border border-rose-100 bg-rose-50 px-5 py-5 space-y-2">
+            <div className="flex items-center gap-2">
+              <Package className="h-5 w-5 text-rose-500" />
+              <p className="text-sm font-semibold text-rose-700">已回單（客戶拒收）</p>
+            </div>
+            {order.driverNote && (
+              <p className="text-xs text-rose-600">{order.driverNote}</p>
+            )}
+            <p className="text-xs text-rose-500/80">此筆貨物請在「剩貨回庫 / 日結」頁面回報回庫數量</p>
           </section>
         )}
       </div>
