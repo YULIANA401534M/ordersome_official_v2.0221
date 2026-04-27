@@ -534,6 +534,89 @@ body { margin: 0; padding: 16px; background: white; font-family: 'Noto Sans TC',
                 </div>
               </section>
 
+              {/* 備用箱登記（草稿狀態才能編輯） */}
+              {detail.status === "draft" && (
+                <section className="no-print rounded-[26px] border border-sky-200 bg-sky-50 p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="text-sm font-semibold text-sky-900">備用箱登記</p>
+                      <p className="text-xs text-sky-600 mt-0.5">倉管點完貨後填，列印時一起扣庫存</p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-sky-300 text-sky-700 hover:bg-sky-100"
+                      onClick={() => setExtraRows((r) => [...r, { productId: "", qty: "", note: "" }])}
+                    >
+                      <Plus className="h-3.5 w-3.5 mr-1" />新增品項
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    {extraRows.map((row, idx) => (
+                      <div key={idx} className="grid grid-cols-[1fr_80px_1fr_auto] gap-2 items-center">
+                        <Select value={row.productId} onValueChange={(v) => setExtraRows((rows) => rows.map((r, i) => i === idx ? { ...r, productId: v } : r))}>
+                          <SelectTrigger className="rounded-2xl h-8 text-xs"><SelectValue placeholder="選商品" /></SelectTrigger>
+                          <SelectContent>
+                            {(allProducts as any[]).map((p: any) => (
+                              <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          type="number" min={1} placeholder="箱數"
+                          className="rounded-2xl h-8 text-xs text-center"
+                          value={row.qty}
+                          onChange={(e) => setExtraRows((rows) => rows.map((r, i) => i === idx ? { ...r, qty: e.target.value } : r))}
+                        />
+                        <Input
+                          placeholder="備註（選填）"
+                          className="rounded-2xl h-8 text-xs"
+                          value={row.note}
+                          onChange={(e) => setExtraRows((rows) => rows.map((r, i) => i === idx ? { ...r, note: e.target.value } : r))}
+                        />
+                        <button
+                          type="button"
+                          className="text-stone-400 hover:text-rose-500 px-1"
+                          onClick={() => setExtraRows((rows) => rows.length === 1 ? [{ productId: "", qty: "", note: "" }] : rows.filter((_, i) => i !== idx))}
+                        >✕</button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 flex justify-end">
+                    <Button
+                      size="sm"
+                      className="bg-sky-600 text-white hover:bg-sky-700"
+                      disabled={upsertExtraItems.isPending}
+                      onClick={() => {
+                        const valid = extraRows.filter((r) => r.productId && Number(r.qty) > 0);
+                        upsertExtraItems.mutate({
+                          dispatchOrderId: dispatchId,
+                          tenantId: TENANT_ID,
+                          items: valid.map((r) => ({ productId: Number(r.productId), qty: Number(r.qty), note: r.note || undefined })),
+                        });
+                      }}
+                    >
+                      {upsertExtraItems.isPending ? "儲存中..." : "儲存備用箱"}
+                    </Button>
+                  </div>
+                </section>
+              )}
+
+              {/* 備用箱唯讀顯示（已列印後） */}
+              {detail.status !== "draft" && (existingExtraItems as any[]).length > 0 && (
+                <section className="no-print rounded-[26px] border border-sky-200 bg-sky-50 p-4">
+                  <p className="text-sm font-semibold text-sky-900 mb-2">備用箱（已出車）</p>
+                  <div className="space-y-1.5">
+                    {(existingExtraItems as any[]).map((r: any) => (
+                      <div key={r.id} className="flex items-center justify-between text-sm">
+                        <span className="text-sky-800">{r.productName}</span>
+                        <span className="font-semibold text-sky-900">{Number(r.qty)} {r.unit || "箱"}{r.note ? <span className="ml-2 text-xs text-sky-500">（{r.note}）</span> : null}</span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
               {/* ─── PRINT LAYOUT ────────────────────────────────────── */}
               <section className="print-dispatch-sheet">
                 <div style={{fontFamily:"'Noto Sans TC', Arial, sans-serif", fontSize:"12px", color:"#111"}}>
@@ -845,89 +928,6 @@ body { margin: 0; padding: 16px; background: white; font-family: 'Noto Sans TC',
 
                 </div>
               </section>
-
-              {/* 備用箱登記（草稿狀態才能編輯） */}
-              {detail.status === "draft" && (
-                <section className="no-print rounded-[26px] border border-sky-200 bg-sky-50 p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <p className="text-sm font-semibold text-sky-900">備用箱登記</p>
-                      <p className="text-xs text-sky-600 mt-0.5">倉管點完貨後填，列印時一起扣庫存</p>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-sky-300 text-sky-700 hover:bg-sky-100"
-                      onClick={() => setExtraRows((r) => [...r, { productId: "", qty: "", note: "" }])}
-                    >
-                      <Plus className="h-3.5 w-3.5 mr-1" />新增品項
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    {extraRows.map((row, idx) => (
-                      <div key={idx} className="grid grid-cols-[1fr_80px_1fr_auto] gap-2 items-center">
-                        <Select value={row.productId} onValueChange={(v) => setExtraRows((rows) => rows.map((r, i) => i === idx ? { ...r, productId: v } : r))}>
-                          <SelectTrigger className="rounded-2xl h-8 text-xs"><SelectValue placeholder="選商品" /></SelectTrigger>
-                          <SelectContent>
-                            {(allProducts as any[]).map((p: any) => (
-                              <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Input
-                          type="number" min={1} placeholder="箱數"
-                          className="rounded-2xl h-8 text-xs text-center"
-                          value={row.qty}
-                          onChange={(e) => setExtraRows((rows) => rows.map((r, i) => i === idx ? { ...r, qty: e.target.value } : r))}
-                        />
-                        <Input
-                          placeholder="備註（選填）"
-                          className="rounded-2xl h-8 text-xs"
-                          value={row.note}
-                          onChange={(e) => setExtraRows((rows) => rows.map((r, i) => i === idx ? { ...r, note: e.target.value } : r))}
-                        />
-                        <button
-                          type="button"
-                          className="text-stone-400 hover:text-rose-500 px-1"
-                          onClick={() => setExtraRows((rows) => rows.length === 1 ? [{ productId: "", qty: "", note: "" }] : rows.filter((_, i) => i !== idx))}
-                        >✕</button>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-3 flex justify-end">
-                    <Button
-                      size="sm"
-                      className="bg-sky-600 text-white hover:bg-sky-700"
-                      disabled={upsertExtraItems.isPending}
-                      onClick={() => {
-                        const valid = extraRows.filter((r) => r.productId && Number(r.qty) > 0);
-                        upsertExtraItems.mutate({
-                          dispatchOrderId: dispatchId,
-                          tenantId: TENANT_ID,
-                          items: valid.map((r) => ({ productId: Number(r.productId), qty: Number(r.qty), note: r.note || undefined })),
-                        });
-                      }}
-                    >
-                      {upsertExtraItems.isPending ? "儲存中..." : "儲存備用箱"}
-                    </Button>
-                  </div>
-                </section>
-              )}
-
-              {/* 備用箱唯讀顯示（已列印後） */}
-              {detail.status !== "draft" && (existingExtraItems as any[]).length > 0 && (
-                <section className="no-print rounded-[26px] border border-sky-200 bg-sky-50 p-4">
-                  <p className="text-sm font-semibold text-sky-900 mb-2">備用箱（已出車）</p>
-                  <div className="space-y-1.5">
-                    {(existingExtraItems as any[]).map((r: any) => (
-                      <div key={r.id} className="flex items-center justify-between text-sm">
-                        <span className="text-sky-800">{r.productName}</span>
-                        <span className="font-semibold text-sky-900">{Number(r.qty)} {r.unit || "箱"}{r.note ? <span className="ml-2 text-xs text-sky-500">（{r.note}）</span> : null}</span>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              )}
 
               {/* Screen-only station cards (no-print) */}
               <section className="no-print space-y-3">
