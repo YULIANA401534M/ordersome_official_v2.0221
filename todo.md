@@ -10,14 +10,14 @@
 
 ### 大永後端帳務 Bug 修復（靜態審查發現，需修完才能真實驗收）
 
-- [ 進行中 ] **Bug 1（高）— AR 重複寫入 + 觸發路徑不一致**：`dispatch.ts:updateDispatchItem` 在管理員後台更新派車項目時會重複觸發 AR，且只有 `orderStatus === "delivered"` 才觸發，路徑混亂。需整理唯一觸發點。
-- [ 進行中 ] **Bug 2（高）— `confirmHandover` 結清條件錯誤**：`dispatch.ts:878` WHERE 條件寫 `o.paymentStatus IN ('paid','partial')` 邏輯反了，應為 `ar.status IN ('unpaid','partial')`，現在結清的是已付款的而非未付款的。
-- [ 進行中 ] **Bug 3（高）— `getMyTodayOrders` 用 UTC 日期**：`driver.ts:78` 用 `new Date().toISOString()` 是 UTC，台灣凌晨 0:00–7:59 司機 App 會看到昨天的單。需改為台灣時間（UTC+8）。
-- [ 進行中 ] **Bug 4（中）— `deleteOrder` 誤刪同派車單其他訂單的 pending_returns**：刪一筆訂單時 `DELETE FROM dy_pending_returns WHERE dispatchOrderId=?` 會連帶刪掉同派車單所有停點的待驗記錄。
-- [ 進行中 ] **Bug 5（中）— `markPrinted` 庫存可扣成負數**：`UPDATE dy_inventory SET currentQty = currentQty - ?` 沒有 `WHERE currentQty >= ?` 保護。
-- [ 進行中 ] **Bug 6（中）— 月結對帳單月底日期 hardcode 31**：`ar.ts:411` endDate 寫死 31，2月、4月等月份查詢結果不準。
-- [ 進行中 ] **Bug 7（低）— `getLiffOrders` tenantId hardcode 90004**：`orders.ts:169` tenantId 寫死，多租戶擴展會壞。
-- [ 進行中 ] **Bug 8（低）— `calcDueDate` 三份重複**：`dispatch.ts`、`orders.ts`、`driver.ts` 各自複製一份，應抽成共用。
+- [x] **Bug 1（高）— `updateDispatchItem` AR 不同步**：司機派車工作台更新現收金額時，`dy_ar_records` 未同步更新，已修（v6.71）
+- [x] **Bug 2（高）— `confirmHandover` 結清條件**：已確認程式碼為正確的 `ar.status IN ('unpaid','partial')`，無需修
+- [x] **Bug 3（高）— `getMyTodayOrders` UTC 日期**：已使用 `todayTW()` 台灣時間，無需修
+- [x] **Bug 4（中）— `deleteOrder` 誤刪 pending_returns**：已有細粒度 productId 比對邏輯，無需修
+- [x] **Bug 5（中）— `markPrinted` 庫存負數**：已用 `GREATEST(0, currentQty - ?)` 保護，無需修
+- [x] **Bug 6（中）— 月結對帳單月底日期**：已用 `new Date(year, month, 0).getDate()` 正確計算，無需修
+- [x] **Bug 7（低）— `getLiffOrders` tenantId**：已透過 input.tenantId 傳入，無需修
+- [x] **Bug 8（低）— `calcDueDate` 重複**：三個檔案均已 import utils.ts，無需修
 
 ### 大永落地驗收（Bug 修完後跑）
 
