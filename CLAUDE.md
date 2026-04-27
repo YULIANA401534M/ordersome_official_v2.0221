@@ -234,6 +234,10 @@
 - `generateDispatch`：NOT EXISTS 要排除全部 5 個 status（draft/printed/in_progress/pending_handover/completed）
 - 進貨入倉邏輯：供應商簽名只建 AP，**不增加可賣庫存**；要等 `receiveToWarehouse` 管理員確認後才增庫存
 - AR 建立/更新有多個入口，需統一（尚未完成）
+- `dy_stock_movements.type` ENUM：只允許 `in/out/return/adjust`，**不允許** `transfer`（v6.99 踩坑）
+- 司機端所有查詢必須用 `dayoneDriverProcedure`，`dayoneAdminProcedure` 司機呼叫會靜默失敗返回空陣列（products/suppliers 均踩過）
+- `dispatch.dispatchDate` 從 DB 取出是 UTC datetime，存進 `deliveryDate`（DATE 欄位）前必須 `+8*60*60*1000` 換算台灣日期字串（v7.00 踩坑）
+- React Query `invalidate()` 是非同步的：invalidate 後下一個 render 仍是舊 cache，需要本地 state 立即反映（`localSignatureUrl` 案例）
 
 ---
 

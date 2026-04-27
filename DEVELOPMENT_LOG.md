@@ -5,6 +5,38 @@
 
 ---
 
+## 2026-04-28 — 大永司機端全面修復（v6.92–v7.02）
+
+### 核心 Bug 修復
+
+| 問題 | 修法 | 版本 |
+|------|------|------|
+| 供應商/商品清單空白（司機無 admin 權限） | 新增 `listForDriver`（dayoneDriverProcedure），products + suppliers 各一支 | v6.93/v6.96/v6.98 |
+| 補貨商品選擇不自動帶單價 | `onValueChange` 查 `defaultPrice` 後 setState | v6.95 |
+| 簽名儲存後按鈕仍 disabled | 加 `localSignatureUrl` state，upload 成功立即解鎖，不依賴 cache refetch 時序 | v6.95 |
+| 補單 `deliveryDate` 存 UTC 前一天 | `dispatch.dispatchDate` +8h 換算台灣日期再 INSERT | v7.00 |
+| 補單建立報 `Data truncated for column 'type'` | `dy_stock_movements.type` ENUM 只允許 `in/out/return/adjust`，`transfer` 改 `out` | v6.99 |
+| 供應商下拉空白（前端多餘 filter） | `listForDriver` 已過濾 active，前端移除重複 `.filter(s.status==='active')` | v6.98 |
+| 回庫數量上限只算訂單量，不含備用箱 | `maxReturn = shippedQty + extraQty - supplementUsed`，後端加查補單動用量 | v7.01 |
+| 補單不出現在今日路線（時區導致日期錯誤） | 同 deliveryDate 修法，+8h 換算 | v7.00 |
+
+### 新功能
+
+| 功能 | 說明 | 版本 |
+|------|------|------|
+| 後台三張列印報表 | 司機日結對帳單、每日收款彙總、月結對帳單，新增 `reports` router | v6.92 |
+| 司機拒收流程 | `rejectNote` + `status=returned`，DriverOrderDetail 加「客戶拒收」按鈕 | v6.94 |
+| 後台今日未送達警示 | DayoneOrders 頁頂部紅色警示區塊，顯示 picked/delivering 未完成訂單 | v6.94 |
+| 配送訂單卡片收合 | DriverOrders 預設收合，點擊展開地址/電話/金額 | v6.97 |
+| 底部導覽固定 | 改用 `h-dvh flex-col` 結構，移除 `fixed` 避免 iOS Safari transform 干擾 | v6.99 |
+| 補單自動合併 | `addSupplementOrder`：同客戶同派車有未完成訂單時追加品項而非建新單，臨時客戶永遠建新單 | v7.02 |
+
+### 已知待驗收
+- 簽名強制：localSignatureUrl 修正後需用新訂單實測
+- 補單合併後簽名→送達的完整流程端對端驗收
+
+---
+
 ## 2026-04-15 — 大永 P0-P3 完善（Batch 1-3）
 
 | 檔案 | 變更摘要 |

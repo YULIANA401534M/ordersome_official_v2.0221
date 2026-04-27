@@ -1,6 +1,6 @@
 # todo.md — OrderSome 待辦清單
 
-> 上次更新：2026-04-27（v6.71）
+> 上次更新：2026-04-28（v7.02）
 > 有新想法就加在對應 P 等級下面。要開始做某件事，先把它標為 `[ 進行中 ]`，完成後打 `[x]`。
 > 已完成的項目定期移到底部「已完成」區。
 
@@ -19,14 +19,19 @@
 - [x] **Bug 7（低）— `getLiffOrders` tenantId**：已透過 input.tenantId 傳入，無需修
 - [x] **Bug 8（低）— `calcDueDate` 重複**：三個檔案均已 import utils.ts，無需修
 
-### 大永落地驗收（Bug 修完後跑）
+### 大永落地驗收（2026-04-28 測試進行中）
 
 驗收條件（需要真人跑過完整一天）：
-- [ ] 建訂單 → 派車 → 列印派車單有內容
-- [ ] 司機 APP 送達 → AR 應收自動出現在「應收帳款」
-- [ ] 司機收現 → 訂單付款狀態同步更新
-- [ ] 剩貨回庫待驗 → 管理員確認 → 庫存數字增加
+- [x] 建訂單 → 派車 → 列印派車單有內容
+- [x] 司機 APP 送達 → AR 應收自動出現在「應收帳款」
+- [x] 司機收現 → 訂單付款狀態同步更新
+- [ ] 剩貨回庫待驗 → 管理員確認 → 庫存數字增加（回庫上限邏輯已修，待完整驗收）
 - [ ] 進貨簽收 → AP 應付出現 → 確認入倉 → 庫存增加
+
+### 大永司機端待修（2026-04-28 session 發現）
+
+- [ ] **簽名強制驗證**：已修邏輯（localSignatureUrl），需用新訂單實測確認無法繞過
+- [ ] **月結客戶補單合併後，簽名頁流程**：合併到未完成訂單後，司機去現場時需正常走 DriverOrderDetail 簽名→送達，需端對端驗收
 
 ### 宇聯後台數字落地
 
@@ -109,3 +114,16 @@
 - [x] 客製定價調整功能＋歷史紀錄（v6.70）
 - [x] AR 同步修復：updateDispatchItem 補上 upsertArRecord（v6.71）
 - [x] P1 Bug 全部驗證完畢，2~8 均已在先前版本修好（v6.71）
+- [x] 後台帳務三張列印報表（司機日結、每日彙總、月結對帳單）+ 後端 reports router（v6.92）
+- [x] confirmHandover 現金比例分配 + completeDispatch 防重複日結（v6.92）
+- [x] 司機端進貨供應商 listForDriver 權限拆分（v6.93）
+- [x] DriverOrderDetail 簽名必填強制 + localSignatureUrl 時序修正（v6.93–v6.95）
+- [x] 司機端拒收（返單）流程：rejectNote + returned 狀態（v6.94）
+- [x] 後台訂單管理今日未送達警示橫幅（v6.94）
+- [x] 補貨商品 listForDriver 權限拆分（products + suppliers，v6.96–v6.98）
+- [x] 補貨對話框選商品自動帶入 defaultPrice（v6.95）
+- [x] 配送訂單頁卡片預設收合、展開顯示詳情（v6.97）
+- [x] DriverLayout 底部導覽改用 h-dvh flex-col 結構固定貼底（v6.99）
+- [x] 補單 deliveryDate 時區修正（UTC→台灣+8h，v7.00）
+- [x] 回庫數量上限修正：shippedQty + extraQty − supplementUsed（v7.01）
+- [x] 補單自動合併同客戶未完成訂單（A方案，v7.02）
