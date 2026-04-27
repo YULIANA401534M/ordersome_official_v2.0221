@@ -39,7 +39,6 @@ function ProductCard({
       }`}
     >
       <div className="flex items-center justify-between gap-3">
-        {/* 商品資訊 */}
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-gray-800 text-base leading-snug truncate">
             {product.name}
@@ -50,8 +49,6 @@ function ProductCard({
               : `依訂單確認 / ${product.unit}`}
           </p>
         </div>
-
-        {/* 數量控制 */}
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={onRemove}
@@ -111,28 +108,131 @@ function SuccessScreen({ orderNo }: { orderNo: string }) {
 }
 
 // ---------- Loading 畫面 ----------
-function LoadingScreen() {
+function LoadingScreen({ message }: { message?: string }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 gap-4">
       <div className="w-10 h-10 border-4 border-amber-400 border-t-transparent rounded-full animate-spin" />
-      <p className="text-sm text-gray-500">驗證身份中...</p>
+      <p className="text-sm text-gray-500">{message ?? "載入中..."}</p>
+    </div>
+  );
+}
+
+// ---------- 綁定畫面 ----------
+function BindingScreen({
+  brandName,
+  onBound,
+  lineId,
+  tenant,
+}: {
+  brandName: string;
+  lineId: string;
+  tenant: string | null;
+  onBound: (customerName: string) => void;
+}) {
+  const [phone, setPhone] = useState("");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const bindMutation = trpc.dayone.liff.bindLineId.useMutation({
+    onSuccess(data) {
+      onBound(data.customerName);
+    },
+    onError(err) {
+      setErrorMsg(err.message ?? "綁定失敗，請稍後再試");
+    },
+  });
+
+  function handleBind() {
+    const trimmed = phone.trim();
+    if (!trimmed) {
+      setErrorMsg("請輸入手機號碼");
+      return;
+    }
+    if (!/^0\d{9}$/.test(trimmed)) {
+      setErrorMsg("請輸入正確的手機號碼格式，例如 0912345678");
+      return;
+    }
+    setErrorMsg(null);
+    bindMutation.mutate({ lineId, phone: trimmed, tenant: tenant ?? undefined });
+  }
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-6">
+      <div className="w-full max-w-sm">
+        {/* 品牌 header */}
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-10 h-10 rounded-xl bg-amber-400 flex items-center justify-center shrink-0">
+            <span className="text-white font-black text-lg leading-none">{brandName.charAt(0)}</span>
+          </div>
+          <div>
+            <h1 className="text-xl font-black text-gray-900 leading-tight">{brandName}</h1>
+            <p className="text-xs text-gray-400 tracking-widest">首次使用</p>
+          </div>
+        </div>
+
+        {/* 說明 */}
+        <div className="mb-6">
+          <h2 className="text-lg font-bold text-gray-800 mb-1">綁定您的帳號</h2>
+          <p className="text-sm text-gray-500">
+            請輸入您在大永蛋品登記的手機號碼，完成綁定後即可開始下單。
+          </p>
+        </div>
+
+        {/* 手機號輸入 */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">手機號碼</label>
+          <input
+            type="tel"
+            inputMode="numeric"
+            placeholder="0912345678"
+            value={phone}
+            onChange={(e) => {
+              setPhone(e.target.value);
+              setErrorMsg(null);
+            }}
+            onKeyDown={(e) => e.key === "Enter" && handleBind()}
+            className="w-full border border-gray-300 rounded-xl px-4 py-3 text-lg font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+          />
+        </div>
+
+        {errorMsg && (
+          <p className="text-sm text-red-500 mb-4">{errorMsg}</p>
+        )}
+
+        <button
+          onClick={handleBind}
+          disabled={bindMutation.isPending}
+          className="w-full py-4 rounded-2xl text-white text-lg font-bold tracking-wide transition-all
+            bg-gray-900 active:bg-gray-700
+            disabled:bg-gray-300 disabled:cursor-not-allowed"
+        >
+          {bindMutation.isPending ? "綁定中…" : "確認綁定"}
+        </button>
+
+        <p className="text-xs text-gray-400 text-center mt-4">
+          如有問題請聯絡您的業務人員
+        </p>
+      </div>
     </div>
   );
 }
 
 // ---------- 主頁面 ----------
+type AppState = "init" | "checking" | "binding" | "ordering";
+
 export default function LiffOrder() {
   const tenantSlug = new URLSearchParams(window.location.search).get("tenant");
   const config = getTenantConfig(tenantSlug);
 
   const [lineId, setLineId] = useState<string>("");
-  const [liffReady, setLiffReady] = useState(false);
   const [liffError, setLiffError] = useState<string | null>(null);
+  const [appState, setAppState] = useState<AppState>("init");
+  const [customerName, setCustomerName] = useState<string>("");
 
   const [cart, setCart] = useState<Record<number, number>>({});
   const [submittedOrderNo, setSubmittedOrderNo] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // Step 1: LIFF init → 取得 lineId → checkBinding
   useEffect(() => {
     liff
       .init({ liffId: config.liffId })
@@ -143,7 +243,7 @@ export default function LiffOrder() {
         }
         return liff.getProfile().then((profile) => {
           setLineId(profile.userId);
-          setLiffReady(true);
+          setAppState("checking");
         });
       })
       .catch((err: unknown) => {
@@ -152,6 +252,27 @@ export default function LiffOrder() {
       });
   }, []);
 
+  // Step 2: 有 lineId 後查綁定狀態
+  const checkBinding = trpc.dayone.liff.checkBinding.useQuery(
+    { lineId, tenant: config.slug ?? undefined },
+    {
+      enabled: appState === "checking" && lineId !== "",
+      retry: false,
+      onSuccess(data) {
+        if (data.bound) {
+          setCustomerName(data.customerName ?? "");
+          setAppState("ordering");
+        } else {
+          setAppState("binding");
+        }
+      },
+      onError() {
+        setAppState("binding");
+      },
+    }
+  );
+
+  // ---------- 錯誤畫面 ----------
   if (liffError) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-6 text-center">
@@ -160,10 +281,27 @@ export default function LiffOrder() {
     );
   }
 
-  if (!liffReady) {
-    return <LoadingScreen />;
+  // ---------- 初始化 / 查詢中 ----------
+  if (appState === "init" || (appState === "checking" && checkBinding.isLoading)) {
+    return <LoadingScreen message="驗證身份中..." />;
   }
 
+  // ---------- 綁定畫面 ----------
+  if (appState === "binding") {
+    return (
+      <BindingScreen
+        brandName={config.brandName}
+        lineId={lineId}
+        tenant={config.slug}
+        onBound={(name) => {
+          setCustomerName(name);
+          setAppState("ordering");
+        }}
+      />
+    );
+  }
+
+  // ---------- 下單頁 ----------
   const { data: products, isLoading, isError } = trpc.dayone.liff.getProducts.useQuery({
     tenant: config.slug ?? undefined,
   });
@@ -176,7 +314,6 @@ export default function LiffOrder() {
     },
   });
 
-  // 送出成功 → 顯示成功畫面
   if (submittedOrderNo) {
     return <SuccessScreen orderNo={submittedOrderNo} />;
   }
@@ -217,7 +354,11 @@ export default function LiffOrder() {
           </div>
           <div>
             <h1 className="text-xl font-black text-gray-900 leading-tight">{config.brandName}</h1>
-            <p className="text-xs text-gray-400 tracking-widest">快速下單</p>
+            {customerName ? (
+              <p className="text-xs text-gray-500">{customerName}，歡迎光臨</p>
+            ) : (
+              <p className="text-xs text-gray-400 tracking-widest">快速下單</p>
+            )}
           </div>
         </div>
       </div>
@@ -245,8 +386,10 @@ export default function LiffOrder() {
       </div>
 
       {/* ===== 底部固定送出按鈕 ===== */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-4 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]"
-           style={{ maxWidth: 480, margin: "0 auto", left: "50%", transform: "translateX(-50%)", width: "100%" }}>
+      <div
+        className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-4 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]"
+        style={{ maxWidth: 480, margin: "0 auto", left: "50%", transform: "translateX(-50%)", width: "100%" }}
+      >
         {errorMsg && (
           <p className="text-xs text-red-500 mb-2 text-center">{errorMsg}</p>
         )}

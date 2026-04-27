@@ -1,6 +1,6 @@
 # CLAUDE.md — OrderSome 專案主腦
 
-> 版本 v6.54｜最後更新：2026-04-28
+> 版本 v6.55｜最後更新：2026-04-27
 > **每次開始新對話請讀完這份文件**，然後視任務需要讀 `todo.md` 或 `docs/` 子頁。
 > 歷史變更記錄請看 `DEVELOPMENT_LOG.md`，不需要每次讀。
 
@@ -228,7 +228,7 @@
 關鍵現況（v6.53）：
 - `dy_customers` 已有 `defaultDriverId`、`deliveryFrequency`、`lineId` 欄位
 - `server/liff.ts`：createOrder 已自動帶入 driverId、依頻率推算 deliveryDate
-- **缺：** LIFF app 尚未在 LINE Developers 建立；客戶首次綁定流程尚未做
+- **已完成：** LIFF ID `2009700774-rWyJ27md` 已確認；客戶首次綁定流程已做（`checkBinding` + `bindLineId`）
 - **`dy_districts` 已停用**（側欄已隱藏，表留著不刪）
 - 訂單管理頁已支援單筆換司機（pending/assigned 狀態才能換）
 

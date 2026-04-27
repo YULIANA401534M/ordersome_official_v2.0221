@@ -28,7 +28,76 @@ function resolveTenantId(tenant?: string): number {
   return TENANT_MAP[tenant] ?? DEFAULT_TENANT_ID;
 }
 
+// 手機號碼 normalize：去掉空白、dash，補 0 開頭（統一比對格式）
+function normalizePhone(phone: string): string {
+  return phone.replace(/[\s\-]/g, "").replace(/^\+886/, "0");
+}
+
 export const liffRouter = router({
+  // 檢查 lineId 是否已綁定客戶
+  checkBinding: publicProcedure
+    .input(z.object({ lineId: z.string().min(1), tenant: z.string().optional() }))
+    .query(async ({ input }) => {
+      const tenantId = resolveTenantId(input.tenant);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      const [rows] = await (db as any).$client.execute(
+        `SELECT id, name FROM dy_customers WHERE tenantId = ? AND lineId = ? AND status = 'active' LIMIT 1`,
+        [tenantId, input.lineId]
+      );
+      const customer = (rows as any[])[0];
+      if (!customer) return { bound: false };
+      return { bound: true, customerId: customer.id as number, customerName: customer.name as string };
+    }),
+
+  // 首次綁定：用手機號找客戶，寫入 lineId
+  bindLineId: publicProcedure
+    .input(z.object({
+      lineId: z.string().min(1),
+      phone: z.string().min(1),
+      tenant: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const tenantId = resolveTenantId(input.tenant);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      const client = (db as any).$client;
+
+      const normalizedInput = normalizePhone(input.phone);
+
+      // 查所有 active 客戶的 phone，比對 normalize 後的值
+      const [rows] = await client.execute(
+        `SELECT id, name, phone FROM dy_customers WHERE tenantId = ? AND status = 'active' AND phone IS NOT NULL`,
+        [tenantId]
+      );
+      const customers = rows as any[];
+      const matched = customers.find(
+        (c) => normalizePhone(String(c.phone ?? "")) === normalizedInput
+      );
+
+      if (!matched) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "找不到此手機號碼對應的客戶，請聯絡業務確認",
+        });
+      }
+
+      // 確認此客戶尚未被其他 LINE 帳號綁定
+      if (matched.lineId && matched.lineId !== input.lineId) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "此手機號碼已綁定其他 LINE 帳號，請聯絡業務",
+        });
+      }
+
+      await client.execute(
+        `UPDATE dy_customers SET lineId = ?, updatedAt = NOW() WHERE id = ? AND tenantId = ?`,
+        [input.lineId, matched.id, tenantId]
+      );
+
+      return { success: true, customerId: matched.id as number, customerName: matched.name as string };
+    }),
+
   // 公開查詢：取得指定租戶所有上架商品（供 LIFF 下單頁使用）
   getProducts: publicProcedure
     .input(z.object({ tenant: z.string().optional() }))
