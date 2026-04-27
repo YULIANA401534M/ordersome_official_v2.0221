@@ -12,7 +12,6 @@ function getTenantConfig(slug: string | null) {
   return { ...(TENANT_CONFIG[slug] ?? DEFAULT_CONFIG), slug };
 }
 
-// ── 狀態對應（客戶友善文字）──
 const ORDER_STATUS: Record<string, { label: string; color: string }> = {
   pending:    { label: "已收單，確認中", color: "bg-stone-100 text-stone-600" },
   assigned:   { label: "已排車",        color: "bg-sky-100 text-sky-700" },
@@ -28,6 +27,14 @@ const PAYMENT_STATUS: Record<string, { label: string; color: string }> = {
   paid:    { label: "已付清",   color: "text-emerald-600" },
 };
 
+function todayTW() {
+  return new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+function monthStartTW() {
+  return todayTW().slice(0, 7) + "-01";
+}
+
 function formatDate(val: string) {
   if (!val) return "-";
   return new Date(val).toLocaleDateString("zh-TW", {
@@ -35,11 +42,19 @@ function formatDate(val: string) {
   });
 }
 
+function formatDateTime(val: string) {
+  if (!val) return "-";
+  return new Date(val).toLocaleString("zh-TW", {
+    timeZone: "Asia/Taipei",
+    month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+
 function formatMoney(val: number) {
   return `NT$ ${val.toLocaleString("zh-TW")}`;
 }
 
-// ── Loading ──
 function LoadingScreen() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 gap-4">
@@ -54,21 +69,25 @@ function OrderCard({ order }: { order: any }) {
   const [expanded, setExpanded] = useState(false);
   const status = ORDER_STATUS[order.status] ?? { label: order.status, color: "bg-stone-100 text-stone-600" };
   const payment = PAYMENT_STATUS[order.paymentStatus] ?? { label: order.paymentStatus, color: "text-stone-500" };
+  const unpaid = Math.max(order.totalAmount - order.paidAmount, 0);
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       {/* 頂部：訂單號 + 狀態 */}
-      <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-gray-50">
-        <div>
+      <div className="flex items-start justify-between px-4 pt-4 pb-3 border-b border-gray-50">
+        <div className="min-w-0">
           <p className="text-[10px] font-medium tracking-widest text-gray-400 uppercase">{order.orderNo}</p>
-          <p className="text-sm font-semibold text-gray-700 mt-0.5">配送日 {formatDate(order.deliveryDate)}</p>
+          <p className="text-sm font-semibold text-gray-800 mt-0.5">
+            配送日 {formatDate(order.deliveryDate)}
+          </p>
+          <p className="text-xs text-gray-400 mt-0.5">下單 {formatDateTime(order.createdAt)}</p>
         </div>
-        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${status.color}`}>
+        <span className={`shrink-0 ml-2 text-xs font-semibold px-2.5 py-1 rounded-full ${status.color}`}>
           {status.label}
         </span>
       </div>
 
-      {/* 金額列 */}
+      {/* 金額 + 付款狀態 */}
       <div className="flex items-center justify-between px-4 py-3">
         <div>
           <p className="text-base font-bold text-gray-900">{formatMoney(order.totalAmount)}</p>
@@ -76,7 +95,7 @@ function OrderCard({ order }: { order: any }) {
         </div>
         <button
           onClick={() => setExpanded(!expanded)}
-          className="text-xs text-amber-600 font-semibold px-3 py-1.5 rounded-xl bg-amber-50 active:bg-amber-100"
+          className="text-xs text-amber-600 font-semibold px-3 py-1.5 rounded-xl bg-amber-50 active:bg-amber-100 shrink-0"
         >
           {expanded ? "收起" : "查看明細"}
         </button>
@@ -84,29 +103,47 @@ function OrderCard({ order }: { order: any }) {
 
       {/* 品項明細（展開） */}
       {expanded && (
-        <div className="border-t border-gray-50 px-4 py-3 space-y-2">
-          {order.items.map((item: any, idx: number) => (
-            <div key={idx} className="flex justify-between text-sm">
-              <span className="text-gray-700">
-                {item.productName} × {item.qty}{item.unit}
-              </span>
-              <span className="text-gray-500 shrink-0 ml-2">
-                {item.unitPrice > 0
-                  ? formatMoney(item.subtotal)
-                  : "待確認"}
-              </span>
-            </div>
-          ))}
-          {order.totalAmount > 0 && order.paidAmount > 0 && order.paymentStatus !== "paid" && (
-            <div className="pt-2 border-t border-gray-100 flex justify-between text-xs text-gray-500">
-              <span>已付</span>
-              <span>{formatMoney(order.paidAmount)}</span>
-            </div>
+        <div className="border-t border-gray-50 px-4 pt-3 pb-4 space-y-2">
+          {order.items.length === 0 ? (
+            <p className="text-xs text-gray-400">無品項資料</p>
+          ) : (
+            order.items.map((item: any, idx: number) => (
+              <div key={idx} className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="shrink-0 w-5 h-5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold flex items-center justify-center">
+                    {idx + 1}
+                  </span>
+                  <span className="text-gray-800 truncate">{item.productName}</span>
+                  <span className="shrink-0 text-gray-400 text-xs">× {item.qty}{item.unit}</span>
+                </div>
+                <span className="shrink-0 ml-2 text-gray-600 font-medium">
+                  {item.unitPrice > 0 ? formatMoney(item.subtotal) : "待確認"}
+                </span>
+              </div>
+            ))
           )}
-          {order.paymentStatus !== "paid" && order.totalAmount > 0 && (
-            <div className="flex justify-between text-xs font-semibold text-rose-600">
-              <span>待付</span>
-              <span>{formatMoney(order.totalAmount - order.paidAmount)}</span>
+
+          {/* 付款細節 */}
+          {order.totalAmount > 0 && (
+            <div className="mt-3 pt-3 border-t border-gray-100 space-y-1">
+              {order.paidAmount > 0 && order.paymentStatus !== "paid" && (
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>已付</span>
+                  <span>{formatMoney(order.paidAmount)}</span>
+                </div>
+              )}
+              {unpaid > 0 && (
+                <div className="flex justify-between text-xs font-semibold text-rose-600">
+                  <span>尚待付款</span>
+                  <span>{formatMoney(unpaid)}</span>
+                </div>
+              )}
+              {order.paymentStatus === "paid" && (
+                <div className="flex justify-between text-xs font-semibold text-emerald-600">
+                  <span>已全額付清</span>
+                  <span>{formatMoney(order.totalAmount)}</span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -114,6 +151,8 @@ function OrderCard({ order }: { order: any }) {
     </div>
   );
 }
+
+type DateMode = "single" | "range";
 
 // ── 主頁面 ──
 export default function LiffMyOrders() {
@@ -123,7 +162,15 @@ export default function LiffMyOrders() {
   const [lineId, setLineId] = useState("");
   const [liffError, setLiffError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
-  const [mode, setMode] = useState<"today" | "month">("today");
+
+  // 日期模式
+  const [dateMode, setDateMode] = useState<DateMode>("single");
+  const [singleDate, setSingleDate] = useState(todayTW());
+  const [rangeFrom, setRangeFrom] = useState(monthStartTW());
+  const [rangeTo, setRangeTo] = useState(todayTW());
+
+  const dateFrom = dateMode === "single" ? singleDate : rangeFrom;
+  const dateTo   = dateMode === "single" ? singleDate : rangeTo;
 
   useEffect(() => {
     liff
@@ -141,7 +188,7 @@ export default function LiffMyOrders() {
   }, []);
 
   const { data, isLoading, isError, error } = trpc.dayone.liff.getMyOrders.useQuery(
-    { lineId, tenant: config.slug ?? undefined, mode },
+    { lineId, tenant: config.slug ?? undefined, dateFrom, dateTo },
     { enabled: ready && lineId !== "", retry: false }
   );
 
@@ -166,8 +213,6 @@ export default function LiffMyOrders() {
 
   const orders = data?.orders ?? [];
   const customerName = data?.customerName ?? "";
-
-  // 統計
   const totalAmount = orders.reduce((s, o) => s + o.totalAmount, 0);
   const unpaidAmount = orders.reduce((s, o) => s + Math.max(o.totalAmount - o.paidAmount, 0), 0);
 
@@ -175,7 +220,7 @@ export default function LiffMyOrders() {
     <div className="min-h-screen bg-gray-50 flex flex-col" style={{ maxWidth: 480, margin: "0 auto" }}>
       {/* 頂部品牌區 */}
       <div className="bg-white px-5 pt-8 pb-5 border-b border-gray-100 shadow-sm">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 mb-5">
           <div className="w-10 h-10 rounded-xl bg-amber-400 flex items-center justify-center shrink-0">
             <span className="text-white font-black text-lg leading-none">{config.brandName.charAt(0)}</span>
           </div>
@@ -185,29 +230,57 @@ export default function LiffMyOrders() {
           </div>
         </div>
 
-        {/* 當日 / 當月切換 */}
-        <div className="flex gap-2 mt-4">
-          {([["today", "今日訂單"], ["month", "本月訂單"]] as const).map(([val, label]) => (
+        {/* 單日 / 範圍 切換 */}
+        <div className="flex gap-2 mb-3">
+          {([["single", "選單日"], ["range", "選範圍"]] as [DateMode, string][]).map(([val, label]) => (
             <button
               key={val}
-              onClick={() => setMode(val)}
+              onClick={() => setDateMode(val)}
               className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-colors ${
-                mode === val
-                  ? "bg-amber-400 text-white"
-                  : "bg-gray-100 text-gray-500"
+                dateMode === val ? "bg-amber-400 text-white" : "bg-gray-100 text-gray-500"
               }`}
             >
               {label}
             </button>
           ))}
         </div>
+
+        {/* 日期輸入 */}
+        {dateMode === "single" ? (
+          <input
+            type="date"
+            value={singleDate}
+            max={todayTW()}
+            onChange={(e) => setSingleDate(e.target.value)}
+            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-300"
+          />
+        ) : (
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={rangeFrom}
+              max={rangeTo}
+              onChange={(e) => setRangeFrom(e.target.value)}
+              className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-300"
+            />
+            <span className="text-gray-400 text-sm shrink-0">至</span>
+            <input
+              type="date"
+              value={rangeTo}
+              min={rangeFrom}
+              max={todayTW()}
+              onChange={(e) => setRangeTo(e.target.value)}
+              className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-300"
+            />
+          </div>
+        )}
       </div>
 
       {/* 統計列 */}
       {orders.length > 0 && (
         <div className="grid grid-cols-3 gap-3 px-4 pt-4">
           <div className="bg-white rounded-2xl px-3 py-3 text-center shadow-sm border border-gray-100">
-            <p className="text-[10px] text-gray-400 mb-1">筆數</p>
+            <p className="text-[10px] text-gray-400 mb-1">訂單數</p>
             <p className="text-xl font-bold text-gray-900">{orders.length}</p>
           </div>
           <div className="bg-white rounded-2xl px-3 py-3 text-center shadow-sm border border-gray-100">
@@ -224,7 +297,7 @@ export default function LiffMyOrders() {
       )}
 
       {/* 訂單列表 */}
-      <div className="flex-1 px-4 py-4 space-y-3">
+      <div className="flex-1 px-4 py-4 space-y-3 pb-8">
         {orders.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
@@ -232,10 +305,8 @@ export default function LiffMyOrders() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
             </div>
-            <p className="text-sm text-gray-500">
-              {mode === "today" ? "今日尚無訂單" : "本月尚無訂單"}
-            </p>
-            <p className="text-xs text-gray-400 mt-1">可點選「立即下單」建立新訂單</p>
+            <p className="text-sm text-gray-500">查無訂單資料</p>
+            <p className="text-xs text-gray-400 mt-1">請調整日期範圍後重新查詢</p>
           </div>
         ) : (
           orders.map((order) => <OrderCard key={order.orderId} order={order} />)

@@ -281,12 +281,13 @@ export const liffRouter = router({
       return { success: true, orderId, orderNo };
     }),
 
-  // 客戶查詢自己的訂單（用 lineId 免登入）
+  // 客戶查詢自己的訂單（用 lineId 免登入，支援自選日期範圍）
   getMyOrders: publicProcedure
     .input(z.object({
       lineId: z.string().min(1),
       tenant: z.string().optional(),
-      mode: z.enum(["today", "month"]).default("today"),
+      dateFrom: z.string().optional(), // YYYY-MM-DD，不傳則預設今天
+      dateTo: z.string().optional(),   // YYYY-MM-DD，不傳則預設今天
     }))
     .query(async ({ input }) => {
       const tenantId = resolveTenantId(input.tenant);
@@ -302,22 +303,20 @@ export const liffRouter = router({
       const customer = (custRows as any[])[0];
       if (!customer) throw new TRPCError({ code: "NOT_FOUND", message: "查無客戶綁定，請先完成綁定" });
 
-      // 計算日期範圍（台灣時間 UTC+8）
-      const nowTW = new Date(Date.now() + 8 * 60 * 60 * 1000);
-      const todayStr = nowTW.toISOString().slice(0, 10);
-      const monthStart = todayStr.slice(0, 7) + "-01";
+      // 台灣今天日期
+      const todayStr = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      const dateFrom = input.dateFrom ?? todayStr;
+      const dateTo = input.dateTo ?? todayStr;
 
-      const dateFrom = input.mode === "today" ? todayStr : monthStart;
-      const dateTo = todayStr;
-
-      // 查訂單
+      // 查訂單（含下單時間 createdAt）
       const [orderRows] = await client.execute(
-        `SELECT o.id, o.orderNo, o.deliveryDate, o.status, o.totalAmount, o.paidAmount, o.paymentStatus, o.createdAt
+        `SELECT o.id, o.orderNo, o.deliveryDate, o.createdAt, o.status,
+                o.totalAmount, o.paidAmount, o.paymentStatus
          FROM dy_orders o
          WHERE o.tenantId = ? AND o.customerId = ?
            AND o.deliveryDate >= ? AND o.deliveryDate <= ?
            AND o.status != 'cancelled'
-         ORDER BY o.deliveryDate DESC, o.id DESC`,
+         ORDER BY o.deliveryDate DESC, o.createdAt DESC`,
         [tenantId, customer.id, dateFrom, dateTo]
       );
       const orders = orderRows as any[];
@@ -336,6 +335,7 @@ export const liffRouter = router({
           orderId: order.id as number,
           orderNo: order.orderNo as string,
           deliveryDate: order.deliveryDate as string,
+          createdAt: order.createdAt as string,
           status: order.status as string,
           totalAmount: Number(order.totalAmount),
           paidAmount: Number(order.paidAmount),

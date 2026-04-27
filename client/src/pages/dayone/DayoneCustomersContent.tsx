@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, Phone, MapPin, Globe, Copy, Users, ChevronDown, ChevronRight, Folder, FolderOpen } from "lucide-react";
+import { Plus, Pencil, Trash2, Phone, MapPin, Globe, Copy, Users, ChevronDown, ChevronRight, Folder, FolderOpen, Tags } from "lucide-react";
 import { toast } from "sonner";
 
 const EMPTY_FORM = {
@@ -51,11 +51,21 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
   const [editGroupId, setEditGroupId] = useState<number | undefined>();
   const [groupForm, setGroupForm] = useState({ ...EMPTY_GROUP_FORM });
 
+  // 客製定價
+  const [priceCustomerId, setPriceCustomerId] = useState<number | null>(null);
+  const [priceCustomerName, setPriceCustomerName] = useState("");
+  const [newPriceForm, setNewPriceForm] = useState({ productId: "", price: "", effectiveDate: new Date().toISOString().slice(0, 10) });
+
   const utils = trpc.useUtils();
   const { data: customers, isLoading } = trpc.dayone.customers.list.useQuery({ tenantId });
   // const { data: districts } = trpc.dayone.districts.list.useQuery({ tenantId }); // 停用
   const { data: groups } = trpc.dayone.customers.listGroups.useQuery({ tenantId });
   const { data: drivers } = trpc.dayone.drivers.list.useQuery({ tenantId });
+  const { data: products = [] } = trpc.dayone.products.list.useQuery({ tenantId });
+  const { data: customerPrices = [], refetch: refetchPrices } = trpc.dayone.customers.getCustomerPrices.useQuery(
+    { customerId: priceCustomerId!, tenantId },
+    { enabled: priceCustomerId !== null }
+  );
 
   const upsert = trpc.dayone.customers.upsert.useMutation({
     onSuccess: () => {
@@ -91,6 +101,15 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
       utils.dayone.customers.list.invalidate();
     },
     onError: () => toast.error("刪除失敗，請重試"),
+  });
+
+  const setCustomerPrice = trpc.dayone.customers.setCustomerPrice.useMutation({
+    onSuccess: () => {
+      toast.success("客製定價已儲存");
+      setNewPriceForm({ productId: "", price: "", effectiveDate: new Date().toISOString().slice(0, 10) });
+      refetchPrices();
+    },
+    onError: (err) => toast.error(err.message),
   });
 
   function openNew() {
@@ -255,6 +274,9 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
       </td>
       <td>
         <div className="flex gap-1">
+          <Button variant="ghost" size="sm" title="客製定價" onClick={() => { setPriceCustomerId(c.id); setPriceCustomerName(c.name); }}>
+            <Tags className="h-4 w-4 text-amber-500" />
+          </Button>
           <Button variant="ghost" size="sm" title="複製客戶" onClick={() => openCopy(c)}>
             <Copy className="h-4 w-4 text-stone-400" />
           </Button>
@@ -673,6 +695,101 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
           <Button className="w-full bg-amber-600 hover:bg-amber-700" onClick={handleSaveGroup} disabled={upsertGroup.isPending}>
             {upsertGroup.isPending ? "儲存中..." : editGroupId ? "更新群組" : "建立群組"}
           </Button>
+        </DialogContent>
+      </Dialog>
+
+      {/* 客製定價 Dialog */}
+      <Dialog open={priceCustomerId !== null} onOpenChange={(v) => { if (!v) setPriceCustomerId(null); }}>
+        <DialogContent className="max-w-lg rounded-3xl">
+          <DialogHeader>
+            <DialogTitle>客製定價 — {priceCustomerName}</DialogTitle>
+          </DialogHeader>
+
+          {/* 現有定價列表 */}
+          <div className="max-h-52 overflow-y-auto rounded-2xl border border-stone-200">
+            {(customerPrices as any[]).length === 0 ? (
+              <div className="py-8 text-center text-sm text-stone-400">尚無客製定價，使用分級定價或主檔售價</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="border-b bg-stone-50 sticky top-0">
+                  <tr>
+                    <th className="px-3 py-2 text-left font-medium text-stone-500">商品</th>
+                    <th className="px-3 py-2 text-left font-medium text-stone-500">單位</th>
+                    <th className="px-3 py-2 text-right font-medium text-stone-500">售價</th>
+                    <th className="px-3 py-2 text-left font-medium text-stone-500">生效日</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(customerPrices as any[]).map((cp: any) => (
+                    <tr key={cp.id} className="border-b last:border-b-0">
+                      <td className="px-3 py-2 font-medium text-stone-900">{cp.productName}</td>
+                      <td className="px-3 py-2 text-stone-500">{cp.unit}</td>
+                      <td className="px-3 py-2 text-right font-semibold text-stone-900">NT$ {Number(cp.price).toLocaleString()}</td>
+                      <td className="px-3 py-2 text-stone-500">{cp.effectiveDate?.slice(0, 10) ?? "-"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* 新增定價表單 */}
+          <div className="space-y-3 pt-2">
+            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide">新增 / 覆蓋定價</p>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <Label className="text-xs">商品</Label>
+                <select
+                  value={newPriceForm.productId}
+                  onChange={(e) => setNewPriceForm((p) => ({ ...p, productId: e.target.value }))}
+                  className="mt-1 w-full rounded-xl border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+                >
+                  <option value="">請選擇</option>
+                  {(products as any[]).filter((p: any) => p.isActive !== false).map((p: any) => (
+                    <option key={p.id} value={p.id}>{p.name}（{p.unit}）</option>
+                  ))}
+                </select>
+              </div>
+              <div className="w-28">
+                <Label className="text-xs">售價（NT$）</Label>
+                <Input
+                  type="number" min={0} step={0.01}
+                  className="mt-1"
+                  value={newPriceForm.price}
+                  onChange={(e) => setNewPriceForm((p) => ({ ...p, price: e.target.value }))}
+                  placeholder="0"
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">生效日</Label>
+              <Input
+                type="date"
+                className="mt-1"
+                value={newPriceForm.effectiveDate}
+                onChange={(e) => setNewPriceForm((p) => ({ ...p, effectiveDate: e.target.value }))}
+              />
+            </div>
+            <Button
+              className="w-full rounded-2xl bg-amber-600 text-white hover:bg-amber-700"
+              disabled={setCustomerPrice.isPending}
+              onClick={() => {
+                if (!newPriceForm.productId) { toast.error("請選擇商品"); return; }
+                const price = Number(newPriceForm.price);
+                if (isNaN(price) || price < 0) { toast.error("請輸入有效金額"); return; }
+                setCustomerPrice.mutate({
+                  tenantId,
+                  customerId: priceCustomerId!,
+                  productId: Number(newPriceForm.productId),
+                  price,
+                  effectiveDate: newPriceForm.effectiveDate,
+                });
+              }}
+            >
+              {setCustomerPrice.isPending ? "儲存中..." : "儲存定價"}
+            </Button>
+            <p className="text-xs text-stone-400 text-center">同商品重複設定會以最新生效日為準</p>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

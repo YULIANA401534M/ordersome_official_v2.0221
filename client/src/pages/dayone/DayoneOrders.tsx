@@ -63,8 +63,15 @@ export default function DayoneOrders() {
   const { data: products } = trpc.dayone.products.list.useQuery({ tenantId: TENANT_ID });
 
   const createOrder = trpc.dayone.orders.create.useMutation({
-    onSuccess: () => {
-      toast.success("訂單建立成功");
+    onSuccess: (data) => {
+      if (data.overCredit) {
+        toast.warning(
+          `訂單已建立，但此客戶信用額度不足！信用額度 NT$ ${data.creditLimit.toLocaleString()}，建單後未結金額已達 NT$ ${data.unpaidTotal.toLocaleString()}`,
+          { duration: 8000 }
+        );
+      } else {
+        toast.success("訂單建立成功");
+      }
       setCreateOpen(false);
       utils.dayone.orders.list.invalidate();
     },

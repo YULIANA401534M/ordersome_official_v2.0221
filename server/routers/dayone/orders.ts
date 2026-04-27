@@ -97,6 +97,24 @@ export const dyOrdersRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
       const client = (db as any).$client;
       const totalAmount = input.items.reduce((sum, i) => sum + i.qty * i.unitPrice, 0);
+
+      // 信用額度檢查：查客戶 creditLimit + 目前未結金額
+      const [custRows] = await client.execute(
+        `SELECT c.creditLimit,
+                COALESCE(SUM(o.totalAmount - o.paidAmount), 0) AS unpaidTotal
+         FROM dy_customers c
+         LEFT JOIN dy_orders o ON o.customerId = c.id AND o.tenantId = c.tenantId
+           AND o.status NOT IN ('cancelled','returned')
+           AND o.paymentStatus != 'paid'
+         WHERE c.id = ? AND c.tenantId = ?
+         GROUP BY c.creditLimit`,
+        [input.customerId, input.tenantId]
+      );
+      const cust = (custRows as any[])[0];
+      const creditLimit = Number(cust?.creditLimit ?? 0);
+      const unpaidTotal = Number(cust?.unpaidTotal ?? 0);
+      const overCredit = creditLimit > 0 && (unpaidTotal + totalAmount) > creditLimit;
+
       const orderNo = `DY${Date.now()}`;
       const [result] = await client.execute(
         `INSERT INTO dy_orders (tenantId, orderNo, customerId, driverId, deliveryDate, districtId, status, totalAmount, paidAmount, paymentStatus, prevBoxes, inBoxes, returnBoxes, remainBoxes, note, createdAt, updatedAt)
@@ -110,7 +128,13 @@ export const dyOrdersRouter = router({
           [input.tenantId, orderId, item.productId, item.qty, item.unitPrice, item.qty * item.unitPrice]
         );
       }
-      return { id: orderId, orderNo };
+      return {
+        id: orderId,
+        orderNo,
+        overCredit,
+        creditLimit,
+        unpaidTotal: unpaidTotal + totalAmount,
+      };
     }),
 
   updateStatus: dyAdminProcedure
