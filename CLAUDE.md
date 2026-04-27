@@ -1,6 +1,6 @@
 # CLAUDE.md — OrderSome 專案主腦
 
-> 版本 v6.60｜最後更新：2026-04-27
+> 版本 v6.70｜最後更新：2026-04-27
 > **每次開始新對話請讀完這份文件**，然後視任務需要讀 `todo.md` 或 `docs/` 子頁。
 > 歷史變更記錄請看 `DEVELOPMENT_LOG.md`，不需要每次讀。
 
@@ -225,10 +225,16 @@
 
 流程：LINE Developers 建 LIFF app → 換 liffId → 補客戶綁定流程（首次開 LIFF 輸入手機號碼綁 lineId）→ 每個客戶設好預設司機+送貨頻率 → 端對端測試
 
-關鍵現況（v6.53）：
+關鍵現況（v6.70）：
 - `dy_customers` 已有 `defaultDriverId`、`deliveryFrequency`、`lineId` 欄位
 - `server/liff.ts`：createOrder 已自動帶入 driverId、依頻率推算 deliveryDate
-- **已完成：** LIFF ID `2009700774-rWyJ27md` 已確認；客戶首次綁定流程已做（`checkBinding` + `bindLineId`）
+- **已完成：** LIFF ID `2009700774-rWyJ27md`（下單）、`2009700774-0nJKIzne`（訂單查詢）已確認
+- **已完成：** 客戶首次綁定流程（`checkBinding` + `bindLineId`）
+- **已完成：** 三段式定價（客製 → 分級 → 主檔）：`dy_customer_prices`、`dy_level_prices` 均已實作，LIFF 下單與顯示均套用
+- **已完成：** 訂單查詢頁（`/liff/my-orders`）：單日/區間切換、每筆明細展開、付款狀態
+- **已完成：** 客製定價管理（客戶管理頁 🏷 按鈕）：可新增、調整、保留完整歷史紀錄
+- **已完成：** 分級定價管理（`/dayone/level-prices`）：零售/門市/供應商各別設定
+- **已完成：** 信用額度軟性警示（建訂單超額時 toast 警告，不阻擋）
 - **`dy_districts` 已停用**（側欄已隱藏，表留著不刪）
 - 訂單管理頁已支援單筆換司機（pending/assigned 狀態才能換）
 
