@@ -53,7 +53,7 @@ export const dyOrdersRouter = router({
       return rows as any[];
     }),
 
-  getWithItems: dyDriverProcedure
+  getWithItems: dyAdminProcedure
     .input(z.object({ id: z.number(), tenantId: z.number() }))
     .query(async ({ input }) => {
       const db = await getDb();
