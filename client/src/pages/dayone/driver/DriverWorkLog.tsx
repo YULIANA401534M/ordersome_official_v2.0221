@@ -117,22 +117,30 @@ export default function DriverWorkLog() {
       .filter((e: any) => !existingPids.has(Number(e.productId)))
       .map((e: any) => {
         const pid = Number(e.productId);
+        const extraQty = Number(e.qty);
+        const suppUsed = Number(e.supplementUsed ?? 0);
+        const maxReturn = Math.max(0, extraQty - suppUsed);
         return {
           productId: pid,
           productName: e.productName,
           unit: e.unit,
           shippedQty: 0,
-          extraQty: Number(e.qty),
-          qty: returnQtyByProduct[pid] !== undefined ? Number(returnQtyByProduct[pid]) : 0,
+          extraQty,
+          suppUsed,
+          maxReturn,
+          qty: returnQtyByProduct[pid] !== undefined ? Math.min(Number(returnQtyByProduct[pid]), maxReturn) : 0,
           reportedQty: Math.round(Number(pendingReturnsByProduct[pid] ?? 0)),
           isExtra: true,
         };
       });
 
-    // 訂單品項也要加入備用箱數量（同商品）
+    // 訂單品項也要加入備用箱數量與補單動用量
     const withExtra = orderItems.map((item: any) => {
       const ex = (extraItems as any[]).find((e: any) => Number(e.productId) === item.productId);
-      return { ...item, extraQty: ex ? Number(ex.qty) : 0 };
+      const extraQty = ex ? Number(ex.qty) : 0;
+      const suppUsed = ex ? Number(ex.supplementUsed ?? 0) : 0;
+      const maxReturn = Math.max(0, item.shippedQty + extraQty - suppUsed);
+      return { ...item, extraQty, suppUsed, maxReturn };
     });
 
     return [...withExtra, ...extraOnly];
@@ -244,21 +252,25 @@ export default function DriverWorkLog() {
                           </p>
                           <p className="mt-1 text-xs text-stone-500">
                             {item.isExtra
-                              ? `備用帶出 ${item.extraQty} ${item.unit || "箱"}　回庫幾箱？`
+                              ? item.suppUsed > 0
+                                ? `備用 ${item.extraQty} 箱 − 補單用 ${item.suppUsed} 箱 = 最多回 ${item.maxReturn} ${item.unit || "箱"}`
+                                : `備用帶出 ${item.extraQty} ${item.unit || "箱"}　回庫幾箱？`
                               : item.extraQty > 0
-                                ? `訂單 ${item.shippedQty} + 備用 ${item.extraQty} = ${item.shippedQty + item.extraQty} ${item.unit || "箱"}　回庫幾箱？`
+                                ? item.suppUsed > 0
+                                  ? `訂單 ${item.shippedQty} + 備用 ${item.extraQty} − 補單 ${item.suppUsed} = 最多回 ${item.maxReturn} ${item.unit || "箱"}`
+                                  : `訂單 ${item.shippedQty} + 備用 ${item.extraQty} = ${item.shippedQty + item.extraQty} ${item.unit || "箱"}　回庫幾箱？`
                                 : `今日帶出 ${item.shippedQty} ${item.unit || "箱"}　回庫幾箱？`}
                           </p>
                         </div>
                         <input
                           type="number"
                           min={0}
-                          max={item.shippedQty}
+                          max={item.maxReturn}
                           value={item.qty}
                           onChange={(event) =>
                             setReturnQtyByProduct((prev) => ({
                               ...prev,
-                              [item.productId]: Math.max(0, Math.min(item.shippedQty, Number(event.target.value ?? 0))),
+                              [item.productId]: Math.max(0, Math.min(item.maxReturn, Number(event.target.value ?? 0))),
                             }))
                           }
                           className="w-24 rounded-2xl border border-stone-200 bg-white px-3 py-2 text-right text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"

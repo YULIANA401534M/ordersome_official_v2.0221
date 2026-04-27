@@ -1174,6 +1174,22 @@ export const dyDispatchRouter = router({
          ORDER BY ei.id ASC`,
         [input.dispatchOrderId, input.tenantId]
       );
-      return rows as any[];
+      // 查本派車單補單動用量（orderType='supplement'）
+      const [suppRows] = await client.execute(
+        `SELECT oi.productId, SUM(oi.qty) AS suppQty
+         FROM dy_dispatch_items di
+         JOIN dy_orders o ON o.id = di.orderId
+         JOIN dy_order_items oi ON oi.orderId = o.id
+         WHERE di.dispatchOrderId=? AND di.tenantId=? AND o.orderType='supplement'
+         GROUP BY oi.productId`,
+        [input.dispatchOrderId, input.tenantId]
+      );
+      const suppMap = new Map(
+        (suppRows as any[]).map((r: any) => [Number(r.productId), Number(r.suppQty ?? 0)])
+      );
+      return (rows as any[]).map((row: any) => ({
+        ...row,
+        supplementUsed: suppMap.get(Number(row.productId)) ?? 0,
+      }));
     }),
 });
