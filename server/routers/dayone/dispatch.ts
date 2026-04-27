@@ -1012,14 +1012,17 @@ export const dyDispatchRouter = router({
         );
       }
 
-      // 2. 現收應收帳款結清（這張派車單下、AR 尚未付清的記錄，管理員點收現金後標為已付）
+      // 2. 現收應收帳款結清：只結清「逐筆結(per_delivery)」的 AR
+      //    月結/週結客戶的 AR 留著，等月底/週結時另外處理
       const [cashArRows] = await client.execute(
         `SELECT ar.id, ar.amount, ar.paidAmount
          FROM dy_ar_records ar
          JOIN dy_orders o ON o.id = ar.orderId
          JOIN dy_dispatch_items di ON di.orderId = o.id
+         JOIN dy_customers c ON c.id = o.customerId
          WHERE di.dispatchOrderId=? AND ar.tenantId=?
-           AND ar.status IN ('unpaid','partial')`,
+           AND ar.status IN ('unpaid','partial')
+           AND c.settlementCycle = 'per_delivery'`,
         [input.dispatchOrderId, input.tenantId]
       );
 

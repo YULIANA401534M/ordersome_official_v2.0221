@@ -394,6 +394,22 @@ export const dyDriverRouter = router({
         dueDate,
       });
 
+      // 庫存移轉記錄：備用箱在列印時已扣，這裡只記「補單動用備用箱」的流向備查
+      for (const item of input.items) {
+        await client.execute(
+          `INSERT INTO dy_stock_movements
+           (tenantId, productId, type, qty, refId, refType, note, createdAt)
+           VALUES (?,?,'transfer',?,?,'supplement_from_extra',?,NOW())`,
+          [
+            input.tenantId,
+            item.productId,
+            item.qty,
+            orderId,
+            `補單#${orderId} 動用備用箱 派車單#${input.dispatchOrderId}`,
+          ]
+        );
+      }
+
       return { success: true, orderId, orderNo, totalAmount };
     }),
 
