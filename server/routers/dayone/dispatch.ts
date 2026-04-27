@@ -30,6 +30,58 @@ export const dyDispatchRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
       const client = (db as any).$client;
 
+      // ── Step 1：清除 draft 派車單裡已取消的站點 ──────────────────────
+      // 只清除「對應訂單已 cancelled」的站點；手動加站（orderId 為 null 或訂單不存在）不動
+      const [draftDispatchRows] = await client.execute(
+        `SELECT id FROM dy_dispatch_orders
+         WHERE tenantId=? AND dispatchDate=? AND status='draft'`,
+        [input.tenantId, input.dispatchDate]
+      );
+      const draftIds = (draftDispatchRows as any[]).map((r: any) => Number(r.id));
+
+      let cancelledStopsRemoved = 0;
+      if (draftIds.length > 0) {
+        // 找出 draft 派車單裡、對應訂單已 cancelled 的 stop
+        const placeholders = draftIds.map(() => "?").join(",");
+        const [cancelledItemRows] = await client.execute(
+          `SELECT di.id AS itemId, di.orderId
+           FROM dy_dispatch_items di
+           JOIN dy_orders o ON o.id = di.orderId
+           WHERE di.dispatchOrderId IN (${placeholders})
+             AND di.tenantId = ?
+             AND o.status = 'cancelled'`,
+          [...draftIds, input.tenantId]
+        );
+        const cancelledItems = cancelledItemRows as any[];
+        if (cancelledItems.length > 0) {
+          const itemIds = cancelledItems.map((r: any) => Number(r.itemId));
+          const itemPlaceholders = itemIds.map(() => "?").join(",");
+          await client.execute(
+            `DELETE FROM dy_dispatch_items WHERE id IN (${itemPlaceholders})`,
+            itemIds
+          );
+          // 取消訂單狀態回復（從 assigned → pending，讓它們不再佔著派車位）
+          const orderIds = [...new Set(cancelledItems.map((r: any) => Number(r.orderId)))];
+          // 訂單本身已是 cancelled，不需要改狀態，只是移除站點即可
+          cancelledStopsRemoved = itemIds.length;
+        }
+
+        // ── Step 2：清除 0 站的空草稿派車單 ──────────────────────────
+        for (const dId of draftIds) {
+          const [countRows] = await client.execute(
+            `SELECT COUNT(*) AS cnt FROM dy_dispatch_items WHERE dispatchOrderId=?`,
+            [dId]
+          );
+          if (Number((countRows as any[])[0]?.cnt) === 0) {
+            await client.execute(
+              `DELETE FROM dy_dispatch_orders WHERE id=? AND tenantId=? AND status='draft'`,
+              [dId, input.tenantId]
+            );
+          }
+        }
+      }
+
+      // ── Step 3：把新的可派車訂單加入派車單（原有邏輯）──────────────
       const [orderRows] = await client.execute(
         `SELECT o.*, c.settlementCycle, c.overdueDays, c.address AS customerAddress,
                 c.name AS customerName, c.customerLevel,
@@ -56,10 +108,6 @@ export const dyDispatchRouter = router({
       );
       const orders = orderRows as any[];
 
-      if (orders.length === 0) {
-        return { dispatchOrders: [], message: "No dispatchable orders for this date" };
-      }
-
       const driverMap = new Map<number, any[]>();
       for (const order of orders) {
         const driverId = Number(order.driverId ?? 0);
@@ -72,7 +120,7 @@ export const dyDispatchRouter = router({
       for (const [driverId, driverOrders] of Array.from(driverMap.entries())) {
         const routeCode = driverOrders[0]?.driverRouteCode ?? "R00";
 
-        // 如果同一天同一司機已有 draft 派車單，複用它，不重複建立
+        // 複用既有 draft，沒有才新建
         const [existingRows] = await client.execute(
           `SELECT id FROM dy_dispatch_orders
            WHERE tenantId=? AND dispatchDate=? AND driverId=? AND status='draft' LIMIT 1`,
@@ -91,7 +139,7 @@ export const dyDispatchRouter = router({
           dispatchOrderId = (dispatchResult as any).insertId;
         }
 
-        // 複用既有派車單時，stopSequence 接著現有最大值
+        // stopSequence 接著現有最大值
         const [maxSeqRows] = await client.execute(
           `SELECT COALESCE(MAX(stopSequence), 0) AS maxSeq FROM dy_dispatch_items WHERE dispatchOrderId=?`,
           [dispatchOrderId]
@@ -129,7 +177,58 @@ export const dyDispatchRouter = router({
         dispatchOrders.push({ id: dispatchOrderId, driverId, routeCode, itemCount: driverOrders.length });
       }
 
-      return { dispatchOrders };
+      return { dispatchOrders, cancelledStopsRemoved, newOrdersAdded: orders.length };
+    }),
+
+  mergeDraftDispatches: dyAdminProcedure
+    .input(z.object({ tenantId: z.number(), driverId: z.number(), dispatchDate: z.string() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      const client = (db as any).$client;
+
+      // 找該司機當天所有 draft 派車單，依 id 排序（最小的為主單）
+      const [draftRows] = await client.execute(
+        `SELECT id FROM dy_dispatch_orders
+         WHERE tenantId=? AND dispatchDate=? AND driverId=? AND status='draft'
+         ORDER BY id ASC`,
+        [input.tenantId, input.dispatchDate, input.driverId]
+      );
+      const drafts = draftRows as any[];
+      if (drafts.length < 2) {
+        return { merged: false, message: "沒有需要合併的草稿" };
+      }
+
+      const primaryId = Number(drafts[0].id);
+      const secondaryIds = drafts.slice(1).map((r: any) => Number(r.id));
+
+      // 取主單目前最大 stopSequence
+      const [maxSeqRows] = await client.execute(
+        `SELECT COALESCE(MAX(stopSequence), 0) AS maxSeq FROM dy_dispatch_items WHERE dispatchOrderId=?`,
+        [primaryId]
+      );
+      let nextSeq = Number((maxSeqRows as any[])[0]?.maxSeq ?? 0) + 1;
+
+      // 把次要單的所有站點搬到主單，stopSequence 重新編
+      for (const secId of secondaryIds) {
+        const [secItems] = await client.execute(
+          `SELECT * FROM dy_dispatch_items WHERE dispatchOrderId=? ORDER BY stopSequence ASC`,
+          [secId]
+        );
+        for (const item of secItems as any[]) {
+          await client.execute(
+            `UPDATE dy_dispatch_items SET dispatchOrderId=?, stopSequence=? WHERE id=?`,
+            [primaryId, nextSeq++, item.id]
+          );
+        }
+        // 刪除空的次要派車單
+        await client.execute(
+          `DELETE FROM dy_dispatch_orders WHERE id=? AND tenantId=? AND status='draft'`,
+          [secId, input.tenantId]
+        );
+      }
+
+      return { merged: true, primaryId, mergedCount: secondaryIds.length };
     }),
 
   listDispatch: driverProcedure

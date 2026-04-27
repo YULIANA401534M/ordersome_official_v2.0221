@@ -8,7 +8,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, CheckCircle2, Package, Printer, Plus, RotateCcw, Route, Truck, Wallet } from "lucide-react";
+import { AlertTriangle, CheckCircle2, GitMerge, Package, Printer, Plus, RotateCcw, Route, Truck, Wallet } from "lucide-react";
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
@@ -37,15 +37,17 @@ const DISPATCH_STATUS: Record<string, { label: string; className: string }> = {
   completed: { label: "已完成", className: "bg-emerald-100 text-emerald-700" },
 };
 
-function GenerateDialog({ date, onClose, onSuccess }: { date: string; onClose: () => void; onSuccess: () => void }) {
+function SyncDialog({ date, onClose, onSuccess }: { date: string; onClose: () => void; onSuccess: () => void }) {
   const firedRef = React.useRef(false);
   const generateDispatch = trpc.dayone.dispatch.generateDispatch.useMutation({
     onSuccess: (data) => {
-      if (!data.dispatchOrders.length) {
-        toast.warning((data as any).message ?? "這一天沒有可派車訂單");
-      } else {
-        toast.success(`已建立 ${data.dispatchOrders.length} 張派車單`);
-      }
+      const added = (data as any).newOrdersAdded ?? 0;
+      const removed = (data as any).cancelledStopsRemoved ?? 0;
+      const parts: string[] = [];
+      if (added > 0) parts.push(`新增 ${added} 筆訂單`);
+      if (removed > 0) parts.push(`移除 ${removed} 個已取消站點`);
+      if (parts.length === 0) parts.push("已是最新，無需變更");
+      toast.success(`同步完成：${parts.join("、")}`);
       onSuccess();
       onClose();
     },
@@ -65,14 +67,28 @@ function GenerateDialog({ date, onClose, onSuccess }: { date: string; onClose: (
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-sm rounded-3xl">
         <DialogHeader>
-          <DialogTitle>建立派車單</DialogTitle>
+          <DialogTitle>同步今日派車單</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 text-sm text-stone-600">
           <p>
-            系統會將 <span className="font-semibold text-amber-700">{fmtDate(date)}</span> 的可配送訂單，依司機與路線建立派車單。
+            系統將對 <span className="font-semibold text-amber-700">{fmtDate(date)}</span> 的草稿派車單執行以下動作：
           </p>
+          <ul className="space-y-2 text-xs">
+            <li className="flex items-start gap-2">
+              <span className="mt-0.5 h-4 w-4 shrink-0 rounded-full bg-emerald-100 text-center text-[10px] font-bold leading-4 text-emerald-700">+</span>
+              <span>將尚未排入派車的新訂單補入對應司機的派車單</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mt-0.5 h-4 w-4 shrink-0 rounded-full bg-rose-100 text-center text-[10px] font-bold leading-4 text-rose-700">−</span>
+              <span>移除已取消訂單的對應站點（手動加站不受影響）</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mt-0.5 h-4 w-4 shrink-0 rounded-full bg-stone-100 text-center text-[10px] font-bold leading-4 text-stone-500">×</span>
+              <span>清除因取消而變成空站的草稿派車單</span>
+            </li>
+          </ul>
           <div className="rounded-2xl bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-700">
-            建立派車單只做派車分配，不會提早建立應收。真正列印時才會扣庫存。
+            已列印或配送中的派車單不會被異動。同步只操作「草稿」狀態的派車單。
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={onClose}>取消</Button>
@@ -81,7 +97,7 @@ function GenerateDialog({ date, onClose, onSuccess }: { date: string; onClose: (
               disabled={generateDispatch.isPending || firedRef.current}
               className="bg-amber-600 text-white hover:bg-amber-700"
             >
-              {generateDispatch.isPending ? "建立中..." : "確認建立"}
+              {generateDispatch.isPending ? "同步中..." : "確認同步"}
             </Button>
           </div>
         </div>
@@ -966,10 +982,11 @@ body { margin: 0; padding: 16px; background: white; font-family: 'Noto Sans TC',
 
 export default function DayoneDispatch() {
   const [date, setDate] = useState(todayStr());
-  const [showGenerateDialog, setShowGenerateDialog] = useState(false);
+  const [showSyncDialog, setShowSyncDialog] = useState(false);
   const [detailId, setDetailId] = useState<number | null>(null);
   const [assigningId, setAssigningId] = useState<number | null>(null);
   const [assignDriverId, setAssignDriverId] = useState("");
+  const [mergingDriverId, setMergingDriverId] = useState<number | null>(null);
 
   const utils = trpc.useUtils();
   const { data: dispatches = [], isLoading, refetch } = trpc.dayone.dispatch.listDispatch.useQuery({
@@ -985,6 +1002,18 @@ export default function DayoneDispatch() {
   const { data: drivers = [] } = trpc.dayone.drivers.list.useQuery({ tenantId: TENANT_ID });
   const unassigned = (unassignedOrders as any[]).filter((o: any) => !o.driverId);
 
+  // 偵測同司機多張草稿
+  const draftsByDriver = useMemo(() => {
+    const draftDispatches = (dispatches as any[]).filter((d: any) => d.status === "draft");
+    const map = new Map<number, any[]>();
+    for (const d of draftDispatches) {
+      const did = Number(d.driverId);
+      if (!map.has(did)) map.set(did, []);
+      map.get(did)!.push(d);
+    }
+    return Array.from(map.entries()).filter(([, list]) => list.length > 1);
+  }, [dispatches]);
+
   const setOrderDriver = trpc.dayone.orders.setDriver.useMutation({
     onSuccess: () => {
       toast.success("司機已指派");
@@ -993,6 +1022,17 @@ export default function DayoneDispatch() {
       utils.dayone.orders.list.invalidate();
     },
     onError: () => toast.error("指派失敗，請重試"),
+  });
+
+  const mergeDrafts = trpc.dayone.dispatch.mergeDraftDispatches.useMutation({
+    onSuccess: (data) => {
+      if (data.merged) {
+        toast.success(`已合併 ${data.mergedCount} 張草稿派車單`);
+      }
+      setMergingDriverId(null);
+      refresh();
+    },
+    onError: (e) => toast.error(e.message),
   });
 
   function refresh() {
@@ -1019,9 +1059,9 @@ export default function DayoneDispatch() {
                   <p className="text-xs text-white/55">配送日期</p>
                   <Input type="date" value={date} onChange={(event) => setDate(event.target.value)} className="mt-2 border-white/15 bg-white/10 text-white" />
                 </div>
-                <Button className="bg-white text-stone-900 hover:bg-white/90" onClick={() => setShowGenerateDialog(true)}>
+                <Button className="bg-white text-stone-900 hover:bg-white/90" onClick={() => setShowSyncDialog(true)}>
                   <Route className="mr-2 h-4 w-4" />
-                  建立當日派車
+                  同步今日派車
                 </Button>
               </div>
             </div>
@@ -1095,6 +1135,41 @@ export default function DayoneDispatch() {
             </section>
           )}
 
+          {/* 同司機多張草稿合併提示 */}
+          {draftsByDriver.length > 0 && (
+            <section className="rounded-[28px] border border-sky-200 bg-sky-50 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <GitMerge className="h-4 w-4 text-sky-600 shrink-0" />
+                <p className="text-sm font-semibold text-sky-800">發現可合併的草稿派車單</p>
+              </div>
+              <div className="space-y-2">
+                {draftsByDriver.map(([driverId, list]) => (
+                  <div key={driverId} className="flex items-center gap-3 rounded-2xl bg-white px-4 py-3 text-sm shadow-sm">
+                    <div className="min-w-0 flex-1">
+                      <span className="font-medium text-stone-900">{list[0].driverName}</span>
+                      <span className="ml-2 text-xs text-stone-400">
+                        {list.length} 張草稿（共 {list.reduce((s: number, d: any) => s + Number(d.totalStops ?? 0), 0)} 站）
+                      </span>
+                    </div>
+                    <Button
+                      size="sm"
+                      className="h-8 bg-sky-600 text-white hover:bg-sky-700 gap-1.5 text-xs"
+                      disabled={mergingDriverId === driverId && mergeDrafts.isPending}
+                      onClick={() => {
+                        setMergingDriverId(driverId);
+                        mergeDrafts.mutate({ tenantId: TENANT_ID, driverId, dispatchDate: date });
+                      }}
+                    >
+                      <GitMerge className="h-3.5 w-3.5" />
+                      {mergingDriverId === driverId && mergeDrafts.isPending ? "合併中..." : "合併"}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-3 text-xs text-sky-600">合併後站點全部保留，以最早建立的派車單為主。</p>
+            </section>
+          )}
+
           {isLoading ? (
             <div className="flex justify-center py-16">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-amber-500 border-t-transparent" />
@@ -1103,7 +1178,7 @@ export default function DayoneDispatch() {
             <section className="rounded-[30px] border border-dashed border-stone-200 bg-white px-6 py-16 text-center text-stone-400">
               <Truck className="mx-auto h-12 w-12 opacity-40" />
               <p className="mt-4 text-sm">{fmtDate(date)} 還沒有派車單。</p>
-              <Button className="mt-5 bg-amber-600 text-white hover:bg-amber-700" onClick={() => setShowGenerateDialog(true)}>
+              <Button className="mt-5 bg-amber-600 text-white hover:bg-amber-700" onClick={() => setShowSyncDialog(true)}>
                 立即建立派車
               </Button>
             </section>
@@ -1175,8 +1250,8 @@ export default function DayoneDispatch() {
         </div>
       </DayoneLayout>
 
-      {showGenerateDialog && (
-        <GenerateDialog date={date} onClose={() => setShowGenerateDialog(false)} onSuccess={refresh} />
+      {showSyncDialog && (
+        <SyncDialog date={date} onClose={() => setShowSyncDialog(false)} onSuccess={refresh} />
       )}
 
       {detailId !== null && <DispatchDetailSheet dispatchId={detailId} onClose={() => setDetailId(null)} />}
