@@ -950,8 +950,8 @@ function CreateReceiptDialog({
     for (const product of products as any[]) {
       nextPrices[Number(product.id)] = Number(product.price ?? 0);
     }
-    for (const supplierPrice of supplierPrices as any[]) {
-      nextPrices[Number(supplierPrice.productId)] = Number(supplierPrice.price ?? 0);
+    for (const sp of supplierPrices as any[]) {
+      nextPrices[Number(sp.productId)] = Number(sp.price ?? 0);
     }
     setPrices(nextPrices);
   }, [products, supplierPrices]);
@@ -968,7 +968,7 @@ function CreateReceiptDialog({
         }));
 
       onClose();
-      onSignNeeded(data.id, {
+      onSignNeeded(Number(data.id), {
         supplierName: supplier?.name ?? "",
         batchNo,
         licensePlate,
@@ -1346,7 +1346,7 @@ export default function DayonePurchaseReceipts() {
             ) : (
               supplierSummaryRows.map((row: any) => (
                 <div
-                  key={row.supplierId}
+                  key={Number(row.supplierId)}
                   className="rounded-[28px] border border-stone-200 bg-white px-4 py-4 shadow-[0_12px_24px_rgba(120,53,15,0.05)]"
                 >
                   <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -1454,7 +1454,7 @@ export default function DayonePurchaseReceipts() {
                         const statusTone = payableStatusTone[record.status] ?? payableStatusTone.unpaid;
                         const unpaidAmount = Math.max(0, Number(record.amount ?? 0) - Number(record.paidAmount ?? 0));
                         return (
-                          <tr key={record.id} className="border-t border-stone-200">
+                          <tr key={Number(record.id)} className="border-t border-stone-200">
                             <td className="px-4 py-4">
                               <p className="font-semibold text-stone-900">{record.supplierName}</p>
                               {record.adminNote ? <p className="mt-1 text-xs text-stone-400">{record.adminNote}</p> : null}
@@ -1494,7 +1494,7 @@ export default function DayonePurchaseReceipts() {
                     const statusTone = payableStatusTone[record.status] ?? payableStatusTone.unpaid;
                     const unpaidAmount = Math.max(0, Number(record.amount ?? 0) - Number(record.paidAmount ?? 0));
                     return (
-                      <article key={record.id} className="dayone-mobile-card p-4">
+                      <article key={Number(record.id)} className="dayone-mobile-card p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <h2 className="text-base font-semibold text-stone-900">{record.supplierName}</h2>
@@ -1613,7 +1613,7 @@ export default function DayonePurchaseReceipts() {
                       {receipts.map((receipt: any) => {
                         const statusTone = receiptStatusTone[receipt.status] ?? receiptStatusTone.pending;
                         return (
-                          <tr key={receipt.id} className="border-t border-stone-200">
+                          <tr key={Number(receipt.id)} className="border-t border-stone-200">
                             <td className="px-4 py-4 text-stone-700">{fmtDateTime(receipt.receiptDate)}</td>
                             <td className="px-4 py-4 font-semibold text-stone-900">{receipt.supplierName}</td>
                             <td className="px-4 py-4 text-stone-700">{receipt.driverName}</td>
@@ -1677,7 +1677,7 @@ export default function DayonePurchaseReceipts() {
                   {receipts.map((receipt: any) => {
                     const statusTone = receiptStatusTone[receipt.status] ?? receiptStatusTone.pending;
                     return (
-                      <article key={receipt.id} className="dayone-mobile-card p-4">
+                      <article key={Number(receipt.id)} className="dayone-mobile-card p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <h2 className="text-base font-semibold text-stone-900">{receipt.supplierName}</h2>
