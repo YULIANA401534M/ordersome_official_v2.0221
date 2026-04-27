@@ -42,9 +42,9 @@ export default function DriverLayout({ children, title }: { children: React.Reac
   }
 
   return (
-    <div className="dayone-shell flex min-h-screen justify-center">
-      <div className="flex min-h-screen w-full max-w-md flex-col bg-[rgba(255,253,248,0.9)] shadow-[0_18px_48px_rgba(120,53,15,0.12)] backdrop-blur-xl">
-        <header className="sticky top-0 z-20 border-b border-amber-100/80 bg-[rgba(255,252,245,0.96)] px-5 py-4 backdrop-blur-xl">
+    <div className="dayone-shell flex h-dvh justify-center overflow-hidden">
+      <div className="flex h-full w-full max-w-md flex-col bg-[rgba(255,253,248,0.9)] shadow-[0_18px_48px_rgba(120,53,15,0.12)]">
+        <header className="shrink-0 border-b border-amber-100/80 bg-[rgba(255,252,245,0.96)] px-5 py-4">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-[0_12px_24px_rgba(180,83,9,0.22)]">
               <Package className="h-5 w-5" />
@@ -56,9 +56,9 @@ export default function DriverLayout({ children, title }: { children: React.Reac
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto px-4 pt-4" style={{ paddingBottom: "calc(5.5rem + env(safe-area-inset-bottom))" }}>{children}</main>
+        <main className="flex-1 overflow-y-auto px-4 py-4">{children}</main>
 
-        <nav className="fixed bottom-0 left-1/2 z-20 flex w-full max-w-md -translate-x-1/2 border-t border-amber-100/80 bg-[rgba(255,252,245,0.96)] backdrop-blur-xl" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+        <nav className="shrink-0 flex border-t border-amber-100/80 bg-[rgba(255,252,245,0.96)]" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
           {NAV.map(({ href, icon: Icon, label }) => {
             const active = location === href || (href !== "/driver" && location.startsWith(href));
             return (

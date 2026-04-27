@@ -402,7 +402,7 @@ export const dyDriverRouter = router({
         await client.execute(
           `INSERT INTO dy_stock_movements
            (tenantId, productId, type, qty, refId, refType, note, createdAt)
-           VALUES (?,?,'transfer',?,?,'supplement_from_extra',?,NOW())`,
+           VALUES (?,?,'out',?,?,'supplement_order',?,NOW())`,
           [
             input.tenantId,
             item.productId,
