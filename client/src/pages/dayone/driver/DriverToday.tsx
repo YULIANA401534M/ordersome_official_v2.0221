@@ -50,7 +50,11 @@ function SupplementOrderDialog({ onClose }: { onClose: () => void }) {
 
   const addSupplementOrder = trpc.dayone.driver.addSupplementOrder.useMutation({
     onSuccess: (data) => {
-      toast.success(`補單已建立，金額 NT$ ${data.totalAmount.toLocaleString()}，訂單號 ${data.orderNo}`);
+      if ((data as any).merged) {
+        toast.success(`已合併到現有訂單，追加 NT$ ${data.totalAmount.toLocaleString()}`);
+      } else {
+        toast.success(`補單已建立，金額 NT$ ${data.totalAmount.toLocaleString()}`);
+      }
       utils.dayone.driver.getMyTodayOrders.invalidate();
       onClose();
     },

@@ -348,59 +348,119 @@ export const dyDriverRouter = router({
         }
       }
 
-      const totalAmount = input.items.reduce((s, i) => s + i.qty * i.unitPrice, 0);
-      const paymentStatus = cashCollectedStatus(input.cashCollected, totalAmount, settlementCycle);
-      const orderNo = `SUPP${Date.now()}`;
+      const addedAmount = input.items.reduce((s, i) => s + i.qty * i.unitPrice, 0);
       // dispatchDate 從 DB 取出是 UTC，轉成台灣日期字串（+8h）
       const twDeliveryDate = new Date(new Date(dispatch.dispatchDate).getTime() + 8 * 60 * 60 * 1000)
         .toISOString().slice(0, 10);
 
-      const [orderResult] = await client.execute(
-        `INSERT INTO dy_orders
-         (tenantId, orderNo, customerId, driverId, deliveryDate, status, totalAmount,
-          paidAmount, paymentStatus, cashCollected, orderType, orderSource, createdAt, updatedAt)
-         VALUES (?,?,?,?,?,'delivered',?,?,?,?,'supplement','driver_app',NOW(),NOW())`,
-        [
-          input.tenantId, orderNo, customerId, driver.id, twDeliveryDate,
-          totalAmount, input.cashCollected, paymentStatus, input.cashCollected,
-        ]
-      );
-      const orderId = Number((orderResult as any).insertId);
-
-      for (const item of input.items) {
-        await client.execute(
-          `INSERT INTO dy_order_items (tenantId, orderId, productId, qty, unitPrice, subtotal, returnQty)
-           VALUES (?,?,?,?,?,?,0)`,
-          [input.tenantId, orderId, item.productId, item.qty, item.unitPrice, item.qty * item.unitPrice]
+      // ── 嘗試合併到同客戶今日未完成訂單（僅限現有客戶，臨時客戶永遠建新單）──
+      let mergedOrderId: number | null = null;
+      if (customerId) {
+        const [existRows] = await client.execute(
+          `SELECT o.id, o.totalAmount, o.paidAmount, o.cashCollected
+           FROM dy_orders o
+           JOIN dy_dispatch_items di ON di.orderId = o.id
+           WHERE di.dispatchOrderId = ? AND o.customerId = ? AND o.tenantId = ?
+             AND o.status IN ('picked','delivering','assigned','pending')
+           ORDER BY o.id DESC LIMIT 1`,
+          [input.dispatchOrderId, customerId, input.tenantId]
         );
+        const existOrder = (existRows as any[])[0];
+        if (existOrder) {
+          mergedOrderId = Number(existOrder.id);
+          // 追加品項到現有訂單
+          for (const item of input.items) {
+            await client.execute(
+              `INSERT INTO dy_order_items (tenantId, orderId, productId, qty, unitPrice, subtotal, returnQty)
+               VALUES (?,?,?,?,?,?,0)`,
+              [input.tenantId, mergedOrderId, item.productId, item.qty, item.unitPrice, item.qty * item.unitPrice]
+            );
+          }
+          // 重算訂單金額
+          const newTotal = Number(existOrder.totalAmount) + addedAmount;
+          const newCash = Number(existOrder.cashCollected ?? 0) + input.cashCollected;
+          const newPaid = Number(existOrder.paidAmount ?? 0) + input.cashCollected;
+          const newPayStatus = cashCollectedStatus(newCash, newTotal, settlementCycle);
+          await client.execute(
+            `UPDATE dy_orders SET totalAmount=?, cashCollected=?, paidAmount=?, paymentStatus=?, updatedAt=NOW() WHERE id=?`,
+            [newTotal, newCash, newPaid, newPayStatus, mergedOrderId]
+          );
+          // 更新派車單站點的金額
+          await client.execute(
+            `UPDATE dy_dispatch_items SET paymentStatus=?, cashCollected=? WHERE dispatchOrderId=? AND orderId=?`,
+            [newPayStatus, newCash, input.dispatchOrderId, mergedOrderId]
+          );
+          // 更新 AR
+          const dueDate = calcDueDate(twDeliveryDate, settlementCycle, 30);
+          await upsertArRecord(client, {
+            tenantId: input.tenantId,
+            orderId: mergedOrderId,
+            customerId: customerId!,
+            amount: newTotal,
+            paidAmount: newPaid,
+            dueDate,
+          });
+        }
       }
 
-      // 加入派車單站點
-      const [seqRows] = await client.execute(
-        `SELECT COALESCE(MAX(stopSequence),0) AS maxSeq FROM dy_dispatch_items WHERE dispatchOrderId=?`,
-        [input.dispatchOrderId]
-      );
-      const nextSeq = Number((seqRows as any[])[0]?.maxSeq ?? 0) + 1;
-      await client.execute(
-        `INSERT INTO dy_dispatch_items
-         (dispatchOrderId, tenantId, orderId, customerId, stopSequence,
-          prevBoxes, deliverBoxes, returnBoxes, remainBoxes, paymentStatus, cashCollected, createdAt)
-         VALUES (?,?,?,?,?,0,0,0,0,?,?,NOW())`,
-        [input.dispatchOrderId, input.tenantId, orderId, customerId, nextSeq, paymentStatus, input.cashCollected]
-      );
+      // ── 無法合併（臨時客戶 or 該客戶今日無未完成訂單）→ 建新補單 ──
+      let orderId: number;
+      let orderNo: string;
+      if (mergedOrderId) {
+        orderId = mergedOrderId;
+        orderNo = `MERGED-${orderId}`;
+      } else {
+        const totalAmount = addedAmount;
+        const paymentStatus = cashCollectedStatus(input.cashCollected, totalAmount, settlementCycle);
+        orderNo = `SUPP${Date.now()}`;
 
-      // AR（補單已是 delivered 狀態，直接建 AR）
-      const dueDate = calcDueDate(twDeliveryDate, settlementCycle, 30);
-      await upsertArRecord(client, {
-        tenantId: input.tenantId,
-        orderId,
-        customerId: customerId!,
-        amount: totalAmount,
-        paidAmount: input.cashCollected,
-        dueDate,
-      });
+        const [orderResult] = await client.execute(
+          `INSERT INTO dy_orders
+           (tenantId, orderNo, customerId, driverId, deliveryDate, status, totalAmount,
+            paidAmount, paymentStatus, cashCollected, orderType, orderSource, createdAt, updatedAt)
+           VALUES (?,?,?,?,?,'delivered',?,?,?,?,'supplement','driver_app',NOW(),NOW())`,
+          [
+            input.tenantId, orderNo, customerId, driver.id, twDeliveryDate,
+            totalAmount, input.cashCollected, paymentStatus, input.cashCollected,
+          ]
+        );
+        orderId = Number((orderResult as any).insertId);
 
-      // 庫存移轉記錄：備用箱在列印時已扣，這裡只記「補單動用備用箱」的流向備查
+        for (const item of input.items) {
+          await client.execute(
+            `INSERT INTO dy_order_items (tenantId, orderId, productId, qty, unitPrice, subtotal, returnQty)
+             VALUES (?,?,?,?,?,?,0)`,
+            [input.tenantId, orderId, item.productId, item.qty, item.unitPrice, item.qty * item.unitPrice]
+          );
+        }
+
+        // 加入派車單站點
+        const [seqRows] = await client.execute(
+          `SELECT COALESCE(MAX(stopSequence),0) AS maxSeq FROM dy_dispatch_items WHERE dispatchOrderId=?`,
+          [input.dispatchOrderId]
+        );
+        const nextSeq = Number((seqRows as any[])[0]?.maxSeq ?? 0) + 1;
+        await client.execute(
+          `INSERT INTO dy_dispatch_items
+           (dispatchOrderId, tenantId, orderId, customerId, stopSequence,
+            prevBoxes, deliverBoxes, returnBoxes, remainBoxes, paymentStatus, cashCollected, createdAt)
+           VALUES (?,?,?,?,?,0,0,0,0,?,?,NOW())`,
+          [input.dispatchOrderId, input.tenantId, orderId, customerId, nextSeq, paymentStatus, input.cashCollected]
+        );
+
+        // AR
+        const dueDate = calcDueDate(twDeliveryDate, settlementCycle, 30);
+        await upsertArRecord(client, {
+          tenantId: input.tenantId,
+          orderId,
+          customerId: customerId!,
+          amount: totalAmount,
+          paidAmount: input.cashCollected,
+          dueDate,
+        });
+      }
+
+      // 庫存移轉記錄（無論合併或新建）
       for (const item of input.items) {
         await client.execute(
           `INSERT INTO dy_stock_movements
@@ -416,7 +476,7 @@ export const dyDriverRouter = router({
         );
       }
 
-      return { success: true, orderId, orderNo, totalAmount };
+      return { success: true, orderId, orderNo, totalAmount: addedAmount, merged: !!mergedOrderId };
     }),
 
   getMyWorkLog: driverProcedure
