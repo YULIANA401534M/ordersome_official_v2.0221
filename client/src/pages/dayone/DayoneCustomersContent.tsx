@@ -55,6 +55,7 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
   const [priceCustomerId, setPriceCustomerId] = useState<number | null>(null);
   const [priceCustomerName, setPriceCustomerName] = useState("");
   const [newPriceForm, setNewPriceForm] = useState({ productId: "", price: "", effectiveDate: new Date().toISOString().slice(0, 10) });
+  const [editingPriceId, setEditingPriceId] = useState<number | null>(null);
 
   const utils = trpc.useUtils();
   const { data: customers, isLoading } = trpc.dayone.customers.list.useQuery({ tenantId });
@@ -107,6 +108,7 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
     onSuccess: () => {
       toast.success("客製定價已儲存");
       setNewPriceForm({ productId: "", price: "", effectiveDate: new Date().toISOString().slice(0, 10) });
+      setEditingPriceId(null);
       refetchPrices();
     },
     onError: (err) => toast.error(err.message),
@@ -699,14 +701,14 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
       </Dialog>
 
       {/* 客製定價 Dialog */}
-      <Dialog open={priceCustomerId !== null} onOpenChange={(v) => { if (!v) setPriceCustomerId(null); }}>
+      <Dialog open={priceCustomerId !== null} onOpenChange={(v) => { if (!v) { setPriceCustomerId(null); setEditingPriceId(null); setNewPriceForm({ productId: "", price: "", effectiveDate: new Date().toISOString().slice(0, 10) }); } }}>
         <DialogContent className="max-w-lg rounded-3xl">
           <DialogHeader>
             <DialogTitle>客製定價 — {priceCustomerName}</DialogTitle>
           </DialogHeader>
 
-          {/* 現有定價列表 */}
-          <div className="max-h-52 overflow-y-auto rounded-2xl border border-stone-200">
+          {/* 現有定價列表（含歷史） */}
+          <div className="max-h-56 overflow-y-auto rounded-2xl border border-stone-200">
             {(customerPrices as any[]).length === 0 ? (
               <div className="py-8 text-center text-sm text-stone-400">尚無客製定價，使用分級定價或主檔售價</div>
             ) : (
@@ -714,28 +716,65 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
                 <thead className="border-b bg-stone-50 sticky top-0">
                   <tr>
                     <th className="px-3 py-2 text-left font-medium text-stone-500">商品</th>
-                    <th className="px-3 py-2 text-left font-medium text-stone-500">單位</th>
                     <th className="px-3 py-2 text-right font-medium text-stone-500">售價</th>
                     <th className="px-3 py-2 text-left font-medium text-stone-500">生效日</th>
+                    <th className="px-3 py-2 text-left font-medium text-stone-500">建立時間</th>
+                    <th className="px-3 py-2"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {(customerPrices as any[]).map((cp: any) => (
-                    <tr key={cp.id} className="border-b last:border-b-0">
-                      <td className="px-3 py-2 font-medium text-stone-900">{cp.productName}</td>
-                      <td className="px-3 py-2 text-stone-500">{cp.unit}</td>
-                      <td className="px-3 py-2 text-right font-semibold text-stone-900">NT$ {Number(cp.price).toLocaleString()}</td>
-                      <td className="px-3 py-2 text-stone-500">{cp.effectiveDate?.slice(0, 10) ?? "-"}</td>
-                    </tr>
-                  ))}
+                  {(customerPrices as any[]).map((cp: any, idx: number) => {
+                    // 同商品中第一筆（effectiveDate最新）為當前生效
+                    const prevIdx = idx - 1;
+                    const isLatestForProduct = idx === 0 || (customerPrices as any[])[prevIdx]?.productId !== cp.productId;
+                    return (
+                      <tr key={cp.id} className={`border-b last:border-b-0 ${isLatestForProduct ? "" : "opacity-50"}`}>
+                        <td className="px-3 py-2 font-medium text-stone-900">
+                          {isLatestForProduct ? cp.productName : <span className="text-stone-400 text-xs ml-2">↳ {cp.productName}</span>}
+                        </td>
+                        <td className="px-3 py-2 text-right font-semibold text-stone-900">
+                          NT$ {Number(cp.price).toLocaleString()}
+                          {isLatestForProduct && <span className="ml-1 text-[10px] font-normal text-emerald-600">生效中</span>}
+                        </td>
+                        <td className="px-3 py-2 text-stone-500">{cp.effectiveDate?.slice(0, 10) ?? "-"}</td>
+                        <td className="px-3 py-2 text-stone-400 text-xs">
+                          {cp.createdAt ? new Date(cp.createdAt).toLocaleDateString("zh-TW", { timeZone: "Asia/Taipei", month: "2-digit", day: "2-digit" }) : "-"}
+                        </td>
+                        <td className="px-3 py-2">
+                          {isLatestForProduct && (
+                            <button
+                              className="text-xs text-amber-600 font-semibold hover:underline"
+                              onClick={() => {
+                                setEditingPriceId(cp.id);
+                                setNewPriceForm({
+                                  productId: String(cp.productId),
+                                  price: String(cp.price),
+                                  effectiveDate: new Date().toISOString().slice(0, 10),
+                                });
+                              }}
+                            >
+                              調整
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}
           </div>
 
-          {/* 新增定價表單 */}
+          {/* 新增 / 調整定價表單 */}
           <div className="space-y-3 pt-2">
-            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide">新增 / 覆蓋定價</p>
+            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide">
+              {editingPriceId ? "調整定價（將新增一筆修改紀錄）" : "新增客製定價"}
+              {editingPriceId && (
+                <button className="ml-2 text-stone-400 hover:text-stone-600 normal-case font-normal" onClick={() => { setEditingPriceId(null); setNewPriceForm({ productId: "", price: "", effectiveDate: new Date().toISOString().slice(0, 10) }); }}>
+                  取消
+                </button>
+              )}
+            </p>
             <div className="flex gap-2">
               <div className="flex-1">
                 <Label className="text-xs">商品</Label>
@@ -786,9 +825,9 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
                 });
               }}
             >
-              {setCustomerPrice.isPending ? "儲存中..." : "儲存定價"}
+              {setCustomerPrice.isPending ? "儲存中..." : editingPriceId ? "確認調整（保留舊紀錄）" : "儲存定價"}
             </Button>
-            <p className="text-xs text-stone-400 text-center">同商品重複設定會以最新生效日為準</p>
+            <p className="text-xs text-stone-400 text-center">每次調整會保留完整歷史紀錄，灰色為過去紀錄</p>
           </div>
         </DialogContent>
       </Dialog>

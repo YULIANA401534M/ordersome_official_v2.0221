@@ -177,7 +177,7 @@ export const dyCustomersRouter = router({
          FROM dy_customer_prices cp
          JOIN dy_products p ON cp.productId = p.id
          WHERE cp.customerId = ? AND cp.tenantId = ?
-         ORDER BY p.code`,
+         ORDER BY p.code, cp.effectiveDate DESC, cp.id DESC`,
         [input.customerId, input.tenantId]
       );
       return rows as any[];
