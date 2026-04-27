@@ -604,152 +604,178 @@ body { margin: 0; padding: 16px; background: white; font-family: 'Noto Sans TC',
                     </div>
                   </div>
 
-                  {/* ══ PAGE 2+: 個別出貨單（每頁兩站，cut line 分隔） ══ */}
+                  {/* ══ PAGE 2+: 個別出貨單（同客戶合併，cut line 分隔） ══ */}
                   <div style={{pageBreakBefore:"always"}}>
                     <div style={{fontSize:"11px", color:"#888", marginBottom:"8px", textAlign:"center", letterSpacing:"0.06em"}}>
-                      ── 以下為各站個別出貨單，請沿虛線裁切交給客戶 ──
+                      ── 以下為各客戶出貨單（同客戶已合併），請沿虛線裁切交給客戶 ──
                     </div>
-                    {items.map((item: any, idx: number) => {
-                      const stopProducts = productsByOrder.filter((p: any) => Number(p.orderId) === Number(item.orderId));
-                      const isMonthly = item.paymentStatus === "monthly";
-                      const isWeekly = item.paymentStatus === "weekly";
-                      const isCash = !isMonthly && !isWeekly;
-                      const totalAmt = Number(item.orderAmount ?? 0);
-                      const slipTotal = stopProducts.reduce((s: number, p: any) =>
-                        s + (p.unitPrice ? Number(p.shippedQty) * Number(p.unitPrice) : 0), 0);
-
-                      return (
-                        <div key={item.id} style={{pageBreakInside:"avoid"}}>
-                          {/* Cut line between slips */}
-                          {idx > 0 && (
-                            <div style={{
-                              borderTop:"1.5px dashed #aaa",
-                              margin:"6px 0",
-                              position:"relative",
-                            }}>
-                              <span style={{
-                                position:"absolute",
-                                top:"-8px",
-                                left:"50%",
-                                transform:"translateX(-50%)",
-                                background:"white",
-                                padding:"0 8px",
-                                fontSize:"10px",
-                                color:"#aaa",
-                              }}>✂</span>
-                            </div>
-                          )}
-
-                          {/* Slip */}
-                          <div style={{
-                            border:"1.5px solid #aaa",
-                            borderRadius:"4px",
-                            padding:"10px 14px",
-                            marginBottom:"6px",
-                          }}>
-                            {/* Slip header row */}
-                            <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", borderBottom:"2px solid #111", paddingBottom:"6px", marginBottom:"8px"}}>
-                              <div>
-                                <div style={{fontSize:"15px", fontWeight:"800", letterSpacing:"0.05em"}}>大永蛋行　出貨單</div>
-                                <div style={{fontSize:"10px", color:"#666", marginTop:"1px"}}>
-                                  第一聯（白）存根　第二聯（粉）客戶　第三聯（黃）收款
-                                </div>
+                    {(() => {
+                      // 依客戶合併：同一個 customerId 的多站合為一張出貨單
+                      type MergedSlip = {
+                        customerId: number;
+                        customerName: string;
+                        customerPhone: string | null;
+                        customerAddress: string | null;
+                        paymentStatus: string;
+                        prevBoxes: number;
+                        deliverBoxes: number;
+                        totalAmt: number;
+                        stopNos: number[];
+                        products: { productName: string; unit: string; qty: number; unitPrice: number | null }[];
+                      };
+                      const slipMap = new Map<number, MergedSlip>();
+                      // preserve insertion order (司機站序)
+                      const slipOrder: number[] = [];
+                      for (const item of items) {
+                        const cid = Number(item.customerId);
+                        if (!slipMap.has(cid)) {
+                          slipMap.set(cid, {
+                            customerId: cid,
+                            customerName: item.customerName,
+                            customerPhone: item.customerPhone ?? null,
+                            customerAddress: item.customerAddress ?? null,
+                            paymentStatus: item.paymentStatus,
+                            prevBoxes: Number(item.prevBoxes ?? 0),
+                            deliverBoxes: Number(item.deliverBoxes ?? 0),
+                            totalAmt: Number(item.orderAmount ?? 0),
+                            stopNos: [item.stopSequence],
+                            products: [],
+                          });
+                          slipOrder.push(cid);
+                        } else {
+                          const s = slipMap.get(cid)!;
+                          s.stopNos.push(item.stopSequence);
+                          s.deliverBoxes += Number(item.deliverBoxes ?? 0);
+                          s.totalAmt += Number(item.orderAmount ?? 0);
+                        }
+                        // merge products: sum qty for same productId
+                        const stopProducts = productsByOrder.filter((p: any) => Number(p.orderId) === Number(item.orderId));
+                        for (const p of stopProducts) {
+                          const slip = slipMap.get(cid)!;
+                          const existing = slip.products.find((x) => x.productName === p.productName);
+                          if (existing) {
+                            existing.qty += Number(p.shippedQty ?? 0);
+                          } else {
+                            slip.products.push({
+                              productName: p.productName,
+                              unit: p.unit || "",
+                              qty: Number(p.shippedQty ?? 0),
+                              unitPrice: p.unitPrice != null ? Number(p.unitPrice) : null,
+                            });
+                          }
+                        }
+                      }
+                      return slipOrder.map((cid, idx) => {
+                        const slip = slipMap.get(cid)!;
+                        const isMonthly = slip.paymentStatus === "monthly";
+                        const isWeekly = slip.paymentStatus === "weekly";
+                        const isCash = !isMonthly && !isWeekly;
+                        const slipTotal = slip.products.reduce((s, p) =>
+                          s + (p.unitPrice != null ? p.qty * p.unitPrice : 0), 0);
+                        const displayTotal = slipTotal || slip.totalAmt;
+                        const stopLabel = slip.stopNos.length > 1
+                          ? `站 ${slip.stopNos.join("+")} (合併)`
+                          : `站 ${slip.stopNos[0]}`;
+                        return (
+                          <div key={cid} style={{pageBreakInside:"avoid"}}>
+                            {idx > 0 && (
+                              <div style={{borderTop:"1.5px dashed #aaa", margin:"6px 0", position:"relative"}}>
+                                <span style={{position:"absolute", top:"-8px", left:"50%", transform:"translateX(-50%)", background:"white", padding:"0 8px", fontSize:"10px", color:"#aaa"}}>✂</span>
                               </div>
-                              <div style={{textAlign:"right"}}>
-                                <div style={{fontSize:"11px", color:"#888"}}>路線 {detail.routeCode}　{fmtDate(detail.dispatchDate)}</div>
-                                <div style={{fontSize:"16px", fontWeight:"700", letterSpacing:"0.12em", color:"#111"}}>No. {String((detail.routeCode ?? "") + String(item.stopSequence).padStart(3, "0"))}</div>
-                              </div>
-                            </div>
-
-                            {/* Customer row */}
-                            <div style={{display:"grid", gridTemplateColumns:"auto 1fr", gap:"4px 12px", marginBottom:"8px", fontSize:"12px"}}>
-                              <span style={{color:"#666", whiteSpace:"nowrap"}}>訂購人</span>
-                              <span style={{fontWeight:"700", fontSize:"14px"}}>{item.customerName}</span>
-                              {item.customerPhone && <>
-                                <span style={{color:"#666"}}>電話</span>
-                                <span>{item.customerPhone}</span>
-                              </>}
-                              {item.customerAddress && <>
-                                <span style={{color:"#666", whiteSpace:"nowrap"}}>地址</span>
-                                <span style={{fontSize:"11px", color:"#444"}}>{item.customerAddress}</span>
-                              </>}
-                            </div>
-
-                            {/* Products table */}
-                            <table style={{width:"100%", borderCollapse:"collapse", fontSize:"12px", marginBottom:"8px"}}>
-                              <thead>
-                                <tr style={{borderBottom:"1.5px solid #aaa", background:"#f9fafb"}}>
-                                  <th style={{textAlign:"left", padding:"4px 6px", fontWeight:"600", color:"#444"}}>產品</th>
-                                  <th style={{textAlign:"right", padding:"4px 6px", fontWeight:"600", color:"#444", width:"52px"}}>數量</th>
-                                  <th style={{textAlign:"right", padding:"4px 6px", fontWeight:"600", color:"#444", width:"64px"}}>價格</th>
-                                  <th style={{textAlign:"right", padding:"4px 6px", fontWeight:"600", color:"#444", width:"72px"}}>金額</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {stopProducts.length > 0 ? stopProducts.map((p: any, pi: number) => {
-                                  const lineAmt = p.unitPrice ? Number(p.shippedQty) * Number(p.unitPrice) : null;
-                                  return (
-                                    <tr key={pi} style={{borderBottom:"1px solid #eee"}}>
-                                      <td style={{padding:"5px 6px"}}>{p.productName}</td>
-                                      <td style={{padding:"5px 6px", textAlign:"right", fontVariantNumeric:"tabular-nums"}}>{Math.round(Number(p.shippedQty))} {p.unit || ""}</td>
-                                      <td style={{padding:"5px 6px", textAlign:"right", color:"#555", fontVariantNumeric:"tabular-nums"}}>
-                                        {p.unitPrice ? Number(p.unitPrice).toLocaleString() : "—"}
-                                      </td>
-                                      <td style={{padding:"5px 6px", textAlign:"right", fontWeight:"600", fontVariantNumeric:"tabular-nums"}}>
-                                        {lineAmt !== null ? lineAmt.toLocaleString() : "—"}
-                                      </td>
-                                    </tr>
-                                  );
-                                }) : (
-                                  <tr><td colSpan={4} style={{padding:"6px", textAlign:"center", color:"#aaa"}}>—</td></tr>
-                                )}
-                              </tbody>
-                            </table>
-
-                            {/* Bottom section: boxes + payment + total */}
-                            <div style={{borderTop:"1.5px solid #aaa", paddingTop:"7px", display:"grid", gridTemplateColumns:"auto 1fr auto", gap:"0 16px", alignItems:"center"}}>
-                              {/* Box grid */}
-                              <div style={{display:"grid", gridTemplateColumns:"repeat(4,52px)", gap:"4px", textAlign:"center"}}>
-                                {([
-                                  {label:"前　箱", value: item.prevBoxes != null ? String(item.prevBoxes) : ""},
-                                  {label:"入　箱", value: item.deliverBoxes != null ? String(item.deliverBoxes) : ""},
-                                  {label:"回　箱", value: ""},
-                                  {label:"餘　箱", value: ""},
-                                ] as {label: string; value: string}[]).map(({label, value}) => (
-                                  <div key={label} style={{border:"1px solid #ccc", borderRadius:"2px", padding:"3px 2px"}}>
-                                    <div style={{fontSize:"9px", color:"#777", lineHeight:"1.2"}}>{label}</div>
-                                    <div style={{fontSize:"13px", fontWeight:"700", minHeight:"18px", borderBottom:"1px solid #aaa", marginTop:"1px", paddingBottom:"1px"}}>
-                                      {value}
-                                    </div>
+                            )}
+                            <div style={{border:"1.5px solid #aaa", borderRadius:"4px", padding:"10px 14px", marginBottom:"6px"}}>
+                              {/* Slip header */}
+                              <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", borderBottom:"2px solid #111", paddingBottom:"6px", marginBottom:"8px"}}>
+                                <div>
+                                  <div style={{fontSize:"15px", fontWeight:"800", letterSpacing:"0.05em"}}>大永蛋行　出貨單</div>
+                                  <div style={{fontSize:"10px", color:"#666", marginTop:"1px"}}>
+                                    第一聯（白）存根　第二聯（粉）客戶　第三聯（黃）收款
                                   </div>
-                                ))}
-                              </div>
-
-                              {/* Payment checkboxes + note */}
-                              <div style={{fontSize:"11px"}}>
-                                <div style={{display:"flex", gap:"12px", marginBottom:"4px"}}>
-                                  <span>□ 已收款</span>
-                                  <span>□ 未收款</span>
-                                  {!isCash && <span style={{color:"#2563eb", fontWeight:"700"}}>{isMonthly ? "月結" : "週結"}</span>}
                                 </div>
-                                <div style={{color:"#888", fontSize:"10px"}}>備註：＿＿＿＿＿＿＿＿＿</div>
-                              </div>
-
-                              {/* Total */}
-                              <div style={{textAlign:"right", borderLeft:"1px solid #ddd", paddingLeft:"12px"}}>
-                                <div style={{fontSize:"10px", color:"#666", marginBottom:"2px"}}>總金額</div>
-                                <div style={{fontSize:"20px", fontWeight:"800", fontVariantNumeric:"tabular-nums", letterSpacing:"0.02em"}}>
-                                  {(slipTotal || totalAmt).toLocaleString()}
+                                <div style={{textAlign:"right"}}>
+                                  <div style={{fontSize:"11px", color:"#888"}}>路線 {detail.routeCode}　{fmtDate(detail.dispatchDate)}</div>
+                                  <div style={{fontSize:"14px", fontWeight:"700", letterSpacing:"0.08em", color:"#111"}}>{stopLabel}</div>
                                 </div>
-                                <div style={{fontSize:"10px", color:"#888", marginTop:"4px"}}>
-                                  客戶簽收：＿＿＿＿＿
+                              </div>
+                              {/* Customer info */}
+                              <div style={{display:"grid", gridTemplateColumns:"auto 1fr", gap:"4px 12px", marginBottom:"8px", fontSize:"12px"}}>
+                                <span style={{color:"#666", whiteSpace:"nowrap"}}>訂購人</span>
+                                <span style={{fontWeight:"700", fontSize:"14px"}}>{slip.customerName}</span>
+                                {slip.customerPhone && <>
+                                  <span style={{color:"#666"}}>電話</span>
+                                  <span>{slip.customerPhone}</span>
+                                </>}
+                                {slip.customerAddress && <>
+                                  <span style={{color:"#666", whiteSpace:"nowrap"}}>地址</span>
+                                  <span style={{fontSize:"11px", color:"#444"}}>{slip.customerAddress}</span>
+                                </>}
+                              </div>
+                              {/* Products table */}
+                              <table style={{width:"100%", borderCollapse:"collapse", fontSize:"12px", marginBottom:"8px"}}>
+                                <thead>
+                                  <tr style={{borderBottom:"1.5px solid #aaa", background:"#f9fafb"}}>
+                                    <th style={{textAlign:"left", padding:"4px 6px", fontWeight:"600", color:"#444"}}>產品</th>
+                                    <th style={{textAlign:"right", padding:"4px 6px", fontWeight:"600", color:"#444", width:"52px"}}>數量</th>
+                                    <th style={{textAlign:"right", padding:"4px 6px", fontWeight:"600", color:"#444", width:"64px"}}>價格</th>
+                                    <th style={{textAlign:"right", padding:"4px 6px", fontWeight:"600", color:"#444", width:"72px"}}>金額</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {slip.products.length > 0 ? slip.products.map((p, pi) => {
+                                    const lineAmt = p.unitPrice != null ? Math.round(p.qty * p.unitPrice) : null;
+                                    return (
+                                      <tr key={pi} style={{borderBottom:"1px solid #eee"}}>
+                                        <td style={{padding:"5px 6px"}}>{p.productName}</td>
+                                        <td style={{padding:"5px 6px", textAlign:"right", fontVariantNumeric:"tabular-nums"}}>{Math.round(p.qty)} {p.unit}</td>
+                                        <td style={{padding:"5px 6px", textAlign:"right", color:"#555", fontVariantNumeric:"tabular-nums"}}>
+                                          {p.unitPrice != null ? p.unitPrice.toLocaleString() : "—"}
+                                        </td>
+                                        <td style={{padding:"5px 6px", textAlign:"right", fontWeight:"600", fontVariantNumeric:"tabular-nums"}}>
+                                          {lineAmt !== null ? lineAmt.toLocaleString() : "—"}
+                                        </td>
+                                      </tr>
+                                    );
+                                  }) : (
+                                    <tr><td colSpan={4} style={{padding:"6px", textAlign:"center", color:"#aaa"}}>—</td></tr>
+                                  )}
+                                </tbody>
+                              </table>
+                              {/* Bottom: boxes + payment + total */}
+                              <div style={{borderTop:"1.5px solid #aaa", paddingTop:"7px", display:"grid", gridTemplateColumns:"auto 1fr auto", gap:"0 16px", alignItems:"center"}}>
+                                <div style={{display:"grid", gridTemplateColumns:"repeat(4,52px)", gap:"4px", textAlign:"center"}}>
+                                  {([
+                                    {label:"前　箱", value: String(slip.prevBoxes)},
+                                    {label:"入　箱", value: String(slip.deliverBoxes)},
+                                    {label:"回　箱", value: ""},
+                                    {label:"餘　箱", value: ""},
+                                  ] as {label: string; value: string}[]).map(({label, value}) => (
+                                    <div key={label} style={{border:"1px solid #ccc", borderRadius:"2px", padding:"3px 2px"}}>
+                                      <div style={{fontSize:"9px", color:"#777", lineHeight:"1.2"}}>{label}</div>
+                                      <div style={{fontSize:"13px", fontWeight:"700", minHeight:"18px", borderBottom:"1px solid #aaa", marginTop:"1px", paddingBottom:"1px"}}>{value}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                                <div style={{fontSize:"11px"}}>
+                                  <div style={{display:"flex", gap:"12px", marginBottom:"4px"}}>
+                                    <span>□ 已收款</span>
+                                    <span>□ 未收款</span>
+                                    {!isCash && <span style={{color:"#2563eb", fontWeight:"700"}}>{isMonthly ? "月結" : "週結"}</span>}
+                                  </div>
+                                  <div style={{color:"#888", fontSize:"10px"}}>備註：＿＿＿＿＿＿＿＿＿</div>
+                                </div>
+                                <div style={{textAlign:"right", borderLeft:"1px solid #ddd", paddingLeft:"12px"}}>
+                                  <div style={{fontSize:"10px", color:"#666", marginBottom:"2px"}}>總金額</div>
+                                  <div style={{fontSize:"20px", fontWeight:"800", fontVariantNumeric:"tabular-nums", letterSpacing:"0.02em"}}>
+                                    {displayTotal.toLocaleString()}
+                                  </div>
+                                  <div style={{fontSize:"10px", color:"#888", marginTop:"4px"}}>客戶簽收：＿＿＿＿＿</div>
                                 </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      });
+                    })()}
                   </div>
 
                 </div>

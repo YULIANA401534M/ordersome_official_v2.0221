@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Plus, Pencil, Trash2, Phone, Truck, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 
-const emptyForm = { name: "", phone: "", lineId: "", vehicleNo: "", status: "active" as const };
+const emptyForm = { name: "", phone: "", lineId: "", vehicleNo: "", routeCode: "", status: "active" as const };
 
 export default function DayoneDrivers() {
   const [open, setOpen] = useState(false);
@@ -51,6 +51,7 @@ export default function DayoneDrivers() {
       phone: driver.phone ?? "",
       lineId: driver.lineId ?? "",
       vehicleNo: driver.vehicleNo ?? "",
+      routeCode: driver.routeCode ?? "",
       status: driver.status,
     });
     setOpen(true);
@@ -88,7 +89,7 @@ export default function DayoneDrivers() {
                 <table className="dayone-table w-full text-sm">
                   <thead>
                     <tr>
-                      {["姓名", "電話", "LINE ID", "車牌", "狀態", "操作"].map((h) => (
+                      {["姓名", "路線代碼", "電話", "LINE ID", "車牌", "狀態", "操作"].map((h) => (
                         <th key={h}>{h}</th>
                       ))}
                     </tr>
@@ -97,6 +98,11 @@ export default function DayoneDrivers() {
                     {(drivers as any[]).map((driver: any) => (
                       <tr key={driver.id}>
                         <td className="font-medium">{driver.name}</td>
+                        <td>
+                          {driver.routeCode
+                            ? <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">{driver.routeCode}</span>
+                            : <span className="text-stone-400">未設定</span>}
+                        </td>
                         <td className="text-stone-600">{driver.phone ?? "-"}</td>
                         <td className="text-stone-600">{driver.lineId ?? "-"}</td>
                         <td className="text-stone-700">{driver.vehicleNo ?? "-"}</td>
@@ -135,6 +141,9 @@ export default function DayoneDrivers() {
                         <div className="mt-1 flex items-center gap-2 text-xs text-stone-400">
                           <Truck className="h-3.5 w-3.5" />
                           <span>{driver.vehicleNo ?? "尚未設定車牌"}</span>
+                          {driver.routeCode && (
+                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-700 font-semibold">{driver.routeCode}</span>
+                          )}
                         </div>
                       </div>
                       <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${driver.status === "active" ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-500"}`}>
@@ -191,6 +200,15 @@ export default function DayoneDrivers() {
                 <Input value={form.vehicleNo} onChange={(e) => setForm((p) => ({ ...p, vehicleNo: e.target.value }))} />
               </div>
               <div>
+                <Label>路線代碼</Label>
+                <Input
+                  placeholder="例如 R01、台中北區"
+                  value={form.routeCode}
+                  onChange={(e) => setForm((p) => ({ ...p, routeCode: e.target.value }))}
+                />
+                <p className="mt-1 text-xs text-stone-400">用於派車單識別，設定後新派車單自動帶入</p>
+              </div>
+              <div>
                 <Label>狀態</Label>
                 <Select value={form.status} onValueChange={(v) => setForm((p) => ({ ...p, status: v as any }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -208,7 +226,7 @@ export default function DayoneDrivers() {
                   toast.error("請先輸入司機姓名");
                   return;
                 }
-                upsert.mutate({ ...form, tenantId: TENANT_ID, id: editing?.id });
+                upsert.mutate({ ...form, tenantId: TENANT_ID, id: editing?.id, routeCode: form.routeCode || undefined });
               }}
               disabled={upsert.isPending}
             >

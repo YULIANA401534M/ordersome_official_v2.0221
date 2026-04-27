@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Search, Trash2, CalendarDays, Calendar, ChevronDown, ChevronUp, X } from "lucide-react";
+import { Plus, Search, Trash2, CalendarDays, Calendar, ChevronDown, ChevronUp, X, Pencil, Check } from "lucide-react";
 import { toast } from "sonner";
 
 function fmtDate(val: string | null | undefined): string {
@@ -113,51 +113,149 @@ export default function DayoneOrders() {
 
   const filtered = (orders as any[] ?? []).filter((o: any) => !search || o.customerName?.includes(search) || o.orderNo?.includes(search));
 
-  function MobileOrderItems({ orderId }: { orderId: number }) {
+  function EditableOrderItems({ orderId, colSpan = 7, mobile = false }: { orderId: number; colSpan?: number; mobile?: boolean }) {
+    const utils = trpc.useUtils();
     const { data, isLoading } = trpc.dayone.orders.getWithItems.useQuery({ id: orderId, tenantId: TENANT_ID });
-    if (isLoading) return <div className="mt-2 px-1 text-xs text-stone-400">載入中...</div>;
-    const items = data?.items ?? [];
-    if (!items.length) return <div className="mt-2 px-1 text-xs text-stone-400">無商品明細</div>;
-    return (
-      <div className="mt-2 rounded-xl border border-amber-100 bg-amber-50/60 px-3 py-2 space-y-1">
-        {items.map((item: any) => (
-          <div key={item.id} className="flex justify-between text-xs">
-            <span className="text-stone-700">{item.productName} × {item.qty}{item.unit || ""}</span>
-            <span className="tabular-nums font-medium text-stone-800">${Number(item.subtotal).toLocaleString()}</span>
-          </div>
-        ))}
-        {data?.note && <p className="pt-1 text-xs text-stone-500 border-t border-amber-100">備註：{data.note}</p>}
-      </div>
-    );
-  }
+    const [editing, setEditing] = useState(false);
+    const [editValues, setEditValues] = useState<Record<number, { qty: number; unitPrice: number }>>({});
 
-  function OrderItems({ orderId }: { orderId: number }) {
-    const { data, isLoading } = trpc.dayone.orders.getWithItems.useQuery({ id: orderId, tenantId: TENANT_ID });
-    if (isLoading) return <tr><td colSpan={7} className="px-4 py-2 text-xs text-stone-400">載入中...</td></tr>;
-    const items = data?.items ?? [];
-    if (!items.length) return <tr><td colSpan={7} className="px-4 py-2 text-xs text-stone-400">無商品明細</td></tr>;
-    return (
-      <tr>
-        <td colSpan={7} className="bg-amber-50/60 px-8 py-3">
-          <div className="grid grid-cols-[1fr_60px_72px_80px] gap-x-4 mb-1">
+    const updateItems = trpc.dayone.orders.updateItems.useMutation({
+      onSuccess: (result) => {
+        toast.success(`品項已更新，訂單金額 NT$ ${result.totalAmount.toLocaleString("zh-TW")}`);
+        setEditing(false);
+        utils.dayone.orders.getWithItems.invalidate({ id: orderId, tenantId: TENANT_ID });
+        utils.dayone.orders.list.invalidate();
+      },
+      onError: (e) => toast.error(e.message),
+    });
+
+    if (isLoading) {
+      const inner = <div className="py-2 text-xs text-stone-400">載入中...</div>;
+      return mobile ? inner : <tr><td colSpan={colSpan} className="px-8 py-2">{inner}</td></tr>;
+    }
+
+    const items: any[] = data?.items ?? [];
+
+    function startEdit() {
+      const map: Record<number, { qty: number; unitPrice: number }> = {};
+      for (const item of items) {
+        map[item.id] = { qty: Number(item.qty), unitPrice: Number(item.unitPrice) };
+      }
+      setEditValues(map);
+      setEditing(true);
+    }
+
+    function saveEdit() {
+      updateItems.mutate({
+        id: orderId,
+        tenantId: TENANT_ID,
+        items: Object.entries(editValues).map(([id, v]) => ({
+          id: Number(id),
+          qty: v.qty,
+          unitPrice: v.unitPrice,
+        })),
+      });
+    }
+
+    const inner = (
+      <div className={mobile ? "mt-2 rounded-xl border border-amber-100 bg-amber-50/60 px-3 py-2" : ""}>
+        {!mobile && (
+          <div className="grid grid-cols-[1fr_64px_80px_80px] gap-x-3 mb-1.5">
             {["商品名稱", "數量", "單價", "小計"].map((h) => (
               <span key={h} className="text-[11px] font-medium text-stone-400">{h}</span>
             ))}
           </div>
-          {items.map((item: any) => (
-            <div key={item.id} className="grid grid-cols-[1fr_60px_72px_80px] gap-x-4 py-1 border-b border-amber-100 last:border-0">
-              <span className="text-xs text-stone-700">{item.productName}</span>
-              <span className="text-xs text-stone-600 tabular-nums">{item.qty} {item.unit || ""}</span>
-              <span className="text-xs text-stone-600 tabular-nums text-right">${Number(item.unitPrice).toLocaleString()}</span>
-              <span className="text-xs font-medium text-stone-800 tabular-nums text-right">${Number(item.subtotal).toLocaleString()}</span>
-            </div>
-          ))}
-          {data?.note && (
-            <p className="mt-2 text-xs text-stone-500">備註：{data.note}</p>
+        )}
+        <div className="space-y-1">
+          {items.map((item: any) => {
+            const ev = editValues[item.id];
+            const displayQty = editing ? ev?.qty : Number(item.qty);
+            const displayPrice = editing ? ev?.unitPrice : Number(item.unitPrice);
+            const subtotal = displayQty * displayPrice;
+
+            if (mobile) {
+              return (
+                <div key={item.id} className="flex items-center justify-between text-xs gap-2">
+                  <span className="text-stone-700">{item.productName} × {editing
+                    ? <input type="number" min={1} className="w-12 rounded border border-amber-300 px-1 text-center text-xs" value={ev?.qty ?? item.qty}
+                        onChange={(e) => setEditValues((p) => ({ ...p, [item.id]: { ...p[item.id], qty: Number(e.target.value) || 1 } }))} />
+                    : `${item.qty}${item.unit || ""}`}
+                  </span>
+                  {editing ? (
+                    <input type="number" min={0} className="w-20 rounded border border-amber-300 px-1 text-right text-xs"
+                      value={ev?.unitPrice ?? item.unitPrice}
+                      onChange={(e) => setEditValues((p) => ({ ...p, [item.id]: { ...p[item.id], unitPrice: Number(e.target.value) || 0 } }))} />
+                  ) : (
+                    <span className={`tabular-nums font-medium ${!Number(item.unitPrice) ? "text-amber-600" : "text-stone-800"}`}>
+                      {Number(item.unitPrice) ? `$${Number(item.subtotal).toLocaleString()}` : "待補"}
+                    </span>
+                  )}
+                </div>
+              );
+            }
+
+            return (
+              <div key={item.id} className="grid grid-cols-[1fr_64px_80px_80px] gap-x-3 py-1 border-b border-amber-100 last:border-0 items-center">
+                <span className="text-xs text-stone-700">{item.productName}</span>
+                {editing ? (
+                  <input type="number" min={1} className="h-6 w-full rounded border border-amber-300 px-1 text-center text-xs tabular-nums"
+                    value={ev?.qty ?? item.qty}
+                    onChange={(e) => setEditValues((p) => ({ ...p, [item.id]: { ...p[item.id], qty: Number(e.target.value) || 1 } }))} />
+                ) : (
+                  <span className="text-xs text-stone-600 tabular-nums">{item.qty} {item.unit || ""}</span>
+                )}
+                {editing ? (
+                  <input type="number" min={0} className="h-6 w-full rounded border border-amber-300 px-1 text-right text-xs tabular-nums"
+                    value={ev?.unitPrice ?? item.unitPrice}
+                    onChange={(e) => setEditValues((p) => ({ ...p, [item.id]: { ...p[item.id], unitPrice: Number(e.target.value) || 0 } }))} />
+                ) : (
+                  <span className={`text-xs tabular-nums text-right ${!Number(item.unitPrice) ? "font-semibold text-amber-600" : "text-stone-600"}`}>
+                    {Number(item.unitPrice) ? `$${Number(item.unitPrice).toLocaleString()}` : "待補"}
+                  </span>
+                )}
+                <span className={`text-xs font-medium tabular-nums text-right ${editing ? "text-amber-700" : !Number(item.unitPrice) ? "text-amber-600" : "text-stone-800"}`}>
+                  {subtotal ? `$${subtotal.toLocaleString()}` : "待補"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        {data?.note && <p className={`${mobile ? "pt-1 border-t border-amber-100" : "mt-2"} text-xs text-stone-500`}>備註：{data.note}</p>}
+
+        <div className={`${mobile ? "mt-2" : "mt-3"} flex gap-2`}>
+          {editing ? (
+            <>
+              <Button size="sm" className="h-7 rounded-xl bg-amber-600 text-white hover:bg-amber-700 gap-1 text-xs"
+                disabled={updateItems.isPending} onClick={saveEdit}>
+                <Check className="h-3 w-3" />
+                {updateItems.isPending ? "儲存中..." : "儲存"}
+              </Button>
+              <Button size="sm" variant="outline" className="h-7 rounded-xl text-xs" onClick={() => setEditing(false)}>
+                取消
+              </Button>
+            </>
+          ) : (
+            <Button size="sm" variant="outline" className="h-7 rounded-xl gap-1 text-xs text-amber-700 border-amber-300 hover:bg-amber-50"
+              onClick={startEdit}>
+              <Pencil className="h-3 w-3" />
+              補填金額 / 修改數量
+            </Button>
           )}
-        </td>
-      </tr>
+        </div>
+      </div>
     );
+
+    if (mobile) return inner;
+    return <tr><td colSpan={colSpan} className="bg-amber-50/40 px-8 py-3">{inner}</td></tr>;
+  }
+
+  function MobileOrderItems({ orderId }: { orderId: number }) {
+    return <EditableOrderItems orderId={orderId} mobile />;
+  }
+
+  function OrderItems({ orderId }: { orderId: number }) {
+    return <EditableOrderItems orderId={orderId} colSpan={7} />;
   }
 
   return (

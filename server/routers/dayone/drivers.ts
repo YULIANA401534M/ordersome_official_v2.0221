@@ -28,6 +28,7 @@ export const dyDriversRouter = router({
         lineId: z.string().max(128).optional(),
         districtIds: z.array(z.number()).optional(),
         vehicleNo: z.string().max(20).optional(),
+        routeCode: z.string().max(20).optional(),
         status: z.enum(["active", "inactive"]).default("active"),
       })
     )
@@ -38,15 +39,15 @@ export const dyDriversRouter = router({
       const districtIdsJson = input.districtIds ? JSON.stringify(input.districtIds) : null;
       if (input.id) {
         await client.execute(
-          `UPDATE dy_drivers SET name=?, phone=?, lineId=?, districtIds=?, vehicleNo=?, status=?, updatedAt=NOW() WHERE id=? AND tenantId=?`,
-          [input.name, input.phone ?? null, input.lineId ?? null, districtIdsJson, input.vehicleNo ?? null, input.status, input.id, input.tenantId]
+          `UPDATE dy_drivers SET name=?, phone=?, lineId=?, districtIds=?, vehicleNo=?, routeCode=?, status=?, updatedAt=NOW() WHERE id=? AND tenantId=?`,
+          [input.name, input.phone ?? null, input.lineId ?? null, districtIdsJson, input.vehicleNo ?? null, input.routeCode ?? null, input.status, input.id, input.tenantId]
         );
         return { id: input.id };
       }
 
       const [result] = await client.execute(
-        `INSERT INTO dy_drivers (tenantId, name, phone, lineId, districtIds, vehicleNo, status, createdAt, updatedAt) VALUES (?,?,?,?,?,?,?,NOW(),NOW())`,
-        [input.tenantId, input.name, input.phone ?? null, input.lineId ?? null, districtIdsJson, input.vehicleNo ?? null, input.status]
+        `INSERT INTO dy_drivers (tenantId, name, phone, lineId, districtIds, vehicleNo, routeCode, status, createdAt, updatedAt) VALUES (?,?,?,?,?,?,?,?,NOW(),NOW())`,
+        [input.tenantId, input.name, input.phone ?? null, input.lineId ?? null, districtIdsJson, input.vehicleNo ?? null, input.routeCode ?? null, input.status]
       );
       return { id: (result as any).insertId };
     }),

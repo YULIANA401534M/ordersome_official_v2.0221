@@ -683,10 +683,11 @@ ${allUrls.join("\n")}
         // 查當日訂單
         const [orderRows] = await client.execute(
           `SELECT o.*, c.settlementCycle, c.overdueDays, c.customerLevel,
-                  dist.sortOrder, dist.routeCode
+                  dist.sortOrder, d.routeCode AS driverRouteCode
            FROM dy_orders o
            JOIN dy_customers c ON o.customerId = c.id
            LEFT JOIN dy_districts dist ON o.districtId = dist.id
+           LEFT JOIN dy_drivers d ON o.driverId = d.id
            WHERE o.tenantId=? AND o.deliveryDate=? AND o.status != 'cancelled'
            ORDER BY o.driverId, dist.sortOrder`,
           [tenantId, dispatchDate]
@@ -708,7 +709,7 @@ ${allUrls.join("\n")}
 
         const generated: number[] = [];
         for (const [driverId, driverOrders] of Array.from(driverMap.entries())) {
-          const routeCode = driverOrders[0]?.routeCode ?? "R00";
+          const routeCode = driverOrders[0]?.driverRouteCode ?? "R00";
           const [doResult] = await client.execute(
             `INSERT INTO dy_dispatch_orders
              (tenantId, dispatchDate, driverId, routeCode, status, generatedAt, createdAt, updatedAt)

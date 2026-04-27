@@ -33,10 +33,11 @@ export const dyDispatchRouter = router({
       const [orderRows] = await client.execute(
         `SELECT o.*, c.settlementCycle, c.overdueDays, c.address AS customerAddress,
                 c.name AS customerName, c.customerLevel,
-                dist.sortOrder, dist.routeCode
+                dist.sortOrder, d.routeCode AS driverRouteCode
          FROM dy_orders o
          JOIN dy_customers c ON o.customerId = c.id
          LEFT JOIN dy_districts dist ON o.districtId = dist.id
+         LEFT JOIN dy_drivers d ON o.driverId = d.id
          WHERE o.tenantId=?
            AND o.deliveryDate=?
            AND o.status IN ('pending', 'assigned')
@@ -69,7 +70,7 @@ export const dyDispatchRouter = router({
       const dispatchOrders: any[] = [];
 
       for (const [driverId, driverOrders] of Array.from(driverMap.entries())) {
-        const routeCode = driverOrders[0]?.routeCode ?? "R00";
+        const routeCode = driverOrders[0]?.driverRouteCode ?? "R00";
 
         // 如果同一天同一司機已有 draft 派車單，複用它，不重複建立
         const [existingRows] = await client.execute(

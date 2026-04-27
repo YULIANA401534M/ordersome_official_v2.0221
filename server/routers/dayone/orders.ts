@@ -168,6 +168,77 @@ export const dyOrdersRouter = router({
       };
     }),
 
+  updateItems: dyAdminProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        tenantId: z.number(),
+        items: z.array(z.object({
+          id: z.number(),
+          qty: z.number().positive(),
+          unitPrice: z.number().min(0),
+        })),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      const client = (db as any).$client;
+
+      const [orderCheck] = await client.execute(
+        `SELECT id FROM dy_orders WHERE id=? AND tenantId=? LIMIT 1`,
+        [input.id, input.tenantId]
+      );
+      if (!(orderCheck as any[])[0]) throw new TRPCError({ code: "NOT_FOUND" });
+
+      for (const item of input.items) {
+        const subtotal = item.qty * item.unitPrice;
+        await client.execute(
+          `UPDATE dy_order_items SET qty=?, unitPrice=?, subtotal=? WHERE id=? AND orderId=?`,
+          [item.qty, item.unitPrice, subtotal, item.id, input.id]
+        );
+      }
+
+      // 重新算 totalAmount 寫回 dy_orders
+      const [sumRows] = await client.execute(
+        `SELECT COALESCE(SUM(subtotal), 0) AS total FROM dy_order_items WHERE orderId=? AND tenantId=?`,
+        [input.id, input.tenantId]
+      );
+      const newTotal = Number((sumRows as any[])[0]?.total ?? 0);
+      await client.execute(
+        `UPDATE dy_orders SET totalAmount=?, updatedAt=NOW() WHERE id=? AND tenantId=?`,
+        [newTotal, input.id, input.tenantId]
+      );
+
+      // 同步更新 AR（如果這張訂單已有應收記錄）
+      const [arRows] = await client.execute(
+        `SELECT ar.id, ar.paidAmount, ar.dueDate, o.customerId, o.deliveryDate,
+                c.settlementCycle, c.overdueDays
+         FROM dy_ar_records ar
+         JOIN dy_orders o ON ar.orderId = o.id
+         JOIN dy_customers c ON o.customerId = c.id
+         WHERE ar.orderId=? AND ar.tenantId=? LIMIT 1`,
+        [input.id, input.tenantId]
+      );
+      const arRow = (arRows as any[])[0];
+      if (arRow && newTotal > 0) {
+        const { calcDueDate } = await import("./utils");
+        const dueDate = calcDueDate(
+          arRow.deliveryDate?.toISOString?.().slice(0, 10) ?? arRow.dueDate,
+          arRow.settlementCycle,
+          arRow.overdueDays
+        );
+        const paidAmount = Number(arRow.paidAmount ?? 0);
+        const newStatus = paidAmount >= newTotal ? "paid" : paidAmount > 0 ? "partial" : "unpaid";
+        await client.execute(
+          `UPDATE dy_ar_records SET amount=?, status=?, dueDate=?, updatedAt=NOW() WHERE id=? AND tenantId=?`,
+          [newTotal, newStatus, dueDate, arRow.id, input.tenantId]
+        );
+      }
+
+      return { success: true, totalAmount: newTotal };
+    }),
+
   updateStatus: dyAdminProcedure
     .input(
       z.object({
