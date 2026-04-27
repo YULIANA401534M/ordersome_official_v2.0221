@@ -100,7 +100,7 @@ export const dyCustomersRouter = router({
       address: z.string().optional(),
       districtId: z.number().optional(),
       groupId: z.number().optional(),
-      paymentType: z.enum(['monthly', 'weekly', 'cash']).default('monthly'),
+      paymentType: z.enum(['cash', 'transfer', 'check']).default('cash'),
       creditLimit: z.number().default(0),
       status: z.enum(['active', 'suspended']).default('active'),
       customerLevel: z.string().optional(),

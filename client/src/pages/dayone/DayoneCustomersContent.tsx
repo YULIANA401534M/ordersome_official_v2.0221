@@ -34,9 +34,9 @@ const EMPTY_GROUP_FORM = {
 };
 
 const paymentTypeLabel: Record<string, string> = {
-  monthly: "月結",
-  weekly: "週結",
   cash: "現金",
+  transfer: "轉帳",
+  check: "支票",
 };
 
 export default function DayoneCustomersContent({ tenantId }: { tenantId: number }) {
@@ -585,9 +585,9 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
                 <Select value={form.paymentType} onValueChange={(v) => setForm((p) => ({ ...p, paymentType: v as any }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="monthly">月結</SelectItem>
-                    <SelectItem value="weekly">週結</SelectItem>
                     <SelectItem value="cash">現金</SelectItem>
+                    <SelectItem value="transfer">轉帳</SelectItem>
+                    <SelectItem value="check">支票</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
