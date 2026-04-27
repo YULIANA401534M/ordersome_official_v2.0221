@@ -136,7 +136,7 @@ export default function DriverPurchaseReceipt() {
   const [createdId, setCreatedId] = useState<number | null>(null);
   const [signatureUrl, setSignatureUrl] = useState("");
 
-  const { data: suppliers = [] } = trpc.dayone.suppliers.list.useQuery({ tenantId: TENANT_ID });
+  const { data: suppliers = [] } = trpc.dayone.suppliers.listForDriver.useQuery({ tenantId: TENANT_ID });
   const { data: products = [] } = trpc.dayone.products.list.useQuery({ tenantId: TENANT_ID });
   const { data: eggPrice, refetch: refetchEggPrice } = trpc.dayone.eggPrice.today.useQuery();
 

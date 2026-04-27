@@ -2,10 +2,23 @@ import { z } from "zod";
 import { router } from "../../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../../db";
-import { dayoneAdminProcedure as dyAdminProcedure } from "./procedures";
+import { dayoneAdminProcedure as dyAdminProcedure, dayoneDriverProcedure as dyDriverProcedure } from "./procedures";
 
 
 export const dySuppliersRouter = router({
+  // 司機端進貨頁用：只回傳 active 供應商，司機權限即可
+  listForDriver: dyDriverProcedure
+    .input(z.object({ tenantId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
+      const [rows] = await (db as any).$client.execute(
+        `SELECT id, name, phone FROM dy_suppliers WHERE tenantId = ? AND status='active' ORDER BY name`,
+        [input.tenantId]
+      );
+      return rows as any[];
+    }),
+
   list: dyAdminProcedure
     .input(z.object({ tenantId: z.number() }))
     .query(async ({ input }) => {

@@ -273,13 +273,16 @@ export default function DriverOrderDetail() {
               />
             </div>
 
-            {/* 客戶簽名 */}
+            {/* 客戶簽名（必填） */}
             <div>
-              <p className="mb-2 text-xs font-medium text-stone-600">客戶簽名</p>
+              <div className="mb-2 flex items-center gap-1.5">
+                <p className="text-xs font-medium text-stone-600">客戶簽名</p>
+                <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-600">必填</span>
+              </div>
               {order.signatureUrl ? (
                 <div className="rounded-2xl border border-emerald-200 bg-white p-2">
                   <img src={order.signatureUrl} alt="客戶簽名" className="max-h-28 w-full object-contain" />
-                  <p className="mt-1 text-center text-xs font-semibold text-emerald-600">已簽名</p>
+                  <p className="mt-1 text-center text-xs font-semibold text-emerald-600">✓ 已簽名</p>
                 </div>
               ) : showSig ? (
                 <div>
@@ -299,24 +302,36 @@ export default function DriverOrderDetail() {
                 </div>
               ) : (
                 <button type="button" onClick={() => setShowSig(true)}
-                  className="w-full rounded-2xl border-2 border-dashed border-amber-300 py-5 text-sm font-medium text-amber-700">
-                  點這裡讓客戶簽名
+                  className="w-full rounded-2xl border-2 border-dashed border-rose-300 bg-rose-50 py-5 text-sm font-medium text-rose-700">
+                  ✎ 點這裡讓客戶簽名（必填）
                 </button>
               )}
             </div>
 
             {/* 確認送達 */}
-            <button
-              type="button"
-              className="w-full rounded-2xl bg-stone-900 py-4 text-base font-bold text-white active:scale-[0.98] transition-transform disabled:opacity-50"
-              disabled={updateStatus.isPending || (isCash && cashInput === "")}
-              onClick={handleConfirmDelivery}
-            >
-              {updateStatus.isPending ? "送出中…" : "確認送達"}
-            </button>
-            {isCash && cashInput === "" && (
-              <p className="text-center text-xs text-rose-500">現收客戶請先填入收款金額</p>
-            )}
+            {(() => {
+              const missingCash = isCash && cashInput === "";
+              const missingSig = !order.signatureUrl;
+              const canSubmit = !missingCash && !missingSig && !updateStatus.isPending;
+              return (
+                <>
+                  <button
+                    type="button"
+                    className="w-full rounded-2xl bg-stone-900 py-4 text-base font-bold text-white active:scale-[0.98] transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={!canSubmit}
+                    onClick={handleConfirmDelivery}
+                  >
+                    {updateStatus.isPending ? "送出中…" : "確認送達"}
+                  </button>
+                  {(missingCash || missingSig) && (
+                    <div className="space-y-1">
+                      {missingCash && <p className="text-center text-xs text-rose-500">請先填入收款金額</p>}
+                      {missingSig && <p className="text-center text-xs text-rose-500">請先取得客戶簽名</p>}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </section>
         )}
 
