@@ -133,7 +133,8 @@ function SupplementOrderDialog({ onClose }: { onClose: () => void }) {
             {items.map((item, idx) => (
               <div key={idx} className="mb-1.5 grid grid-cols-[1fr_52px_68px_auto] gap-1.5 items-center">
                 <Select value={item.productId} onValueChange={(v) => {
-                  setItems((s) => s.map((r, i) => i === idx ? { ...r, productId: v, unitPrice: "" } : r));
+                  const prod = (products as any[]).find((p: any) => String(p.id) === v);
+                  setItems((s) => s.map((r, i) => i === idx ? { ...r, productId: v, unitPrice: String(prod?.defaultPrice ?? "") } : r));
                 }}>
                   <SelectTrigger className="rounded-xl h-8 text-xs"><SelectValue placeholder="商品" /></SelectTrigger>
                   <SelectContent>

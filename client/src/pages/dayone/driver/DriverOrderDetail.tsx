@@ -48,6 +48,8 @@ export default function DriverOrderDetail() {
   const [driverNote, setDriverNote] = useState("");
   const [showSig, setShowSig] = useState(false);
   const sigRef = useRef<SignatureCanvas>(null);
+  // 本地快取簽名 URL（invalidate 完成前仍能 unlock 送出按鈕）
+  const [localSignatureUrl, setLocalSignatureUrl] = useState<string | null>(null);
   // 拒收流程
   const [showReject, setShowReject] = useState(false);
   const [rejectNote, setRejectNote] = useState("");
@@ -75,9 +77,10 @@ export default function DriverOrderDetail() {
   });
 
   const uploadSignature = trpc.dayone.driver.uploadSignature.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast.success("簽名已記錄");
       setShowSig(false);
+      setLocalSignatureUrl(data.signatureUrl);
       utils.dayone.driver.getMyTodayOrders.invalidate();
     },
     onError: (e) => toast.error(e.message),
@@ -325,9 +328,9 @@ export default function DriverOrderDetail() {
                 <p className="text-xs font-medium text-stone-600">客戶簽名</p>
                 <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-600">必填</span>
               </div>
-              {order.signatureUrl ? (
+              {(order.signatureUrl || localSignatureUrl) ? (
                 <div className="rounded-2xl border border-emerald-200 bg-white p-2">
-                  <img src={order.signatureUrl} alt="客戶簽名" className="max-h-28 w-full object-contain" />
+                  <img src={order.signatureUrl || localSignatureUrl!} alt="客戶簽名" className="max-h-28 w-full object-contain" />
                   <p className="mt-1 text-center text-xs font-semibold text-emerald-600">✓ 已簽名</p>
                 </div>
               ) : showSig ? (
@@ -357,7 +360,7 @@ export default function DriverOrderDetail() {
             {/* 確認送達 */}
             {(() => {
               const missingCash = isCash && cashInput === "";
-              const missingSig = !order.signatureUrl;
+              const missingSig = !order.signatureUrl && !localSignatureUrl;
               const canSubmit = !missingCash && !missingSig && !updateStatus.isPending;
               return (
                 <>
