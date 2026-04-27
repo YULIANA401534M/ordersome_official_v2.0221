@@ -351,6 +351,9 @@ export const dyDriverRouter = router({
       const totalAmount = input.items.reduce((s, i) => s + i.qty * i.unitPrice, 0);
       const paymentStatus = cashCollectedStatus(input.cashCollected, totalAmount, settlementCycle);
       const orderNo = `SUPP${Date.now()}`;
+      // dispatchDate 從 DB 取出是 UTC，轉成台灣日期字串（+8h）
+      const twDeliveryDate = new Date(new Date(dispatch.dispatchDate).getTime() + 8 * 60 * 60 * 1000)
+        .toISOString().slice(0, 10);
 
       const [orderResult] = await client.execute(
         `INSERT INTO dy_orders
@@ -358,7 +361,7 @@ export const dyDriverRouter = router({
           paidAmount, paymentStatus, cashCollected, orderType, orderSource, createdAt, updatedAt)
          VALUES (?,?,?,?,?,'delivered',?,?,?,?,'supplement','driver_app',NOW(),NOW())`,
         [
-          input.tenantId, orderNo, customerId, driver.id, dispatch.dispatchDate,
+          input.tenantId, orderNo, customerId, driver.id, twDeliveryDate,
           totalAmount, input.cashCollected, paymentStatus, input.cashCollected,
         ]
       );
@@ -387,7 +390,7 @@ export const dyDriverRouter = router({
       );
 
       // AR（補單已是 delivered 狀態，直接建 AR）
-      const dueDate = calcDueDate(dispatch.dispatchDate, settlementCycle, 30);
+      const dueDate = calcDueDate(twDeliveryDate, settlementCycle, 30);
       await upsertArRecord(client, {
         tenantId: input.tenantId,
         orderId,
