@@ -785,23 +785,32 @@ export const dyDispatchRouter = router({
         [input.id, input.tenantId]
       );
 
-      const [reportResult] = await client.execute(
-        `INSERT INTO dy_driver_cash_reports
-         (tenantId, driverId, reportDate, expectedAmount, actualAmount, diff, status, driverNote, createdAt)
-         VALUES (?,?,?,?,?,?,?,?,NOW())`,
-        [
-          input.tenantId,
-          dispatch.driverId,
-          dispatch.dispatchDate ?? new Date().toISOString().slice(0, 10),
-          expectedAmount,
-          input.actualAmount,
-          diff,
-          status,
-          input.driverNote ?? null,
-        ]
+      // 防止重複：同一司機同一天已有報告就 UPDATE，沒有才 INSERT
+      const reportDate = dispatch.dispatchDate ?? new Date().toISOString().slice(0, 10);
+      const [existingReport] = await client.execute(
+        `SELECT id FROM dy_driver_cash_reports WHERE tenantId=? AND driverId=? AND reportDate=? LIMIT 1`,
+        [input.tenantId, dispatch.driverId, reportDate]
       );
+      let reportId: number;
+      if ((existingReport as any[]).length > 0) {
+        reportId = Number((existingReport as any[])[0].id);
+        await client.execute(
+          `UPDATE dy_driver_cash_reports
+           SET expectedAmount=?, actualAmount=?, diff=?, status=?, driverNote=?
+           WHERE id=?`,
+          [expectedAmount, input.actualAmount, diff, status, input.driverNote ?? null, reportId]
+        );
+      } else {
+        const [reportResult] = await client.execute(
+          `INSERT INTO dy_driver_cash_reports
+           (tenantId, driverId, reportDate, expectedAmount, actualAmount, diff, status, driverNote, createdAt)
+           VALUES (?,?,?,?,?,?,?,?,NOW())`,
+          [input.tenantId, dispatch.driverId, reportDate, expectedAmount, input.actualAmount, diff, status, input.driverNote ?? null]
+        );
+        reportId = Number((reportResult as any).insertId);
+      }
 
-      return { success: true, expectedAmount, diff, status, reportId: (reportResult as any).insertId };
+      return { success: true, expectedAmount, diff, status, reportId };
     }),
 
   manualAddStop: driverProcedure
@@ -1023,7 +1032,7 @@ export const dyDispatchRouter = router({
       }
 
       // 2. 現收應收帳款結清：只結清「逐筆結(per_delivery)」的 AR
-      //    月結/週結客戶的 AR 留著，等月底/週結時另外處理
+      //    用管理員實際點收金額（cashConfirmed）按比例分配，不無條件全額標 paid
       const [cashArRows] = await client.execute(
         `SELECT ar.id, ar.amount, ar.paidAmount
          FROM dy_ar_records ar
@@ -1040,12 +1049,35 @@ export const dyDispatchRouter = router({
         ? `管理員點收確認。備註：${input.adminNote}`
         : `管理員點收確認，現金 NT$${input.cashConfirmed.toLocaleString()}`;
 
+      // 計算逐筆結 AR 的應收總額，按比例將 cashConfirmed 分配給各筆 AR
+      const totalPerDeliveryAmt = (cashArRows as any[]).reduce(
+        (s: number, ar: any) => s + (Number(ar.amount) - Number(ar.paidAmount)), 0
+      );
+      let remainingCash = input.cashConfirmed;
+
       for (const ar of cashArRows as any[]) {
+        const unpaid = Number(ar.amount) - Number(ar.paidAmount);
+        // 依比例分配，或直接用剩餘現金（取較小值）
+        const allocate = totalPerDeliveryAmt > 0
+          ? Math.min(unpaid, Math.round((unpaid / totalPerDeliveryAmt) * input.cashConfirmed))
+          : unpaid;
+        const actualAllocate = Math.min(allocate, remainingCash, unpaid);
+        remainingCash -= actualAllocate;
+        const newPaid = Number(ar.paidAmount) + actualAllocate;
+        const newStatus = newPaid >= Number(ar.amount) ? "paid" : newPaid > 0 ? "partial" : "unpaid";
         await client.execute(
           `UPDATE dy_ar_records
-           SET paidAmount=amount, status='paid', paidAt=NOW(), paymentMethod='cash', adminNote=?, updatedAt=NOW()
+           SET paidAmount=?, status=?, paidAt=IF(?='paid',NOW(),paidAt), paymentMethod='cash', adminNote=?, updatedAt=NOW()
            WHERE id=? AND tenantId=?`,
-          [noteText, ar.id, input.tenantId]
+          [newPaid, newStatus, newStatus, noteText, ar.id, input.tenantId]
+        );
+        // 同步回 dy_orders
+        await client.execute(
+          `UPDATE dy_orders o
+           JOIN dy_ar_records ar ON ar.orderId = o.id
+           SET o.paidAmount=?, o.paymentStatus=?, o.updatedAt=NOW()
+           WHERE ar.id=? AND o.tenantId=?`,
+          [newPaid, newStatus, ar.id, input.tenantId]
         );
       }
 

@@ -663,12 +663,146 @@ function DriverCashTab({ tenantId }: { tenantId: number }) {
     utils.dayone.dispatch.listDispatch.invalidate();
   }
 
+  async function handlePrintDailyStatement(driverId: number, driverName: string) {
+    const result = await utils.dayone.reports.driverDailyStatement.fetch({ tenantId, driverId, date });
+    const win = window.open("", "_blank");
+    if (!win) return;
+    const orders = (result.orders ?? []) as any[];
+    const extras = (result.extraItems ?? []) as any[];
+    const supps = (result.suppItems ?? []) as any[];
+    const returns = (result.returnItems ?? []) as any[];
+    const totalCollected = orders.reduce((s: number, o: any) => s + Number(o.arPaid ?? 0), 0);
+    const totalInvoiced = orders.reduce((s: number, o: any) => s + Number(o.totalAmount ?? 0), 0);
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>司機日結對帳單</title>
+<style>
+body{font-family:sans-serif;padding:32px;color:#1c1917;font-size:13px}
+h2{font-size:18px;font-weight:700;color:#b45309;margin-bottom:4px}
+h3{font-size:13px;font-weight:700;margin:20px 0 6px;color:#44403c}
+table{width:100%;border-collapse:collapse;margin-top:8px}
+th{background:#f5f5f4;padding:7px 10px;text-align:left;font-size:12px;color:#78716c;border-bottom:1px solid #e7e5e4}
+td{padding:7px 10px;border-bottom:1px solid #f5f5f4;font-size:12px}
+.right{text-align:right}.center{text-align:center}
+.total-row td{font-weight:700;background:#fafaf9}
+.info{display:flex;gap:24px;margin:12px 0;font-size:13px}
+.info span{color:#78716c}
+.sig{display:flex;gap:64px;margin-top:48px}
+.sig-box{border-top:1px solid #000;padding-top:6px;width:200px;text-align:center;font-size:12px}
+</style>
+</head><body>
+<h2>大永蛋品 — 司機日結對帳單</h2>
+<div class="info">
+<div><span>司機：</span><strong>${driverName}</strong></div>
+<div><span>日期：</span>${date}</div>
+<div><span>路線：</span>${result.dispatch?.routeCode ?? "-"}</div>
+</div>
+<h3>訂單明細</h3>
+<table>
+<tr><th>訂單號</th><th>客戶</th><th>結帳</th><th class="right">應收</th><th class="right">實收</th><th class="center">收款方式</th><th class="center">狀態</th></tr>
+${orders.map((o: any) => `<tr>
+<td>#${o.orderNo ?? o.id}</td>
+<td>${o.customerName ?? "-"}</td>
+<td>${CYCLE_LABEL[o.settlementCycle] ?? o.settlementCycle ?? "-"}</td>
+<td class="right">${fmtMoney(o.totalAmount)}</td>
+<td class="right">${fmtMoney(o.arPaid)}</td>
+<td class="center">${o.paymentMethod === "cash" ? "現金" : o.paymentMethod === "transfer" ? "轉帳" : "-"}</td>
+<td class="center">${AR_STATUS_TONE[o.arStatus]?.label ?? o.paymentStatus ?? "-"}</td>
+</tr>`).join("")}
+<tr class="total-row">
+<td colspan="3">合計</td>
+<td class="right">${fmtMoney(totalInvoiced)}</td>
+<td class="right">${fmtMoney(totalCollected)}</td>
+<td colspan="2"></td>
+</tr>
+</table>
+${extras.length ? `<h3>備用箱登記</h3>
+<table>
+<tr><th>品名</th><th>單位</th><th class="right">數量</th><th>備註</th></tr>
+${extras.map((e: any) => `<tr><td>${e.productName}</td><td>${e.unit ?? "-"}</td><td class="right">${e.qty}</td><td>${e.note ?? ""}</td></tr>`).join("")}
+</table>` : ""}
+${supps.length ? `<h3>補單動用備用箱</h3>
+<table>
+<tr><th>品名</th><th class="right">動用數量</th></tr>
+${supps.map((s: any) => `<tr><td>${s.productName}</td><td class="right">${s.suppQty}</td></tr>`).join("")}
+</table>` : ""}
+${returns.length ? `<h3>剩貨回庫</h3>
+<table>
+<tr><th>品名</th><th class="right">回庫數量</th></tr>
+${returns.map((r: any) => `<tr><td>${r.productName}</td><td class="right">${r.returnedQty}</td></tr>`).join("")}
+</table>` : ""}
+<h3>現金繳款</h3>
+<table>
+<tr><th>應繳現金</th><th>實繳現金</th><th>差額</th><th>狀態</th></tr>
+<tr>
+<td>${fmtMoney(result.cashReport?.expectedAmount ?? 0)}</td>
+<td>${fmtMoney(result.cashReport?.actualAmount ?? 0)}</td>
+<td>${fmtMoney(result.cashReport?.diff ?? 0)}</td>
+<td>${result.cashReport?.status === "normal" ? "正常" : result.cashReport?.status === "anomaly" ? "異常" : "-"}</td>
+</tr>
+</table>
+<div class="sig">
+<div class="sig-box">司機簽名</div>
+<div class="sig-box">管理員確認</div>
+</div>
+</body></html>`);
+    win.document.close();
+    win.print();
+  }
+
+  async function handlePrintDailySummary() {
+    const rows = await utils.dayone.reports.dailyCashSummary.fetch({ tenantId, date });
+    const win = window.open("", "_blank");
+    if (!win) return;
+    const data = rows as any[];
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>每日收款彙總</title>
+<style>
+body{font-family:sans-serif;padding:32px;color:#1c1917;font-size:13px}
+h2{font-size:18px;font-weight:700;color:#b45309;margin-bottom:4px}
+table{width:100%;border-collapse:collapse;margin-top:16px}
+th{background:#f5f5f4;padding:8px 12px;text-align:left;font-size:12px;color:#78716c;border-bottom:1px solid #e7e5e4}
+td{padding:8px 12px;border-bottom:1px solid #f5f5f4}
+.right{text-align:right}
+.total-row td{font-weight:700;background:#fafaf9}
+</style>
+</head><body>
+<h2>大永蛋品 — 每日收款彙總</h2>
+<p style="color:#78716c;margin-bottom:16px">${date}</p>
+<table>
+<tr>
+<th>司機</th><th>路線</th>
+<th class="right">逐筆應收</th><th class="right">逐筆已收</th>
+<th class="right">應繳現金</th><th class="right">實繳現金</th>
+<th class="right">差額</th><th>狀態</th>
+</tr>
+${data.map((r: any) => {
+  const diff = Number(r.reportDiff ?? 0);
+  const diffStr = diff === 0 ? "—" : (diff > 0 ? "+" : "") + `NT$ ${Number(diff).toLocaleString("zh-TW")}`;
+  const diffColor = diff < 0 ? "color:#dc2626" : diff > 0 ? "color:#059669" : "color:#a8a29e";
+  return `<tr>
+<td>${r.driverName}</td>
+<td>${r.routeCode ?? "-"}</td>
+<td class="right">${fmtMoney(r.perDeliveryAR)}</td>
+<td class="right">${fmtMoney(r.perDeliveryPaid)}</td>
+<td class="right">${fmtMoney(r.reportExpected)}</td>
+<td class="right">${fmtMoney(r.reportActual)}</td>
+<td class="right" style="${diffColor}">${diffStr}</td>
+<td>${r.reportStatus === "normal" ? "正常" : r.reportStatus === "anomaly" ? "異常" : r.reportStatus === "resolved" ? "已解決" : "-"}</td>
+</tr>`;
+}).join("")}
+</table>
+</body></html>`);
+    win.document.close();
+    win.print();
+  }
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-3">
         <Input type="date" className="w-[180px] rounded-2xl" value={date} onChange={(e) => setDate(e.target.value)} />
         {anomalyCount > 0 && <Badge className="border-0 bg-red-100 text-red-700">{anomalyCount} 筆現金異常待處理</Badge>}
         {pendingHandover.length > 0 && <Badge className="border-0 bg-amber-100 text-amber-700">{pendingHandover.length} 筆待點收</Badge>}
+        <Button variant="outline" size="sm" className="rounded-2xl ml-auto" onClick={handlePrintDailySummary}>
+          列印每日收款彙總
+        </Button>
       </div>
 
       {/* 待管理員點收的派車單 */}
@@ -736,9 +870,15 @@ function DriverCashTab({ tenantId }: { tenantId: number }) {
                         {rep.adminNote || rep.driverNote || "-"}
                       </td>
                       <td className="px-4 py-4 text-center">
-                        {rep.status === "anomaly" && (
-                          <Button variant="destructive" size="sm" className="rounded-2xl" onClick={() => setResolveTarget(rep)}>解決</Button>
-                        )}
+                        <div className="flex items-center justify-center gap-2">
+                          <Button variant="outline" size="sm" className="rounded-2xl text-xs"
+                            onClick={() => handlePrintDailyStatement(rep.driverId, rep.driverName)}>
+                            列印日結
+                          </Button>
+                          {rep.status === "anomaly" && (
+                            <Button variant="destructive" size="sm" className="rounded-2xl" onClick={() => setResolveTarget(rep)}>解決</Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -762,9 +902,15 @@ function DriverCashTab({ tenantId }: { tenantId: number }) {
                     <div><p className="text-xs text-stone-400">實繳現金</p><p className="mt-0.5 font-semibold">{fmtMoney(rep.actualAmount)}</p></div>
                     <div><p className="text-xs text-stone-400">差額</p><p className={`mt-0.5 font-semibold ${diff < 0 ? "text-red-600" : diff > 0 ? "text-emerald-700" : "text-stone-400"}`}>{diff !== 0 ? (diff > 0 ? "+" : "") + fmtMoney(diff) : "—"}</p></div>
                   </div>
-                  {rep.status === "anomaly" && (
-                    <Button variant="destructive" className="mt-3 w-full rounded-2xl" onClick={() => setResolveTarget(rep)}>解決異常</Button>
-                  )}
+                  <div className="mt-3 flex gap-2">
+                    <Button variant="outline" size="sm" className="flex-1 rounded-2xl text-xs"
+                      onClick={() => handlePrintDailyStatement(rep.driverId, rep.driverName)}>
+                      列印日結
+                    </Button>
+                    {rep.status === "anomaly" && (
+                      <Button variant="destructive" size="sm" className="flex-1 rounded-2xl" onClick={() => setResolveTarget(rep)}>解決異常</Button>
+                    )}
+                  </div>
                 </article>
               );
             })}
@@ -920,7 +1066,7 @@ function MonthlyStatementTab({ tenantId }: { tenantId: number }) {
 
   const { data: customers = [] } = trpc.dayone.customers.list.useQuery({ tenantId });
   const [year, month] = yearMonth.split("-").map(Number);
-  const { data: stmt, isLoading, refetch } = trpc.dayone.ar.monthlyStatement.useQuery(
+  const { data: stmt, isLoading, refetch } = trpc.dayone.reports.monthlyStatement.useQuery(
     { tenantId, customerId: Number(customerId), year, month },
     { enabled: queried && !!customerId }
   );
@@ -929,16 +1075,23 @@ function MonthlyStatementTab({ tenantId }: { tenantId: number }) {
     if (!stmt) return;
     const win = window.open("", "_blank");
     if (!win) return;
+    const orders = (stmt.orders ?? []) as any[];
+    const itemsByOrder = (stmt.itemsByOrder ?? {}) as Record<number, any[]>;
     win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>月結對帳單</title>
 <style>
-body { font-family: sans-serif; padding: 32px; color: #1c1917; font-size: 13px; }
-h2 { font-size: 18px; font-weight: 700; color: #b45309; margin-bottom: 4px; }
-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-th { background: #f5f5f4; padding: 8px 12px; text-align: left; font-size: 12px; color: #78716c; border-bottom: 1px solid #e7e5e4; }
-td { padding: 8px 12px; border-bottom: 1px solid #f5f5f4; }
-.total-row td { font-weight: 600; background: #fafaf9; }
-.info { display: flex; gap: 32px; margin: 16px 0; font-size: 13px; }
-.info span { color: #78716c; }
+body{font-family:sans-serif;padding:32px;color:#1c1917;font-size:13px}
+h2{font-size:18px;font-weight:700;color:#b45309;margin-bottom:4px}
+h3{font-size:13px;font-weight:700;margin:20px 0 6px;color:#44403c}
+table{width:100%;border-collapse:collapse;margin-top:8px}
+th{background:#f5f5f4;padding:7px 10px;text-align:left;font-size:12px;color:#78716c;border-bottom:1px solid #e7e5e4}
+td{padding:7px 10px;border-bottom:1px solid #f5f5f4;font-size:12px}
+.right{text-align:right}.center{text-align:center}
+.total-row td{font-weight:700;background:#fafaf9}
+.item-row td{background:#fafaf9;font-size:11px;color:#78716c}
+.info{display:flex;gap:32px;margin:12px 0;font-size:13px}
+.info span{color:#78716c}
+.sig{display:flex;gap:64px;margin-top:48px}
+.sig-box{border-top:1px solid #000;padding-top:6px;width:200px;text-align:center;font-size:12px}
 </style>
 </head><body>
 <h2>大永蛋品月結對帳單</h2>
@@ -948,25 +1101,33 @@ td { padding: 8px 12px; border-bottom: 1px solid #f5f5f4; }
 <div><span>電話：</span>${stmt.customer?.phone ?? "-"}</div>
 </div>
 <div style="color:#78716c;font-size:12px">${stmt.customer?.address ?? ""}</div>
+<h3>訂單明細</h3>
 <table>
-<tr><th>到期日</th><th>訂單編號</th><th style="text-align:right">應收</th><th style="text-align:right">已收</th><th>狀態</th></tr>
-${(stmt.arRecords ?? []).map((r: any) => `<tr>
-<td>${fmtDate(r.dueDate)}</td><td>#${r.orderId}</td>
-<td style="text-align:right">${fmtMoney(r.amount)}</td>
-<td style="text-align:right">${fmtMoney(r.paidAmount)}</td>
-<td>${AR_STATUS_TONE[r.status]?.label ?? r.status}</td>
-</tr>`).join("")}
+<tr><th>送達日</th><th>訂單號</th><th>品項</th><th class="right">應收</th><th class="right">已收</th><th>狀態</th></tr>
+${orders.map((o: any) => {
+  const items = itemsByOrder[Number(o.id)] ?? [];
+  const itemStr = items.map((i: any) => `${i.productName} ×${i.qty}`).join("、") || "-";
+  const tone = AR_STATUS_TONE[o.arStatus] ?? AR_STATUS_TONE.unpaid;
+  return `<tr>
+<td>${fmtDate(o.deliveryDate)}</td>
+<td>#${o.orderNo ?? o.id}</td>
+<td>${itemStr}</td>
+<td class="right">${fmtMoney(o.arAmount ?? o.totalAmount)}</td>
+<td class="right">${fmtMoney(o.arPaid ?? o.paidAmount)}</td>
+<td>${tone.label}</td>
+</tr>`;
+}).join("")}
 <tr class="total-row">
-<td colspan="2">合計</td>
-<td style="text-align:right">${fmtMoney(stmt.totalAmount)}</td>
-<td style="text-align:right">${fmtMoney(stmt.paidAmount)}</td>
-<td style="color:#dc2626;font-weight:700">未收 ${fmtMoney(stmt.unpaidAmount)}</td>
+<td colspan="3">合計</td>
+<td class="right">${fmtMoney(stmt.totalInvoiced)}</td>
+<td class="right">${fmtMoney(stmt.totalPaid)}</td>
+<td style="color:#dc2626">未收 ${fmtMoney(stmt.totalUnpaid)}</td>
 </tr>
 </table>
-<p style="margin-top:16px;font-size:12px;color:#78716c">空箱結存：${Number(stmt.boxBalance ?? 0)} 箱</p>
-<div style="margin-top:48px;display:flex;gap:64px">
-<div style="border-top:1px solid #000;padding-top:6px;width:200px;text-align:center;font-size:12px">客戶確認簽章</div>
-<div style="border-top:1px solid #000;padding-top:6px;width:200px;text-align:center;font-size:12px">大永蛋行</div>
+${stmt.dueDate ? `<p style="margin-top:12px;font-size:12px;color:#78716c">到期日：${fmtDate(stmt.dueDate)}</p>` : ""}
+<div class="sig">
+<div class="sig-box">客戶確認簽章</div>
+<div class="sig-box">大永蛋行</div>
 </div>
 </body></html>`);
     win.document.close();
@@ -976,18 +1137,30 @@ ${(stmt.arRecords ?? []).map((r: any) => `<tr>
   async function handleExcel() {
     if (!stmt) return;
     const XLSX = await import("xlsx");
-    const rows: any[] = [
+    const orders = (stmt.orders ?? []) as any[];
+    const itemsByOrder = (stmt.itemsByOrder ?? {}) as Record<number, any[]>;
+    const excelRows: any[] = [
       ["大永蛋品月結對帳單", `${year}年${month}月`],
       ["客戶", stmt.customer?.name ?? ""], ["電話", stmt.customer?.phone ?? ""],
       ["地址", stmt.customer?.address ?? ""], [],
-      ["到期日", "訂單編號", "應收", "已收", "狀態"],
-      ...(stmt.arRecords ?? []).map((r: any) => [
-        fmtDate(r.dueDate), `#${r.orderId}`, Number(r.amount), Number(r.paidAmount), AR_STATUS_TONE[r.status]?.label ?? r.status
-      ]),
-      [], ["總應收", Number(stmt.totalAmount)], ["已收", Number(stmt.paidAmount)],
-      ["未收", Number(stmt.unpaidAmount)], ["空箱結存", Number(stmt.boxBalance ?? 0)],
+      ["送達日", "訂單號", "品項", "應收", "已收", "狀態"],
+      ...orders.map((o: any) => {
+        const items = itemsByOrder[Number(o.id)] ?? [];
+        return [
+          fmtDate(o.deliveryDate),
+          `#${o.orderNo ?? o.id}`,
+          items.map((i: any) => `${i.productName}×${i.qty}`).join("、") || "-",
+          Number(o.arAmount ?? o.totalAmount),
+          Number(o.arPaid ?? o.paidAmount),
+          AR_STATUS_TONE[o.arStatus]?.label ?? o.paymentStatus ?? "-",
+        ];
+      }),
+      [],
+      ["總應收", Number(stmt.totalInvoiced)],
+      ["已收", Number(stmt.totalPaid)],
+      ["未收", Number(stmt.totalUnpaid)],
     ];
-    const ws = XLSX.utils.aoa_to_sheet(rows);
+    const ws = XLSX.utils.aoa_to_sheet(excelRows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "月結對帳");
     XLSX.writeFile(wb, `大永月結_${stmt.customer?.name ?? "客戶"}_${yearMonth}.xlsx`);
@@ -1045,44 +1218,44 @@ ${(stmt.arRecords ?? []).map((r: any) => `<tr>
               <table className="w-full text-sm">
                 <thead className="bg-stone-50 text-stone-500">
                   <tr>
-                    <th className="px-4 py-3 text-left font-medium">到期日</th>
+                    <th className="px-4 py-3 text-left font-medium">送達日</th>
                     <th className="px-4 py-3 text-left font-medium">訂單</th>
+                    <th className="px-4 py-3 text-left font-medium">品項</th>
                     <th className="px-4 py-3 text-right font-medium">應收</th>
                     <th className="px-4 py-3 text-right font-medium">已收</th>
                     <th className="px-4 py-3 text-center font-medium">狀態</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {(stmt.arRecords ?? []).length ? (
-                    (stmt.arRecords as any[]).map((r: any) => {
-                      const tone = AR_STATUS_TONE[r.status] ?? AR_STATUS_TONE.unpaid;
+                  {(stmt.orders ?? []).length ? (
+                    (stmt.orders as any[]).map((o: any) => {
+                      const items = ((stmt.itemsByOrder ?? {}) as Record<number, any[]>)[Number(o.id)] ?? [];
+                      const tone = AR_STATUS_TONE[o.arStatus] ?? AR_STATUS_TONE.unpaid;
                       return (
-                        <tr key={r.id} className="border-t border-stone-200">
-                          <td className="px-4 py-3">{fmtDate(r.dueDate)}</td>
-                          <td className="px-4 py-3 text-stone-500">#{r.orderId}</td>
-                          <td className="px-4 py-3 text-right">{fmtMoney(r.amount)}</td>
-                          <td className="px-4 py-3 text-right text-emerald-700">{fmtMoney(r.paidAmount)}</td>
+                        <tr key={o.id} className="border-t border-stone-200">
+                          <td className="px-4 py-3">{fmtDate(o.deliveryDate)}</td>
+                          <td className="px-4 py-3 text-stone-500">#{o.orderNo ?? o.id}</td>
+                          <td className="px-4 py-3 text-stone-600 text-xs">
+                            {items.map((i: any) => `${i.productName} ×${i.qty}`).join("、") || "-"}
+                          </td>
+                          <td className="px-4 py-3 text-right">{fmtMoney(o.arAmount ?? o.totalAmount)}</td>
+                          <td className="px-4 py-3 text-right text-emerald-700">{fmtMoney(o.arPaid ?? o.paidAmount)}</td>
                           <td className="px-4 py-3 text-center"><Badge className={`border-0 ${tone.cls}`}>{tone.label}</Badge></td>
                         </tr>
                       );
                     })
                   ) : (
-                    <tr><td colSpan={5} className="px-4 py-8 text-center text-stone-400">這個月份沒有帳款資料。</td></tr>
+                    <tr><td colSpan={6} className="px-4 py-8 text-center text-stone-400">這個月份沒有帳款資料。</td></tr>
                   )}
                 </tbody>
               </table>
             </div>
 
-            <div className="mt-5 grid gap-3 md:grid-cols-2">
-              <div className="rounded-3xl border border-amber-100 bg-amber-50 px-4 py-4">
-                <p className="text-xs text-amber-700">空箱台帳結存</p>
-                <p className="mt-2 text-2xl font-semibold text-amber-700">{Number(stmt.boxBalance ?? 0)} 箱</p>
-              </div>
-              <div className="rounded-3xl border border-stone-200 bg-stone-50 px-4 py-4 space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-stone-500">總應收</span><span className="font-semibold">{fmtMoney(stmt.totalAmount)}</span></div>
-                <div className="flex justify-between"><span className="text-stone-500">已收</span><span className="font-semibold text-emerald-700">{fmtMoney(stmt.paidAmount)}</span></div>
-                <div className="flex justify-between border-t border-stone-200 pt-2"><span className="font-semibold">未收</span><span className="text-lg font-semibold text-red-600">{fmtMoney(stmt.unpaidAmount)}</span></div>
-              </div>
+            <div className="mt-5 rounded-3xl border border-stone-200 bg-stone-50 px-4 py-4 space-y-2 text-sm">
+              <div className="flex justify-between"><span className="text-stone-500">總應收</span><span className="font-semibold">{fmtMoney(stmt.totalInvoiced)}</span></div>
+              <div className="flex justify-between"><span className="text-stone-500">已收</span><span className="font-semibold text-emerald-700">{fmtMoney(stmt.totalPaid)}</span></div>
+              <div className="flex justify-between border-t border-stone-200 pt-2"><span className="font-semibold">未收</span><span className="text-lg font-semibold text-red-600">{fmtMoney(stmt.totalUnpaid)}</span></div>
+              {stmt.dueDate && <div className="flex justify-between pt-1"><span className="text-stone-500">月結到期日</span><span className="font-semibold text-stone-700">{fmtDate(stmt.dueDate)}</span></div>}
             </div>
           </div>
         </>
