@@ -357,7 +357,7 @@ export const dyDispatchRouter = router({
     }),
 
   markPrinted: dyAdminProcedure
-    .input(z.object({ id: z.number(), tenantId: z.number() }))
+    .input(z.object({ id: z.number(), tenantId: z.number(), forceOverride: z.boolean().default(false) }))
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
@@ -373,7 +373,35 @@ export const dyDispatchRouter = router({
       }
 
       if (["printed", "completed"].includes(dispatchOrder.status)) {
-        return { success: true, alreadyPrinted: true };
+        return { success: true, alreadyPrinted: true, pendingAmountOrders: [] };
+      }
+
+      // 若非強制覆蓋，先檢查是否有待補金額的訂單
+      // 只攔截「現收客戶（per_delivery）金額為 0」的情況；月結/週結客戶 $0 是正常的
+      if (!input.forceOverride) {
+        const [pendingAmtRows] = await client.execute(
+          `SELECT o.id, o.orderNo, c.name AS customerName
+           FROM dy_dispatch_items di
+           JOIN dy_orders o ON di.orderId = o.id
+           JOIN dy_customers c ON o.customerId = c.id
+           WHERE di.dispatchOrderId=? AND di.tenantId=?
+             AND di.orderId IS NOT NULL
+             AND (o.totalAmount IS NULL OR o.totalAmount = 0)
+             AND c.settlementCycle = 'per_delivery'`,
+          [input.id, input.tenantId]
+        );
+        const pendingAmountOrders = pendingAmtRows as any[];
+        if (pendingAmountOrders.length > 0) {
+          // 回傳警告，不執行列印，讓前端彈確認 Dialog
+          return {
+            success: false,
+            alreadyPrinted: false,
+            pendingAmountOrders: pendingAmountOrders.map((o: any) => ({
+              orderNo: o.orderNo,
+              customerName: o.customerName,
+            })),
+          };
+        }
       }
 
       const [itemRows] = await client.execute(
@@ -415,7 +443,7 @@ export const dyDispatchRouter = router({
         [input.id, input.tenantId]
       );
 
-      return { success: true };
+      return { success: true, alreadyPrinted: false, pendingAmountOrders: [] };
     }),
 
   updateDispatchItem: driverProcedure

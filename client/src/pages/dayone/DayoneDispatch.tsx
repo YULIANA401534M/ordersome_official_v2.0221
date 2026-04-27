@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, CheckCircle2, GitMerge, Package, Printer, Plus, RotateCcw, Route, Truck, Wallet } from "lucide-react";
 
 function todayStr() {
-  return new Date().toISOString().slice(0, 10);
+  return new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
 function fmtMoney(value: number | string | null | undefined) {
@@ -328,6 +328,7 @@ function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onCl
   const [returnQtyByProduct, setReturnQtyByProduct] = useState<Record<number, number>>({});
   const [handoverCash, setHandoverCash] = useState("");
   const [handoverAdminNote, setHandoverAdminNote] = useState("");
+  const [pendingAmountWarning, setPendingAmountWarning] = useState<{ orderNo: string; customerName: string }[]>([]);
 
   const { data: detail, isLoading } = trpc.dayone.dispatch.getDispatchDetail.useQuery(
     { id: dispatchId, tenantId: TENANT_ID },
@@ -335,7 +336,12 @@ function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onCl
   );
 
   const markPrinted = trpc.dayone.dispatch.markPrinted.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      if (!data.success && data.pendingAmountOrders && data.pendingAmountOrders.length > 0) {
+        // 後端攔截：有待補金額，彈確認 Dialog
+        setPendingAmountWarning(data.pendingAmountOrders);
+        return;
+      }
       toast.success("派車單已列印，庫存已同步扣減");
       utils.dayone.dispatch.getDispatchDetail.invalidate();
       utils.dayone.dispatch.listDispatch.invalidate();
@@ -439,7 +445,7 @@ body { margin: 0; padding: 16px; background: white; font-family: 'Noto Sans TC',
                 {detail.status === "draft" && (
                   <Button
                     variant="outline"
-                    onClick={() => markPrinted.mutate({ id: dispatchId, tenantId: TENANT_ID })}
+                    onClick={() => markPrinted.mutate({ id: dispatchId, tenantId: TENANT_ID, forceOverride: false })}
                     disabled={markPrinted.isPending}
                   >
                     {markPrinted.isPending ? "處理中..." : "撿貨完畢並扣庫存"}
@@ -975,6 +981,43 @@ body { margin: 0; padding: 16px; background: white; font-family: 'Noto Sans TC',
         {showAddStop && (
           <ManualAddStopDialog dispatchOrderId={dispatchId} onClose={() => setShowAddStop(false)} onSuccess={() => utils.dayone.dispatch.getDispatchDetail.invalidate()} />
         )}
+
+        {/* 待補金額攔截 Dialog */}
+        <Dialog open={pendingAmountWarning.length > 0} onOpenChange={(v) => { if (!v) setPendingAmountWarning([]); }}>
+          <DialogContent className="max-w-sm rounded-3xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-amber-700">
+                <AlertTriangle className="h-5 w-5" />
+                有訂單金額尚未補填
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 text-sm text-stone-600">
+              <p>以下訂單金額為 $0，請先補填後再列印撿貨單：</p>
+              <div className="rounded-2xl bg-amber-50 px-3 py-2 space-y-1">
+                {pendingAmountWarning.map((o, i) => (
+                  <div key={i} className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-stone-800">{o.customerName}</span>
+                    <span className="font-mono text-stone-500">{o.orderNo}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-stone-400">補填路徑：訂單管理 → 找到該筆 → 展開 → 補填金額 / 修改數量</p>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="outline" onClick={() => setPendingAmountWarning([])}>返回補填</Button>
+              <Button
+                className="bg-amber-600 text-white hover:bg-amber-700"
+                disabled={markPrinted.isPending}
+                onClick={() => {
+                  setPendingAmountWarning([]);
+                  markPrinted.mutate({ id: dispatchId, tenantId: TENANT_ID, forceOverride: true });
+                }}
+              >
+                {markPrinted.isPending ? "處理中..." : "忽略並強制列印"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </SheetContent>
     </Sheet>
   );

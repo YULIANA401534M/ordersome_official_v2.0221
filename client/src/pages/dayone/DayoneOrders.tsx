@@ -29,7 +29,7 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
 };
 
 function todayStr() {
-  return new Date().toISOString().slice(0, 10);
+  return new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
 type DateMode = "single" | "range";
@@ -477,9 +477,10 @@ export default function DayoneOrders() {
                       {filtered.map((o: any) => {
                         const st = STATUS_MAP[o.status] ?? { label: o.status, color: "bg-gray-100 text-gray-700" };
                         const isExpanded = expandedId === o.id;
+                        const hasPendingAmount = !Number(o.totalAmount) && o.status !== "cancelled" && o.customerSettlementCycle === "per_delivery";
                         return (
                           <React.Fragment key={o.id}>
-                            <tr className={isExpanded ? "bg-amber-50/40" : ""}>
+                            <tr className={`${isExpanded ? "bg-amber-50/40" : ""} ${hasPendingAmount ? "outline outline-1 outline-amber-400" : ""}`}>
                               <td className="w-8">
                                 <button
                                   type="button"
@@ -490,7 +491,12 @@ export default function DayoneOrders() {
                                   {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                                 </button>
                               </td>
-                              <td className="font-mono text-xs">{o.orderNo}</td>
+                              <td className="font-mono text-xs">
+                                {o.orderNo}
+                                {hasPendingAmount && (
+                                  <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">待補金額</span>
+                                )}
+                              </td>
                               <td className="font-medium">{o.customerName}</td>
                               <td>
                                 {["pending", "assigned"].includes(o.status) ? (
@@ -555,11 +561,17 @@ export default function DayoneOrders() {
                   {filtered.map((o: any) => {
                     const st = STATUS_MAP[o.status] ?? { label: o.status, color: "bg-gray-100 text-gray-700" };
                     const isExpanded = expandedId === o.id;
+                    const hasPendingAmount = !Number(o.totalAmount) && o.status !== "cancelled" && o.customerSettlementCycle === "per_delivery";
                     return (
-                      <article key={o.id} className="dayone-mobile-card p-4">
+                      <article key={o.id} className={`dayone-mobile-card p-4 ${hasPendingAmount ? "border-amber-400 ring-1 ring-amber-300" : ""}`}>
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <div className="font-mono text-[11px] text-stone-400">{o.orderNo}</div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono text-[11px] text-stone-400">{o.orderNo}</span>
+                              {hasPendingAmount && (
+                                <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">待補金額</span>
+                              )}
+                            </div>
                             <h2 className="mt-1 text-lg font-semibold text-stone-900">{o.customerName}</h2>
                             {["pending", "assigned"].includes(o.status) ? (
                               <Select

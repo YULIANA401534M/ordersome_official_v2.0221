@@ -21,6 +21,7 @@ export const dyOrdersRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
       let sql = `SELECT o.*, c.name as customerName, c.address as customerAddress, c.phone as customerPhone,
+                        c.settlementCycle as customerSettlementCycle,
                         d.name as driverName, dist.name as districtName
                  FROM dy_orders o
                  JOIN dy_customers c ON o.customerId = c.id
