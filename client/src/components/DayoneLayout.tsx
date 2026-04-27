@@ -19,6 +19,7 @@ import {
   ClipboardCheck,
   Boxes,
   ClipboardList,
+  Tags,
 } from "lucide-react";
 import { useLocation } from "wouter";
 
@@ -37,6 +38,7 @@ const NAV_GROUPS = [
     label: "商品與庫存",
     items: [
       { icon: Package, label: "商品管理", path: "/dayone/products", moduleKey: "products" },
+      { icon: Tags, label: "分級定價", path: "/dayone/level-prices", moduleKey: "products" },
       { icon: Boxes, label: "庫存管理", path: "/dayone/inventory", moduleKey: "inventory" },
       { icon: ClipboardList, label: "採購管理", path: "/dayone/purchase", moduleKey: "purchasing" },
     ],

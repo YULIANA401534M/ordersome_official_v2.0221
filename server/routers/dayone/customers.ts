@@ -200,4 +200,54 @@ export const dyCustomersRouter = router({
       );
       return { id: (result as any).insertId };
     }),
+
+  // ── 分級定價（零售 / 門市 / 供應商）──
+
+  getLevelPrices: dyAdminProcedure
+    .input(z.object({ tenantId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
+      const [rows] = await (db as any).$client.execute(
+        `SELECT lp.*, p.name as productName, p.code, p.unit
+         FROM dy_level_prices lp
+         JOIN dy_products p ON lp.productId = p.id
+         WHERE lp.tenantId = ?
+         ORDER BY p.code, lp.level`,
+        [input.tenantId]
+      );
+      return rows as any[];
+    }),
+
+  setLevelPrice: dyAdminProcedure
+    .input(z.object({
+      tenantId: z.number(),
+      level: z.enum(['retail', 'store', 'supplier']),
+      productId: z.number(),
+      price: z.number().min(0),
+      effectiveDate: z.string(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
+      await (db as any).$client.execute(
+        `INSERT INTO dy_level_prices (tenantId, level, productId, price, effectiveDate, createdAt, updatedAt)
+         VALUES (?,?,?,?,?,NOW(),NOW())
+         ON DUPLICATE KEY UPDATE price=VALUES(price), effectiveDate=VALUES(effectiveDate), updatedAt=NOW()`,
+        [input.tenantId, input.level, input.productId, input.price, input.effectiveDate]
+      );
+      return { success: true };
+    }),
+
+  deleteLevelPrice: dyAdminProcedure
+    .input(z.object({ tenantId: z.number(), id: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
+      await (db as any).$client.execute(
+        `DELETE FROM dy_level_prices WHERE id=? AND tenantId=?`,
+        [input.id, input.tenantId]
+      );
+      return { success: true };
+    }),
 });

@@ -156,9 +156,9 @@ export const liffRouter = router({
       }
       const client = (db as any).$client;
 
-      // 1. 查客戶（用 lineId）
+      // 1. 查客戶（用 lineId），同時取 customerLevel 供分級定價使用
       const [customerRows] = await client.execute(
-        `SELECT id, name, defaultDriverId, deliveryFrequency FROM dy_customers WHERE tenantId = ? AND lineId = ? AND status = 'active' LIMIT 1`,
+        `SELECT id, name, defaultDriverId, deliveryFrequency, customerLevel FROM dy_customers WHERE tenantId = ? AND lineId = ? AND status = 'active' LIMIT 1`,
         [tenantId, input.lineId]
       );
       const customer = (customerRows as any[])[0];
@@ -169,8 +169,9 @@ export const liffRouter = router({
         });
       }
       const customerId: number = customer.id;
+      const customerLevel: string = customer.customerLevel ?? "retail";
 
-      // 2. 查各品項的客製定價（查不到就 null，後台再補）
+      // 2. 查各品項定價：客製價 → 分級價 → defaultPrice → null
       const resolvedItems: {
         productId: number;
         qty: number;
@@ -179,7 +180,7 @@ export const liffRouter = router({
       }[] = [];
 
       for (const item of input.items) {
-        // 優先用客製定價，查不到就用商品主檔 defaultPrice，再查不到才存 null
+        // 第一優先：個別客製定價
         const [priceRows] = await client.execute(
           `SELECT price FROM dy_customer_prices
            WHERE tenantId = ? AND customerId = ? AND productId = ?
@@ -187,9 +188,21 @@ export const liffRouter = router({
           [tenantId, customerId, item.productId]
         );
         const priceRow = (priceRows as any[])[0];
-
         let unitPrice: number | null = priceRow ? Number(priceRow.price) : null;
 
+        // 第二優先：分級定價（retail / store / supplier）
+        if (unitPrice === null) {
+          const [levelRows] = await client.execute(
+            `SELECT price FROM dy_level_prices
+             WHERE tenantId = ? AND level = ? AND productId = ?
+             ORDER BY effectiveDate DESC LIMIT 1`,
+            [tenantId, customerLevel, item.productId]
+          );
+          const levelRow = (levelRows as any[])[0];
+          if (levelRow) unitPrice = Number(levelRow.price);
+        }
+
+        // 第三優先：商品主檔 defaultPrice
         if (unitPrice === null) {
           const [productRows] = await client.execute(
             `SELECT defaultPrice FROM dy_products WHERE tenantId = ? AND id = ? LIMIT 1`,

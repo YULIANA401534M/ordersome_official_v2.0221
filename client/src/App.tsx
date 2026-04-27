@@ -112,6 +112,7 @@ const DayoneLiffOrders = lazy(() => import("./pages/dayone/DayoneLiffOrders"));
 const DayoneAR = lazy(() => import("./pages/dayone/DayoneAR"));
 const DayoneDispatch = lazy(() => import("./pages/dayone/DayoneDispatch"));
 const DayonePurchaseReceipts = lazy(() => import("./pages/dayone/DayonePurchaseReceipts"));
+const DayoneLevelPrices = lazy(() => import("./pages/dayone/DayoneLevelPrices"));
 const DayoneUsers = lazy(() => import("./pages/dayone/DayoneUsers"));
 const SupplierList = lazy(() => import("./pages/erp/dayone/SupplierList"));
 const DayonePortalHome = lazy(() => import("./pages/dayone/portal/DayonePortalHome"));
@@ -271,6 +272,7 @@ function Router() {
       <Route path="/dayone/ar" component={DayoneAR} />
       <Route path="/dayone/dispatch" component={DayoneDispatch} />
       <Route path="/dayone/purchase-receipts" component={DayonePurchaseReceipts} />
+      <Route path="/dayone/level-prices" component={DayoneLevelPrices} />
       <Route path="/dayone/users" component={DayoneUsers} />
       {/* DaYone Customer Portal Routes */}
       <Route path="/dayone/portal" component={DayonePortalHome} />
