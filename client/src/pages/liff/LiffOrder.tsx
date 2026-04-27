@@ -13,7 +13,6 @@ function getTenantConfig(slug: string | null) {
   return { ...(TENANT_CONFIG[slug] ?? DEFAULT_CONFIG), slug };
 }
 
-// ---------- 型別 ----------
 interface CartItem {
   productId: number;
   qty: number;
@@ -85,13 +84,7 @@ function SuccessScreen({ orderNo }: { orderNo: string }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-6 text-center">
       <div className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center mb-6">
-        <svg
-          className="w-14 h-14 text-green-500"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2.5}
-        >
+        <svg className="w-14 h-14 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
         </svg>
       </div>
@@ -99,9 +92,7 @@ function SuccessScreen({ orderNo }: { orderNo: string }) {
       <p className="text-gray-500 text-sm mb-4">業務將盡快確認您的訂單</p>
       <div className="bg-white border border-gray-200 rounded-xl px-6 py-4 w-full max-w-xs">
         <p className="text-xs text-gray-400 mb-1">訂單編號</p>
-        <p className="font-mono font-bold text-gray-700 text-base tracking-wide break-all">
-          {orderNo}
-        </p>
+        <p className="font-mono font-bold text-gray-700 text-base tracking-wide break-all">{orderNo}</p>
       </div>
     </div>
   );
@@ -120,9 +111,9 @@ function LoadingScreen({ message }: { message?: string }) {
 // ---------- 綁定畫面 ----------
 function BindingScreen({
   brandName,
-  onBound,
   lineId,
   tenant,
+  onBound,
 }: {
   brandName: string;
   lineId: string;
@@ -143,14 +134,8 @@ function BindingScreen({
 
   function handleBind() {
     const trimmed = phone.trim();
-    if (!trimmed) {
-      setErrorMsg("請輸入手機號碼");
-      return;
-    }
-    if (!/^0\d{9}$/.test(trimmed)) {
-      setErrorMsg("請輸入正確的手機號碼格式，例如 0912345678");
-      return;
-    }
+    if (!trimmed) { setErrorMsg("請輸入手機號碼"); return; }
+    if (!/^0\d{9}$/.test(trimmed)) { setErrorMsg("請輸入正確的手機號碼格式，例如 0912345678"); return; }
     setErrorMsg(null);
     bindMutation.mutate({ lineId, phone: trimmed, tenant: tenant ?? undefined });
   }
@@ -158,7 +143,6 @@ function BindingScreen({
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-6">
       <div className="w-full max-w-sm">
-        {/* 品牌 header */}
         <div className="flex items-center gap-3 mb-8">
           <div className="w-10 h-10 rounded-xl bg-amber-400 flex items-center justify-center shrink-0">
             <span className="text-white font-black text-lg leading-none">{brandName.charAt(0)}</span>
@@ -168,16 +152,10 @@ function BindingScreen({
             <p className="text-xs text-gray-400 tracking-widest">首次使用</p>
           </div>
         </div>
-
-        {/* 說明 */}
         <div className="mb-6">
           <h2 className="text-lg font-bold text-gray-800 mb-1">綁定您的帳號</h2>
-          <p className="text-sm text-gray-500">
-            請輸入您在大永蛋品登記的手機號碼，完成綁定後即可開始下單。
-          </p>
+          <p className="text-sm text-gray-500">請輸入您在大永蛋品登記的手機號碼，完成綁定後即可開始下單。</p>
         </div>
-
-        {/* 手機號輸入 */}
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-1.5">手機號碼</label>
           <input
@@ -185,32 +163,20 @@ function BindingScreen({
             inputMode="numeric"
             placeholder="0912345678"
             value={phone}
-            onChange={(e) => {
-              setPhone(e.target.value);
-              setErrorMsg(null);
-            }}
+            onChange={(e) => { setPhone(e.target.value); setErrorMsg(null); }}
             onKeyDown={(e) => e.key === "Enter" && handleBind()}
             className="w-full border border-gray-300 rounded-xl px-4 py-3 text-lg font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
           />
         </div>
-
-        {errorMsg && (
-          <p className="text-sm text-red-500 mb-4">{errorMsg}</p>
-        )}
-
+        {errorMsg && <p className="text-sm text-red-500 mb-4">{errorMsg}</p>}
         <button
           onClick={handleBind}
           disabled={bindMutation.isPending}
-          className="w-full py-4 rounded-2xl text-white text-lg font-bold tracking-wide transition-all
-            bg-gray-900 active:bg-gray-700
-            disabled:bg-gray-300 disabled:cursor-not-allowed"
+          className="w-full py-4 rounded-2xl text-white text-lg font-bold tracking-wide transition-all bg-gray-900 active:bg-gray-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
         >
           {bindMutation.isPending ? "綁定中…" : "確認綁定"}
         </button>
-
-        <p className="text-xs text-gray-400 text-center mt-4">
-          如有問題請聯絡您的業務人員
-        </p>
+        <p className="text-xs text-gray-400 text-center mt-4">如有問題請聯絡您的業務人員</p>
       </div>
     </div>
   );
@@ -227,20 +193,16 @@ export default function LiffOrder() {
   const [liffError, setLiffError] = useState<string | null>(null);
   const [appState, setAppState] = useState<AppState>("init");
   const [customerName, setCustomerName] = useState<string>("");
-
   const [cart, setCart] = useState<Record<number, number>>({});
   const [submittedOrderNo, setSubmittedOrderNo] = useState<string | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [orderErrorMsg, setOrderErrorMsg] = useState<string | null>(null);
 
-  // Step 1: LIFF init → 取得 lineId → checkBinding
+  // Step 1: LIFF init → 取得 lineId
   useEffect(() => {
     liff
       .init({ liffId: config.liffId })
       .then(() => {
-        if (!liff.isLoggedIn()) {
-          liff.login();
-          return;
-        }
+        if (!liff.isLoggedIn()) { liff.login(); return; }
         return liff.getProfile().then((profile) => {
           setLineId(profile.userId);
           setAppState("checking");
@@ -252,13 +214,12 @@ export default function LiffOrder() {
       });
   }, []);
 
-  // Step 2: 有 lineId 後查綁定狀態
+  // ★ 所有 Hook 必須無條件在頂層呼叫，用 enabled 控制是否執行 ★
+
+  // Step 2: 查綁定狀態
   const checkBinding = trpc.dayone.liff.checkBinding.useQuery(
     { lineId, tenant: config.slug ?? undefined },
-    {
-      enabled: appState === "checking" && lineId !== "",
-      retry: false,
-    }
+    { enabled: appState === "checking" && lineId !== "", retry: false }
   );
 
   useEffect(() => {
@@ -275,7 +236,20 @@ export default function LiffOrder() {
     }
   }, [appState, checkBinding.isSuccess, checkBinding.isError, checkBinding.data]);
 
-  // ---------- 錯誤畫面 ----------
+  // Step 3: 取商品（進入下單頁才啟用）
+  const productsQuery = trpc.dayone.liff.getProducts.useQuery(
+    { tenant: config.slug ?? undefined },
+    { enabled: appState === "ordering" }
+  );
+
+  // Step 4: 建立訂單
+  const createOrder = trpc.dayone.liff.createOrder.useMutation({
+    onSuccess(data) { setSubmittedOrderNo(data.orderNo); },
+    onError(err) { setOrderErrorMsg(err.message ?? "送出失敗，請稍後再試"); },
+  });
+
+  // ---------- 渲染邏輯（純條件式 return，不再有 Hook）----------
+
   if (liffError) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-6 text-center">
@@ -284,48 +258,31 @@ export default function LiffOrder() {
     );
   }
 
-  // ---------- 初始化 / 查詢中 ----------
-  if (appState === "init" || (appState === "checking" && checkBinding.isLoading)) {
+  if (appState === "init" || (appState === "checking" && !checkBinding.isSuccess && !checkBinding.isError)) {
     return <LoadingScreen message="驗證身份中..." />;
   }
 
-  // ---------- 綁定畫面 ----------
   if (appState === "binding") {
     return (
       <BindingScreen
         brandName={config.brandName}
         lineId={lineId}
         tenant={config.slug}
-        onBound={(name) => {
-          setCustomerName(name);
-          setAppState("ordering");
-        }}
+        onBound={(name) => { setCustomerName(name); setAppState("ordering"); }}
       />
     );
   }
-
-  // ---------- 下單頁 ----------
-  const { data: products, isLoading, isError } = trpc.dayone.liff.getProducts.useQuery({
-    tenant: config.slug ?? undefined,
-  });
-  const createOrder = trpc.dayone.liff.createOrder.useMutation({
-    onSuccess(data) {
-      setSubmittedOrderNo(data.orderNo);
-    },
-    onError(err) {
-      setErrorMsg(err.message ?? "送出失敗，請稍後再試");
-    },
-  });
 
   if (submittedOrderNo) {
     return <SuccessScreen orderNo={submittedOrderNo} />;
   }
 
+  const products = productsQuery.data;
   const totalItems = Object.values(cart).reduce((s, q) => s + q, 0);
 
   function add(id: number) {
     setCart((prev) => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }));
-    setErrorMsg(null);
+    setOrderErrorMsg(null);
   }
   function remove(id: number) {
     setCart((prev) => {
@@ -334,22 +291,18 @@ export default function LiffOrder() {
       return next;
     });
   }
-
   function handleSubmit() {
     const items = Object.entries(cart)
       .filter(([, q]) => q > 0)
       .map(([id, qty]) => ({ productId: Number(id), qty }));
-    if (items.length === 0) {
-      setErrorMsg("請至少選擇一樣商品");
-      return;
-    }
-    setErrorMsg(null);
+    if (items.length === 0) { setOrderErrorMsg("請至少選擇一樣商品"); return; }
+    setOrderErrorMsg(null);
     createOrder.mutate({ lineId, tenant: config.slug ?? undefined, items });
   }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col" style={{ maxWidth: 480, margin: "0 auto" }}>
-      {/* ===== 頂部品牌區 ===== */}
+      {/* 頂部品牌區 */}
       <div className="bg-white px-5 pt-8 pb-5 border-b border-gray-100 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-amber-400 flex items-center justify-center shrink-0">
@@ -357,21 +310,20 @@ export default function LiffOrder() {
           </div>
           <div>
             <h1 className="text-xl font-black text-gray-900 leading-tight">{config.brandName}</h1>
-            {customerName ? (
-              <p className="text-xs text-gray-500">{customerName}，歡迎光臨</p>
-            ) : (
-              <p className="text-xs text-gray-400 tracking-widest">快速下單</p>
-            )}
+            {customerName
+              ? <p className="text-xs text-gray-500">{customerName}，歡迎光臨</p>
+              : <p className="text-xs text-gray-400 tracking-widest">快速下單</p>
+            }
           </div>
         </div>
       </div>
 
-      {/* ===== 商品列表 ===== */}
+      {/* 商品列表 */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 pb-32">
-        {isLoading && (
+        {productsQuery.isLoading && (
           <div className="text-center py-16 text-gray-400 text-sm">載入商品中…</div>
         )}
-        {isError && (
+        {productsQuery.isError && (
           <div className="text-center py-16 text-red-400 text-sm">商品載入失敗，請重新整理</div>
         )}
         {products?.map((p) => (
@@ -388,26 +340,19 @@ export default function LiffOrder() {
         )}
       </div>
 
-      {/* ===== 底部固定送出按鈕 ===== */}
+      {/* 底部送出按鈕 */}
       <div
         className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-4 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]"
         style={{ maxWidth: 480, margin: "0 auto", left: "50%", transform: "translateX(-50%)", width: "100%" }}
       >
-        {errorMsg && (
-          <p className="text-xs text-red-500 mb-2 text-center">{errorMsg}</p>
-        )}
+        {orderErrorMsg && <p className="text-xs text-red-500 mb-2 text-center">{orderErrorMsg}</p>}
         <button
           onClick={handleSubmit}
           disabled={createOrder.isPending || totalItems === 0}
           className="w-full py-4 rounded-2xl text-white text-lg font-bold tracking-wide transition-all
-            bg-gray-900 active:bg-gray-700
-            disabled:bg-gray-300 disabled:cursor-not-allowed"
+            bg-gray-900 active:bg-gray-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
         >
-          {createOrder.isPending
-            ? "送出中…"
-            : totalItems > 0
-            ? `送出訂單（${totalItems} 項）`
-            : "請選擇商品"}
+          {createOrder.isPending ? "送出中…" : totalItems > 0 ? `送出訂單（${totalItems} 項）` : "請選擇商品"}
         </button>
       </div>
     </div>
