@@ -137,7 +137,7 @@ export default function DriverPurchaseReceipt() {
   const [signatureUrl, setSignatureUrl] = useState("");
 
   const { data: suppliers = [] } = trpc.dayone.suppliers.listForDriver.useQuery({ tenantId: TENANT_ID });
-  const { data: products = [] } = trpc.dayone.products.list.useQuery({ tenantId: TENANT_ID });
+  const { data: products = [] } = trpc.dayone.products.listForDriver.useQuery({ tenantId: TENANT_ID });
   const { data: eggPrice, refetch: refetchEggPrice } = trpc.dayone.eggPrice.today.useQuery();
 
   // 識別哪個商品是「普白大箱」（對應農委會雞蛋大運輸價）

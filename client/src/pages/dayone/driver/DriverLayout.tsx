@@ -56,9 +56,9 @@ export default function DriverLayout({ children, title }: { children: React.Reac
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto px-4 pb-24 pt-4">{children}</main>
+        <main className="flex-1 overflow-y-auto px-4 pt-4" style={{ paddingBottom: "calc(5.5rem + env(safe-area-inset-bottom))" }}>{children}</main>
 
-        <nav className="fixed bottom-0 left-1/2 z-20 flex w-full max-w-md -translate-x-1/2 border-t border-amber-100/80 bg-[rgba(255,252,245,0.96)] backdrop-blur-xl">
+        <nav className="fixed bottom-0 left-1/2 z-20 flex w-full max-w-md -translate-x-1/2 border-t border-amber-100/80 bg-[rgba(255,252,245,0.96)] backdrop-blur-xl" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
           {NAV.map(({ href, icon: Icon, label }) => {
             const active = location === href || (href !== "/driver" && location.startsWith(href));
             return (
