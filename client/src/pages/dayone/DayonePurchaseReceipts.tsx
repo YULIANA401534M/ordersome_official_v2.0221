@@ -948,10 +948,10 @@ function CreateReceiptDialog({
     if (!products.length) return;
     const nextPrices: Record<number, number> = {};
     for (const product of products as any[]) {
-      nextPrices[product.id] = Number(product.price ?? 0);
+      nextPrices[Number(product.id)] = Number(product.price ?? 0);
     }
     for (const supplierPrice of supplierPrices as any[]) {
-      nextPrices[supplierPrice.productId] = Number(supplierPrice.price ?? 0);
+      nextPrices[Number(supplierPrice.productId)] = Number(supplierPrice.price ?? 0);
     }
     setPrices(nextPrices);
   }, [products, supplierPrices]);
@@ -960,11 +960,11 @@ function CreateReceiptDialog({
     onSuccess: (data) => {
       const supplier = suppliers.find((item: any) => String(item.id) === supplierId);
       const selectedItems = (products as any[])
-        .filter((product: any) => Number(quantities[product.id] ?? 0) > 0)
+        .filter((product: any) => Number(quantities[Number(product.id)] ?? 0) > 0)
         .map((product: any) => ({
           name: product.name,
-          qty: Number(quantities[product.id] ?? 0),
-          unitPrice: Number(prices[product.id] ?? 0),
+          qty: Number(quantities[Number(product.id)] ?? 0),
+          unitPrice: Number(prices[Number(product.id)] ?? 0),
         }));
 
       onClose();
@@ -979,9 +979,10 @@ function CreateReceiptDialog({
   });
 
   function adjustQty(productId: number, delta: number) {
+    const pid = Number(productId);
     setQuantities((current) => ({
       ...current,
-      [productId]: Math.max(0, Number(current[productId] ?? 0) + delta),
+      [pid]: Math.max(0, Number(current[pid] ?? 0) + delta),
     }));
   }
 
@@ -997,12 +998,12 @@ function CreateReceiptDialog({
     }
 
     const items = (products as any[])
-      .filter((product: any) => Number(quantities[product.id] ?? 0) > 0)
+      .filter((product: any) => Number(quantities[Number(product.id)] ?? 0) > 0)
       .map((product: any) => ({
-        productId: product.id,
+        productId: Number(product.id),
         name: product.name,
-        qty: Number(quantities[product.id] ?? 0),
-        unitPrice: Number(prices[product.id] ?? 0),
+        qty: Number(quantities[Number(product.id)] ?? 0),
+        unitPrice: Number(prices[Number(product.id)] ?? 0),
       }));
 
     if (!items.length) {
@@ -1101,11 +1102,12 @@ function CreateReceiptDialog({
             </div>
             <div className="space-y-3">
               {products.map((product: any) => {
-                const qty = Number(quantities[product.id] ?? 0);
+                const pid = Number(product.id);
+                const qty = Number(quantities[pid] ?? 0);
                 const active = qty > 0;
                 return (
                   <div
-                    key={product.id}
+                    key={pid}
                     className={`rounded-[24px] border px-4 py-4 transition-colors ${
                       active ? "border-amber-200 bg-amber-50" : "border-stone-200 bg-stone-50"
                     }`}
@@ -1121,11 +1123,11 @@ function CreateReceiptDialog({
                             type="number"
                             min="0"
                             className="h-8 w-24 rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-700"
-                            value={prices[product.id] ?? ""}
+                            value={prices[pid] ?? ""}
                             onChange={(event) =>
                               setPrices((current) => ({
                                 ...current,
-                                [product.id]: Number(event.target.value || 0),
+                                [pid]: Number(event.target.value || 0),
                               }))
                             }
                             placeholder="0"
@@ -1137,7 +1139,7 @@ function CreateReceiptDialog({
                         <button
                           type="button"
                           className="flex h-10 w-10 items-center justify-center rounded-2xl border border-stone-300 bg-white text-lg font-semibold text-stone-600"
-                          onClick={() => adjustQty(product.id, -1)}
+                          onClick={() => adjustQty(pid, -1)}
                         >
                           -
                         </button>
@@ -1151,14 +1153,14 @@ function CreateReceiptDialog({
                           onChange={(event) =>
                             setQuantities((current) => ({
                               ...current,
-                              [product.id]: Math.max(0, Number(event.target.value || 0)),
+                              [pid]: Math.max(0, Number(event.target.value || 0)),
                             }))
                           }
                         />
                         <button
                           type="button"
                           className="flex h-10 w-10 items-center justify-center rounded-2xl border border-amber-300 bg-amber-100 text-lg font-semibold text-amber-700"
-                          onClick={() => adjustQty(product.id, 1)}
+                          onClick={() => adjustQty(pid, 1)}
                         >
                           +
                         </button>

@@ -114,7 +114,7 @@ export default function DayoneLayout({ children }: { children: React.ReactNode }
   }
 
   const activeItem = ALL_NAV_ITEMS.find(
-    (item) => location === item.path || (item.path !== "/dayone" && location.startsWith(item.path))
+    (item) => location === item.path || (item.path !== "/dayone" && location.startsWith(item.path + "/"))
   );
 
   function handleNavClick(path: string) {
@@ -123,7 +123,7 @@ export default function DayoneLayout({ children }: { children: React.ReactNode }
   }
 
   function NavButton({ item }: { item: NavItem }) {
-    const isActive = location === item.path || (item.path !== "/dayone" && location.startsWith(item.path));
+    const isActive = location === item.path || (item.path !== "/dayone" && location.startsWith(item.path + "/"));
     return (
       <button
         onClick={() => handleNavClick(item.path)}
