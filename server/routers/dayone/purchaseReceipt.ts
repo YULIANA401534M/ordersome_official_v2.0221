@@ -7,16 +7,6 @@ import { dayoneAdminProcedure as dyAdminProcedure, dayoneDriverProcedure as driv
 
 
 
-async function ensureSupplierPaymentDays(client: any) {
-  try {
-    await client.execute(
-      `ALTER TABLE dy_suppliers ADD COLUMN IF NOT EXISTS paymentDays INT NOT NULL DEFAULT 30`
-    );
-  } catch {
-    // 欄位已存在則忽略
-  }
-}
-
 export const dyPurchaseReceiptRouter = router({
   // 1. 進貨單列表（管理員）
   list: dyAdminProcedure
@@ -167,8 +157,6 @@ export const dyPurchaseReceiptRouter = router({
       if (!db)
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
       const client = (db as any).$client;
-
-      await ensureSupplierPaymentDays(client);
 
       // 取得進貨單資料
       const [prRows] = await client.execute(

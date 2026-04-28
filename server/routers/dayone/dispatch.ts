@@ -2,7 +2,6 @@ import { z } from "zod";
 import { router } from "../../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../../db";
-import { ensureDyPendingReturnsTable } from "./pendingReturns";
 import { dayoneAdminProcedure as dyAdminProcedure, dayoneDriverProcedure as driverProcedure } from "./procedures";
 import { calcDueDate, upsertArRecord } from "./utils";
 
@@ -681,7 +680,6 @@ export const dyDispatchRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
       const client = (db as any).$client;
-      await ensureDyPendingReturnsTable(client);
       const scopedDriverId = await resolveDriverScope(client, input.tenantId, ctx.user.id, ctx.user.role ?? "");
 
       const [dispatchRows] = await client.execute(
@@ -839,7 +837,7 @@ export const dyDispatchRouter = router({
          WHERE dispatchOrderId=? AND tenantId=?`,
         [input.id, input.tenantId]
       );
-      const expectedAmount = parseFloat((sumRows as any[])[0]?.expectedAmount ?? 0);
+      const expectedAmount = Number((sumRows as any[])[0]?.expectedAmount ?? 0);
       const diff = input.actualAmount - expectedAmount;
       const status = Math.abs(diff) < 1 ? "normal" : "anomaly";
 

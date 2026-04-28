@@ -283,7 +283,7 @@ export const dyArRouter = router({
            c.settlementCycle,
            COUNT(ar.id) AS unpaidCount,
            COALESCE(SUM(ar.amount - ar.paidAmount), 0) AS unpaidAmount,
-           DATEDIFF(NOW(), MIN(ar.dueDate)) AS daysSinceOldest
+           DATEDIFF(CURDATE(), MIN(ar.dueDate)) AS daysSinceOldest
          FROM dy_customers c
          LEFT JOIN dy_ar_records ar
            ON ar.customerId = c.id AND ar.tenantId = c.tenantId AND ar.status IN ('unpaid', 'overdue', 'partial')
@@ -348,8 +348,8 @@ export const dyArRouter = router({
                  WHERE bt.tenantId = ?`;
       const params: any[] = [input.tenantId];
       if (input.customerId) { sql += " AND bt.customerId = ?"; params.push(input.customerId); }
-      if (input.startDate) { sql += " AND DATE(bt.createdAt) >= ?"; params.push(input.startDate); }
-      if (input.endDate) { sql += " AND DATE(bt.createdAt) <= ?"; params.push(input.endDate); }
+      if (input.startDate) { sql += " AND DATE(CONVERT_TZ(bt.createdAt,'+00:00','+08:00')) >= ?"; params.push(input.startDate); }
+      if (input.endDate) { sql += " AND DATE(CONVERT_TZ(bt.createdAt,'+00:00','+08:00')) <= ?"; params.push(input.endDate); }
       sql += ` ORDER BY bt.createdAt DESC LIMIT 30 OFFSET ${offset}`;
       const [rows] = await client.execute(sql, params);
       return rows as any[];
