@@ -75,9 +75,9 @@ function currentMonthValue() {
 }
 
 function nowLocalDatetime() {
-  const now = new Date();
+  const now = new Date(Date.now() + 8 * 60 * 60 * 1000);
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  return `${now.getUTCFullYear()}-${pad(now.getUTCMonth() + 1)}-${pad(now.getUTCDate())}T${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}`;
 }
 
 function parseItems(raw: ReceiptRecord["items"]) {
@@ -925,7 +925,7 @@ function SignatureSheet({
           </div>
 
           <div className="flex-1 px-5 py-4">
-            <p className="mb-3 text-sm text-stone-500">請由供應商對接人員在下方簽名，送出後才會正式入庫並建立應付帳款。</p>
+            <p className="mb-3 text-sm text-stone-500">請由供應商對接人員在下方簽名，簽收後會建立應付帳款，管理員確認入倉後庫存才正式增加。</p>
             <div className="overflow-hidden rounded-[28px] border-2 border-dashed border-stone-300 bg-white">
               <canvas
                 ref={canvasRef}
@@ -954,7 +954,7 @@ function SignatureSheet({
               disabled={signReceipt.isPending}
               onClick={submitSignature}
             >
-              {signReceipt.isPending ? "簽收送出中..." : "確認簽收並入庫"}
+              {signReceipt.isPending ? "簽收送出中..." : "確認供應商簽收"}
             </Button>
           </div>
         </div>
@@ -1071,7 +1071,7 @@ function CreateReceiptDialog({
       tenantId: TENANT_ID,
       supplierId: Number(supplierId),
       driverId: Number(driverId),
-      receiptDate,
+      receiptDate: receiptDate.length === 16 ? `${receiptDate}:00+08:00` : receiptDate,
       licensePlate,
       batchNo: batchNo || undefined,
       items,

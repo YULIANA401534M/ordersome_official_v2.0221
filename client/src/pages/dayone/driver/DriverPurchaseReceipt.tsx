@@ -193,7 +193,7 @@ export default function DriverPurchaseReceipt() {
     createReceipt.mutate({
       tenantId: TENANT_ID,
       supplierId: Number(supplierId),
-      receiptDate,
+      receiptDate: receiptDate.length === 16 ? `${receiptDate}:00+08:00` : receiptDate,
       licensePlate,
       items,
     });
