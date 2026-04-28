@@ -7,13 +7,6 @@ import { dayoneAdminProcedure as dyAdminProcedure, dayoneDriverProcedure as driv
 
 
 
-async function ensureDyPurchaseReceiptSchema(client: any) {
-  await client.execute(
-    `ALTER TABLE dy_purchase_receipts
-     MODIFY COLUMN status ENUM('pending','signed','warehoused','anomaly') NOT NULL DEFAULT 'pending'`
-  );
-}
-
 async function ensureSupplierPaymentDays(client: any) {
   try {
     await client.execute(
@@ -248,7 +241,6 @@ export const dyPurchaseReceiptRouter = router({
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
       }
       const client = (db as any).$client;
-      await ensureDyPurchaseReceiptSchema(client);
 
       const [rows] = await client.execute(
         `SELECT * FROM dy_purchase_receipts WHERE id=? AND tenantId=? LIMIT 1`,
@@ -327,7 +319,6 @@ export const dyPurchaseReceiptRouter = router({
       if (!db)
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
       const client = (db as any).$client;
-      await ensureDyPurchaseReceiptSchema(client);
       const [rows] = await client.execute(
         `SELECT status FROM dy_purchase_receipts WHERE id=? AND tenantId=? LIMIT 1`,
         [input.id, input.tenantId]

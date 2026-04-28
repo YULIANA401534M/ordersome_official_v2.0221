@@ -52,7 +52,7 @@ export const dyArRouter = router({
       // 自動將逾期未付標記為 overdue
       await client.execute(
         `UPDATE dy_ar_records SET status='overdue', updatedAt=NOW()
-         WHERE tenantId=? AND status='unpaid' AND dueDate < NOW()`,
+         WHERE tenantId=? AND status IN ('unpaid','partial') AND DATE(CONVERT_TZ(dueDate,'+00:00','+08:00')) < CURDATE()`,
         [input.tenantId]
       );
 
@@ -386,16 +386,16 @@ export const dyArRouter = router({
            c.settlementCycle,
            c.creditLimit,
            COALESCE(SUM(ar.amount - ar.paidAmount), 0) AS totalUnpaid,
-           COALESCE(SUM(CASE WHEN DATEDIFF(NOW(), ar.dueDate) BETWEEN 0 AND 30 THEN ar.amount - ar.paidAmount ELSE 0 END), 0) AS bucket0_30,
-           COALESCE(SUM(CASE WHEN DATEDIFF(NOW(), ar.dueDate) BETWEEN 31 AND 60 THEN ar.amount - ar.paidAmount ELSE 0 END), 0) AS bucket31_60,
-           COALESCE(SUM(CASE WHEN DATEDIFF(NOW(), ar.dueDate) BETWEEN 61 AND 90 THEN ar.amount - ar.paidAmount ELSE 0 END), 0) AS bucket61_90,
-           COALESCE(SUM(CASE WHEN DATEDIFF(NOW(), ar.dueDate) > 90 THEN ar.amount - ar.paidAmount ELSE 0 END), 0) AS bucket90plus,
-           MAX(DATEDIFF(NOW(), ar.dueDate)) AS maxOverdueDays
+           COALESCE(SUM(CASE WHEN DATEDIFF(CURDATE(), DATE(CONVERT_TZ(ar.dueDate,'+00:00','+08:00'))) BETWEEN 0 AND 30 THEN ar.amount - ar.paidAmount ELSE 0 END), 0) AS bucket0_30,
+           COALESCE(SUM(CASE WHEN DATEDIFF(CURDATE(), DATE(CONVERT_TZ(ar.dueDate,'+00:00','+08:00'))) BETWEEN 31 AND 60 THEN ar.amount - ar.paidAmount ELSE 0 END), 0) AS bucket31_60,
+           COALESCE(SUM(CASE WHEN DATEDIFF(CURDATE(), DATE(CONVERT_TZ(ar.dueDate,'+00:00','+08:00'))) BETWEEN 61 AND 90 THEN ar.amount - ar.paidAmount ELSE 0 END), 0) AS bucket61_90,
+           COALESCE(SUM(CASE WHEN DATEDIFF(CURDATE(), DATE(CONVERT_TZ(ar.dueDate,'+00:00','+08:00'))) > 90 THEN ar.amount - ar.paidAmount ELSE 0 END), 0) AS bucket90plus,
+           MAX(DATEDIFF(CURDATE(), DATE(CONVERT_TZ(ar.dueDate,'+00:00','+08:00')))) AS maxOverdueDays
          FROM dy_customers c
          LEFT JOIN dy_ar_records ar
            ON ar.customerId = c.id AND ar.tenantId = c.tenantId
            AND ar.status IN ('unpaid','partial','overdue')
-           AND ar.dueDate < NOW()
+           AND DATE(CONVERT_TZ(ar.dueDate,'+00:00','+08:00')) < CURDATE()
          WHERE c.tenantId = ?
          GROUP BY c.id, c.name, c.settlementCycle, c.creditLimit
          HAVING totalUnpaid > 0

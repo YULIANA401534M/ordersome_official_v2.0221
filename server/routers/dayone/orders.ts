@@ -223,7 +223,6 @@ export const dyOrdersRouter = router({
       );
       const arRow = (arRows as any[])[0];
       if (arRow && newTotal > 0) {
-        const { calcDueDate } = await import("./utils");
         const rawDate = arRow.deliveryDate instanceof Date
           ? new Date(arRow.deliveryDate.getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10)
           : String(arRow.deliveryDate ?? arRow.dueDate ?? "").slice(0, 10);
@@ -344,8 +343,8 @@ export const dyOrdersRouter = router({
                  JOIN dy_customers c ON o.customerId = c.id
                  WHERE o.orderSource = 'liff' AND o.tenantId = ?`;
       const params: any[] = [input.tenantId];
-      if (input.dateFrom) { sql += " AND DATE(o.createdAt) >= ?"; params.push(input.dateFrom); }
-      if (input.dateTo)   { sql += " AND DATE(o.createdAt) <= ?"; params.push(input.dateTo); }
+      if (input.dateFrom) { sql += " AND DATE(CONVERT_TZ(o.createdAt,'+00:00','+08:00')) >= ?"; params.push(input.dateFrom); }
+      if (input.dateTo)   { sql += " AND DATE(CONVERT_TZ(o.createdAt,'+00:00','+08:00')) <= ?"; params.push(input.dateTo); }
       sql += " ORDER BY o.createdAt DESC LIMIT 200";
 
       const [rows] = await client.execute(sql, params);

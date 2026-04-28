@@ -3,9 +3,6 @@ import { router } from "../../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../../db";
 import { dayoneAdminProcedure as dyAdminProcedure } from "./procedures";
-import { ensureDyPendingReturnsTable } from "./pendingReturns";
-
-
 export const dyInventoryRouter = router({
   list: dyAdminProcedure
     .input(z.object({ tenantId: z.number() }))
@@ -96,7 +93,6 @@ export const dyInventoryRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const client = (db as any).$client;
-      await ensureDyPendingReturnsTable(client);
       const [rows] = await client.execute(
         `SELECT pr.*, p.name AS productName, p.code AS productCode, p.unit,
                 d.name AS driverName, ddo.dispatchDate, ddo.routeCode
@@ -117,7 +113,6 @@ export const dyInventoryRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const client = (db as any).$client;
-      await ensureDyPendingReturnsTable(client);
       await client.execute('START TRANSACTION');
       try {
         const [rows] = await client.execute(

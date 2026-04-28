@@ -285,7 +285,7 @@ function ManualAddStopDialog({
                   dispatchOrderId,
                   tenantId: TENANT_ID,
                   customerId: Number(customerId),
-                  deliverBoxes,
+                  deliverBoxes: Number(deliverBoxes),
                   paymentStatus,
                   note: note.trim() || undefined,
                   items: orderItems

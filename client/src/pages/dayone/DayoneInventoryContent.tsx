@@ -404,7 +404,7 @@ export default function DayoneInventoryContent({ tenantId }: { tenantId: number 
                 tenantId,
                 productId: Number(form.productId),
                 type: form.movementType as any,
-                qty: form.qty,
+                qty: Number(form.qty),
                 note: form.note || undefined,
               });
             }}
