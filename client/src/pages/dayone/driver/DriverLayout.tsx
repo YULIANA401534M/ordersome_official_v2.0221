@@ -41,6 +41,24 @@ export default function DriverLayout({ children, title }: { children: React.Reac
     );
   }
 
+  if (user.role !== "driver" && user.role !== "super_admin") {
+    return (
+      <div className="dayone-shell flex min-h-screen flex-col items-center justify-center gap-4 p-6">
+        <Package className="h-16 w-16 text-stone-300" />
+        <h1 className="font-brand text-xl text-stone-900">此頁面僅供司機使用</h1>
+        <p className="max-w-xs text-center text-sm text-stone-500">
+          您的帳號無法存取司機端，請回到管理後台。
+        </p>
+        <a
+          href="/dayone"
+          className="w-full max-w-xs rounded-2xl bg-amber-600 py-3 text-center font-semibold text-white shadow-[0_12px_24px_rgba(180,83,9,0.18)]"
+        >
+          返回大永後台
+        </a>
+      </div>
+    );
+  }
+
   return (
     <div className="dayone-shell flex h-dvh justify-center overflow-hidden">
       <div className="flex h-full w-full max-w-md flex-col bg-[rgba(255,253,248,0.9)] shadow-[0_18px_48px_rgba(120,53,15,0.12)]">
