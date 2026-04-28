@@ -53,6 +53,8 @@ export default function DriverWorkLog() {
     onSuccess: () => {
       toast.success("派車單日結已送出");
       utils.dayone.driver.getMyWorkLog.invalidate();
+      utils.dayone.dispatch.listDispatch.invalidate();
+      utils.dayone.dispatch.getDispatchDetail.invalidate();
     },
     onError: (error) => toast.error(error.message),
   });

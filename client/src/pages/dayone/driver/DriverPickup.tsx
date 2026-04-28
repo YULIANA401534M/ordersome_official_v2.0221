@@ -1,5 +1,6 @@
 import DriverLayout from "./DriverLayout";
 import { trpc } from "@/lib/trpc";
+import { useMemo } from "react";
 import { CheckCircle2, MapPin, Package, Truck } from "lucide-react";
 
 const TENANT_ID = 90004;
@@ -12,7 +13,10 @@ export default function DriverPickup() {
     dispatchDate: todayDate,
   });
 
-  const myDispatch = (dispatches as any[])[0];
+  const myDispatch = useMemo(() => {
+    const list = [...(dispatches as any[])].reverse();
+    return list.find((d: any) => ["printed", "in_progress"].includes(d.status ?? "")) ?? list[0];
+  }, [dispatches]);
   const dispatchId = myDispatch?.id ?? 0;
   const dispatchPrinted = myDispatch && ["printed", "in_progress", "pending_handover", "completed"].includes(myDispatch.status ?? "");
 
@@ -72,7 +76,7 @@ export default function DriverPickup() {
                 </span>
               </div>
               <p className="mt-1 ml-6 text-xs text-stone-500">
-                路線 {myDispatch.routeCode ?? "—"}，共 {myDispatch.totalStops ?? items.length} 站，備用箱 {detail?.extraBoxes ?? myDispatch.extraBoxes ?? 20} 箱
+                路線 {myDispatch.routeCode ?? "—"}，共 {myDispatch.totalStops ?? items.length} 站，備用箱 {detail?.extraBoxes ?? myDispatch.extraBoxes ?? "—"} 箱
               </p>
             </section>
           ) : (

@@ -1010,7 +1010,7 @@ function CreateReceiptDialog({
     }
     setPrices(nextPrices);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [products.length, supplierId, supplierPrices, eggPrice?.pricePerBox]);
+  }, [products, supplierId, supplierPrices, eggPrice?.pricePerBox]);
 
   const createReceipt = trpc.dayone.purchaseReceipt.create.useMutation({
     onSuccess: (data) => {
@@ -1070,7 +1070,7 @@ function CreateReceiptDialog({
     createReceipt.mutate({
       tenantId: TENANT_ID,
       supplierId: Number(supplierId),
-      driverId: driverId ? Number(driverId) : undefined,
+      driverId: Number(driverId),
       receiptDate,
       licensePlate,
       batchNo: batchNo || undefined,
