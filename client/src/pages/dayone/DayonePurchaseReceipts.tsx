@@ -75,9 +75,9 @@ function currentMonthValue() {
 }
 
 function nowLocalDatetime() {
-  const now = new Date(Date.now() + 8 * 60 * 60 * 1000);
+  const now = new Date();
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${now.getUTCFullYear()}-${pad(now.getUTCMonth() + 1)}-${pad(now.getUTCDate())}T${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}`;
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
 }
 
 function parseItems(raw: ReceiptRecord["items"]) {

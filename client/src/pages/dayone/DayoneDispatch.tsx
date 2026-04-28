@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, CheckCircle2, GitMerge, Package, Printer, Plus, RotateCcw, Route, Truck, Wallet } from "lucide-react";
 
 function todayStr() {
-  return new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  return new Date().toLocaleDateString("sv-SE");
 }
 
 function fmtMoney(value: number | string | null | undefined) {

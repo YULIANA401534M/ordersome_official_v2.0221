@@ -29,7 +29,7 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
 };
 
 function todayStr() {
-  return new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  return new Date().toLocaleDateString("sv-SE");
 }
 
 type DateMode = "single" | "range";

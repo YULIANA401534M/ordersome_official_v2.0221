@@ -30,7 +30,7 @@ const STATUS_TONE: Record<string, string> = {
 };
 
 function SupplementOrderDialog({ onClose }: { onClose: () => void }) {
-  const today = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const today = new Date().toLocaleDateString("sv-SE");
   const utils = trpc.useUtils();
   const [customerId, setCustomerId] = useState("");
   const [tempName, setTempName] = useState("");
@@ -185,7 +185,7 @@ function SupplementOrderDialog({ onClose }: { onClose: () => void }) {
 export default function DriverToday() {
   const [, navigate] = useLocation();
   const [showSupplement, setShowSupplement] = useState(false);
-  const today = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const today = new Date().toLocaleDateString("sv-SE");
 
   const { data: orders = [], isLoading } = trpc.dayone.driver.getMyTodayOrders.useQuery({
     tenantId: TENANT_ID,

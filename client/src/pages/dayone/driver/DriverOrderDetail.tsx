@@ -54,7 +54,7 @@ export default function DriverOrderDetail() {
   const [showReject, setShowReject] = useState(false);
   const [rejectNote, setRejectNote] = useState("");
 
-  const today = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const today = new Date().toLocaleDateString("sv-SE");
   const utils = trpc.useUtils();
 
   const { data: orders = [] } = trpc.dayone.driver.getMyTodayOrders.useQuery({

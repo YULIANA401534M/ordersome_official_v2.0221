@@ -20,10 +20,10 @@ function fmtDate(v: string | Date | null | undefined) {
   return new Date(v).toLocaleDateString("zh-TW");
 }
 function todayStr() {
-  return new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  return new Date().toLocaleDateString("sv-SE");
 }
 function currentMonth() {
-  const now = new Date(Date.now() + 8 * 60 * 60 * 1000);
+  const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 

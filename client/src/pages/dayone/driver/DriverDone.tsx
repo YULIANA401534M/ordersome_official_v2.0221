@@ -5,7 +5,7 @@ import { CheckCircle2, MapPin, Wallet } from "lucide-react";
 const TENANT_ID = 90004;
 
 export default function DriverDone() {
-  const todayDate = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const todayDate = new Date().toLocaleDateString("sv-SE");
   const { data: orders = [], isLoading } = trpc.dayone.driver.getMyTodayOrders.useQuery({
     tenantId: TENANT_ID,
     deliveryDate: todayDate,

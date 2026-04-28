@@ -6,7 +6,7 @@ import { CheckCircle2, MapPin, Package, Truck } from "lucide-react";
 const TENANT_ID = 90004;
 
 export default function DriverPickup() {
-  const todayDate = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const todayDate = new Date().toLocaleDateString("sv-SE");
 
   const { data: dispatches = [], isLoading } = trpc.dayone.dispatch.listDispatch.useQuery({
     tenantId: TENANT_ID,

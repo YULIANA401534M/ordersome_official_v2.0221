@@ -7,7 +7,7 @@ import { ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
 const TENANT_ID = 90004;
 
 function nowLocalDatetime() {
-  const now = new Date(Date.now() + 8 * 60 * 60 * 1000);
+  const now = new Date();
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
 }
