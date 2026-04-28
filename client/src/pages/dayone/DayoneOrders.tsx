@@ -50,6 +50,11 @@ export default function DayoneOrders() {
   const [newOrder, setNewOrder] = useState({ customerId: "", driverId: "", deliveryDate: todayStr(), note: "" });
   const [orderItems, setOrderItems] = useState([{ productId: "", qty: 1, unitPrice: 0 }]);
 
+  const { data: customerPrices } = trpc.dayone.customers.getPricesForCustomer.useQuery(
+    { customerId: Number(newOrder.customerId), tenantId: TENANT_ID },
+    { enabled: !!newOrder.customerId }
+  );
+
   const utils = trpc.useUtils();
   const { data: orders, isLoading } = trpc.dayone.orders.list.useQuery({
     tenantId: TENANT_ID,
@@ -336,7 +341,8 @@ export default function DayoneOrders() {
                           value={item.productId}
                           onValueChange={(v) => {
                             const prod = (products as any[] ?? []).find((p: any) => String(p.id) === v);
-                            setOrderItems((prev) => prev.map((it, i) => i === idx ? { ...it, productId: v, unitPrice: Number(prod?.defaultPrice ?? 0) } : it));
+                            const effectivePrice = (customerPrices as any)?.[Number(v)] ?? Number(prod?.defaultPrice ?? 0);
+                            setOrderItems((prev) => prev.map((it, i) => i === idx ? { ...it, productId: v, unitPrice: effectivePrice } : it));
                           }}
                         >
                           <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="選商品" /></SelectTrigger>

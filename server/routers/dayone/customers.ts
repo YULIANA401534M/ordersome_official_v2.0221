@@ -167,6 +167,63 @@ export const dyCustomersRouter = router({
       return { success: true };
     }),
 
+  // 三段式定價：客製 → 分級 → 主檔，回傳此客戶每個商品的有效單價
+  getPricesForCustomer: dyAdminProcedure
+    .input(z.object({ customerId: z.number(), tenantId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
+      const client = (db as any).$client;
+
+      // 取得客戶等級
+      const [custRows] = await client.execute(
+        `SELECT customerLevel FROM dy_customers WHERE id=? AND tenantId=? LIMIT 1`,
+        [input.customerId, input.tenantId]
+      );
+      const level = (custRows as any[])[0]?.customerLevel ?? 'retail';
+
+      // 取得所有商品
+      const [prodRows] = await client.execute(
+        `SELECT id, defaultPrice FROM dy_products WHERE tenantId=? AND isActive=1`,
+        [input.tenantId]
+      );
+      const products = prodRows as any[];
+
+      // 取得此客戶的客製定價（最新生效）
+      const [cpRows] = await client.execute(
+        `SELECT productId, price FROM dy_customer_prices
+         WHERE customerId=? AND tenantId=? AND effectiveDate <= CURDATE()
+         ORDER BY effectiveDate DESC, id DESC`,
+        [input.customerId, input.tenantId]
+      );
+      const customPriceMap: Record<number, number> = {};
+      for (const r of cpRows as any[]) {
+        const pid = Number(r.productId);
+        if (!(pid in customPriceMap)) customPriceMap[pid] = Number(r.price);
+      }
+
+      // 取得此等級的分級定價（最新生效）
+      const [lpRows] = await client.execute(
+        `SELECT productId, price FROM dy_level_prices
+         WHERE level=? AND tenantId=? AND effectiveDate <= CURDATE()
+         ORDER BY effectiveDate DESC, id DESC`,
+        [level, input.tenantId]
+      );
+      const levelPriceMap: Record<number, number> = {};
+      for (const r of lpRows as any[]) {
+        const pid = Number(r.productId);
+        if (!(pid in levelPriceMap)) levelPriceMap[pid] = Number(r.price);
+      }
+
+      // 三段式合併
+      const result: Record<number, number> = {};
+      for (const p of products) {
+        const pid = Number(p.id);
+        result[pid] = customPriceMap[pid] ?? levelPriceMap[pid] ?? Number(p.defaultPrice);
+      }
+      return result; // { [productId]: effectivePrice }
+    }),
+
   getCustomerPrices: dyAdminProcedure
     .input(z.object({ customerId: z.number(), tenantId: z.number() }))
     .query(async ({ input }) => {
