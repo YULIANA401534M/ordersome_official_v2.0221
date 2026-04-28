@@ -88,7 +88,7 @@ export const dyApRouter = router({
 
       const client = (db as any).$client;
       const baseDateExpr = "COALESCE(DATE(pr.receiptDate), DATE(ap.createdAt))";
-      let where = "WHERE ap.tenantId = ?";
+      let where = "WHERE ap.tenantId = ? AND ap.status != 'pending_review'";
       const params: any[] = [input.tenantId];
 
       if (input.supplierId) {

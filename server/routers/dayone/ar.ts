@@ -243,6 +243,31 @@ export const dyArRouter = router({
       return { success: true };
     }),
 
+  // KPI 彙總（不受分頁限制，全量統計）
+  kpiSummary: dyAdminProcedure
+    .input(z.object({ tenantId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      const client = (db as any).$client;
+      const [rows] = await client.execute(
+        `SELECT
+           COALESCE(SUM(CASE WHEN status IN ('unpaid','partial') THEN amount - paidAmount ELSE 0 END), 0) AS unpaidAmt,
+           COALESCE(SUM(CASE WHEN status = 'overdue' THEN amount - paidAmount ELSE 0 END), 0) AS overdueAmt,
+           COALESCE(SUM(CASE WHEN paymentMethod = 'cash' THEN paidAmount ELSE 0 END), 0) AS cashPaid,
+           COALESCE(SUM(CASE WHEN paymentMethod = 'transfer' THEN paidAmount ELSE 0 END), 0) AS transferPaid
+         FROM dy_ar_records WHERE tenantId = ?`,
+        [input.tenantId]
+      );
+      const r = (rows as any[])[0];
+      return {
+        unpaidAmt: Number(r?.unpaidAmt ?? 0),
+        overdueAmt: Number(r?.overdueAmt ?? 0),
+        cashPaid: Number(r?.cashPaid ?? 0),
+        transferPaid: Number(r?.transferPaid ?? 0),
+      };
+    }),
+
   // 7a. 客戶逾期統計（按客戶聚合，含最早未付訂單日期、未付總額）
   customerOverdueStats: dyAdminProcedure
     .input(z.object({ tenantId: z.number() }))

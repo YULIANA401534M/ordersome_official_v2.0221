@@ -112,6 +112,7 @@ export const dyReportsRouter = router({
          JOIN dy_customers c ON c.id = o.customerId
          LEFT JOIN dy_ar_records ar ON ar.orderId = o.id AND ar.tenantId = o.tenantId
          WHERE o.tenantId=? AND o.driverId=? AND o.deliveryDate=?
+           AND o.status != 'cancelled'
          ORDER BY o.id ASC`,
         [input.tenantId, input.driverId, input.date]
       );
@@ -225,7 +226,7 @@ export const dyReportsRouter = router({
          LEFT JOIN dy_ar_records ar ON ar.orderId = o.id AND ar.tenantId = o.tenantId
          WHERE o.tenantId=? AND o.customerId=?
            AND YEAR(o.deliveryDate)=? AND MONTH(o.deliveryDate)=?
-           AND o.status IN ('delivered','picked','delivering')
+           AND o.status = 'delivered'
          ORDER BY o.deliveryDate ASC`,
         [input.tenantId, input.customerId, input.year, input.month]
       );
@@ -255,8 +256,12 @@ export const dyReportsRouter = router({
       const totalPaid = orders.reduce((s: number, o: any) => s + Number(o.arPaid ?? o.paidAmount ?? 0), 0);
       const totalUnpaid = totalInvoiced - totalPaid;
 
-      // 月結到期日（取最大的那筆，或用當月月底+overdueDays）
-      const dueDate = orders.find((o: any) => o.dueDate)?.dueDate ?? null;
+      // 月結到期日：取所有訂單中最晚的那筆 dueDate
+      const dueDate = orders.reduce((max: string | null, o: any) => {
+        if (!o.dueDate) return max;
+        if (!max) return o.dueDate;
+        return o.dueDate > max ? o.dueDate : max;
+      }, null);
 
       return { customer, orders, itemsByOrder, totalInvoiced, totalPaid, totalUnpaid, dueDate };
     }),

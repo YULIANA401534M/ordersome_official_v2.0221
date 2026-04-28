@@ -34,6 +34,7 @@ const AR_STATUS_TONE: Record<string, { label: string; cls: string }> = {
   overdue: { label: "逾期",     cls: "bg-red-100 text-red-700" },
 };
 const AP_STATUS_TONE: Record<string, { label: string; cls: string }> = {
+  pending_review: { label: "待入倉", cls: "bg-sky-100 text-sky-700" },
   unpaid:  { label: "未付",   cls: "bg-stone-100 text-stone-700" },
   partial: { label: "部分付", cls: "bg-amber-100 text-amber-700" },
   paid:    { label: "已付",   cls: "bg-emerald-100 text-emerald-700" },
@@ -237,6 +238,7 @@ function ReceivableTab({ tenantId }: { tenantId: number }) {
   const [collectTarget, setCollectTarget] = useState<any>(null);
 
   const { data: customers = [] } = trpc.dayone.customers.list.useQuery({ tenantId });
+  const { data: kpiData } = trpc.dayone.ar.kpiSummary.useQuery({ tenantId });
   const { data: overdueStats = [] } = trpc.dayone.ar.customerOverdueStats.useQuery({ tenantId });
   const { data: agingRows = [], isLoading: agingLoading } = trpc.dayone.ar.agingReport.useQuery(
     { tenantId }, { enabled: viewMode === "aging" }
@@ -256,17 +258,15 @@ function ReceivableTab({ tenantId }: { tenantId: number }) {
     return m;
   }, [overdueStats]);
 
-  const kpi = useMemo(() => {
-    const unpaidAmt = (records as any[]).filter((r: any) => ["unpaid","partial"].includes(r.status))
-      .reduce((s: number, r: any) => s + Number(r.amount) - Number(r.paidAmount), 0);
-    const overdueAmt = (records as any[]).filter((r: any) => r.status === "overdue")
-      .reduce((s: number, r: any) => s + Number(r.amount) - Number(r.paidAmount), 0);
-    const cashPaid = (records as any[]).filter((r: any) => r.paymentMethod === "cash").reduce((s: number, r: any) => s + Number(r.paidAmount), 0);
-    const transferPaid = (records as any[]).filter((r: any) => r.paymentMethod === "transfer").reduce((s: number, r: any) => s + Number(r.paidAmount), 0);
-    return { unpaidAmt, overdueAmt, overdueCustomers: (overdueStats as any[]).filter((s: any) => s.isOverdue).length, cashPaid, transferPaid };
-  }, [records, overdueStats]);
+  const kpi = useMemo(() => ({
+    unpaidAmt: kpiData?.unpaidAmt ?? 0,
+    overdueAmt: kpiData?.overdueAmt ?? 0,
+    overdueCustomers: (overdueStats as any[]).filter((s: any) => s.isOverdue).length,
+    cashPaid: kpiData?.cashPaid ?? 0,
+    transferPaid: kpiData?.transferPaid ?? 0,
+  }), [kpiData, overdueStats]);
 
-  function invalidate() { refetch(); utils.dayone.ar.customerOverdueStats.invalidate(); }
+  function invalidate() { refetch(); utils.dayone.ar.kpiSummary.invalidate(); utils.dayone.ar.customerOverdueStats.invalidate(); utils.dayone.ar.agingReport.invalidate(); }
 
   return (
     <div className="space-y-5">
@@ -586,9 +586,13 @@ function PayableTab({ tenantId }: { tenantId: number }) {
                         <Badge className={`border-0 ${tone.cls}`}>{tone.label}</Badge>
                       </td>
                       <td className="px-4 py-4 text-center">
-                        {rec.status !== "paid" ? (
+                        {rec.status === "paid" ? (
+                          <span className="text-xs text-stone-400">已結清</span>
+                        ) : rec.status === "pending_review" ? (
+                          <span className="text-xs text-sky-500">待入倉確認</span>
+                        ) : (
                           <Button size="sm" className="rounded-2xl bg-stone-900 text-white hover:bg-stone-800" onClick={() => setPayTarget(rec)}>付款</Button>
-                        ) : <span className="text-xs text-stone-400">已結清</span>}
+                        )}
                       </td>
                     </tr>
                   );
@@ -617,7 +621,7 @@ function PayableTab({ tenantId }: { tenantId: number }) {
                     <div><p className="text-xs text-stone-400">已付</p><p className="mt-0.5 font-semibold text-emerald-700">{fmtMoney(rec.paidAmount)}</p></div>
                     <div><p className="text-xs text-stone-400">未付</p><p className="mt-0.5 font-semibold text-stone-800">{fmtMoney(unpaid)}</p></div>
                   </div>
-                  {rec.status !== "paid" && (
+                  {rec.status !== "paid" && rec.status !== "pending_review" && (
                     <Button className="mt-3 w-full rounded-2xl bg-stone-900 text-white hover:bg-stone-800" onClick={() => setPayTarget(rec)}>付款</Button>
                   )}
                 </article>
