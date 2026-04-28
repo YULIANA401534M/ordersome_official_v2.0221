@@ -266,8 +266,7 @@ export const dyDispatchRouter = router({
                         wl.handoverNote AS wlHandoverNote
                  FROM dy_dispatch_orders do2
                  JOIN dy_drivers d ON do2.driverId = d.id
-                 LEFT JOIN dy_work_logs wl ON wl.driverId = do2.driverId
-                   AND wl.workDate = do2.dispatchDate AND wl.tenantId = do2.tenantId
+                 LEFT JOIN dy_work_logs wl ON wl.dispatchOrderId = do2.id AND wl.tenantId = do2.tenantId
                  WHERE do2.tenantId = ?`;
       const params: any[] = [input.tenantId];
 
@@ -642,8 +641,8 @@ export const dyDispatchRouter = router({
           ]
         );
 
-        // 同步更新 AR（避免帳務頁與訂單付款狀態不一致）
-        if (item.orderDeliveryDate && item.orderCustomerId) {
+        // 同步更新 AR（只有訂單已送達才建帳，避免配送途中產生幽靈帳款）
+        if (item.orderStatus === "delivered" && item.orderDeliveryDate && item.orderCustomerId) {
           const dueDate = calcDueDate(
             item.orderDeliveryDate,
             item.settlementCycle,
@@ -1067,7 +1066,7 @@ export const dyDispatchRouter = router({
         `SELECT do2.*, d.name AS driverName, wl.totalCollected, wl.cashHandedOver, wl.handoverNote
          FROM dy_dispatch_orders do2
          JOIN dy_drivers d ON d.id = do2.driverId
-         LEFT JOIN dy_work_logs wl ON wl.driverId = do2.driverId AND wl.workDate = do2.dispatchDate AND wl.tenantId = do2.tenantId
+         LEFT JOIN dy_work_logs wl ON wl.dispatchOrderId = do2.id AND wl.tenantId = do2.tenantId
          WHERE do2.id=? AND do2.tenantId=? LIMIT 1`,
         [input.dispatchOrderId, input.tenantId]
       );

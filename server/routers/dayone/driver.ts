@@ -332,15 +332,17 @@ export const dyDriverRouter = router({
 
       let customerId = input.customerId;
       let settlementCycle = "per_delivery";
+      let customerOverdueDays = 30;
 
       if (customerId) {
         const [cRows] = await client.execute(
-          `SELECT id, settlementCycle, districtId FROM dy_customers WHERE id=? AND tenantId=? LIMIT 1`,
+          `SELECT id, settlementCycle, overdueDays, districtId FROM dy_customers WHERE id=? AND tenantId=? LIMIT 1`,
           [customerId, input.tenantId]
         );
         const c = (cRows as any[])[0];
         if (!c) throw new TRPCError({ code: "NOT_FOUND", message: "Customer not found" });
         settlementCycle = c.settlementCycle ?? "per_delivery";
+        customerOverdueDays = Number(c.overdueDays ?? 30);
       } else {
         // 建立臨時客戶
         const [cResult] = await client.execute(
@@ -401,7 +403,7 @@ export const dyDriverRouter = router({
             [newPayStatus, newCash, input.dispatchOrderId, mergedOrderId]
           );
           // 更新 AR
-          const dueDate = calcDueDate(twDeliveryDate, settlementCycle, 30);
+          const dueDate = calcDueDate(twDeliveryDate, settlementCycle, customerOverdueDays);
           await upsertArRecord(client, {
             tenantId: input.tenantId,
             orderId: mergedOrderId,
@@ -459,7 +461,7 @@ export const dyDriverRouter = router({
         );
 
         // AR
-        const dueDate = calcDueDate(twDeliveryDate, settlementCycle, 30);
+        const dueDate = calcDueDate(twDeliveryDate, settlementCycle, customerOverdueDays);
         await upsertArRecord(client, {
           tenantId: input.tenantId,
           orderId,
