@@ -6,14 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, Phone, Truck, MessageSquare } from "lucide-react";
+import { Pencil, Trash2, Phone, Truck, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 
 const emptyForm = { name: "", phone: "", lineId: "", vehicleNo: "", routeCode: "", status: "active" as const };
 
 export default function DayoneDrivers() {
-  const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
+  const [open, setOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
 
@@ -38,12 +38,6 @@ export default function DayoneDrivers() {
     onError: () => toast.error("操作失敗，請重試"),
   });
 
-  function openCreate() {
-    setEditing(null);
-    setForm(emptyForm);
-    setOpen(true);
-  }
-
   function openEdit(driver: any) {
     setEditing(driver);
     setForm({
@@ -65,10 +59,9 @@ export default function DayoneDrivers() {
             <h1 className="dayone-page-title">司機管理</h1>
             <p className="dayone-page-subtitle">保留原本功能，但把手機視圖改成卡片式清單，避免資料表在手機上橫向滑動。</p>
           </div>
-          <Button className="dayone-action gap-2 rounded-2xl bg-amber-600 text-white hover:bg-amber-700" onClick={openCreate}>
-            <Plus className="w-4 h-4" />
-            新增司機
-          </Button>
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+            新增司機請至「帳號管理」建立 driver 帳號，系統會自動同步
+          </div>
         </div>
 
         <div className="dayone-table-shell">
