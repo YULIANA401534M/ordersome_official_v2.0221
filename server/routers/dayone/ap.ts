@@ -195,8 +195,8 @@ export const dyApRouter = router({
         throw new TRPCError({ code: "NOT_FOUND" });
       }
 
-      const totalAmount = parseFloat(record.amount);
-      const currentPaid = parseFloat(record.paidAmount ?? 0);
+      const totalAmount = Number(record.amount);
+      const currentPaid = Number(record.paidAmount ?? 0);
       const nextPaidAmount = Math.min(totalAmount, currentPaid + input.paidAmount);
       const newStatus = nextPaidAmount >= totalAmount ? "paid" : "partial";
 

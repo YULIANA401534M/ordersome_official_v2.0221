@@ -21,7 +21,7 @@ export const dyReportsRouter = router({
            SUM(CASE WHEN status='pending'   THEN 1 ELSE 0 END) AS pendingCount,
            SUM(CASE WHEN status='returned'  THEN 1 ELSE 0 END) AS returnedCount,
            SUM(totalAmount) AS orderTotalAmount
-         FROM dy_orders WHERE tenantId=? AND deliveryDate=?`,
+         FROM dy_orders WHERE tenantId=? AND DATE(CONVERT_TZ(deliveryDate,'+00:00','+08:00'))=?`,
         [input.tenantId, input.date]
       );
       const orderSummary = (orderRows as any[])[0];
@@ -36,7 +36,7 @@ export const dyReportsRouter = router({
            SUM(CASE WHEN ar.paymentMethod='transfer' THEN ar.paidAmount ELSE 0 END) AS transferReceived
          FROM dy_ar_records ar
          JOIN dy_orders o ON o.id = ar.orderId
-         WHERE ar.tenantId=? AND o.deliveryDate=?`,
+         WHERE ar.tenantId=? AND DATE(CONVERT_TZ(o.deliveryDate,'+00:00','+08:00'))=?`,
         [input.tenantId, input.date]
       );
       const arSummary = (arRows as any[])[0];
@@ -52,7 +52,7 @@ export const dyReportsRouter = router({
          FROM dy_orders o
          LEFT JOIN dy_drivers d ON o.driverId = d.id
          LEFT JOIN dy_ar_records ar ON ar.orderId = o.id AND ar.tenantId = o.tenantId
-         WHERE o.tenantId=? AND o.deliveryDate=?
+         WHERE o.tenantId=? AND DATE(CONVERT_TZ(o.deliveryDate,'+00:00','+08:00'))=?
          GROUP BY o.driverId, d.name`,
         [input.tenantId, input.date]
       );
@@ -74,9 +74,9 @@ export const dyReportsRouter = router({
            COALESCE(SUM(ar.paidAmount), 0) AS collected
          FROM dy_orders o
          LEFT JOIN dy_ar_records ar ON ar.orderId = o.id AND ar.tenantId = o.tenantId
-         WHERE o.tenantId=? AND YEAR(o.deliveryDate)=? AND MONTH(o.deliveryDate)=?
+         WHERE o.tenantId=? AND YEAR(CONVERT_TZ(o.deliveryDate,'+00:00','+08:00'))=? AND MONTH(CONVERT_TZ(o.deliveryDate,'+00:00','+08:00'))=?
            AND o.status='delivered'
-         GROUP BY DATE(o.deliveryDate)
+         GROUP BY DATE(CONVERT_TZ(o.deliveryDate,'+00:00','+08:00'))
          ORDER BY date`,
         [input.tenantId, input.year, input.month]
       );
@@ -111,7 +111,7 @@ export const dyReportsRouter = router({
          FROM dy_orders o
          JOIN dy_customers c ON c.id = o.customerId
          LEFT JOIN dy_ar_records ar ON ar.orderId = o.id AND ar.tenantId = o.tenantId
-         WHERE o.tenantId=? AND o.driverId=? AND o.deliveryDate=?
+         WHERE o.tenantId=? AND o.driverId=? AND DATE(CONVERT_TZ(o.deliveryDate,'+00:00','+08:00'))=?
            AND o.status != 'cancelled'
          ORDER BY o.id ASC`,
         [input.tenantId, input.driverId, input.date]
@@ -225,7 +225,7 @@ export const dyReportsRouter = router({
          FROM dy_orders o
          LEFT JOIN dy_ar_records ar ON ar.orderId = o.id AND ar.tenantId = o.tenantId
          WHERE o.tenantId=? AND o.customerId=?
-           AND YEAR(o.deliveryDate)=? AND MONTH(o.deliveryDate)=?
+           AND YEAR(CONVERT_TZ(o.deliveryDate,'+00:00','+08:00'))=? AND MONTH(CONVERT_TZ(o.deliveryDate,'+00:00','+08:00'))=?
            AND o.status = 'delivered'
          ORDER BY o.deliveryDate ASC`,
         [input.tenantId, input.customerId, input.year, input.month]
@@ -276,8 +276,8 @@ export const dyReportsRouter = router({
         `SELECT c.name, c.phone, COUNT(o.id) as orderCount, SUM(o.totalAmount) as totalSpending
          FROM dy_customers c JOIN dy_orders o ON c.id = o.customerId
          WHERE c.tenantId=? AND o.status='delivered'
-         GROUP BY c.id, c.name, c.phone ORDER BY totalSpending DESC LIMIT ${input.limit}`,
-        [input.tenantId]
+         GROUP BY c.id, c.name, c.phone ORDER BY totalSpending DESC LIMIT ?`,
+        [input.tenantId, Math.max(1, Math.floor(Number(input.limit)))]
       );
       return rows as any[];
     }),

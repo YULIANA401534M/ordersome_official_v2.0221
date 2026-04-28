@@ -54,7 +54,7 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
   // 客製定價
   const [priceCustomerId, setPriceCustomerId] = useState<number | null>(null);
   const [priceCustomerName, setPriceCustomerName] = useState("");
-  const [newPriceForm, setNewPriceForm] = useState({ productId: "", price: "", effectiveDate: new Date().toISOString().slice(0, 10) });
+  const [newPriceForm, setNewPriceForm] = useState({ productId: "", price: "", effectiveDate: new Date().toLocaleDateString("sv-SE") });
   const [editingPriceId, setEditingPriceId] = useState<number | null>(null);
 
   const utils = trpc.useUtils();
@@ -107,7 +107,7 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
   const setCustomerPrice = trpc.dayone.customers.setCustomerPrice.useMutation({
     onSuccess: () => {
       toast.success("客製定價已儲存");
-      setNewPriceForm({ productId: "", price: "", effectiveDate: new Date().toISOString().slice(0, 10) });
+      setNewPriceForm({ productId: "", price: "", effectiveDate: new Date().toLocaleDateString("sv-SE") });
       setEditingPriceId(null);
       refetchPrices();
     },
@@ -701,7 +701,7 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
       </Dialog>
 
       {/* 客製定價 Dialog */}
-      <Dialog open={priceCustomerId !== null} onOpenChange={(v) => { if (!v) { setPriceCustomerId(null); setEditingPriceId(null); setNewPriceForm({ productId: "", price: "", effectiveDate: new Date().toISOString().slice(0, 10) }); } }}>
+      <Dialog open={priceCustomerId !== null} onOpenChange={(v) => { if (!v) { setPriceCustomerId(null); setEditingPriceId(null); setNewPriceForm({ productId: "", price: "", effectiveDate: new Date().toLocaleDateString("sv-SE") }); } }}>
         <DialogContent className="max-w-lg rounded-3xl">
           <DialogHeader>
             <DialogTitle>客製定價 — {priceCustomerName}</DialogTitle>
@@ -749,7 +749,7 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
                                 setNewPriceForm({
                                   productId: String(cp.productId),
                                   price: String(cp.price),
-                                  effectiveDate: new Date().toISOString().slice(0, 10),
+                                  effectiveDate: new Date().toLocaleDateString("sv-SE"),
                                 });
                               }}
                             >
@@ -770,7 +770,7 @@ export default function DayoneCustomersContent({ tenantId }: { tenantId: number 
             <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide">
               {editingPriceId ? "調整定價（將新增一筆修改紀錄）" : "新增客製定價"}
               {editingPriceId && (
-                <button className="ml-2 text-stone-400 hover:text-stone-600 normal-case font-normal" onClick={() => { setEditingPriceId(null); setNewPriceForm({ productId: "", price: "", effectiveDate: new Date().toISOString().slice(0, 10) }); }}>
+                <button className="ml-2 text-stone-400 hover:text-stone-600 normal-case font-normal" onClick={() => { setEditingPriceId(null); setNewPriceForm({ productId: "", price: "", effectiveDate: new Date().toLocaleDateString("sv-SE") }); }}>
                   取消
                 </button>
               )}
