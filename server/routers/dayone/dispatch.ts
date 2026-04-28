@@ -431,7 +431,7 @@ export const dyDispatchRouter = router({
          FROM dy_dispatch_items di
          JOIN dy_order_items oi ON di.orderId = oi.orderId
          WHERE di.dispatchOrderId=? AND di.tenantId=? AND di.orderId IS NOT NULL
-         GROUP BY oi.productId`,
+         GROUP BY di.orderId, oi.productId`,
         [input.id, input.tenantId]
       );
 

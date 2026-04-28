@@ -6,7 +6,7 @@ export default function DeliveryNote() {
   const orderId = Number(params?.orderId);
 
   const { data: order, isLoading } = trpc.dayone.orders.getWithItems.useQuery(
-    { id: orderId, tenantId: 2 },
+    { id: orderId, tenantId: 90004 },
     { enabled: !!orderId && !isNaN(orderId) }
   );
 

@@ -484,7 +484,10 @@ export const dyOrdersRouter = router({
           customerId: order.customerId,
           amount: Number(order.totalAmount ?? 0),
           paidAmount: Number(order.paidAmount ?? 0),
-          dueDate: calcDueDate(order.deliveryDate, order.settlementCycle, order.overdueDays),
+          dueDate: calcDueDate(
+            new Date(new Date(order.deliveryDate).getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10),
+            order.settlementCycle, order.overdueDays
+          ),
         });
       }
       return { success: true };
