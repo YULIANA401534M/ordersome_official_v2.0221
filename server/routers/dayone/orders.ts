@@ -30,15 +30,15 @@ export const dyOrdersRouter = router({
                  WHERE o.tenantId = ?`;
       const params: any[] = [input.tenantId];
       if (input.deliveryDate) {
-        sql += " AND o.deliveryDate = ?";
+        sql += " AND DATE(CONVERT_TZ(o.deliveryDate,'+00:00','+08:00')) = ?";
         params.push(input.deliveryDate);
       }
       if (input.dateFrom) {
-        sql += " AND o.deliveryDate >= ?";
+        sql += " AND DATE(CONVERT_TZ(o.deliveryDate,'+00:00','+08:00')) >= ?";
         params.push(input.dateFrom);
       }
       if (input.dateTo) {
-        sql += " AND o.deliveryDate <= ?";
+        sql += " AND DATE(CONVERT_TZ(o.deliveryDate,'+00:00','+08:00')) <= ?";
         params.push(input.dateTo);
       }
       if (input.driverId) {

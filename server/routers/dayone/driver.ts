@@ -50,7 +50,7 @@ export const dyDriverRouter = router({
          JOIN dy_customers c ON o.customerId = c.id
          LEFT JOIN dy_districts dist ON o.districtId = dist.id
          LEFT JOIN dy_dispatch_items di ON di.orderId = o.id AND di.tenantId = o.tenantId
-         WHERE o.tenantId = ? AND o.driverId = ? AND o.deliveryDate = ?
+         WHERE o.tenantId = ? AND o.driverId = ? AND DATE(CONVERT_TZ(o.deliveryDate,'+00:00','+08:00')) = ?
          ORDER BY COALESCE(di.stopSequence, 9999) ASC, o.id ASC`,
         [input.tenantId, driver.id, date]
       );

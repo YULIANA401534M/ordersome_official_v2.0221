@@ -276,7 +276,7 @@ export const dyDispatchRouter = router({
       }
 
       if (input.dispatchDate) {
-        sql += " AND do2.dispatchDate = ?";
+        sql += " AND DATE(CONVERT_TZ(do2.dispatchDate,'+00:00','+08:00')) = ?";
         params.push(input.dispatchDate);
       }
       if (input.driverId && !scopedDriverId) {
