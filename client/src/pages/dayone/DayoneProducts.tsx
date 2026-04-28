@@ -79,7 +79,7 @@ export default function DayoneProducts() {
       name: product.name,
       code: product.code ?? "",
       unit: product.unit,
-      defaultPrice: product.defaultPrice,
+      defaultPrice: Number(product.defaultPrice),
       isActive: product.isActive !== false,
       imageUrl: product.imageUrl ?? null,
     });
@@ -299,7 +299,7 @@ export default function DayoneProducts() {
                   name: form.name,
                   code: form.code,
                   unit: form.unit,
-                  defaultPrice: form.defaultPrice,
+                  defaultPrice: Number(form.defaultPrice),
                   isActive: form.isActive,
                   imageUrl: form.imageUrl ?? null,
                 });
