@@ -69,7 +69,7 @@ function OrderCard({ order }: { order: any }) {
   const [expanded, setExpanded] = useState(false);
   const status = ORDER_STATUS[order.status] ?? { label: order.status, color: "bg-stone-100 text-stone-600" };
   const payment = PAYMENT_STATUS[order.paymentStatus] ?? { label: order.paymentStatus, color: "text-stone-500" };
-  const unpaid = Math.max(order.totalAmount - order.paidAmount, 0);
+  const unpaid = Math.max(Number(order.totalAmount ?? 0) - Number(order.paidAmount ?? 0), 0);
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -213,8 +213,8 @@ export default function LiffMyOrders() {
 
   const orders = data?.orders ?? [];
   const customerName = data?.customerName ?? "";
-  const totalAmount = orders.reduce((s, o) => s + o.totalAmount, 0);
-  const unpaidAmount = orders.reduce((s, o) => s + Math.max(o.totalAmount - o.paidAmount, 0), 0);
+  const totalAmount = orders.reduce((s, o) => s + Number(o.totalAmount ?? 0), 0);
+  const unpaidAmount = orders.reduce((s, o) => s + Math.max(Number(o.totalAmount ?? 0) - Number(o.paidAmount ?? 0), 0), 0);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col" style={{ maxWidth: 480, margin: "0 auto" }}>
