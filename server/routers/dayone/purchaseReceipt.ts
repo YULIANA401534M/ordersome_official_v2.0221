@@ -191,8 +191,6 @@ export const dyPurchaseReceiptRouter = router({
         [supplierSignatureUrl, input.id, input.tenantId]
       );
 
-      // 連動 a: 更新庫存
-      // ????????????????????????
       const [apRows] = await client.execute(
         `SELECT id FROM dy_ap_records WHERE tenantId=? AND purchaseReceiptId=? LIMIT 1`,
         [input.tenantId, input.id]
@@ -216,9 +214,6 @@ export const dyPurchaseReceiptRouter = router({
 
       return { success: true, supplierSignatureUrl };
     }),
-
-  // 5. 標記異常（管理員）
-
 
   receiveToWarehouse: dyAdminProcedure
     .input(

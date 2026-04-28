@@ -361,7 +361,7 @@ export const dyDriverRouter = router({
            FROM dy_orders o
            JOIN dy_dispatch_items di ON di.orderId = o.id
            WHERE di.dispatchOrderId = ? AND o.customerId = ? AND o.tenantId = ?
-             AND o.status IN ('picked','delivering','assigned','pending')
+             AND o.status IN ('picked','delivering','assigned')
            ORDER BY o.id DESC LIMIT 1`,
           [input.dispatchOrderId, customerId, input.tenantId]
         );

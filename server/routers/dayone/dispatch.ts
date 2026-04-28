@@ -887,8 +887,8 @@ export const dyDispatchRouter = router({
         const [orderResult] = await client.execute(
           `INSERT INTO dy_orders
            (tenantId, orderNo, customerId, driverId, deliveryDate, districtId, status, totalAmount,
-            paidAmount, paymentStatus, prevBoxes, inBoxes, returnBoxes, remainBoxes, note, orderSource, createdAt, updatedAt)
-           VALUES (?,?,?,?,?,?,?, ?,0,'unpaid',?,?,0,?,?,'dispatch_supplement',NOW(),NOW())`,
+            paidAmount, paymentStatus, prevBoxes, inBoxes, returnBoxes, remainBoxes, note, orderSource, orderType, createdAt, updatedAt)
+           VALUES (?,?,?,?,?,?,?, ?,0,'unpaid',?,?,0,?,?,'dispatch_supplement','supplement',NOW(),NOW())`,
           [
             input.tenantId,
             orderNo,
