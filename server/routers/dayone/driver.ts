@@ -112,22 +112,31 @@ export const dyDriverRouter = router({
       );
 
       if (input.status === "delivered") {
-        const [orderRows] = await client.execute(
-          `SELECT o.id, o.customerId, o.deliveryDate, o.totalAmount, o.paidAmount, c.settlementCycle, c.overdueDays
-           FROM dy_orders o JOIN dy_customers c ON c.id = o.customerId
-           WHERE o.id=? AND o.tenantId=? LIMIT 1`,
-          [input.id, input.tenantId]
-        );
-        const order = (orderRows as any[])[0];
-        if (order) {
-          await upsertArRecord(client, {
-            tenantId: input.tenantId,
-            orderId: order.id,
-            customerId: order.customerId,
-            amount: Number(order.totalAmount ?? 0),
-            paidAmount: Number(order.paidAmount ?? 0),
-            dueDate: calcDueDate(order.deliveryDate, order.settlementCycle, order.overdueDays),
-          });
+        if (input.rejectNote) {
+          // 拒收：不應有應收帳款，若已有舊 AR 一併刪除
+          await client.execute(
+            `DELETE FROM dy_ar_records WHERE tenantId=? AND orderId=?`,
+            [input.tenantId, input.id]
+          );
+        } else {
+          // 正常送達：建立或更新 AR
+          const [orderRows] = await client.execute(
+            `SELECT o.id, o.customerId, o.deliveryDate, o.totalAmount, o.paidAmount, c.settlementCycle, c.overdueDays
+             FROM dy_orders o JOIN dy_customers c ON c.id = o.customerId
+             WHERE o.id=? AND o.tenantId=? LIMIT 1`,
+            [input.id, input.tenantId]
+          );
+          const order = (orderRows as any[])[0];
+          if (order) {
+            await upsertArRecord(client, {
+              tenantId: input.tenantId,
+              orderId: order.id,
+              customerId: order.customerId,
+              amount: Number(order.totalAmount ?? 0),
+              paidAmount: Number(order.paidAmount ?? 0),
+              dueDate: calcDueDate(order.deliveryDate, order.settlementCycle, order.overdueDays),
+            });
+          }
         }
       }
 
@@ -160,7 +169,8 @@ export const dyDriverRouter = router({
         [input.orderId, input.tenantId, driver.id]
       );
       const order = (orderRows as any[])[0];
-      if (order && order.status === "delivered") {
+      const isRejected = String(order?.driverNote ?? "").startsWith("【拒收】");
+      if (order && order.status === "delivered" && !isRejected) {
         await upsertArRecord(client, {
           tenantId: input.tenantId,
           orderId: order.id,

@@ -152,6 +152,13 @@ export const dyDispatchRouter = router({
         let stopSequence = Number((maxSeqRows as any[])[0]?.maxSeq ?? 0) + 1;
 
         for (const order of driverOrders) {
+          // 防重複：同訂單已在此派車單內則跳過
+          const [dupCheck] = await client.execute(
+            `SELECT COUNT(*) AS cnt FROM dy_dispatch_items WHERE dispatchOrderId=? AND orderId=?`,
+            [dispatchOrderId, order.id]
+          );
+          if (Number((dupCheck as any[])[0]?.cnt ?? 0) > 0) continue;
+
           const [boxRows] = await client.execute(
             `SELECT currentBalance FROM dy_box_ledger WHERE tenantId=? AND customerId=?`,
             [input.tenantId, order.customerId]
@@ -419,22 +426,84 @@ export const dyDispatchRouter = router({
         }
       }
 
+      // 彙總訂單品項需求量
       const [itemRows] = await client.execute(
+        `SELECT di.orderId, oi.productId, SUM(oi.qty) AS totalQty
+         FROM dy_dispatch_items di
+         JOIN dy_order_items oi ON di.orderId = oi.orderId
+         WHERE di.dispatchOrderId=? AND di.tenantId=? AND di.orderId IS NOT NULL
+         GROUP BY oi.productId`,
+        [input.id, input.tenantId]
+      );
+
+      // 彙總備用箱需求量
+      const [extraRows] = await client.execute(
+        `SELECT ei.productId, SUM(ei.qty) AS totalQty
+         FROM dy_dispatch_extra_items ei
+         WHERE ei.dispatchOrderId=? AND ei.tenantId=?
+         GROUP BY ei.productId`,
+        [input.id, input.tenantId]
+      );
+
+      // 合算各品項總需求（訂單 + 備用箱）
+      const demandMap = new Map<number, number>();
+      for (const row of itemRows as any[]) {
+        const pid = Number(row.productId);
+        demandMap.set(pid, (demandMap.get(pid) ?? 0) + Number(row.totalQty ?? 0));
+      }
+      for (const row of extraRows as any[]) {
+        const pid = Number(row.productId);
+        demandMap.set(pid, (demandMap.get(pid) ?? 0) + Number(row.totalQty ?? 0));
+      }
+
+      // 若非強制覆蓋，先檢查庫存是否足夠
+      if (!input.forceOverride && demandMap.size > 0) {
+        const productIds = Array.from(demandMap.keys());
+        const placeholders = productIds.map(() => "?").join(",");
+        const [invRows] = await client.execute(
+          `SELECT productId, currentQty, (SELECT name FROM dy_products WHERE id=inv.productId LIMIT 1) AS productName
+           FROM dy_inventory inv
+           WHERE tenantId=? AND productId IN (${placeholders})`,
+          [input.tenantId, ...productIds]
+        );
+        const stockWarnings: { productId: number; productName: string; required: number; available: number }[] = [];
+        for (const inv of invRows as any[]) {
+          const pid = Number(inv.productId);
+          const required = demandMap.get(pid) ?? 0;
+          const available = Number(inv.currentQty ?? 0);
+          if (required > available) {
+            stockWarnings.push({ productId: pid, productName: inv.productName ?? String(pid), required, available });
+          }
+        }
+        // 也檢查庫存表裡完全沒有記錄的品項
+        for (const [pid, required] of demandMap.entries()) {
+          const found = (invRows as any[]).some((r: any) => Number(r.productId) === pid);
+          if (!found) {
+            const [pRows] = await client.execute(`SELECT name FROM dy_products WHERE id=? LIMIT 1`, [pid]);
+            const pName = (pRows as any[])[0]?.name ?? String(pid);
+            stockWarnings.push({ productId: pid, productName: pName, required, available: 0 });
+          }
+        }
+        if (stockWarnings.length > 0) {
+          return { success: false, alreadyPrinted: false, pendingAmountOrders: [], stockWarnings };
+        }
+      }
+
+      // 逐品項扣庫存（訂單品項）
+      const allItemRows = await client.execute(
         `SELECT di.orderId, oi.productId, oi.qty
          FROM dy_dispatch_items di
          JOIN dy_order_items oi ON di.orderId = oi.orderId
          WHERE di.dispatchOrderId=? AND di.tenantId=? AND di.orderId IS NOT NULL`,
         [input.id, input.tenantId]
       );
-
-      for (const item of itemRows as any[]) {
+      for (const item of allItemRows[0] as any[]) {
         await client.execute(
           `UPDATE dy_inventory
            SET currentQty = GREATEST(0, currentQty - ?), updatedAt=NOW()
            WHERE tenantId=? AND productId=?`,
           [item.qty, input.tenantId, item.productId]
         );
-
         await client.execute(
           `INSERT INTO dy_stock_movements
            (tenantId, productId, type, qty, refId, refType, note, createdAt)
@@ -452,22 +521,18 @@ export const dyDispatchRouter = router({
       );
 
       // 扣備用箱庫存
-      const [extraRows] = await client.execute(
-        `SELECT productId, qty FROM dy_dispatch_extra_items WHERE dispatchOrderId=? AND tenantId=?`,
-        [input.id, input.tenantId]
-      );
       for (const extra of extraRows as any[]) {
         await client.execute(
           `UPDATE dy_inventory
            SET currentQty = GREATEST(0, currentQty - ?), updatedAt=NOW()
            WHERE tenantId=? AND productId=?`,
-          [extra.qty, input.tenantId, extra.productId]
+          [extra.totalQty, input.tenantId, extra.productId]
         );
         await client.execute(
           `INSERT INTO dy_stock_movements
            (tenantId, productId, type, qty, refId, refType, note, createdAt)
            VALUES (?,?,'out',?,?,'dispatch_extra',?,NOW())`,
-          [input.tenantId, extra.productId, extra.qty, input.id, `備用箱出車扣庫 派車單#${input.id}`]
+          [input.tenantId, extra.productId, extra.totalQty, input.id, `備用箱出車扣庫 派車單#${input.id}`]
         );
       }
 
@@ -478,7 +543,7 @@ export const dyDispatchRouter = router({
         [input.id, input.tenantId]
       );
 
-      return { success: true, alreadyPrinted: false, pendingAmountOrders: [] };
+      return { success: true, alreadyPrinted: false, pendingAmountOrders: [], stockWarnings: [] };
     }),
 
   updateDispatchItem: driverProcedure
@@ -1049,19 +1114,13 @@ export const dyDispatchRouter = router({
         ? `管理員點收確認。備註：${input.adminNote}`
         : `管理員點收確認，現金 NT$${input.cashConfirmed.toLocaleString()}`;
 
-      // 計算逐筆結 AR 的應收總額，按比例將 cashConfirmed 分配給各筆 AR
-      const totalPerDeliveryAmt = (cashArRows as any[]).reduce(
-        (s: number, ar: any) => s + (Number(ar.amount) - Number(ar.paidAmount)), 0
-      );
+      // 依序結清：AR 按 id 排序，逐筆從 remainingCash 扣除，現金用完則後面的維持原狀
       let remainingCash = input.cashConfirmed;
 
       for (const ar of cashArRows as any[]) {
+        if (remainingCash <= 0) break;
         const unpaid = Number(ar.amount) - Number(ar.paidAmount);
-        // 依比例分配，或直接用剩餘現金（取較小值）
-        const allocate = totalPerDeliveryAmt > 0
-          ? Math.min(unpaid, Math.round((unpaid / totalPerDeliveryAmt) * input.cashConfirmed))
-          : unpaid;
-        const actualAllocate = Math.min(allocate, remainingCash, unpaid);
+        const actualAllocate = Math.min(unpaid, remainingCash);
         remainingCash -= actualAllocate;
         const newPaid = Number(ar.paidAmount) + actualAllocate;
         const newStatus = newPaid >= Number(ar.amount) ? "paid" : newPaid > 0 ? "partial" : "unpaid";
@@ -1071,7 +1130,6 @@ export const dyDispatchRouter = router({
            WHERE id=? AND tenantId=?`,
           [newPaid, newStatus, newStatus, noteText, ar.id, input.tenantId]
         );
-        // 同步回 dy_orders
         await client.execute(
           `UPDATE dy_orders o
            JOIN dy_ar_records ar ON ar.orderId = o.id
@@ -1127,6 +1185,23 @@ export const dyDispatchRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST", message: "只有草稿狀態的派車單可修改備用箱" });
       }
 
+      // 檢查庫存是否足夠（軟性警告，不攔截，但回傳警告讓前端提示）
+      const stockWarnings: { productName: string; required: number; available: number }[] = [];
+      for (const item of input.items) {
+        const [invRows] = await client.execute(
+          `SELECT inv.currentQty, p.name AS productName
+           FROM dy_inventory inv
+           JOIN dy_products p ON p.id = inv.productId
+           WHERE inv.tenantId=? AND inv.productId=? LIMIT 1`,
+          [input.tenantId, item.productId]
+        );
+        const inv = (invRows as any[])[0];
+        const available = inv ? Number(inv.currentQty ?? 0) : 0;
+        if (item.qty > available) {
+          stockWarnings.push({ productName: inv?.productName ?? String(item.productId), required: item.qty, available });
+        }
+      }
+
       // 清除舊的再重寫（每次整批儲存）
       await client.execute(
         `DELETE FROM dy_dispatch_extra_items WHERE dispatchOrderId=? AND tenantId=?`,
@@ -1139,7 +1214,7 @@ export const dyDispatchRouter = router({
           [input.dispatchOrderId, input.tenantId, item.productId, item.qty, item.note ?? null]
         );
       }
-      return { success: true, count: input.items.length };
+      return { success: true, count: input.items.length, stockWarnings };
     }),
 
   getExtraItems: dyAdminProcedure

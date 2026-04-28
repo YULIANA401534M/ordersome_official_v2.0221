@@ -191,6 +191,7 @@ export const dyPurchaseReceiptRouter = router({
         [supplierSignatureUrl, input.id, input.tenantId]
       );
 
+      // 簽名時建立 AP，狀態為 pending_review（待入倉確認後才轉 unpaid）
       const [apRows] = await client.execute(
         `SELECT id FROM dy_ap_records WHERE tenantId=? AND purchaseReceiptId=? LIMIT 1`,
         [input.tenantId, input.id]
@@ -207,7 +208,7 @@ export const dyPurchaseReceiptRouter = router({
         await client.execute(
           `INSERT INTO dy_ap_records
            (tenantId, supplierId, purchaseReceiptId, amount, paidAmount, status, dueDate, createdAt, updatedAt)
-           VALUES (?,?,?,?,0,'unpaid', DATE_ADD(DATE(?), INTERVAL 30 DAY), NOW(), NOW())`,
+           VALUES (?,?,?,?,0,'pending_review', DATE_ADD(DATE(?), INTERVAL 30 DAY), NOW(), NOW())`,
           [input.tenantId, pr.supplierId, input.id, pr.totalAmount, pr.receiptDate]
         );
       }
@@ -243,8 +244,14 @@ export const dyPurchaseReceiptRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST", message: "Only signed purchase receipts can be received into warehouse" });
       }
 
-      const items = typeof receipt.items === "string" ? JSON.parse(receipt.items) : receipt.items;
-      for (const item of items as any[]) {
+      let items: any[];
+      try {
+        items = typeof receipt.items === "string" ? JSON.parse(receipt.items) : receipt.items;
+        if (!Array.isArray(items)) throw new Error("items is not an array");
+      } catch {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "進貨單品項資料損毀，無法入倉" });
+      }
+      for (const item of items) {
         const qty = Number(item.qty ?? 0);
         if (qty <= 0) continue;
 
@@ -279,6 +286,14 @@ export const dyPurchaseReceiptRouter = router({
         [input.id, input.tenantId]
       );
 
+      // 入倉確認後，AP 從 pending_review 轉為正式 unpaid（開始計帳）
+      await client.execute(
+        `UPDATE dy_ap_records
+         SET status='unpaid', updatedAt=NOW()
+         WHERE tenantId=? AND purchaseReceiptId=? AND status='pending_review'`,
+        [input.tenantId, input.id]
+      );
+
       return { success: true };
     }),
   markAnomaly: dyAdminProcedure
@@ -311,6 +326,11 @@ export const dyPurchaseReceiptRouter = router({
         `UPDATE dy_purchase_receipts SET status='anomaly', anomalyNote=?
          WHERE id=? AND tenantId=?`,
         [input.anomalyNote, input.id, input.tenantId]
+      );
+      // 異常時刪除 pending_review AP（貨物未確認，不應計入應付）
+      await client.execute(
+        `DELETE FROM dy_ap_records WHERE tenantId=? AND purchaseReceiptId=? AND status='pending_review'`,
+        [input.tenantId, input.id]
       );
       return { success: true };
     }),

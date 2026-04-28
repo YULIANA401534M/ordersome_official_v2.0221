@@ -54,8 +54,8 @@ export default function DayoneDashboard() {
   const { data: pendingReturns = [] } = trpc.dayone.inventory.pendingReturns.useQuery({ tenantId: TENANT_ID });
 
   const todayArSum = (arList as any[])
-    .filter((r: any) => (r.createdAt ?? "").startsWith(today))
-    .reduce((s: number, r: any) => s + Number(r.amount), 0);
+    .filter((r: any) => (r.dueDate ?? "").startsWith(today))
+    .reduce((s: number, r: any) => s + Number(r.amount) - Number(r.paidAmount ?? 0), 0);
   const overdueSum = (arOverdue as any[]).reduce((s: number, r: any) => s + Number(r.amount) - Number(r.paidAmount ?? 0), 0);
   const anomalyDrivers = (cashReports as any[]).filter((r: any) => r.status === "anomaly").length;
   const pendingReceiptCount = (pendingReceipts as any[]).length;
@@ -75,7 +75,7 @@ export default function DayoneDashboard() {
 
         {/* KPI 警示區 */}
         <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <KpiCard icon={CreditCard} value={`$${todayArSum.toLocaleString()}`} label="今日應收" accent />
+          <KpiCard icon={CreditCard} value={`$${todayArSum.toLocaleString()}`} label="今日到期應收" accent />
           <KpiCard icon={AlertOctagon} value={`$${overdueSum.toLocaleString()}`} label="逾期未收" danger />
           <KpiCard icon={AlertTriangle} value={anomalyDrivers} label="異常司機" danger={anomalyDrivers > 0} />
           <KpiCard icon={Receipt} value={pendingReceiptCount} label="待簽收進貨" />

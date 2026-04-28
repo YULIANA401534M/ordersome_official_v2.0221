@@ -329,6 +329,7 @@ function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onCl
   const [handoverCash, setHandoverCash] = useState("");
   const [handoverAdminNote, setHandoverAdminNote] = useState("");
   const [pendingAmountWarning, setPendingAmountWarning] = useState<{ orderNo: string; customerName: string }[]>([]);
+  const [stockWarning, setStockWarning] = useState<{ productId: number; productName: string; required: number; available: number }[]>([]);
   // 備用箱登記
   const [extraRows, setExtraRows] = useState<{ productId: string; qty: string; note: string }[]>([{ productId: "", qty: "", note: "" }]);
 
@@ -357,7 +358,13 @@ function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onCl
 
   const upsertExtraItems = trpc.dayone.dispatch.upsertExtraItems.useMutation({
     onSuccess: (data) => {
-      toast.success(`備用箱已儲存，共 ${data.count} 筆`);
+      const warnings = (data as any).stockWarnings ?? [];
+      if (warnings.length > 0) {
+        const msg = warnings.map((w: any) => `${w.productName}：需 ${w.required}，剩 ${w.available}`).join("；");
+        toast.warning(`備用箱已儲存，但庫存不足：${msg}`);
+      } else {
+        toast.success(`備用箱已儲存，共 ${data.count} 筆`);
+      }
       utils.dayone.dispatch.getExtraItems.invalidate({ dispatchOrderId: dispatchId, tenantId: TENANT_ID });
     },
     onError: (e) => toast.error(e.message),
@@ -365,8 +372,11 @@ function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onCl
 
   const markPrinted = trpc.dayone.dispatch.markPrinted.useMutation({
     onSuccess: (data) => {
+      if (!data.success && (data as any).stockWarnings?.length > 0) {
+        setStockWarning((data as any).stockWarnings);
+        return;
+      }
       if (!data.success && data.pendingAmountOrders && data.pendingAmountOrders.length > 0) {
-        // 後端攔截：有待補金額，彈確認 Dialog
         setPendingAmountWarning(data.pendingAmountOrders);
         return;
       }
@@ -1176,6 +1186,42 @@ body { margin: 0; padding: 16px; background: white; font-family: 'Noto Sans TC',
                 }}
               >
                 {markPrinted.isPending ? "處理中..." : "忽略並強制列印"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* 庫存不足警告 Dialog */}
+        <Dialog open={stockWarning.length > 0} onOpenChange={(v) => { if (!v) setStockWarning([]); }}>
+          <DialogContent className="max-w-sm rounded-3xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-rose-700">
+                <AlertTriangle className="h-5 w-5" />
+                庫存不足
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 text-sm text-stone-600">
+              <p>以下商品庫存不足，強制列印將以現有庫存出庫：</p>
+              <div className="rounded-2xl bg-rose-50 px-3 py-2 space-y-1">
+                {stockWarning.map((w, i) => (
+                  <div key={i} className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-stone-800">{w.productName}</span>
+                    <span className="text-rose-700">需 {w.required}，剩 {w.available}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="outline" onClick={() => setStockWarning([])}>取消列印</Button>
+              <Button
+                className="bg-rose-600 text-white hover:bg-rose-700"
+                disabled={markPrinted.isPending}
+                onClick={() => {
+                  setStockWarning([]);
+                  markPrinted.mutate({ id: dispatchId, tenantId: TENANT_ID, forceOverride: true });
+                }}
+              >
+                {markPrinted.isPending ? "處理中..." : "強制列印"}
               </Button>
             </div>
           </DialogContent>

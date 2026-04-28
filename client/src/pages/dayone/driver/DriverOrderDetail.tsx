@@ -81,6 +81,13 @@ export default function DriverOrderDetail() {
       toast.success("簽名已記錄");
       setShowSig(false);
       setLocalSignatureUrl(data.signatureUrl);
+      utils.dayone.driver.getMyTodayOrders.setData(
+        { tenantId: TENANT_ID, deliveryDate: today },
+        (prev: any) =>
+          Array.isArray(prev)
+            ? prev.map((o: any) => o.id === orderId ? { ...o, signatureUrl: data.signatureUrl } : o)
+            : prev
+      );
       utils.dayone.driver.getMyTodayOrders.invalidate();
     },
     onError: (e) => toast.error(e.message),
