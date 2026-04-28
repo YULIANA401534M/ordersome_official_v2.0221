@@ -14,6 +14,16 @@ async function ensureDyPurchaseReceiptSchema(client: any) {
   );
 }
 
+async function ensureSupplierPaymentDays(client: any) {
+  try {
+    await client.execute(
+      `ALTER TABLE dy_suppliers ADD COLUMN IF NOT EXISTS paymentDays INT NOT NULL DEFAULT 30`
+    );
+  } catch {
+    // 欄位已存在則忽略
+  }
+}
+
 export const dyPurchaseReceiptRouter = router({
   // 1. 進貨單列表（管理員）
   list: dyAdminProcedure
@@ -166,6 +176,8 @@ export const dyPurchaseReceiptRouter = router({
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
       const client = (db as any).$client;
 
+      await ensureSupplierPaymentDays(client);
+
       // 取得進貨單資料
       const [prRows] = await client.execute(
         `SELECT * FROM dy_purchase_receipts WHERE id=? AND tenantId=?`,
@@ -176,6 +188,13 @@ export const dyPurchaseReceiptRouter = router({
       if (pr.status !== "pending") {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Only pending purchase receipts can be signed" });
       }
+
+      // 讀供應商帳期（fallback 30 天）
+      const [supplierRows] = await client.execute(
+        `SELECT paymentDays FROM dy_suppliers WHERE id=? AND tenantId=? LIMIT 1`,
+        [pr.supplierId, input.tenantId]
+      );
+      const supplierPaymentDays = Number((supplierRows as any[])[0]?.paymentDays ?? 30);
 
       // 上傳簽名圖片到 R2
       const base64Data = input.signatureBase64.replace(/^data:image\/\w+;base64,/, "");
@@ -208,8 +227,8 @@ export const dyPurchaseReceiptRouter = router({
         await client.execute(
           `INSERT INTO dy_ap_records
            (tenantId, supplierId, purchaseReceiptId, amount, paidAmount, status, dueDate, createdAt, updatedAt)
-           VALUES (?,?,?,?,0,'pending_review', DATE_ADD(DATE(?), INTERVAL 30 DAY), NOW(), NOW())`,
-          [input.tenantId, pr.supplierId, input.id, pr.totalAmount, pr.receiptDate]
+           VALUES (?,?,?,?,0,'pending_review', DATE_ADD(DATE(?), INTERVAL ? DAY), NOW(), NOW())`,
+          [input.tenantId, pr.supplierId, input.id, pr.totalAmount, pr.receiptDate, supplierPaymentDays]
         );
       }
 
@@ -318,8 +337,8 @@ export const dyPurchaseReceiptRouter = router({
       if (!receipt) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Purchase receipt not found" });
       }
-      if (receipt.status !== "pending") {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Only pending purchase receipts can be marked anomaly" });
+      if (!["pending", "signed"].includes(receipt.status)) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "只有待簽名或已簽名的進貨單可標記異常" });
       }
 
       await client.execute(

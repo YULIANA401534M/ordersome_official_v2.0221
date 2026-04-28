@@ -388,10 +388,17 @@ export const dyDriverRouter = router({
               [input.tenantId, mergedOrderId, item.productId, item.qty, item.unitPrice, item.qty * item.unitPrice]
             );
           }
+          // 從 dy_ar_records 讀現有已收金額（比 dy_orders 更準確，管理員可能已手動登帳）
+          const [existArRows] = await client.execute(
+            `SELECT paidAmount FROM dy_ar_records WHERE tenantId=? AND orderId=? LIMIT 1`,
+            [input.tenantId, mergedOrderId]
+          );
+          const arPaidAmount = Number((existArRows as any[])[0]?.paidAmount ?? existOrder.paidAmount ?? 0);
+
           // 重算訂單金額
           const newTotal = Number(existOrder.totalAmount) + addedAmount;
           const newCash = Number(existOrder.cashCollected ?? 0) + input.cashCollected;
-          const newPaid = Number(existOrder.paidAmount ?? 0) + input.cashCollected;
+          const newPaid = arPaidAmount + input.cashCollected;
           const newPayStatus = cashCollectedStatus(newCash, newTotal, settlementCycle);
           await client.execute(
             `UPDATE dy_orders SET totalAmount=?, cashCollected=?, paidAmount=?, paymentStatus=?, updatedAt=NOW() WHERE id=?`,

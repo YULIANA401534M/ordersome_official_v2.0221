@@ -47,12 +47,11 @@ export async function upsertArRecord(
     await client.execute(
       `UPDATE dy_ar_records
        SET amount=?, paidAmount=?, status=?, dueDate=?,
-           paymentMethod=IF(? > 0, 'cash', paymentMethod),
            paidAt=CASE WHEN ? >= ? THEN NOW() ELSE paidAt END,
            updatedAt=NOW()
        WHERE id=? AND tenantId=?`,
       [amount, paidAmount, status, payload.dueDate,
-       paidAmount, paidAmount, amount,
+       paidAmount, amount,
        existing.id, payload.tenantId]
     );
     return existing.id as number;

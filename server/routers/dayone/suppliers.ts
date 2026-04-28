@@ -40,22 +40,25 @@ export const dySuppliersRouter = router({
       phone: z.string().max(20).optional(),
       address: z.string().optional(),
       bankAccount: z.string().max(50).optional(),
+      paymentDays: z.number().int().min(0).default(30),
       status: z.enum(['active', 'inactive']).default('active'),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
       const client = (db as any).$client;
+      // 確保欄位存在
+      try { await client.execute(`ALTER TABLE dy_suppliers ADD COLUMN IF NOT EXISTS paymentDays INT NOT NULL DEFAULT 30`); } catch {}
       if (input.id) {
         await client.execute(
-          `UPDATE dy_suppliers SET name=?, contact=?, phone=?, address=?, bankAccount=?, status=? WHERE id=? AND tenantId=?`,
-          [input.name, input.contact ?? null, input.phone ?? null, input.address ?? null, input.bankAccount ?? null, input.status, input.id, input.tenantId]
+          `UPDATE dy_suppliers SET name=?, contact=?, phone=?, address=?, bankAccount=?, paymentDays=?, status=? WHERE id=? AND tenantId=?`,
+          [input.name, input.contact ?? null, input.phone ?? null, input.address ?? null, input.bankAccount ?? null, input.paymentDays, input.status, input.id, input.tenantId]
         );
         return { id: input.id };
       } else {
         const [result] = await client.execute(
-          `INSERT INTO dy_suppliers (tenantId, name, contact, phone, address, bankAccount, status, createdAt) VALUES (?,?,?,?,?,?,?,NOW())`,
-          [input.tenantId, input.name, input.contact ?? null, input.phone ?? null, input.address ?? null, input.bankAccount ?? null, input.status]
+          `INSERT INTO dy_suppliers (tenantId, name, contact, phone, address, bankAccount, paymentDays, status, createdAt) VALUES (?,?,?,?,?,?,?,?,NOW())`,
+          [input.tenantId, input.name, input.contact ?? null, input.phone ?? null, input.address ?? null, input.bankAccount ?? null, input.paymentDays, input.status]
         );
         return { id: (result as any).insertId };
       }

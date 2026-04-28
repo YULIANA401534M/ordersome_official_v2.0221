@@ -224,11 +224,10 @@ export const dyOrdersRouter = router({
       const arRow = (arRows as any[])[0];
       if (arRow && newTotal > 0) {
         const { calcDueDate } = await import("./utils");
-        const dueDate = calcDueDate(
-          arRow.deliveryDate?.toISOString?.().slice(0, 10) ?? arRow.dueDate,
-          arRow.settlementCycle,
-          arRow.overdueDays
-        );
+        const rawDate = arRow.deliveryDate instanceof Date
+          ? new Date(arRow.deliveryDate.getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10)
+          : String(arRow.deliveryDate ?? arRow.dueDate ?? "").slice(0, 10);
+        const dueDate = calcDueDate(rawDate, arRow.settlementCycle, arRow.overdueDays);
         const paidAmount = Number(arRow.paidAmount ?? 0);
         const newStatus = paidAmount >= newTotal ? "paid" : paidAmount > 0 ? "partial" : "unpaid";
         await client.execute(
@@ -251,10 +250,46 @@ export const dyOrdersRouter = router({
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-      await (db as any).$client.execute(
+      const client = (db as any).$client;
+
+      await client.execute(
         `UPDATE dy_orders SET status=?, updatedAt=NOW() WHERE id=? AND tenantId=?`,
         [input.status, input.id, input.tenantId]
       );
+
+      // 狀態改為 delivered → 建立或更新 AR
+      if (input.status === "delivered") {
+        const [orderRows] = await client.execute(
+          `SELECT o.id, o.customerId, o.deliveryDate, o.totalAmount, o.paidAmount, c.settlementCycle, c.overdueDays
+           FROM dy_orders o JOIN dy_customers c ON c.id = o.customerId
+           WHERE o.id=? AND o.tenantId=? LIMIT 1`,
+          [input.id, input.tenantId]
+        );
+        const order = (orderRows as any[])[0];
+        if (order) {
+          await upsertArRecord(client, {
+            tenantId: input.tenantId,
+            orderId: Number(order.id),
+            customerId: Number(order.customerId),
+            amount: Number(order.totalAmount ?? 0),
+            paidAmount: Number(order.paidAmount ?? 0),
+            dueDate: calcDueDate(
+              new Date(new Date(order.deliveryDate).getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10),
+              order.settlementCycle,
+              order.overdueDays
+            ),
+          });
+        }
+      }
+
+      // 狀態改為 cancelled 或 returned → 刪除應收帳款（貨物未送出，帳款不應存在）
+      if (input.status === "cancelled" || input.status === "returned") {
+        await client.execute(
+          `DELETE FROM dy_ar_records WHERE orderId=? AND tenantId=?`,
+          [input.id, input.tenantId]
+        );
+      }
+
       return { success: true };
     }),
 
