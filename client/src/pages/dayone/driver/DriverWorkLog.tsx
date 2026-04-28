@@ -265,16 +265,16 @@ export default function DriverWorkLog() {
                           </p>
                         </div>
                         <input
-                          type="number"
-                          min={0}
-                          max={item.maxReturn}
-                          value={item.qty}
-                          onChange={(event) =>
-                            setReturnQtyByProduct((prev) => ({
-                              ...prev,
-                              [item.productId]: Math.max(0, Math.min(item.maxReturn, Number(event.target.value ?? 0))),
-                            }))
-                          }
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={returnQtyByProduct[item.productId] !== undefined ? String(returnQtyByProduct[item.productId]) : "0"}
+                          onFocus={(e) => e.target.select()}
+                          onChange={(event) => {
+                            const raw = event.target.value.replace(/[^0-9]/g, "");
+                            const num = raw === "" ? 0 : Math.max(0, Math.min(item.maxReturn, Number(raw)));
+                            setReturnQtyByProduct((prev) => ({ ...prev, [item.productId]: num }));
+                          }}
                           className="w-24 rounded-2xl border border-stone-200 bg-white px-3 py-2 text-right text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
                         />
                       </div>

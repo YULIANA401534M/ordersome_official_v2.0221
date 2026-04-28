@@ -112,7 +112,6 @@ export const dyPurchaseReceiptRouter = router({
       if (!db)
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
       const client = (db as any).$client;
-      await ensureDyPurchaseReceiptSchema(client);
 
       const totalQty = input.items.reduce((s, i) => s + i.qty, 0);
       const totalAmount = input.items.reduce((s, i) => s + i.qty * i.unitPrice, 0);
