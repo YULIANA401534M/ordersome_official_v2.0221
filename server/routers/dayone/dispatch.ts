@@ -643,8 +643,9 @@ export const dyDispatchRouter = router({
 
         // 同步更新 AR（只有訂單已送達才建帳，避免配送途中產生幽靈帳款）
         if (item.orderStatus === "delivered" && item.orderDeliveryDate && item.orderCustomerId) {
+          const twDate = new Date(new Date(item.orderDeliveryDate).getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
           const dueDate = calcDueDate(
-            item.orderDeliveryDate,
+            twDate,
             item.settlementCycle,
             item.overdueDays
           );

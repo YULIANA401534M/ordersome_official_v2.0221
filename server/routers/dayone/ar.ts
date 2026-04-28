@@ -444,26 +444,31 @@ export const dyArRouter = router({
       const customer = (custRows as any[])[0];
       if (!customer) throw new TRPCError({ code: "NOT_FOUND", message: "客戶不存在" });
 
-      // 當月訂單
+      // 當月訂單（只算已送達）
       const [orderRows] = await client.execute(
         `SELECT o.*, c.name AS customerName
          FROM dy_orders o
          JOIN dy_customers c ON o.customerId = c.id
          WHERE o.tenantId=? AND o.customerId=?
            AND o.deliveryDate BETWEEN ? AND ?
-           AND o.status != 'cancelled'
+           AND o.status = 'delivered'
          ORDER BY o.deliveryDate ASC`,
         [input.tenantId, input.customerId, startDate, endDate]
       );
       const orders = orderRows as any[];
 
-      // AR 記錄
+      // AR 記錄：以訂單 deliveryDate 為準（月結 dueDate 可能落在下個月）
       const [arRows] = await client.execute(
-        `SELECT * FROM dy_ar_records
-         WHERE tenantId=? AND customerId=?
-           AND dueDate BETWEEN ? AND ?
-         ORDER BY dueDate ASC`,
-        [input.tenantId, input.customerId, startDate, endDate]
+        `SELECT ar.* FROM dy_ar_records ar
+         WHERE ar.tenantId=? AND ar.customerId=?
+           AND ar.orderId IN (
+             SELECT id FROM dy_orders
+             WHERE tenantId=? AND customerId=?
+               AND deliveryDate BETWEEN ? AND ?
+               AND status = 'delivered'
+           )
+         ORDER BY ar.dueDate ASC`,
+        [input.tenantId, input.customerId, input.tenantId, input.customerId, startDate, endDate]
       );
       const arRecords = arRows as any[];
 
@@ -474,7 +479,8 @@ export const dyArRouter = router({
       );
       const boxBalance = (boxRows as any[])[0]?.currentBalance ?? 0;
 
-      const totalAmount = orders.reduce((s: number, o: any) => s + parseFloat(o.totalAmount ?? 0), 0);
+      // totalAmount 和 paidAmount 都從 AR 讀，確保同一來源
+      const totalAmount = arRecords.reduce((s: number, r: any) => s + parseFloat(r.amount ?? 0), 0);
       const paidAmount = arRecords.reduce((s: number, r: any) => s + parseFloat(r.paidAmount ?? 0), 0);
       const unpaidAmount = totalAmount - paidAmount;
 

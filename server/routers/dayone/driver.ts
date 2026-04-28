@@ -128,13 +128,14 @@ export const dyDriverRouter = router({
           );
           const order = (orderRows as any[])[0];
           if (order) {
+            const twDate = new Date(new Date(order.deliveryDate).getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
             await upsertArRecord(client, {
               tenantId: input.tenantId,
               orderId: order.id,
               customerId: order.customerId,
               amount: Number(order.totalAmount ?? 0),
               paidAmount: Number(order.paidAmount ?? 0),
-              dueDate: calcDueDate(order.deliveryDate, order.settlementCycle, order.overdueDays),
+              dueDate: calcDueDate(twDate, order.settlementCycle, order.overdueDays),
             });
           }
         }
@@ -171,13 +172,14 @@ export const dyDriverRouter = router({
       const order = (orderRows as any[])[0];
       const isRejected = String(order?.driverNote ?? "").startsWith("【拒收】");
       if (order && order.status === "delivered" && !isRejected) {
+        const twDate = new Date(new Date(order.deliveryDate).getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
         await upsertArRecord(client, {
           tenantId: input.tenantId,
           orderId: order.id,
           customerId: order.customerId,
           amount: Number(order.totalAmount ?? 0),
           paidAmount: Number(order.paidAmount ?? 0),
-          dueDate: calcDueDate(order.deliveryDate, order.settlementCycle, order.overdueDays),
+          dueDate: calcDueDate(twDate, order.settlementCycle, order.overdueDays),
         });
       }
 
