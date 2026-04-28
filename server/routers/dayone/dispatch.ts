@@ -91,7 +91,7 @@ export const dyDispatchRouter = router({
          LEFT JOIN dy_districts dist ON o.districtId = dist.id
          LEFT JOIN dy_drivers d ON o.driverId = d.id
          WHERE o.tenantId=?
-           AND o.deliveryDate=?
+           AND DATE(CONVERT_TZ(o.deliveryDate,'+00:00','+08:00'))=?
            AND o.status IN ('pending', 'assigned')
            AND NOT EXISTS (
              SELECT 1

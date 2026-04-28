@@ -84,7 +84,7 @@ export const dyDriversRouter = router({
         `SELECT o.*, c.name as customerName, c.address as customerAddress, c.phone as customerPhone
          FROM dy_orders o
          JOIN dy_customers c ON o.customerId = c.id
-         WHERE o.tenantId=? AND o.driverId=? AND o.deliveryDate=?
+         WHERE o.tenantId=? AND o.driverId=? AND DATE(CONVERT_TZ(o.deliveryDate,'+00:00','+08:00'))=?
          ORDER BY o.id`,
         [input.tenantId, driver.id, input.deliveryDate]
       );

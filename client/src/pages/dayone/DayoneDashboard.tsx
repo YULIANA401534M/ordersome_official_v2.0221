@@ -5,7 +5,7 @@ import { ShoppingCart, Users, AlertTriangle, TrendingUp, Truck, CreditCard, Rece
 import { useState } from "react";
 
 function todayStr() {
-  return new Date().toISOString().slice(0, 10);
+  return new Date().toLocaleDateString("sv-SE");
 }
 
 function KpiCard({

@@ -17,7 +17,7 @@ const LEVEL_MAP: Record<string, { label: string; className: string }> = {
   supplier: { label: "供應商", className: "bg-amber-100 text-amber-700" },
 };
 
-const TODAY = new Date().toISOString().slice(0, 10);
+const TODAY = new Date().toLocaleDateString("sv-SE");
 
 const emptyForm = {
   level: "retail" as "retail" | "store" | "supplier",

@@ -199,7 +199,7 @@ export const dyArRouter = router({
          WHERE ddo.tenantId = ? AND ddo.driverId = ? AND ddo.dispatchDate = ?`,
         [input.tenantId, input.driverId, input.reportDate]
       );
-      const expectedAmount = parseFloat((sumRows as any[])[0]?.expectedAmount ?? 0);
+      const expectedAmount = Number((sumRows as any[])[0]?.expectedAmount ?? 0);
       const diff = input.actualAmount - expectedAmount;
       const status = Math.abs(diff) < 1 ? "normal" : "anomaly";
 

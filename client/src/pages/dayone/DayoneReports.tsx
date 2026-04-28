@@ -10,7 +10,7 @@ import {
 } from "recharts";
 import { Download } from "lucide-react";
 
-function todayStr() { return new Date().toISOString().slice(0, 10); }
+function todayStr() { return new Date().toLocaleDateString("sv-SE"); }
 function thisYear() { return new Date().getFullYear(); }
 function thisMonth() { return new Date().getMonth() + 1; }
 
