@@ -44,7 +44,7 @@ export default function DayoneDashboard() {
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
   const { data: monthlyRevenue } = trpc.dayone.reports.monthlyRevenue.useQuery({ tenantId: TENANT_ID, year, month });
-  const totalMonthly = monthlyRevenue?.reduce((sum: number, r: any) => sum + Number(r.revenue || 0), 0) ?? 0;
+  const totalMonthly = (monthlyRevenue as any[])?.reduce((sum: number, r: any) => sum + Number(r.collected || 0), 0) ?? 0;
 
   const { data: arList = [] } = trpc.dayone.ar.listReceivables.useQuery({ tenantId: TENANT_ID, page: 1, status: "unpaid" });
   const { data: arOverdue = [] } = trpc.dayone.ar.listReceivables.useQuery({ tenantId: TENANT_ID, page: 1, status: "overdue" });
@@ -83,9 +83,9 @@ export default function DayoneDashboard() {
 
         {/* KPI 配送區 */}
         <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <KpiCard icon={ShoppingCart} value={(summary as any)?.summary?.totalOrders ?? 0} label="今日訂單數" />
-          <KpiCard icon={Truck} value={(summary as any)?.summary?.deliveredCount ?? 0} label="今日已送達" />
-          <KpiCard icon={TrendingUp} value={`$${Number((summary as any)?.summary?.totalAmount ?? 0).toLocaleString()}`} label="今日金額" accent />
+          <KpiCard icon={ShoppingCart} value={Number((summary as any)?.orderSummary?.totalOrders ?? 0)} label="今日訂單數" />
+          <KpiCard icon={Truck} value={Number((summary as any)?.orderSummary?.deliveredCount ?? 0)} label="今日已送達" />
+          <KpiCard icon={TrendingUp} value={`$${Number((summary as any)?.orderSummary?.orderTotalAmount ?? 0).toLocaleString()}`} label="今日金額" accent />
           <KpiCard icon={TrendingUp} value={`$${totalMonthly.toLocaleString()}`} label={`${month} 月營收`} accent />
         </section>
 
@@ -171,7 +171,7 @@ export default function DayoneDashboard() {
                           <tr key={i}>
                             <td>{d.driverName ?? "未指派"}</td>
                             <td className="text-right">{d.orderCount}</td>
-                            <td className="text-right">${Number(d.totalAmount).toLocaleString()}</td>
+                            <td className="text-right">${Number(d.orderAmount).toLocaleString()}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -189,7 +189,7 @@ export default function DayoneDashboard() {
                           </div>
                           <div>
                             <div className="text-stone-400">金額</div>
-                            <div className="font-semibold text-stone-800">${Number(d.totalAmount).toLocaleString()}</div>
+                            <div className="font-semibold text-stone-800">${Number(d.orderAmount).toLocaleString()}</div>
                           </div>
                         </div>
                       </div>
