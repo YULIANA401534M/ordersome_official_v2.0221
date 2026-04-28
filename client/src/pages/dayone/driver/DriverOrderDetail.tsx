@@ -335,9 +335,9 @@ export default function DriverOrderDetail() {
                 <p className="text-xs font-medium text-stone-600">客戶簽名</p>
                 <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-600">必填</span>
               </div>
-              {(order.signatureUrl || localSignatureUrl) ? (
+              {(localSignatureUrl || order.signatureUrl) ? (
                 <div className="rounded-2xl border border-emerald-200 bg-white p-2">
-                  <img src={order.signatureUrl || localSignatureUrl!} alt="客戶簽名" className="max-h-28 w-full object-contain" />
+                  <img src={localSignatureUrl || order.signatureUrl!} alt="客戶簽名" className="max-h-28 w-full object-contain" />
                   <p className="mt-1 text-center text-xs font-semibold text-emerald-600">✓ 已簽名</p>
                 </div>
               ) : showSig ? (
@@ -367,7 +367,7 @@ export default function DriverOrderDetail() {
             {/* 確認送達 */}
             {(() => {
               const missingCash = isCash && cashInput === "";
-              const missingSig = !order.signatureUrl && !localSignatureUrl;
+              const missingSig = !localSignatureUrl && !order.signatureUrl;
               const canSubmit = !missingCash && !missingSig && !updateStatus.isPending;
               return (
                 <>

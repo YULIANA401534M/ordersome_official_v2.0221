@@ -38,7 +38,6 @@ const DISPATCH_STATUS: Record<string, { label: string; className: string }> = {
 };
 
 function SyncDialog({ date, onClose, onSuccess }: { date: string; onClose: () => void; onSuccess: () => void }) {
-  const firedRef = React.useRef(false);
   const generateDispatch = trpc.dayone.dispatch.generateDispatch.useMutation({
     onSuccess: (data) => {
       const added = (data as any).newOrdersAdded ?? 0;
@@ -51,17 +50,8 @@ function SyncDialog({ date, onClose, onSuccess }: { date: string; onClose: () =>
       onSuccess();
       onClose();
     },
-    onError: (error) => {
-      firedRef.current = false;
-      toast.error(error.message);
-    },
+    onError: (error) => toast.error(error.message),
   });
-
-  function handleConfirm() {
-    if (firedRef.current || generateDispatch.isPending) return;
-    firedRef.current = true;
-    generateDispatch.mutate({ tenantId: TENANT_ID, dispatchDate: date });
-  }
 
   return (
     <Dialog open onOpenChange={onClose}>
@@ -93,8 +83,8 @@ function SyncDialog({ date, onClose, onSuccess }: { date: string; onClose: () =>
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={onClose}>取消</Button>
             <Button
-              onClick={handleConfirm}
-              disabled={generateDispatch.isPending || firedRef.current}
+              onClick={() => { if (!generateDispatch.isPending) generateDispatch.mutate({ tenantId: TENANT_ID, dispatchDate: date }); }}
+              disabled={generateDispatch.isPending}
               className="bg-amber-600 text-white hover:bg-amber-700"
             >
               {generateDispatch.isPending ? "同步中..." : "確認同步"}
@@ -345,9 +335,12 @@ function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onCl
     { enabled: !!dispatchId }
   );
 
-  // 當 existingExtraItems 載入後同步到 extraRows
+  // 只在第一次載入時同步 existingExtraItems → extraRows，之後不覆蓋（避免蓋掉編輯中的資料）
+  const extraInitializedRef = React.useRef(false);
   React.useEffect(() => {
+    if (extraInitializedRef.current) return;
     if ((existingExtraItems as any[]).length > 0) {
+      extraInitializedRef.current = true;
       setExtraRows((existingExtraItems as any[]).map((r: any) => ({
         productId: String(r.productId),
         qty: String(r.qty),
@@ -366,6 +359,7 @@ function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onCl
         toast.success(`備用箱已儲存，共 ${data.count} 筆`);
       }
       utils.dayone.dispatch.getExtraItems.invalidate({ dispatchOrderId: dispatchId, tenantId: TENANT_ID });
+      utils.dayone.dispatch.getDispatchDetail.invalidate({ id: dispatchId, tenantId: TENANT_ID });
     },
     onError: (e) => toast.error(e.message),
   });

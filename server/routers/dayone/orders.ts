@@ -236,6 +236,20 @@ export const dyOrdersRouter = router({
         );
       }
 
+      // 同步更新派車單站點的 paymentStatus（若訂單已在派車單中）
+      const [paidRows] = await client.execute(
+        `SELECT paidAmount FROM dy_orders WHERE id=? AND tenantId=? LIMIT 1`,
+        [input.id, input.tenantId]
+      );
+      const currentPaid = Number((paidRows as any[])[0]?.paidAmount ?? 0);
+      const newDispatchPayStatus = newTotal > 0 && currentPaid >= newTotal ? "paid"
+        : currentPaid > 0 ? "partial"
+        : "unpaid";
+      await client.execute(
+        `UPDATE dy_dispatch_items SET paymentStatus=? WHERE orderId=? AND tenantId=?`,
+        [newDispatchPayStatus, input.id, input.tenantId]
+      );
+
       return { success: true, totalAmount: newTotal };
     }),
 
@@ -286,6 +300,13 @@ export const dyOrdersRouter = router({
       if (input.status === "cancelled" || input.status === "returned") {
         await client.execute(
           `DELETE FROM dy_ar_records WHERE orderId=? AND tenantId=?`,
+          [input.id, input.tenantId]
+        );
+        // 同步清除 draft 派車單的站點（已列印/配送中的不動，由 generateDispatch 處理或司機手動處理）
+        await client.execute(
+          `DELETE di FROM dy_dispatch_items di
+           JOIN dy_dispatch_orders ddo ON ddo.id = di.dispatchOrderId
+           WHERE di.orderId = ? AND di.tenantId = ? AND ddo.status = 'draft'`,
           [input.id, input.tenantId]
         );
       }

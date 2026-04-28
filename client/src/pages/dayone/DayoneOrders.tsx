@@ -81,6 +81,8 @@ export default function DayoneOrders() {
         }
       }
       setCreateOpen(false);
+      setNewOrder({ customerId: "", driverId: "", deliveryDate: todayStr(), note: "" });
+      setOrderItems([{ productId: "", qty: 1, unitPrice: 0 }]);
       utils.dayone.orders.list.invalidate();
     },
     onError: () => toast.error("建立訂單失敗，請確認填寫資料後再試"),
@@ -113,15 +115,10 @@ export default function DayoneOrders() {
 
   const filtered = (orders as any[] ?? []).filter((o: any) => !search || o.customerName?.includes(search) || o.orderNo?.includes(search));
 
-  // 今日未送達警示：狀態停在 picked / delivering，配送日期是今天
-  const { data: undeliveredToday = [] } = trpc.dayone.orders.list.useQuery({
-    tenantId: TENANT_ID,
-    deliveryDate: todayStr(),
-    status: undefined,
-  });
-  const undeliveredOrders = (undeliveredToday as any[]).filter(
-    (o: any) => o.status === "picked" || o.status === "delivering"
-  );
+  // 今日未送達警示：從主查詢結果過濾（僅單日模式且日期為今天時才有意義）
+  const undeliveredOrders = (dateMode === "single" && date === todayStr())
+    ? (orders as any[] ?? []).filter((o: any) => o.status === "picked" || o.status === "delivering")
+    : [];
 
   function EditableOrderItems({ orderId, orderStatus, colSpan = 7, mobile = false }: { orderId: number; orderStatus: string; colSpan?: number; mobile?: boolean }) {
     const utils = trpc.useUtils();

@@ -62,7 +62,8 @@ function SupplementOrderDialog({ onClose }: { onClose: () => void }) {
   });
 
   const totalAmt = items.reduce((s, i) => s + (Number(i.qty) || 0) * (Number(i.unitPrice) || 0), 0);
-  const payLabel = !customerId && !useTempCustomer ? "—" :
+  const payLabel = useTempCustomer ? "現收" :
+    !customerId ? "—" :
     selectedCustomer?.settlementCycle === "monthly" ? "月結" :
     selectedCustomer?.settlementCycle === "weekly" ? "週結" : "現收";
 
@@ -158,8 +159,8 @@ function SupplementOrderDialog({ onClose }: { onClose: () => void }) {
             <div className="text-right text-xs text-stone-500 mt-1">合計：<strong className="text-stone-800">NT$ {totalAmt.toLocaleString()}</strong>　{payLabel}</div>
           </div>
 
-          {/* 現收金額（僅現收客戶） */}
-          {(!selectedCustomer || (!["monthly","weekly"].includes(selectedCustomer.settlementCycle))) && (
+          {/* 現收金額（臨時客戶預設現收；路線客戶非月結/週結才顯示） */}
+          {(useTempCustomer || (customerId && !["monthly","weekly"].includes(selectedCustomer?.settlementCycle ?? ""))) && (
             <div>
               <label className="mb-1 block text-xs font-medium text-stone-600">現場收款</label>
               <Input type="number" min={0} className="rounded-2xl" value={cashCollected}

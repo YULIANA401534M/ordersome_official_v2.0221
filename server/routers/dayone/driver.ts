@@ -181,6 +181,15 @@ export const dyDriverRouter = router({
           paidAmount: Number(order.paidAmount ?? 0),
           dueDate: calcDueDate(twDate, order.settlementCycle, order.overdueDays),
         });
+        // 同步更新派車單站點的收款金額（確保派車工作台數字與 AR 一致）
+        const cashVal = input.cashCollected;
+        const totalVal = Number(order.totalAmount ?? 0);
+        const newPayStatus = cashVal >= totalVal && totalVal > 0 ? "paid" : cashVal > 0 ? "partial" : "unpaid";
+        await client.execute(
+          `UPDATE dy_dispatch_items SET cashCollected=?, paymentStatus=?
+           WHERE orderId=? AND tenantId=?`,
+          [cashVal, newPayStatus, input.orderId, input.tenantId]
+        );
       }
 
       return { success: true };
