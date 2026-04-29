@@ -397,9 +397,10 @@ function DispatchDetailSheet({ dispatchId, onClose }: { dispatchId: number; onCl
 
   const confirmHandover = trpc.dayone.dispatch.confirmHandover.useMutation({
     onSuccess: (data) => {
-      const diffText = data.diff !== 0
-        ? `，差額 NT$ ${Math.abs(data.diff).toLocaleString()}${data.diff < 0 ? "（少收）" : "（多收）"}`
-        : "，金額吻合";
+      const diff = data.cashDiff ?? 0;
+      let diffText = "，金額吻合";
+      if (diff < 0) diffText = `，少收 NT$ ${Math.abs(diff).toLocaleString()}（已記帳，留待補收）`;
+      if (diff > 0) diffText = `，多收 NT$ ${diff.toLocaleString()}（已存入客戶預付餘額）`;
       toast.success(`點收完成${diffText}。回庫 ${data.pendingReturnCount} 項，應收結清 ${data.cashArSettled} 筆`);
       setHandoverCash("");
       setHandoverAdminNote("");
@@ -1108,31 +1109,41 @@ body { margin: 0; padding: 16px; background: white; font-family: 'Noto Sans TC',
                         </div>
 
                         {diff !== 0 && handoverCash !== "" && (
-                          <div className="rounded-2xl bg-rose-100 px-3 py-2 text-xs font-semibold text-rose-700">
-                            差額 NT$ {Math.abs(diff).toLocaleString()}
-                            {diff < 0 ? "（少收）" : "（多收）"}
+                          <div className={`rounded-2xl px-3 py-2 text-xs font-semibold ${diff < 0 ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-700"}`}>
+                            {diff < 0
+                              ? `少收 NT$ ${Math.abs(diff).toLocaleString()}，請填寫原因後送出，AR 將保留待補收`
+                              : `多收 NT$ ${diff.toLocaleString()}，請填寫原因後送出，溢收將存入客戶預付餘額`}
                           </div>
                         )}
 
                         <div>
-                          <label className="mb-1 block text-xs text-stone-500">備註（差額說明等）</label>
+                          <label className="mb-1 block text-xs text-stone-500">
+                            備註
+                            {diff !== 0 && handoverCash !== "" && (
+                              <span className="ml-1 text-rose-600 font-semibold">（差額必填）</span>
+                            )}
+                          </label>
                           <input
                             type="text"
                             value={handoverAdminNote}
                             onChange={(e) => setHandoverAdminNote(e.target.value)}
-                            placeholder="例如：A客戶少付100下次補"
-                            className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-400"
+                            placeholder={diff !== 0 ? "必填：請說明差額原因，例如「A客戶少付100下次補」" : "選填：備註說明"}
+                            className={`w-full rounded-2xl border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-400 bg-white ${diff !== 0 && handoverCash !== "" && !handoverAdminNote.trim() ? "border-rose-400 ring-1 ring-rose-300" : "border-stone-200"}`}
                           />
                         </div>
 
                         <Button
-                          className="w-full bg-rose-600 text-white hover:bg-rose-700"
-                          disabled={confirmHandover.isPending || handoverCash === ""}
+                          className="w-full bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-50"
+                          disabled={
+                            confirmHandover.isPending ||
+                            handoverCash === "" ||
+                            (diff !== 0 && !handoverAdminNote.trim())
+                          }
                           onClick={() => confirmHandover.mutate({
                             dispatchOrderId: dispatchId,
                             tenantId: TENANT_ID,
                             cashConfirmed: Number(handoverCash),
-                            adminNote: handoverAdminNote || undefined,
+                            adminNote: handoverAdminNote.trim() || "無備註",
                           })}
                         >
                           {confirmHandover.isPending ? "確認中..." : "確認點收，完成今日派車"}

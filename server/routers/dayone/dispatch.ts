@@ -1057,13 +1057,13 @@ export const dyDispatchRouter = router({
       };
     }),
 
-  // 管理員點收確認：一鍵完成剩貨入庫 + 現收應收結清 + 派車單完成
+  // 管理員點收確認：一鍵完成剩貨入庫 + 現收應收結清 + 溢收存預付餘額 + 派車單完成
   confirmHandover: dyAdminProcedure
     .input(z.object({
       dispatchOrderId: z.number(),
       tenantId: z.number(),
       cashConfirmed: z.number().min(0),
-      adminNote: z.string().optional(),
+      adminNote: z.string().min(1), // 差額時前端強制填寫，正常時亦接受空字串
     }))
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
@@ -1081,31 +1081,36 @@ export const dyDispatchRouter = router({
       const dispatch = (dispatchRows as any[])[0];
       if (!dispatch) throw new TRPCError({ code: "NOT_FOUND", message: "找不到派車單" });
 
-      // 1. 確認剩貨入庫（把 pending_returns 轉為 received，寫庫存）
+      // 1. 確認剩貨入庫
       const [pendingRows] = await client.execute(
         `SELECT * FROM dy_pending_returns WHERE tenantId=? AND dispatchOrderId=? AND status='pending'`,
         [input.tenantId, input.dispatchOrderId]
       );
 
-      // 2. 現收應收帳款結清：只結清「逐筆結(per_delivery)」的 AR
+      // 2. 現收 AR：只結清「逐筆結(per_delivery)」，同時取得 customerId 以便溢收時寫回
       const [cashArRows] = await client.execute(
-        `SELECT ar.id, ar.amount, ar.paidAmount
+        `SELECT ar.id, ar.amount, ar.paidAmount, o.customerId
          FROM dy_ar_records ar
          JOIN dy_orders o ON o.id = ar.orderId
          JOIN dy_dispatch_items di ON di.orderId = o.id
          JOIN dy_customers c ON c.id = o.customerId
          WHERE di.dispatchOrderId=? AND ar.tenantId=?
            AND ar.status IN ('unpaid','partial')
-           AND c.settlementCycle = 'per_delivery'`,
+           AND c.settlementCycle = 'per_delivery'
+         ORDER BY ar.id ASC`,
         [input.dispatchOrderId, input.tenantId]
       );
 
+      const systemExpected = Number(dispatch.totalCollected ?? 0);
+      const cashDiff = input.cashConfirmed - systemExpected; // 正=多收 負=少收
+      let surplusStored = false;
       const noteText = input.adminNote
-        ? `管理員點收確認。備註：${input.adminNote}`
+        ? `管理員點收確認，現金 NT$${input.cashConfirmed.toLocaleString()}。${input.adminNote}`
         : `管理員點收確認，現金 NT$${input.cashConfirmed.toLocaleString()}`;
 
       await client.execute(`START TRANSACTION`);
       try {
+        // ── 剩貨入庫 ───────────────────────────────────────────────────
         for (const ret of pendingRows as any[]) {
           await client.execute(
             `UPDATE dy_inventory SET currentQty = currentQty + ?, updatedAt=NOW()
@@ -1123,41 +1128,61 @@ export const dyDispatchRouter = router({
           );
         }
 
-        // 依序結清：AR 按 id 排序，逐筆從 remainingCash 扣除，現金用完則後面的維持原狀
+        // ── AR 分配：逐筆從 remainingCash 扣，不足則 partial ──────────
         let remainingCash = input.cashConfirmed;
-
         for (const ar of cashArRows as any[]) {
           if (remainingCash <= 0) break;
           const unpaid = Number(ar.amount) - Number(ar.paidAmount);
-          const actualAllocate = Math.min(unpaid, remainingCash);
-          remainingCash -= actualAllocate;
-          const newPaid = Number(ar.paidAmount) + actualAllocate;
+          const allocated = Math.min(unpaid, remainingCash);
+          remainingCash -= allocated;
+          const newPaid = Number(ar.paidAmount) + allocated;
           const newStatus = newPaid >= Number(ar.amount) ? "paid" : newPaid > 0 ? "partial" : "unpaid";
           await client.execute(
             `UPDATE dy_ar_records
-             SET paidAmount=?, status=?, paidAt=IF(?='paid',NOW(),paidAt), paymentMethod='cash', adminNote=?, updatedAt=NOW()
+             SET paidAmount=?, status=?, paidAt=IF(?='paid',NOW(),paidAt),
+                 paymentMethod='cash', adminNote=?, updatedAt=NOW()
              WHERE id=? AND tenantId=?`,
             [newPaid, newStatus, newStatus, noteText, ar.id, input.tenantId]
           );
           await client.execute(
-            `UPDATE dy_orders o
-             JOIN dy_ar_records ar ON ar.orderId = o.id
+            `UPDATE dy_orders o JOIN dy_ar_records ar2 ON ar2.orderId=o.id
              SET o.paidAmount=?, o.paymentStatus=?, o.updatedAt=NOW()
-             WHERE ar.id=? AND o.tenantId=?`,
+             WHERE ar2.id=? AND o.tenantId=?`,
             [newPaid, newStatus, ar.id, input.tenantId]
           );
         }
 
-        // 3. 派車單下所有 picked 訂單標為 delivered
+        // ── 溢收處理：remainingCash > 0 → 存入客戶預付餘額 ───────────
+        if (remainingCash > 0 && (cashArRows as any[]).length > 0) {
+          const customerIds = [...new Set((cashArRows as any[]).map((r: any) => Number(r.customerId)))];
+          const perCustomer = remainingCash / customerIds.length;
+          for (const cid of customerIds) {
+            await client.execute(
+              `UPDATE dy_customers SET creditBalance = creditBalance + ?, updatedAt=NOW()
+               WHERE id=? AND tenantId=?`,
+              [perCustomer, cid, input.tenantId]
+            );
+          }
+          surplusStored = true;
+        }
+
+        // ── work_logs 補記差額 ─────────────────────────────────────────
         await client.execute(
-          `UPDATE dy_orders o
-           JOIN dy_dispatch_items di ON di.orderId = o.id
+          `UPDATE dy_work_logs
+           SET cashDiff=?, diffNote=?, updatedAt=NOW()
+           WHERE dispatchOrderId=? AND tenantId=?`,
+          [cashDiff, input.adminNote || null, input.dispatchOrderId, input.tenantId]
+        );
+
+        // ── picked → delivered ────────────────────────────────────────
+        await client.execute(
+          `UPDATE dy_orders o JOIN dy_dispatch_items di ON di.orderId=o.id
            SET o.status='delivered', o.updatedAt=NOW()
            WHERE di.dispatchOrderId=? AND o.tenantId=? AND o.status='picked'`,
           [input.dispatchOrderId, input.tenantId]
         );
 
-        // 4. 派車單標已完成
+        // ── 派車單完成 ────────────────────────────────────────────────
         await client.execute(
           `UPDATE dy_dispatch_orders
            SET status='completed', handoverConfirmedAt=NOW(), handoverConfirmedBy=?, completedAt=NOW(), updatedAt=NOW()
@@ -1171,15 +1196,14 @@ export const dyDispatchRouter = router({
         throw err;
       }
 
-      const diff = input.cashConfirmed - Number(dispatch.totalCollected ?? 0);
-
       return {
         success: true,
         pendingReturnCount: (pendingRows as any[]).length,
         cashArSettled: (cashArRows as any[]).length,
         cashConfirmed: input.cashConfirmed,
-        systemExpected: Number(dispatch.totalCollected ?? 0),
-        diff,
+        systemExpected,
+        cashDiff,
+        surplusStored,
       };
     }),
 
