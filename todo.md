@@ -1,6 +1,6 @@
 # todo.md — OrderSome 待辦清單
 
-> 上次更新：2026-04-29（v7.26）
+> 上次更新：2026-04-29（v7.27）
 > 有新想法就加在對應 P 等級下面。要開始做某件事，先把它標為 `[ 進行中 ]`，完成後打 `[x]`。
 > 已完成的項目定期移到底部「已完成」區。
 
@@ -33,7 +33,7 @@
 - [ ] **簽名強制驗證**：已修邏輯（localSignatureUrl），需用新訂單實測確認無法繞過
 - [ ] **月結客戶補單合併後，簽名頁流程**：合併到未完成訂單後，司機去現場時需正常走 DriverOrderDetail 簽名→送達，需端對端驗收
 
-### 大永上線前驗收（程式碼靜態審查已通過 v7.26，剩實際跑流程）
+### 大永上線前驗收（程式碼靜態審查已通過 v7.27，剩實際跑流程）
 
 - [ ] 剩貨回庫待驗 → 管理員確認 → 庫存數字增加
 - [ ] 進貨簽收 → AP 應付出現 → 確認入倉 → 庫存增加
@@ -132,7 +132,7 @@
 - [x] 補單 deliveryDate 時區修正（UTC→台灣+8h，v7.00）
 - [x] 回庫數量上限修正：shippedQty + extraQty − supplementUsed（v7.01）
 - [x] 補單自動合併同客戶未完成訂單（A方案，v7.02）
-- [x] 大永全站三輪靜態審查（時區/DECIMAL/ensureSchema/欄位名/權限，v7.23–v7.26）
+- [x] 大永全站三輪靜態審查（時區/DECIMAL/ensureSchema/欄位名/權限，v7.23–v7.27）
   - 修正：CONVERT_TZ 時區（orders/ar/dispatch/driver/reports）
   - 修正：AR 逾期標記補 partial + CURDATE()
   - 修正：帳齡分析 DATEDIFF 全改 CURDATE()
@@ -140,3 +140,8 @@
   - 修正：deliverBoxes/form.qty/calcDueDate 動態 import
   - 修正：LiffMyOrders 金額計算 NaN（TiDB DECIMAL string）
   - 修正：DriverLayout 補角色守衛（非 driver/super_admin 顯示友善提示）
+  - 修正：ar.ts monthlyStatement parseFloat→Number（v7.27）
+  - 修正：ap.ts offset 加 Math.floor（v7.27）
+  - 修正：orders.ts cancel/return 刪 AR+dispatch_items 加 transaction（v7.27）
+  - 修正：customers.ts 刪客戶前先清 dy_customer_prices（v7.27）
+  - 修正：reports.ts monthlyRevenue SELECT DATE 補 CONVERT_TZ（v7.27）
