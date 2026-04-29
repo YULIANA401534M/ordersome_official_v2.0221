@@ -297,17 +297,24 @@ export const dyOrdersRouter = router({
 
       // 狀態改為 cancelled 或 returned → 刪除應收帳款（貨物未送出，帳款不應存在）
       if (input.status === "cancelled" || input.status === "returned") {
-        await client.execute(
-          `DELETE FROM dy_ar_records WHERE orderId=? AND tenantId=?`,
-          [input.id, input.tenantId]
-        );
-        // 同步清除 draft 派車單的站點（已列印/配送中的不動，由 generateDispatch 處理或司機手動處理）
-        await client.execute(
-          `DELETE di FROM dy_dispatch_items di
-           JOIN dy_dispatch_orders ddo ON ddo.id = di.dispatchOrderId
-           WHERE di.orderId = ? AND di.tenantId = ? AND ddo.status = 'draft'`,
-          [input.id, input.tenantId]
-        );
+        await client.execute(`START TRANSACTION`);
+        try {
+          await client.execute(
+            `DELETE FROM dy_ar_records WHERE orderId=? AND tenantId=?`,
+            [input.id, input.tenantId]
+          );
+          // 同步清除 draft 派車單的站點（已列印/配送中的不動，由 generateDispatch 處理或司機手動處理）
+          await client.execute(
+            `DELETE di FROM dy_dispatch_items di
+             JOIN dy_dispatch_orders ddo ON ddo.id = di.dispatchOrderId
+             WHERE di.orderId = ? AND di.tenantId = ? AND ddo.status = 'draft'`,
+            [input.id, input.tenantId]
+          );
+          await client.execute(`COMMIT`);
+        } catch (err) {
+          await client.execute(`ROLLBACK`);
+          throw err;
+        }
       }
 
       return { success: true };

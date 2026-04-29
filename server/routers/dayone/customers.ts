@@ -161,6 +161,10 @@ export const dyCustomersRouter = router({
         throw new TRPCError({ code: 'BAD_REQUEST', message: `此客戶有 ${orderCount} 筆訂單，無法刪除` });
       }
       await client.execute(
+        `DELETE FROM dy_customer_prices WHERE customerId=? AND tenantId=?`,
+        [input.id, input.tenantId]
+      );
+      await client.execute(
         `DELETE FROM dy_customers WHERE id=? AND tenantId=?`,
         [input.id, input.tenantId]
       );

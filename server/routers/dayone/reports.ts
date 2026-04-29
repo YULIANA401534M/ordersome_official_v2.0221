@@ -68,7 +68,7 @@ export const dyReportsRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
       const [rows] = await (db as any).$client.execute(
         `SELECT
-           DATE(o.deliveryDate) AS date,
+           DATE(CONVERT_TZ(o.deliveryDate,'+00:00','+08:00')) AS date,
            COUNT(DISTINCT o.id) AS orders,
            SUM(o.totalAmount) AS invoiced,
            COALESCE(SUM(ar.paidAmount), 0) AS collected

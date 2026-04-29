@@ -97,8 +97,8 @@ export const dyArRouter = router({
       const record = (rows as any[])[0];
       if (!record) throw new TRPCError({ code: "NOT_FOUND" });
 
-      const totalAmount = parseFloat(record.amount);
-      const currentPaid = parseFloat(record.paidAmount ?? 0);
+      const totalAmount = Number(record.amount ?? 0);
+      const currentPaid = Number(record.paidAmount ?? 0);
       const nextPaidAmount = Math.min(totalAmount, currentPaid + input.paidAmount);
       const newStatus = normalizeArStatus(totalAmount, nextPaidAmount);
 
@@ -480,8 +480,8 @@ export const dyArRouter = router({
       const boxBalance = (boxRows as any[])[0]?.currentBalance ?? 0;
 
       // totalAmount 和 paidAmount 都從 AR 讀，確保同一來源
-      const totalAmount = arRecords.reduce((s: number, r: any) => s + parseFloat(r.amount ?? 0), 0);
-      const paidAmount = arRecords.reduce((s: number, r: any) => s + parseFloat(r.paidAmount ?? 0), 0);
+      const totalAmount = arRecords.reduce((s: number, r: any) => s + Number(r.amount ?? 0), 0);
+      const paidAmount = arRecords.reduce((s: number, r: any) => s + Number(r.paidAmount ?? 0), 0);
       const unpaidAmount = totalAmount - paidAmount;
 
       return { customer, orders, totalAmount, paidAmount, unpaidAmount, boxBalance, arRecords };

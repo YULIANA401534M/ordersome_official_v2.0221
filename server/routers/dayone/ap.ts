@@ -22,7 +22,7 @@ export const dyApRouter = router({
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
       }
 
-      const offset = (input.page - 1) * 20;
+      const offset = Math.floor((input.page - 1) * 20);
       let sql = `SELECT ap.*, s.name AS supplierName,
                         pr.receiptDate
                  FROM dy_ap_records ap
