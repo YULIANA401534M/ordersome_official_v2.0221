@@ -178,6 +178,7 @@ export default function DayoneInventoryContent({ tenantId }: { tenantId: number 
                     </td>
                     <td className="px-4 py-3 text-xs text-stone-500">
                       {new Date(item.reportedAt).toLocaleString("zh-TW", {
+                        timeZone: "Asia/Taipei",
                         month: "2-digit",
                         day: "2-digit",
                         hour: "2-digit",
@@ -338,7 +339,7 @@ export default function DayoneInventoryContent({ tenantId }: { tenantId: number 
                         <td className="px-4 py-3 font-semibold text-stone-900">{incoming ? `+${movement.qty}` : movement.qty}</td>
                         <td className="px-4 py-3 text-xs text-stone-500">{movement.note ?? "-"}</td>
                         <td className="px-4 py-3 text-xs text-stone-500">
-                          {new Date(movement.createdAt).toLocaleString("zh-TW", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                          {new Date(movement.createdAt).toLocaleString("zh-TW", { timeZone: "Asia/Taipei", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
                         </td>
                       </tr>
                     );

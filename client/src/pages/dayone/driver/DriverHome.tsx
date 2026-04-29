@@ -21,7 +21,7 @@ export default function DriverHome() {
   const done = orders.filter((o: any) => o.status === "delivered").length;
   const collected = orders.reduce((sum: number, order: any) => sum + Number(order.cashCollected ?? 0), 0);
 
-  const today = new Date().toLocaleDateString("zh-TW", { month: "long", day: "numeric", weekday: "long" });
+  const today = new Date().toLocaleDateString("zh-TW", { timeZone: "Asia/Taipei", month: "long", day: "numeric", weekday: "long" });
 
   return (
     <DriverLayout title="配送主控台">

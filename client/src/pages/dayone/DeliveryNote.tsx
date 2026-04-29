@@ -32,7 +32,7 @@ export default function DeliveryNote() {
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
           <div>訂購人：<strong>{order.customerName}</strong></div>
           <div>單號：<strong>{order.orderNo}</strong></div>
-          <div>日期：<strong>{new Date(order.deliveryDate).toLocaleDateString("zh-TW")}</strong></div>
+          <div>日期：<strong>{new Date(order.deliveryDate).toLocaleDateString("zh-TW", { timeZone: "Asia/Taipei" })}</strong></div>
         </div>
 
         <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 16 }}>

@@ -11,7 +11,7 @@ function fmtMoney(v: number | string | null | undefined) {
 }
 function fmtDate(v: string | null | undefined) {
   if (!v) return "-";
-  return new Date(v).toLocaleDateString("zh-TW");
+  return new Date(v).toLocaleDateString("zh-TW", { timeZone: "Asia/Taipei" });
 }
 
 const ORDER_STATUS: Record<string, { label: string; cls: string }> = {
@@ -49,7 +49,7 @@ export default function DayonePortalHome() {
           <h1 className="text-lg font-bold text-gray-900">
             您好，{(me as any)?.customer?.name ?? "客戶"} 👋
           </h1>
-          <p className="text-xs text-gray-400">{new Date().toLocaleDateString("zh-TW", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
+          <p className="text-xs text-gray-400">{new Date().toLocaleDateString("zh-TW", { timeZone: "Asia/Taipei", weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
         </div>
 
         {/* 摘要卡片 */}
