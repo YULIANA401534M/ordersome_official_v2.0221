@@ -49,10 +49,20 @@ export const dyDriverRouter = router({
          FROM dy_orders o
          JOIN dy_customers c ON o.customerId = c.id
          LEFT JOIN dy_districts dist ON o.districtId = dist.id
-         LEFT JOIN dy_dispatch_items di ON di.orderId = o.id AND di.tenantId = o.tenantId
-         WHERE o.tenantId = ? AND o.driverId = ? AND DATE(CONVERT_TZ(o.deliveryDate,'+00:00','+08:00')) = ?
+         LEFT JOIN dy_dispatch_items di
+           ON di.orderId = o.id AND di.tenantId = o.tenantId
+           AND di.dispatchOrderId = (
+             SELECT ddo2.id FROM dy_dispatch_orders ddo2
+             WHERE ddo2.tenantId = o.tenantId AND ddo2.driverId = ?
+               AND DATE(CONVERT_TZ(ddo2.dispatchDate,'+00:00','+08:00')) = ?
+               AND ddo2.status IN ('draft','printed','in_progress','pending_handover')
+             ORDER BY ddo2.id DESC LIMIT 1
+           )
+         WHERE o.tenantId = ? AND o.driverId = ?
+           AND DATE(CONVERT_TZ(o.deliveryDate,'+00:00','+08:00')) = ?
+           AND o.status NOT IN ('cancelled','delivered')
          ORDER BY COALESCE(di.stopSequence, 9999) ASC, o.id ASC`,
-        [input.tenantId, driver.id, date]
+        [driver.id, date, input.tenantId, driver.id, date]
       );
       return rows as any[];
     }),

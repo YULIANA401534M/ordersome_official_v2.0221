@@ -1148,7 +1148,16 @@ export const dyDispatchRouter = router({
           );
         }
 
-        // 3. 派車單標已完成
+        // 3. 派車單下所有 picked 訂單標為 delivered
+        await client.execute(
+          `UPDATE dy_orders o
+           JOIN dy_dispatch_items di ON di.orderId = o.id
+           SET o.status='delivered', o.updatedAt=NOW()
+           WHERE di.dispatchOrderId=? AND o.tenantId=? AND o.status='picked'`,
+          [input.dispatchOrderId, input.tenantId]
+        );
+
+        // 4. 派車單標已完成
         await client.execute(
           `UPDATE dy_dispatch_orders
            SET status='completed', handoverConfirmedAt=NOW(), handoverConfirmedBy=?, completedAt=NOW(), updatedAt=NOW()
