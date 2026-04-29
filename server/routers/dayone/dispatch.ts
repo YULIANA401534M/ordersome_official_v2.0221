@@ -1166,13 +1166,19 @@ export const dyDispatchRouter = router({
           surplusStored = true;
         }
 
-        // ── work_logs 補記差額 ─────────────────────────────────────────
-        await client.execute(
-          `UPDATE dy_work_logs
-           SET cashDiff=?, diffNote=?, updatedAt=NOW()
-           WHERE dispatchOrderId=? AND tenantId=?`,
-          [cashDiff, input.adminNote || null, input.dispatchOrderId, input.tenantId]
+        // ── work_logs 補記差額（dy_work_logs 無 updatedAt 欄位）─────────
+        // 有 work_log 才更新；沒有 work_log（司機未日結直接點收）則略過，不影響主流程
+        const [wlRows] = await client.execute(
+          `SELECT id FROM dy_work_logs WHERE dispatchOrderId=? AND tenantId=? LIMIT 1`,
+          [input.dispatchOrderId, input.tenantId]
         );
+        if ((wlRows as any[]).length > 0) {
+          await client.execute(
+            `UPDATE dy_work_logs SET cashDiff=?, diffNote=?
+             WHERE dispatchOrderId=? AND tenantId=?`,
+            [cashDiff, input.adminNote || null, input.dispatchOrderId, input.tenantId]
+          );
+        }
 
         // ── picked → delivered ────────────────────────────────────────
         await client.execute(
