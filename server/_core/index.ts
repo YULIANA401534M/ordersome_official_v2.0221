@@ -680,7 +680,7 @@ ${allUrls.join("\n")}
         const dispatchDate = twNow.toISOString().slice(0, 10);
         const tenantId = 90004;
 
-        // 查當日訂單
+        // 查當日尚未進入任何派車單的訂單（防重複：NOT EXISTS）
         const [orderRows] = await client.execute(
           `SELECT o.*, c.settlementCycle, c.overdueDays, c.customerLevel,
                   dist.sortOrder, d.routeCode AS driverRouteCode
@@ -688,14 +688,23 @@ ${allUrls.join("\n")}
            JOIN dy_customers c ON o.customerId = c.id
            LEFT JOIN dy_districts dist ON o.districtId = dist.id
            LEFT JOIN dy_drivers d ON o.driverId = d.id
-           WHERE o.tenantId=? AND o.deliveryDate=? AND o.status != 'cancelled'
+           WHERE o.tenantId=?
+             AND DATE(CONVERT_TZ(o.deliveryDate,'+00:00','+08:00'))=?
+             AND o.status IN ('pending','assigned')
+             AND NOT EXISTS (
+               SELECT 1 FROM dy_dispatch_items di
+               JOIN dy_dispatch_orders ddo ON ddo.id = di.dispatchOrderId AND ddo.tenantId = di.tenantId
+               WHERE di.tenantId = o.tenantId
+                 AND di.orderId = o.id
+                 AND ddo.status IN ('draft','printed','in_progress','pending_handover','completed')
+             )
            ORDER BY o.driverId, dist.sortOrder`,
           [tenantId, dispatchDate]
         );
         const orders = orderRows as any[];
 
         if (orders.length === 0) {
-          console.log(`[Cron] 07:00 dispatch: 當日無訂單 (${dispatchDate})`);
+          console.log(`[Cron] 07:00 dispatch: 當日無新訂單需加入 (${dispatchDate})`);
           return;
         }
 
@@ -710,16 +719,40 @@ ${allUrls.join("\n")}
         const generated: number[] = [];
         for (const [driverId, driverOrders] of Array.from(driverMap.entries())) {
           const routeCode = driverOrders[0]?.driverRouteCode ?? "R00";
-          const [doResult] = await client.execute(
-            `INSERT INTO dy_dispatch_orders
-             (tenantId, dispatchDate, driverId, routeCode, status, generatedAt, createdAt, updatedAt)
-             VALUES (?,?,?,?,'draft',NOW(),NOW(),NOW())`,
-            [tenantId, dispatchDate, driverId, routeCode]
-          );
-          const dispatchOrderId = (doResult as any).insertId;
 
-          let stopSeq = 1;
+          // 複用既有 draft，沒有才新建（防止每次觸發都建新單）
+          const [existingRows] = await client.execute(
+            `SELECT id FROM dy_dispatch_orders
+             WHERE tenantId=? AND dispatchDate=? AND driverId=? AND status='draft' LIMIT 1`,
+            [tenantId, dispatchDate, driverId]
+          );
+          let dispatchOrderId: number;
+          if ((existingRows as any[]).length > 0) {
+            dispatchOrderId = Number((existingRows as any[])[0].id);
+          } else {
+            const [doResult] = await client.execute(
+              `INSERT INTO dy_dispatch_orders
+               (tenantId, dispatchDate, driverId, routeCode, status, generatedAt, createdAt, updatedAt)
+               VALUES (?,?,?,?,'draft',NOW(),NOW(),NOW())`,
+              [tenantId, dispatchDate, driverId, routeCode]
+            );
+            dispatchOrderId = (doResult as any).insertId;
+          }
+
+          const [maxSeqRows] = await client.execute(
+            `SELECT COALESCE(MAX(stopSequence), 0) AS maxSeq FROM dy_dispatch_items WHERE dispatchOrderId=?`,
+            [dispatchOrderId]
+          );
+          let stopSeq = Number((maxSeqRows as any[])[0]?.maxSeq ?? 0) + 1;
+
           for (const order of driverOrders) {
+            // 防重複：同訂單已在此派車單內則跳過
+            const [dupCheck] = await client.execute(
+              `SELECT COUNT(*) AS cnt FROM dy_dispatch_items WHERE dispatchOrderId=? AND orderId=?`,
+              [dispatchOrderId, order.id]
+            );
+            if (Number((dupCheck as any[])[0]?.cnt ?? 0) > 0) continue;
+
             const [boxRows] = await client.execute(
               `SELECT currentBalance FROM dy_box_ledger WHERE tenantId=? AND customerId=?`,
               [tenantId, order.customerId]
@@ -738,24 +771,9 @@ ${allUrls.join("\n")}
               [dispatchOrderId, tenantId, order.id, order.customerId, stopSeq++, prevBoxes, prevBoxes, paymentStatus]
             );
 
-            // 建立 AR
-            let dueDate = dispatchDate;
-            if (settlementCycle === "monthly") {
-              const d = new Date(dispatchDate);
-              const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-              lastDay.setDate(lastDay.getDate() + (order.overdueDays ?? 5));
-              dueDate = lastDay.toISOString().slice(0, 10);
-            } else if (settlementCycle === "weekly") {
-              const d = new Date(dispatchDate);
-              d.setDate(d.getDate() + 7);
-              dueDate = d.toISOString().slice(0, 10);
-            }
-
             await client.execute(
-              `INSERT INTO dy_ar_records
-               (tenantId, orderId, customerId, amount, paidAmount, status, dueDate, createdAt, updatedAt)
-               VALUES (?,?,?,?,0,'unpaid',?,NOW(),NOW())`,
-              [tenantId, order.id, order.customerId, order.totalAmount, dueDate]
+              `UPDATE dy_orders SET status='assigned', updatedAt=NOW() WHERE id=? AND tenantId=?`,
+              [order.id, tenantId]
             );
           }
           generated.push(dispatchOrderId);
