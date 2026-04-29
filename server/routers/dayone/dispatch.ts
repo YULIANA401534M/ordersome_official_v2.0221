@@ -495,51 +495,60 @@ export const dyDispatchRouter = router({
          WHERE di.dispatchOrderId=? AND di.tenantId=? AND di.orderId IS NOT NULL`,
         [input.id, input.tenantId]
       );
-      for (const item of allItemRows[0] as any[]) {
+
+      await client.execute(`START TRANSACTION`);
+      try {
+        for (const item of allItemRows[0] as any[]) {
+          await client.execute(
+            `UPDATE dy_inventory
+             SET currentQty = GREATEST(0, currentQty - ?), updatedAt=NOW()
+             WHERE tenantId=? AND productId=?`,
+            [item.qty, input.tenantId, item.productId]
+          );
+          await client.execute(
+            `INSERT INTO dy_stock_movements
+             (tenantId, productId, type, qty, refId, refType, note, createdAt)
+             VALUES (?,?,'out',?,?,'dispatch_print',?,NOW())`,
+            [input.tenantId, item.productId, item.qty, input.id, `派車單列印扣庫 #${item.orderId}`]
+          );
+        }
+
         await client.execute(
-          `UPDATE dy_inventory
-           SET currentQty = GREATEST(0, currentQty - ?), updatedAt=NOW()
-           WHERE tenantId=? AND productId=?`,
-          [item.qty, input.tenantId, item.productId]
+          `UPDATE dy_orders o
+           JOIN dy_dispatch_items di ON di.orderId = o.id
+           SET o.status='picked', o.updatedAt=NOW()
+           WHERE di.dispatchOrderId=? AND o.tenantId=?`,
+          [input.id, input.tenantId]
         );
+
+        // 扣備用箱庫存
+        for (const extra of extraRows as any[]) {
+          await client.execute(
+            `UPDATE dy_inventory
+             SET currentQty = GREATEST(0, currentQty - ?), updatedAt=NOW()
+             WHERE tenantId=? AND productId=?`,
+            [extra.totalQty, input.tenantId, extra.productId]
+          );
+          await client.execute(
+            `INSERT INTO dy_stock_movements
+             (tenantId, productId, type, qty, refId, refType, note, createdAt)
+             VALUES (?,?,'out',?,?,'dispatch_extra',?,NOW())`,
+            [input.tenantId, extra.productId, extra.totalQty, input.id, `備用箱出車扣庫 派車單#${input.id}`]
+          );
+        }
+
         await client.execute(
-          `INSERT INTO dy_stock_movements
-           (tenantId, productId, type, qty, refId, refType, note, createdAt)
-           VALUES (?,?,'out',?,?,'dispatch_print',?,NOW())`,
-          [input.tenantId, item.productId, item.qty, input.id, `派車單列印扣庫 #${item.orderId}`]
+          `UPDATE dy_dispatch_orders
+           SET status='printed', printedAt=NOW(), updatedAt=NOW()
+           WHERE id=? AND tenantId=?`,
+          [input.id, input.tenantId]
         );
+
+        await client.execute(`COMMIT`);
+      } catch (err) {
+        await client.execute(`ROLLBACK`);
+        throw err;
       }
-
-      await client.execute(
-        `UPDATE dy_orders o
-         JOIN dy_dispatch_items di ON di.orderId = o.id
-         SET o.status='picked', o.updatedAt=NOW()
-         WHERE di.dispatchOrderId=? AND o.tenantId=?`,
-        [input.id, input.tenantId]
-      );
-
-      // 扣備用箱庫存
-      for (const extra of extraRows as any[]) {
-        await client.execute(
-          `UPDATE dy_inventory
-           SET currentQty = GREATEST(0, currentQty - ?), updatedAt=NOW()
-           WHERE tenantId=? AND productId=?`,
-          [extra.totalQty, input.tenantId, extra.productId]
-        );
-        await client.execute(
-          `INSERT INTO dy_stock_movements
-           (tenantId, productId, type, qty, refId, refType, note, createdAt)
-           VALUES (?,?,'out',?,?,'dispatch_extra',?,NOW())`,
-          [input.tenantId, extra.productId, extra.totalQty, input.id, `備用箱出車扣庫 派車單#${input.id}`]
-        );
-      }
-
-      await client.execute(
-        `UPDATE dy_dispatch_orders
-         SET status='printed', printedAt=NOW(), updatedAt=NOW()
-         WHERE id=? AND tenantId=?`,
-        [input.id, input.tenantId]
-      );
 
       return { success: true, alreadyPrinted: false, pendingAmountOrders: [], stockWarnings: [] };
     }),
@@ -1077,25 +1086,8 @@ export const dyDispatchRouter = router({
         `SELECT * FROM dy_pending_returns WHERE tenantId=? AND dispatchOrderId=? AND status='pending'`,
         [input.tenantId, input.dispatchOrderId]
       );
-      for (const ret of pendingRows as any[]) {
-        await client.execute(
-          `UPDATE dy_inventory SET currentQty = currentQty + ?, updatedAt=NOW()
-           WHERE tenantId=? AND productId=?`,
-          [Number(ret.qty), input.tenantId, ret.productId]
-        );
-        await client.execute(
-          `INSERT INTO dy_stock_movements (tenantId, productId, type, qty, refId, refType, note, createdAt)
-           VALUES (?,?,'in',?,?,'pending_return_confirmed',?,NOW())`,
-          [input.tenantId, ret.productId, Number(ret.qty), ret.id, `管理員點收確認回庫 #${input.dispatchOrderId}`]
-        );
-        await client.execute(
-          `UPDATE dy_pending_returns SET status='received', receivedBy=?, receivedAt=NOW(), updatedAt=NOW() WHERE id=?`,
-          [ctx.user.id, ret.id]
-        );
-      }
 
       // 2. 現收應收帳款結清：只結清「逐筆結(per_delivery)」的 AR
-      //    用管理員實際點收金額（cashConfirmed）按比例分配，不無條件全額標 paid
       const [cashArRows] = await client.execute(
         `SELECT ar.id, ar.amount, ar.paidAmount
          FROM dy_ar_records ar
@@ -1112,38 +1104,63 @@ export const dyDispatchRouter = router({
         ? `管理員點收確認。備註：${input.adminNote}`
         : `管理員點收確認，現金 NT$${input.cashConfirmed.toLocaleString()}`;
 
-      // 依序結清：AR 按 id 排序，逐筆從 remainingCash 扣除，現金用完則後面的維持原狀
-      let remainingCash = input.cashConfirmed;
+      await client.execute(`START TRANSACTION`);
+      try {
+        for (const ret of pendingRows as any[]) {
+          await client.execute(
+            `UPDATE dy_inventory SET currentQty = currentQty + ?, updatedAt=NOW()
+             WHERE tenantId=? AND productId=?`,
+            [Number(ret.qty), input.tenantId, ret.productId]
+          );
+          await client.execute(
+            `INSERT INTO dy_stock_movements (tenantId, productId, type, qty, refId, refType, note, createdAt)
+             VALUES (?,?,'in',?,?,'pending_return_confirmed',?,NOW())`,
+            [input.tenantId, ret.productId, Number(ret.qty), ret.id, `管理員點收確認回庫 #${input.dispatchOrderId}`]
+          );
+          await client.execute(
+            `UPDATE dy_pending_returns SET status='received', receivedBy=?, receivedAt=NOW(), updatedAt=NOW() WHERE id=?`,
+            [ctx.user.id, ret.id]
+          );
+        }
 
-      for (const ar of cashArRows as any[]) {
-        if (remainingCash <= 0) break;
-        const unpaid = Number(ar.amount) - Number(ar.paidAmount);
-        const actualAllocate = Math.min(unpaid, remainingCash);
-        remainingCash -= actualAllocate;
-        const newPaid = Number(ar.paidAmount) + actualAllocate;
-        const newStatus = newPaid >= Number(ar.amount) ? "paid" : newPaid > 0 ? "partial" : "unpaid";
+        // 依序結清：AR 按 id 排序，逐筆從 remainingCash 扣除，現金用完則後面的維持原狀
+        let remainingCash = input.cashConfirmed;
+
+        for (const ar of cashArRows as any[]) {
+          if (remainingCash <= 0) break;
+          const unpaid = Number(ar.amount) - Number(ar.paidAmount);
+          const actualAllocate = Math.min(unpaid, remainingCash);
+          remainingCash -= actualAllocate;
+          const newPaid = Number(ar.paidAmount) + actualAllocate;
+          const newStatus = newPaid >= Number(ar.amount) ? "paid" : newPaid > 0 ? "partial" : "unpaid";
+          await client.execute(
+            `UPDATE dy_ar_records
+             SET paidAmount=?, status=?, paidAt=IF(?='paid',NOW(),paidAt), paymentMethod='cash', adminNote=?, updatedAt=NOW()
+             WHERE id=? AND tenantId=?`,
+            [newPaid, newStatus, newStatus, noteText, ar.id, input.tenantId]
+          );
+          await client.execute(
+            `UPDATE dy_orders o
+             JOIN dy_ar_records ar ON ar.orderId = o.id
+             SET o.paidAmount=?, o.paymentStatus=?, o.updatedAt=NOW()
+             WHERE ar.id=? AND o.tenantId=?`,
+            [newPaid, newStatus, ar.id, input.tenantId]
+          );
+        }
+
+        // 3. 派車單標已完成
         await client.execute(
-          `UPDATE dy_ar_records
-           SET paidAmount=?, status=?, paidAt=IF(?='paid',NOW(),paidAt), paymentMethod='cash', adminNote=?, updatedAt=NOW()
+          `UPDATE dy_dispatch_orders
+           SET status='completed', handoverConfirmedAt=NOW(), handoverConfirmedBy=?, completedAt=NOW(), updatedAt=NOW()
            WHERE id=? AND tenantId=?`,
-          [newPaid, newStatus, newStatus, noteText, ar.id, input.tenantId]
+          [ctx.user.id, input.dispatchOrderId, input.tenantId]
         );
-        await client.execute(
-          `UPDATE dy_orders o
-           JOIN dy_ar_records ar ON ar.orderId = o.id
-           SET o.paidAmount=?, o.paymentStatus=?, o.updatedAt=NOW()
-           WHERE ar.id=? AND o.tenantId=?`,
-          [newPaid, newStatus, ar.id, input.tenantId]
-        );
-      }
 
-      // 3. 派車單標已完成
-      await client.execute(
-        `UPDATE dy_dispatch_orders
-         SET status='completed', handoverConfirmedAt=NOW(), handoverConfirmedBy=?, completedAt=NOW(), updatedAt=NOW()
-         WHERE id=? AND tenantId=?`,
-        [ctx.user.id, input.dispatchOrderId, input.tenantId]
-      );
+        await client.execute(`COMMIT`);
+      } catch (err) {
+        await client.execute(`ROLLBACK`);
+        throw err;
+      }
 
       const diff = input.cashConfirmed - Number(dispatch.totalCollected ?? 0);
 

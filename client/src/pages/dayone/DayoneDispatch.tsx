@@ -20,13 +20,16 @@ function fmtMoney(value: number | string | null | undefined) {
 
 function fmtDate(value: string | null | undefined) {
   if (!value) return "-";
-  return new Date(value).toLocaleDateString("zh-TW");
+  return new Date(value).toLocaleDateString("zh-TW", { timeZone: "Asia/Taipei" });
 }
 
 function fmtDateTime(value: string | null | undefined) {
   if (!value) return "-";
-  const date = new Date(value);
-  return `${date.toLocaleDateString("zh-TW")} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+  return new Date(value).toLocaleString("zh-TW", {
+    timeZone: "Asia/Taipei",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  });
 }
 
 const DISPATCH_STATUS: Record<string, { label: string; className: string }> = {

@@ -17,7 +17,7 @@ function fmtMoney(v: number | string | null | undefined) {
 }
 function fmtDate(v: string | Date | null | undefined) {
   if (!v) return "-";
-  return new Date(v).toLocaleDateString("zh-TW");
+  return new Date(v).toLocaleDateString("zh-TW", { timeZone: "Asia/Taipei" });
 }
 function todayStr() {
   return new Date().toLocaleDateString("sv-SE");

@@ -111,9 +111,9 @@ export const franchiseePaymentRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: '資料庫連線失敗' });
 
-      // 查原記錄
+      // 查原記錄（加 tenantId=1 防跨租戶）
       const [origRows] = await (db as any).$client.execute(
-        `SELECT * FROM os_franchisee_payments WHERE id=? AND direction='receivable'`,
+        `SELECT * FROM os_franchisee_payments WHERE id=? AND direction='receivable' AND tenantId=1`,
         [input.receivableId]
       );
       const orig = (origRows as any[])[0];
@@ -137,11 +137,11 @@ export const franchiseePaymentRouter = router({
         ]
       );
 
-      // 更新原應收備註
+      // 更新原應收備註（加 tenantId=1 防跨租戶）
       const appendNote = `已於 ${input.paidAt} 收款 ${input.paidAmount}`;
       const newNote = orig.note ? `${orig.note}；${appendNote}` : appendNote;
       await (db as any).$client.execute(
-        `UPDATE os_franchisee_payments SET note=?, paidAt=? WHERE id=?`,
+        `UPDATE os_franchisee_payments SET note=?, paidAt=? WHERE id=? AND tenantId=1`,
         [newNote, input.paidAt, input.receivableId]
       );
 

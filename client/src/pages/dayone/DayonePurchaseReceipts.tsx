@@ -57,12 +57,12 @@ type PayableRecord = {
 
 function fmtDate(value: string | null | undefined) {
   if (!value) return "-";
-  return new Date(value).toLocaleDateString("zh-TW");
+  return new Date(value).toLocaleDateString("zh-TW", { timeZone: "Asia/Taipei" });
 }
 
 function fmtDateTime(value: string | null | undefined) {
   if (!value) return "-";
-  return new Date(value).toLocaleString("zh-TW");
+  return new Date(value).toLocaleString("zh-TW", { timeZone: "Asia/Taipei" });
 }
 
 function fmtMoney(value: number | string | null | undefined) {
