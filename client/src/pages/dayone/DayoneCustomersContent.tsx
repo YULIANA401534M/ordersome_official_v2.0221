@@ -15,7 +15,7 @@ const EMPTY_FORM = {
   address: "",
   districtId: undefined as number | undefined,
   groupId: undefined as number | undefined,
-  paymentType: "monthly" as "monthly" | "weekly" | "cash",
+  paymentType: "cash" as "cash" | "transfer" | "check",
   creditLimit: 0,
   status: "active" as "active" | "suspended",
   customerLevel: "retail",

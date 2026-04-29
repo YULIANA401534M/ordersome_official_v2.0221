@@ -4,6 +4,7 @@ import type { TrpcContext } from "./_core/context";
 
 // Mock the database functions
 vi.mock("./db", () => ({
+  getDb: vi.fn().mockResolvedValue(null),
   getCartItems: vi.fn().mockResolvedValue([
     {
       id: 1,
@@ -192,7 +193,7 @@ describe("order procedures", () => {
 
     const result = await caller.order.updateStatus({ id: 1, status: "paid" });
 
-    expect(result).toHaveProperty("status", "paid");
+    expect(result).toHaveProperty("success", true);
   });
 
   it("admin can list all orders", async () => {

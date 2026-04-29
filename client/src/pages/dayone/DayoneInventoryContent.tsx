@@ -235,7 +235,7 @@ export default function DayoneInventoryContent({ tenantId }: { tenantId: number 
                     <tr key={item.id} className="border-b transition-colors hover:bg-stone-50/80">
                       <td className="px-4 py-3 font-medium text-stone-900">{item.productName}</td>
                       <td className={`px-4 py-3 font-semibold ${Number(item.currentQty) <= Number(item.safetyQty) ? "text-orange-600" : "text-stone-900"}`}>
-                        {qtyEdit?.id === item.id ? (
+                        {qtyEdit !== null && qtyEdit?.id === item.id ? (
                           <div className="flex items-center gap-2">
                             <Input
                               className="h-8 w-20"
@@ -275,7 +275,7 @@ export default function DayoneInventoryContent({ tenantId }: { tenantId: number 
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        {safetyEdit?.id === item.id ? (
+                        {safetyEdit !== null && safetyEdit?.id === item.id ? (
                           <div className="flex items-center gap-2">
                             <Input className="h-8 w-20" type="number" value={safetyEdit.value} onChange={(event) => setSafetyEdit((prev) => prev ? { ...prev, value: Number(event.target.value) } : null)} />
                             <button type="button" className="text-xs text-amber-600" onClick={() => setSafety.mutate({ tenantId, productId: safetyEdit.productId, safetyQty: safetyEdit.value })}>儲存</button>

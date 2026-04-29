@@ -306,7 +306,7 @@ export default function LiffOrder() {
   useEffect(() => {
     if (appState !== "checking") return;
     if (checkBinding.isSuccess) {
-      if (checkBinding.data.bound) {
+      if (checkBinding.data.bound && 'customerName' in checkBinding.data) {
         setCustomerName(checkBinding.data.customerName ?? "");
         setAppState("ordering");
       } else {

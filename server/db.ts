@@ -66,17 +66,17 @@ export async function getDb() {
             const [patchedSql, patchedParams] = inlineLimitOffsetParams(sqlStr, params);
             if (typeof queryOrConfig === 'string') {
               return cb !== undefined
-                ? origQuery(patchedSql, patchedParams, cb)
+                ? (origQuery as any)(patchedSql, patchedParams, cb)
                 : origQuery(patchedSql, patchedParams);
             } else {
               const patchedConfig = { ...queryOrConfig, sql: patchedSql };
               return cb !== undefined
-                ? origQuery(patchedConfig, patchedParams, cb)
+                ? (origQuery as any)(patchedConfig, patchedParams, cb)
                 : origQuery(patchedConfig, patchedParams);
             }
           }
         }
-        return cb !== undefined ? origQuery(queryOrConfig, params, cb) : origQuery(queryOrConfig, params);
+        return cb !== undefined ? (origQuery as any)(queryOrConfig, params, cb) : origQuery(queryOrConfig, params);
       };
 
       _db = drizzle(pool);

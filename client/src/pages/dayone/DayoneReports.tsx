@@ -91,10 +91,10 @@ export default function DayoneReports() {
                 <div className="space-y-5">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {[
-                      { label: "總訂單", value: (daily.summary as any)?.totalOrders ?? 0 },
-                      { label: "已送達", value: (daily.summary as any)?.deliveredCount ?? 0 },
-                      { label: "待處理", value: (daily.summary as any)?.pendingCount ?? 0 },
-                      { label: "總金額", value: `$${Number((daily.summary as any)?.totalAmount ?? 0).toLocaleString()}` },
+                      { label: "總訂單", value: (daily.orderSummary as any)?.totalOrders ?? 0 },
+                      { label: "已送達", value: (daily.orderSummary as any)?.deliveredCount ?? 0 },
+                      { label: "待處理", value: (daily.orderSummary as any)?.pendingCount ?? 0 },
+                      { label: "總金額", value: `$${Number((daily.orderSummary as any)?.totalAmount ?? 0).toLocaleString()}` },
                     ].map(item => (
                       <div key={item.label} style={{ background: "rgba(255,255,255,0.65)", border: "1px solid rgba(217,119,6,0.10)", borderRadius: 16, padding: "14px 16px", textAlign: "center" }}>
                         <div style={{ fontSize: 11, color: "#78716c", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>{item.label}</div>

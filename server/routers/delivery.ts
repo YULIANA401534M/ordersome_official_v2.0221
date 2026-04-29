@@ -161,7 +161,7 @@ export const deliveryRouter = router({
             "SELECT id FROM users WHERE storeId=? AND role IN ('franchisee','store_manager') AND tenantId=1 LIMIT 1",
             [order.toStoreId]
           );
-          const userId = (userRows as any[])[0]?.id ?? ctx.userId ?? null;
+          const userId = (userRows as any[])[0]?.id ?? ctx.user?.id ?? null;
 
           await conn.execute(
             `INSERT INTO os_franchisee_payments

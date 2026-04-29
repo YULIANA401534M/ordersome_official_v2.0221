@@ -1275,7 +1275,7 @@ export default function DayoneDispatch() {
   const mergeDrafts = trpc.dayone.dispatch.mergeDraftDispatches.useMutation({
     onSuccess: (data) => {
       if (data.merged) {
-        toast.success(`已合併 ${data.mergedCount} 張草稿派車單`);
+        toast.success(`已合併 ${'mergedCount' in data ? data.mergedCount : ''} 張草稿派車單`);
       }
       setMergingDriverId(null);
       refresh();

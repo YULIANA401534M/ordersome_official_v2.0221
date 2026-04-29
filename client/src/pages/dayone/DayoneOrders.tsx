@@ -110,7 +110,7 @@ export default function DayoneOrders() {
     onError: () => toast.error("刪除失敗，請重試"),
   });
 
-  const reassignDriver = trpc.dayone.orders.reassignDriver.useMutation({
+  const reassignDriver = trpc.dayone.orders.setDriver.useMutation({
     onSuccess: () => {
       toast.success("司機已更新");
       utils.dayone.orders.list.invalidate();
