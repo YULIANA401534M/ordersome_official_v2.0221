@@ -14,7 +14,7 @@ import {
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 
-const LIFF_ID = "2009700774-rWyJ27md";
+const LIFF_ID = "2009943647-KqYJYhiy";
 
 const LEVEL_CFG: Record<string, { label: string; cls: string }> = {
   supplier: { label: "供應商", cls: "bg-purple-100 text-purple-700" },

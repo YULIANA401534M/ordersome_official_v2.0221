@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
-const LIFF_ID = "2009700774-rWyJ27md";
+const LIFF_ID = "2009943647-KqYJYhiy";
 
 export default function DayonePortalLogin() {
   const [, navigate] = useLocation();

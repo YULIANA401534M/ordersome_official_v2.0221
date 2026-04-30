@@ -4,9 +4,9 @@ import { trpc } from "@/lib/trpc";
 
 // 租戶對應表：?tenant=xxx → { liffId, brandName }
 const TENANT_CONFIG: Record<string, { liffId: string; brandName: string }> = {
-  dayone: { liffId: "2009700774-rWyJ27md", brandName: "大永蛋品" },
+  dayone: { liffId: "2009943647-KqYJYhiy", brandName: "大永蛋品" },
 };
-const DEFAULT_CONFIG = { liffId: "2009700774-rWyJ27md", brandName: "快速下單" };
+const DEFAULT_CONFIG = { liffId: "2009943647-KqYJYhiy", brandName: "快速下單" };
 
 function getTenantConfig(slug: string | null) {
   if (!slug) return { ...DEFAULT_CONFIG, slug: null };

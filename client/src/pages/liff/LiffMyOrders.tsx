@@ -3,9 +3,9 @@ import liff from "@line/liff";
 import { trpc } from "@/lib/trpc";
 
 const TENANT_CONFIG: Record<string, { liffId: string; brandName: string }> = {
-  dayone: { liffId: "2009700774-0nJKIzne", brandName: "大永蛋品" },
+  dayone: { liffId: "2009943647-tHEtrU7k", brandName: "大永蛋品" },
 };
-const DEFAULT_CONFIG = { liffId: "2009700774-0nJKIzne", brandName: "大永蛋品" };
+const DEFAULT_CONFIG = { liffId: "2009943647-tHEtrU7k", brandName: "大永蛋品" };
 
 function getTenantConfig(slug: string | null) {
   if (!slug) return { ...DEFAULT_CONFIG, slug: null };
