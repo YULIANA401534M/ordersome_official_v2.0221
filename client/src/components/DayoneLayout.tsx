@@ -47,7 +47,7 @@ const NAV_GROUPS = [
     label: "客戶與帳務",
     items: [
       { icon: Users, label: "客戶管理", path: "/dayone/customers", moduleKey: "crm_customers" },
-      { icon: CreditCard, label: "應收帳款", path: "/dayone/ar", moduleKey: "ar_management" },
+      { icon: CreditCard, label: "帳務管理", path: "/dayone/ar", moduleKey: "ar_management" },
     ],
   },
   {
