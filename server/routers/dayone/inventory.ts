@@ -81,8 +81,7 @@ export const dyInventoryRouter = router({
                  WHERE m.tenantId = ?`;
       const params: any[] = [input.tenantId];
       if (input.productId) { sql += ' AND m.productId = ?'; params.push(input.productId); }
-      sql += ` ORDER BY m.createdAt DESC LIMIT ?`;
-      params.push(Math.max(1, Math.floor(Number(input.limit))));
+      sql += ` ORDER BY m.createdAt DESC LIMIT ${Math.max(1, Math.floor(Number(input.limit)))}`;
       const [rows] = await (db as any).$client.execute(sql, params);
       return rows as any[];
     }),
