@@ -63,8 +63,8 @@ export default function DriverOrderDetail() {
   });
   const order = (orders as any[]).find((o: any) => o.id === orderId);
 
-  const { data: orderDetail } = trpc.dayone.orders.getWithItems.useQuery(
-    { id: orderId, tenantId: TENANT_ID },
+  const { data: orderItems = [] } = trpc.dayone.driver.getOrderItems.useQuery(
+    { orderId, tenantId: TENANT_ID },
     { enabled: !!orderId }
   );
 
@@ -135,7 +135,7 @@ export default function DriverOrderDetail() {
   const isCash = !["monthly", "weekly"].includes(order.settlementCycle ?? "");
   const unpaid = Number(order.customerUnpaidAmount ?? 0);
   const totalAmt = Number(order.totalAmount ?? 0);
-  const items = (orderDetail as any)?.items ?? [];
+  const items = orderItems as any[];
 
   return (
     <DriverLayout title="訂單明細">

@@ -523,6 +523,31 @@ export const dyDriverRouter = router({
       return { success: true, orderId, orderNo, totalAmount: addedAmount, merged: !!mergedOrderId };
     }),
 
+  getOrderItems: driverProcedure
+    .input(z.object({ orderId: z.number(), tenantId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      const client = (db as any).$client;
+      const driver = await getDriverByUser(client, ctx.user.id, input.tenantId);
+      if (!driver) throw new TRPCError({ code: "FORBIDDEN", message: "Driver not linked" });
+      // 確認這筆訂單屬於這位司機（安全檢查）
+      const [orderRows] = await client.execute(
+        `SELECT id FROM dy_orders WHERE id=? AND tenantId=? AND driverId=? LIMIT 1`,
+        [input.orderId, input.tenantId, driver.id]
+      );
+      if (!(orderRows as any[])[0]) throw new TRPCError({ code: "FORBIDDEN", message: "無此訂單" });
+      const [items] = await client.execute(
+        `SELECT oi.id, oi.productId, oi.qty, oi.unitPrice, oi.subtotal,
+                p.name as productName, p.code, p.unit
+         FROM dy_order_items oi
+         JOIN dy_products p ON p.id = oi.productId
+         WHERE oi.orderId=? AND oi.tenantId=?`,
+        [input.orderId, input.tenantId]
+      );
+      return items as any[];
+    }),
+
   getMyWorkLog: driverProcedure
     .input(z.object({ tenantId: z.number(), workDate: z.string(), dispatchOrderId: z.number().optional() }))
     .query(async ({ ctx, input }) => {
