@@ -36,6 +36,17 @@ export const dyDriverRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Driver account is not linked to Dayone" });
       }
 
+      // TiDB 不支援 JOIN ON 內有子查詢，先查出當日派車單 ID 再帶入
+      const [dispatchRows] = await client.execute(
+        `SELECT id FROM dy_dispatch_orders
+         WHERE tenantId=? AND driverId=?
+           AND DATE(CONVERT_TZ(dispatchDate,'+00:00','+08:00'))=?
+           AND status IN ('draft','printed','in_progress','pending_handover')
+         ORDER BY id DESC LIMIT 1`,
+        [input.tenantId, driver.id, date]
+      );
+      const dispatchId = (dispatchRows as any[])[0]?.id ?? 0;
+
       const [rows] = await client.execute(
         `SELECT o.*, c.name as customerName, c.address as customerAddress, c.phone as customerPhone,
                 c.settlementCycle, c.overdueDays,
@@ -50,19 +61,12 @@ export const dyDriverRouter = router({
          JOIN dy_customers c ON o.customerId = c.id
          LEFT JOIN dy_districts dist ON o.districtId = dist.id
          LEFT JOIN dy_dispatch_items di
-           ON di.orderId = o.id AND di.tenantId = o.tenantId
-           AND di.dispatchOrderId = (
-             SELECT ddo2.id FROM dy_dispatch_orders ddo2
-             WHERE ddo2.tenantId = o.tenantId AND ddo2.driverId = ?
-               AND DATE(CONVERT_TZ(ddo2.dispatchDate,'+00:00','+08:00')) = ?
-               AND ddo2.status IN ('draft','printed','in_progress','pending_handover')
-             ORDER BY ddo2.id DESC LIMIT 1
-           )
+           ON di.orderId = o.id AND di.tenantId = o.tenantId AND di.dispatchOrderId = ?
          WHERE o.tenantId = ? AND o.driverId = ?
            AND DATE(CONVERT_TZ(o.deliveryDate,'+00:00','+08:00')) = ?
            AND o.status NOT IN ('cancelled','delivered')
          ORDER BY COALESCE(di.stopSequence, 9999) ASC, o.id ASC`,
-        [driver.id, date, input.tenantId, driver.id, date]
+        [dispatchId, input.tenantId, driver.id, date]
       );
       return rows as any[];
     }),
