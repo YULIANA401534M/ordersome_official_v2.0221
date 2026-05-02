@@ -1,6 +1,6 @@
 # CLAUDE.md — OrderSome 專案主腦
 
-> 版本 v7.39｜最後更新：2026-04-30
+> 版本 v7.40｜最後更新：2026-05-02
 > **每次開始新對話請讀完這份文件**，然後視任務需要讀 `todo.md` 或 `docs/` 子頁。
 > 歷史變更記錄請看 `DEVELOPMENT_LOG.md`，不需要每次讀。
 
@@ -243,43 +243,29 @@
 
 ## 近期目標（詳細待辦看 todo.md）
 
-### 第一優先：大永 LIFF 上線（完成就是 80%）
+### 現況（2026-05-02）
 
-流程：LINE Developers 建 LIFF app → 換 liffId → 補客戶綁定流程（首次開 LIFF 輸入手機號碼綁 lineId）→ 每個客戶設好預設司機+送貨頻率 → 端對端測試
+**大永系統已交付大永蛋品公司實際使用**，等待回報 BUG 再處理。
 
-關鍵現況（v6.70）：
-- `dy_customers` 已有 `defaultDriverId`、`deliveryFrequency`、`lineId` 欄位
-- `server/liff.ts`：createOrder 已自動帶入 driverId、依頻率推算 deliveryDate
-- **已完成：** LIFF ID `2009700774-rWyJ27md`（下單）、`2009700774-0nJKIzne`（訂單查詢）已確認
-- **已完成：** 客戶首次綁定流程（`checkBinding` + `bindLineId`）
-- **已完成：** 三段式定價（客製 → 分級 → 主檔）：`dy_customer_prices`、`dy_level_prices` 均已實作，LIFF 下單與顯示均套用
-- **已完成：** 訂單查詢頁（`/liff/my-orders`）：單日/區間切換、每筆明細展開、付款狀態
-- **已完成：** 客製定價管理（客戶管理頁 🏷 按鈕）：可新增、調整、保留完整歷史紀錄
-- **已完成：** 分級定價管理（`/dayone/level-prices`）：零售/門市/供應商各別設定
-- **已完成：** 信用額度軟性警示（建訂單超額時 toast 警告，不阻擋）
-- **`dy_districts` 已停用**（側欄已隱藏，表留著不刪）
-- 訂單管理頁已支援單筆換司機（pending/assigned 狀態才能換）
+**LIFF 正式 Channel 已切換完成（v7.39）：**
+- Provider：大永蛋品（2005108009）
+- Channel：大永蛋品叫貨（2009943647），LINE Login
+- 下單 LIFF ID：`2009943647-KqYJYhiy`
+- 訂單查詢 LIFF ID：`2009943647-tHEtrU7k`
 
-### 第二優先：大永落地驗收
-
-目標是真人跑完完整一天作業流程，驗收 5 個條件：
-1. 建訂單 → 派車 → 列印派車單有內容
-2. 司機 APP 送達 → AR 應收出現
-3. 司機收現 → 訂單付款狀態同步
-4. 剩貨回庫待驗 → 管理員確認 → 庫存增加
-5. 進貨簽收 → AP 出現 → 確認入倉 → 庫存增加
-
-**已完成後端 Bug 修復（v6.71）：**
-- `updateDispatchItem`：司機派車工作台填現收金額後，現在會同步更新 `dy_ar_records`（原本只改 `dy_orders`，帳務頁看到的是舊資料）
-- Bug 2~8 逐一查驗，確認均已在先前版本修好
-
-### 第二優先：宇聯後台數字落地
+### 下一優先：宇聯後台數字落地
 
 頁面都做完了，但數字還在 Google Sheet。按順序：
 1. 日報閉環（daily-report → profit-loss 對得起 Google Sheet）
 2. 採購閉環（Make 自動化資料進 purchasing）
 3. 應付帳款閉環（月結廠商對 os_payables）
 4. 銀行流水對帳
+
+### 待命：大永 BUG 修復
+
+大永蛋品使用中，有回報再處理。已知待驗收項目：
+- 剩貨回庫待驗 → 管理員確認 → 庫存增加（流程未完整跑過）
+- 進貨簽收 → AP 出現 → 確認入倉 → 庫存增加（流程未完整跑過）
 
 ---
 
