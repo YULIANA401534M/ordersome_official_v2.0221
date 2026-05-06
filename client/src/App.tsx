@@ -143,7 +143,7 @@ function Router() {
     const favicon = document.getElementById('favicon') as HTMLLinkElement;
     const isDayone = location.startsWith('/dayone') || location.startsWith('/driver') || location.startsWith('/liff');
     if (isDayone) {
-      if (favicon) { favicon.href = '/favicon-dayone.svg'; favicon.type = 'image/svg+xml'; }
+      if (favicon) { favicon.href = '/logos/dayong-logo.png'; favicon.type = 'image/png'; }
       document.title = '大永蛋品 ERP';
     } else if (location.startsWith('/brand')) {
       if (favicon) { favicon.href = '/favicon-brand.ico'; favicon.type = 'image/x-icon'; }

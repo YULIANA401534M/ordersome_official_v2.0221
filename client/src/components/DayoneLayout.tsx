@@ -162,27 +162,7 @@ export default function DayoneLayout({ children }: { children: React.ReactNode }
         <div className="border-b border-amber-100/80 px-4 pb-4 pt-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              {/* Dayong logo */}
-              <svg viewBox="0 0 100 110" width="44" height="48" xmlns="http://www.w3.org/2000/svg" aria-label="大永蛋品 Logo">
-                {/* 4 eggs */}
-                <ellipse cx="18" cy="72" rx="14" ry="20" fill="#1a1a1a"/>
-                <ellipse cx="38" cy="72" rx="14" ry="20" fill="#1a1a1a"/>
-                <ellipse cx="58" cy="72" rx="14" ry="20" fill="#1a1a1a"/>
-                <ellipse cx="78" cy="70" rx="14" ry="20" fill="#1a1a1a"/>
-                {/* chick outer body */}
-                <ellipse cx="50" cy="36" rx="22" ry="19" fill="#1a1a1a"/>
-                {/* chick face (cutout style) */}
-                <ellipse cx="50" cy="37" rx="15" ry="13" fill="#fffbf5"/>
-                {/* eyes */}
-                <circle cx="44" cy="33" r="2.2" fill="#1a1a1a"/>
-                <circle cx="56" cy="33" r="2.2" fill="#1a1a1a"/>
-                {/* beak */}
-                <rect x="46" y="38" width="8" height="4" rx="2" fill="#1a1a1a"/>
-                {/* tuft left */}
-                <ellipse cx="43" cy="18" rx="5" ry="7" fill="#1a1a1a" transform="rotate(-20 43 18)"/>
-                {/* tuft right */}
-                <ellipse cx="54" cy="16" rx="4.5" ry="7" fill="#1a1a1a" transform="rotate(15 54 16)"/>
-              </svg>
+              <img src="/logos/dayong-logo.png" alt="大永蛋品" width={52} height={52} style={{ objectFit: 'contain' }} />
               <div>
                 <span className="block text-[10px] font-semibold uppercase tracking-[0.22em] text-amber-700">Dayone Control</span>
                 <span className="mt-1 block font-ui text-[1.15rem] font-extrabold leading-none tracking-[-0.04em] text-stone-950">大永蛋品 ERP</span>
