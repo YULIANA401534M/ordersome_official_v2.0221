@@ -249,13 +249,16 @@ export const sopRouter = router({
   getRepairs: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-      if (isAdminUser(ctx.user)) {
-      return db.select().from(equipmentRepairs).orderBy(desc(equipmentRepairs.createdAt));
+    const tenantId = ctx.tenantId ?? 1;
+    if (isAdminUser(ctx.user)) {
+      return db.select().from(equipmentRepairs)
+        .where(eq(equipmentRepairs.tenantId, tenantId))
+        .orderBy(desc(equipmentRepairs.createdAt));
     }
     return db
       .select()
       .from(equipmentRepairs)
-      .where(eq(equipmentRepairs.reportedBy, ctx.user.id))
+      .where(and(eq(equipmentRepairs.tenantId, tenantId), eq(equipmentRepairs.reportedBy, ctx.user.id)))
       .orderBy(desc(equipmentRepairs.createdAt));
   }),
 
@@ -276,7 +279,7 @@ export const sopRouter = router({
       const { storeName, ...dbInput } = input;
 
       // 寫入資料庫
-      await db.insert(equipmentRepairs).values({ ...dbInput, reportedBy: ctx.user.id });
+      await db.insert(equipmentRepairs).values({ ...dbInput, tenantId: ctx.tenantId ?? 1, reportedBy: ctx.user.id });
 
       // 串接 Make Webhook（非同步，不影響主流程）
       const webhookPayload = {
@@ -307,7 +310,7 @@ export const sopRouter = router({
       status: z.enum(["pending", "in_progress", "resolved", "cancelled"]),
       notes: z.string().optional(),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       const { id, ...data } = input;
@@ -315,7 +318,8 @@ export const sopRouter = router({
       if (data.status === "resolved") {
         updateData.resolvedAt = new Date();
       }
-      await db.update(equipmentRepairs).set(updateData).where(eq(equipmentRepairs.id, id));
+      await db.update(equipmentRepairs).set(updateData)
+        .where(and(eq(equipmentRepairs.id, id), eq(equipmentRepairs.tenantId, ctx.tenantId ?? 1)));
       return { success: true };
     }),
 
