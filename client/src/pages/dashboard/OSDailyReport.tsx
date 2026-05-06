@@ -618,6 +618,117 @@ function MonthlyOverviewTab() {
   );
 }
 
+function DailyRangeTab() {
+  const now = new Date();
+  const firstOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+  const [startDate, setStartDate] = useState(firstOfMonth);
+  const [endDate, setEndDate] = useState(todayStr());
+  const [filterStore, setFilterStore] = useState("");
+
+  const storesQuery = trpc.dailyReport.getStores.useQuery();
+  const stores = storesQuery.data ?? [];
+
+  const listQuery = trpc.dailyReport.list.useQuery(
+    { startDate, endDate, storeName: filterStore || undefined },
+    { enabled: !!startDate && !!endDate }
+  );
+  const rows = (listQuery.data ?? []) as any[];
+
+  const totalSales = rows.reduce((s, r) => s + Number(r.totalSales ?? 0), 0);
+  const totalGuest = rows.reduce((s, r) => s + Number(r.guestTotal ?? 0), 0);
+
+  return (
+    <div className="space-y-4">
+      <div style={cardSt}>
+        <div className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr_auto]">
+          <div>
+            <label style={labelSt}>開始日期</label>
+            <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="h-10" />
+          </div>
+          <div>
+            <label style={labelSt}>結束日期</label>
+            <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="h-10" />
+          </div>
+          <div>
+            <label style={labelSt}>門市篩選</label>
+            <Select value={filterStore} onValueChange={setFilterStore}>
+              <SelectTrigger className="h-10"><SelectValue placeholder="全部門市" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">全部門市</SelectItem>
+                {stores.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-end">
+            <Button variant="outline" size="sm" className="h-10" onClick={() => listQuery.refetch()}>查詢</Button>
+          </div>
+        </div>
+      </div>
+
+      {rows.length > 0 && (
+        <div style={{ ...cardSt, background: 'var(--os-text-1)', color: '#fff' }}>
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <p style={{ fontSize: 11, opacity: 0.65 }}>期間總營業額</p>
+              <p style={{ fontSize: 20, fontWeight: 700 }}>{fmtMoney(totalSales)}</p>
+            </div>
+            <div>
+              <p style={{ fontSize: 11, opacity: 0.65 }}>總筆數</p>
+              <p style={{ fontSize: 20, fontWeight: 700 }}>{rows.length} 天</p>
+            </div>
+            <div>
+              <p style={{ fontSize: 11, opacity: 0.65 }}>總來客數</p>
+              <p style={{ fontSize: 20, fontWeight: 700 }}>{totalGuest.toLocaleString("zh-TW")} 人</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {listQuery.isLoading ? (
+        <div className="py-12 text-center text-sm" style={{ color: 'var(--os-text-3)' }}>載入中...</div>
+      ) : rows.length === 0 ? (
+        <div className="py-12 text-center text-sm" style={{ color: 'var(--os-text-3)' }}>查無資料，請確認日期範圍。</div>
+      ) : (
+        <div style={{ ...cardSt, padding: 0, overflow: 'hidden' }}>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="w-full text-xs">
+              <thead>
+                <tr style={{ background: 'var(--os-surface-2)', borderBottom: '1px solid var(--os-border)' }}>
+                  {["日期", "門市", "總營業額", "店內", "Uber", "Panda", "來客數", "客單價", "假日"].map(h => (
+                    <th key={h} className="whitespace-nowrap px-3 py-2 text-left" style={{ color: 'var(--os-text-3)', fontSize: 11, fontWeight: 700 }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r, i) => {
+                  const total = Number(r.totalSales ?? 0);
+                  const guest = Number(r.guestTotal ?? 0);
+                  const avgTicket = guest > 0 ? Math.round(total / guest) : 0;
+                  return (
+                    <tr key={i} style={{ borderTop: '1px solid var(--os-border-2)' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--os-amber-soft)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = '')}>
+                      <td className="whitespace-nowrap px-3 py-2" style={{ color: 'var(--os-text-2)' }}>{r.reportDate?.slice(0, 10)}</td>
+                      <td className="whitespace-nowrap px-3 py-2 font-medium" style={{ color: 'var(--os-text-1)' }}>{r.storeName}</td>
+                      <td className="whitespace-nowrap px-3 py-2 font-semibold" style={{ color: 'var(--os-text-1)' }}>{fmtMoney(total)}</td>
+                      <td className="whitespace-nowrap px-3 py-2" style={{ color: 'var(--os-text-2)' }}>{fmtMoney(r.instoreSales)}</td>
+                      <td className="whitespace-nowrap px-3 py-2" style={{ color: 'var(--os-text-2)' }}>{fmtMoney(r.uberSales)}</td>
+                      <td className="whitespace-nowrap px-3 py-2" style={{ color: 'var(--os-text-2)' }}>{fmtMoney(r.pandaSales)}</td>
+                      <td className="whitespace-nowrap px-3 py-2" style={{ color: 'var(--os-text-2)' }}>{guest.toLocaleString("zh-TW")}</td>
+                      <td className="whitespace-nowrap px-3 py-2" style={{ color: 'var(--os-text-2)' }}>{avgTicket > 0 ? fmtMoney(avgTicket) : "—"}</td>
+                      <td className="whitespace-nowrap px-3 py-2" style={{ color: r.isHoliday ? 'var(--os-warning)' : 'var(--os-text-3)' }}>{r.isHoliday ? "假日" : "平日"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function OSDailyReport() {
   return (
     <AdminDashboardLayout>
@@ -633,12 +744,17 @@ export default function OSDailyReport() {
               className="data-[state=active]:bg-[--os-surface] data-[state=active]:text-[--os-text-1] data-[state=inactive]:text-[--os-text-3]">
               日報填寫
             </TabsTrigger>
+            <TabsTrigger value="range" style={{ fontSize: 13 }}
+              className="data-[state=active]:bg-[--os-surface] data-[state=active]:text-[--os-text-1] data-[state=inactive]:text-[--os-text-3]">
+              報表總覽
+            </TabsTrigger>
             <TabsTrigger value="monthly" style={{ fontSize: 13 }}
               className="data-[state=active]:bg-[--os-surface] data-[state=active]:text-[--os-text-1] data-[state=inactive]:text-[--os-text-3]">
-              月報總覽
+              月報彙整
             </TabsTrigger>
           </TabsList>
           <TabsContent value="input" className="mt-4"><DailyInputTab /></TabsContent>
+          <TabsContent value="range" className="mt-4"><DailyRangeTab /></TabsContent>
           <TabsContent value="monthly" className="mt-4"><MonthlyOverviewTab /></TabsContent>
         </Tabs>
       </div>
