@@ -138,15 +138,21 @@ const LiffMyOrders = lazy(() => import("./pages/liff/LiffMyOrders"));
 function Router() {
   const [location] = useLocation();
 
-  // 動態切換 favicon
+  // 動態切換 favicon 與 title
   useEffect(() => {
     const favicon = document.getElementById('favicon') as HTMLLinkElement;
-    if (favicon) {
-      if (location.startsWith('/brand')) {
-        favicon.href = '/favicon-brand.ico';
-      } else {
-        favicon.href = '/favicon-yulian.ico';
-      }
+    const isDayone = location.startsWith('/dayone') || location.startsWith('/driver') || location.startsWith('/liff');
+    if (isDayone) {
+      if (favicon) { favicon.href = '/favicon-dayone.svg'; favicon.type = 'image/svg+xml'; }
+      document.title = '大永蛋品 ERP';
+    } else if (location.startsWith('/brand')) {
+      if (favicon) { favicon.href = '/favicon-brand.ico'; favicon.type = 'image/x-icon'; }
+      document.title = '來點什麼｜宇聯國際文化餐飲';
+    } else if (location.startsWith('/dashboard') || location.startsWith('/admin')) {
+      if (favicon) { favicon.href = '/favicon-yulian.ico'; favicon.type = 'image/x-icon'; }
+      document.title = '宇聯後台管理系統';
+    } else {
+      if (favicon) { favicon.href = '/favicon-yulian.ico'; favicon.type = 'image/x-icon'; }
     }
   }, [location]);
 
