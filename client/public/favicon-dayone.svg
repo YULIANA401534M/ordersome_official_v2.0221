@@ -1,4 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="8" fill="#1a1a2e"/>
-  <text x="16" y="23" font-family="Arial,sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="#f5a623">大</text>
+  <rect width="32" height="32" rx="7" fill="#fffbf5"/>
+  <!-- 4 eggs -->
+  <ellipse cx="7" cy="20" rx="4" ry="5.5" fill="#1a1a1a"/>
+  <ellipse cx="12.5" cy="20" rx="4" ry="5.5" fill="#1a1a1a"/>
+  <ellipse cx="18" cy="20" rx="4" ry="5.5" fill="#1a1a1a"/>
+  <ellipse cx="24" cy="19" rx="4" ry="5.5" fill="#1a1a1a"/>
+  <!-- chick body -->
+  <ellipse cx="15" cy="10" rx="5.5" ry="4.5" fill="#1a1a1a"/>
+  <!-- chick face cutout -->
+  <ellipse cx="15" cy="10.5" rx="3.8" ry="3.2" fill="#fffbf5"/>
+  <!-- eyes -->
+  <circle cx="13.5" cy="9.5" r="0.6" fill="#1a1a1a"/>
+  <circle cx="16.5" cy="9.5" r="0.6" fill="#1a1a1a"/>
+  <!-- beak -->
+  <rect x="14.2" y="11" width="1.6" height="1" rx="0.5" fill="#1a1a1a"/>
+  <!-- tuft on top -->
+  <ellipse cx="13.8" cy="6.5" rx="1.2" ry="1.8" fill="#1a1a1a" transform="rotate(-15 13.8 6.5)"/>
+  <ellipse cx="16" cy="6" rx="1.1" ry="1.8" fill="#1a1a1a" transform="rotate(10 16 6)"/>
 </svg>
