@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getDefaultRouteForUser } from "@/lib/roleRouter";
+import { TENANTS } from "@shared/access-control";
 import {
   Loader2,
   LayoutDashboard,
@@ -403,7 +404,7 @@ export default function Dashboard() {
   const roleLabel = ROLE_LABELS[userRole] ?? "會員";
   const roleBadge = ROLE_BADGE[userRole] ?? "bg-gray-100 text-gray-600 border-gray-200";
   const isAdmin = userRole === "super_admin" || userRole === "manager";
-  const isDayoneManager = userRole === "manager" && user?.tenantId === 90004;
+  const isDayoneManager = userRole === "manager" && Number((user as any)?.tenantId) === TENANTS.DAYONE;
   const greeting = getGreeting();
 
   const visibleSmallCards = ALL_SMALL_CARDS.filter((c) => {

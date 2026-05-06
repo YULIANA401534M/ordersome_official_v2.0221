@@ -143,6 +143,73 @@ const SuperAdminModules = lazy(() => import("./pages/dayone/SuperAdminModules"))
 const LiffOrder = lazy(() => import("./pages/liff/LiffOrder"));
 const LiffMyOrders = lazy(() => import("./pages/liff/LiffMyOrders"));
 
+// ── 靜態 Protected 元件（必須在模組頂層宣告，不可放進 render 函數內）──
+// 宇聯後台
+const PAdminDashboard        = protect(AdminDashboard,        { requiredRoles: [...OS_ROLES], redirectTo: "/login" });
+const PAdminProducts         = protect(AdminProducts,         { requiredRoles: [...OS_ROLES], redirectTo: "/login" });
+const PAdminOrders           = protect(AdminOrders,           { requiredRoles: [...OS_ROLES], redirectTo: "/login" });
+const PAdminCategories       = protect(AdminCategories,       { requiredRoles: [...OS_ROLES], redirectTo: "/login" });
+const PAdminUsers            = protect(AdminUsers,            { requiredRoles: [...OS_ROLES], redirectTo: "/login" });
+const PAdminPermissions      = protect(AdminPermissions,      { requiredRoles: [...OS_ROLES], redirectTo: "/login" });
+const PAdminSopPermissions   = protect(AdminSopPermissions,   { requiredRoles: [...OS_ROLES], redirectTo: "/login" });
+const PAdminTenants          = protect(AdminTenants,          { requiredRoles: ["super_admin"], redirectTo: "/login" });
+const PContentManagement     = protect(ContentManagement,     { requiredRoles: [...OS_ROLES], redirectTo: "/login" });
+const PContentEditor         = protect(ContentEditor,         { requiredRoles: [...OS_ROLES], redirectTo: "/login" });
+const PAIWriter              = protect(AIWriter,              { requiredRoles: [...OS_ROLES], redirectTo: "/login" });
+const PFranchiseInquiries    = protect(FranchiseInquiries,    { requiredRoles: [...OS_ROLES], redirectTo: "/login" });
+const POSCustomers           = protect(OSCustomers,           { requiredRoles: [...OS_ROLES], redirectTo: "/login" });
+const PFranchiseDashboard    = protect(FranchiseDashboardPage,{ requiredRoles: [...OS_ROLES], redirectTo: "/login" });
+const PStaffDashboard        = protect(StaffDashboardPage,    { requiredRoles: [...OS_ROLES], redirectTo: "/login" });
+const PSOPKnowledgeBase      = protect(SOPKnowledgeBase,      { requiredRoles: [...OS_ROLES], redirectTo: "/login" });
+const PEquipmentRepairs      = protect(EquipmentRepairs,      { requiredRoles: [...OS_ROLES], redirectTo: "/login" });
+const PDailyChecklist        = protect(DailyChecklist,        { requiredRoles: [...OS_ROLES], redirectTo: "/login" });
+const POSInventory           = protect(OSInventory,           { requiredRoles: [...OS_ROLES], redirectTo: "/login" });
+const POSScheduling          = protect(OSScheduling,          { requiredRoles: [...OS_ROLES], redirectTo: "/login" });
+const POSDailyReport         = protect(OSDailyReport,         { requiredRoles: [...OS_ROLES], redirectTo: "/login" });
+const POSProducts            = protect(OSProducts,            { requiredRoles: [...OS_ROLES], redirectTo: "/login" });
+const POSDelivery            = protect(OSDelivery,            { requiredRoles: [...OS_ROLES], redirectTo: "/login" });
+const PComingSoon            = protect(ComingSoon,            { requiredRoles: [...OS_ROLES], redirectTo: "/login" });
+const POSPurchasing          = protect(OSPurchasing,          { requiredRoles: [...OS_ROLES], redirectTo: "/login" });
+const POSRebate              = protect(OSRebate,              { requiredRoles: [...OS_ROLES], redirectTo: "/login" });
+const POSProfitLoss          = protect(OSProfitLoss,          { requiredRoles: [...OS_ROLES], redirectTo: "/login" });
+const POSFranchiseePayments  = protect(OSFranchiseePayments,  { requiredRoles: [...OS_ROLES], redirectTo: "/login" });
+const POSCaMenu              = protect(OSCaMenu,              { requiredRoles: [...OS_ROLES], redirectTo: "/login" });
+const POSAccounting          = protect(OSAccounting,          { requiredRoles: [...OS_ROLES], redirectTo: "/login" });
+// 大永 ERP
+const DY_OPTS = { requiredRoles: [...DY_ROLES], requiredTenantId: TENANTS.DAYONE, redirectTo: "/dayone/login" } as const;
+const PDayoneDashboard       = protect(DayoneDashboard,       DY_OPTS);
+const PDayoneOrders          = protect(DayoneOrders,          DY_OPTS);
+const PDayoneCustomers       = protect(DayoneCustomers,       DY_OPTS);
+const PDayoneDrivers         = protect(DayoneDrivers,         DY_OPTS);
+const PDayoneProducts        = protect(DayoneProducts,        DY_OPTS);
+const PDayoneInventory       = protect(DayoneInventory,       DY_OPTS);
+const PDayonePurchase        = protect(DayonePurchase,        DY_OPTS);
+const PDayoneDistricts       = protect(DayoneDistricts,       DY_OPTS);
+const PDayoneReports         = protect(DayoneReports,         DY_OPTS);
+const PDayoneLiffOrders      = protect(DayoneLiffOrders,      DY_OPTS);
+const PDayoneAR              = protect(DayoneAR,              DY_OPTS);
+const PDayoneDispatch        = protect(DayoneDispatch,        DY_OPTS);
+const PDayonePurchaseReceipts= protect(DayonePurchaseReceipts,DY_OPTS);
+const PDayoneLevelPrices     = protect(DayoneLevelPrices,     DY_OPTS);
+const PDayoneUsers           = protect(DayoneUsers,           DY_OPTS);
+// 客戶 Portal
+const PORT_OPTS = { requiredRoles: [...PORT_ROLES], redirectTo: "/dayone/portal/login" } as const;
+const PDayonePortalHome      = protect(DayonePortalHome,      PORT_OPTS);
+const PDayonePortalOrders    = protect(DayonePortalOrders,    PORT_OPTS);
+const PDayonePortalStatement = protect(DayonePortalStatement, PORT_OPTS);
+const PDayonePortalAccount   = protect(DayonePortalAccount,   PORT_OPTS);
+// 司機端
+const DRV_OPTS = { requiredRoles: [...DRV_ROLES], redirectTo: "/driver/login" } as const;
+const PDriverHome            = protect(DriverHome,            DRV_OPTS);
+const PDriverToday           = protect(DriverToday,           DRV_OPTS);
+const PDriverOrders          = protect(DriverOrders,          DRV_OPTS);
+const PDriverOrderDetail     = protect(DriverOrderDetail,     DRV_OPTS);
+const PDriverPickup          = protect(DriverPickup,          DRV_OPTS);
+const PDriverDone            = protect(DriverDone,            DRV_OPTS);
+const PDriverWorkLog         = protect(DriverWorkLog,         DRV_OPTS);
+const PDriverPurchaseReceipt = protect(DriverPurchaseReceipt, DRV_OPTS);
+const PDriverProfile         = protect(DriverProfile,         DRV_OPTS);
+
 function Router() {
   const [location] = useLocation();
 
@@ -234,73 +301,73 @@ function Router() {
       <Route path="/member/orders" component={MemberOrders} />
       
       {/* ── 宇聯後台（需登入 + OS 角色）─────────────────────────────── */}
-      <Route path="/dashboard/admin/ecommerce" component={protect(AdminDashboard, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
-      <Route path="/dashboard/admin/products" component={protect(AdminProducts, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
-      <Route path="/dashboard/admin/orders" component={protect(AdminOrders, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
-      <Route path="/dashboard/admin/categories" component={protect(AdminCategories, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
-      <Route path="/dashboard/admin/users" component={protect(AdminUsers, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
-      <Route path="/dashboard/admin/permissions" component={protect(AdminPermissions, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
-      <Route path="/dashboard/admin/sop-permissions" component={protect(AdminSopPermissions, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
-      <Route path="/dashboard/admin/tenants" component={protect(AdminTenants, { requiredRoles: ["super_admin"], redirectTo: "/login" })} />
-      <Route path="/dashboard/content" component={protect(ContentManagement, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
-      <Route path="/dashboard/content/new" component={protect(ContentEditor, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
-      <Route path="/dashboard/content/edit/:id" component={protect(ContentEditor, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
-      <Route path="/dashboard/ai-writer" component={protect(AIWriter, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
-      <Route path="/dashboard/franchise-inquiries" component={protect(FranchiseInquiries, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
-      <Route path="/dashboard/franchisees" component={protect(OSCustomers, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
-      <Route path="/dashboard/franchise" component={protect(FranchiseDashboardPage, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
-      <Route path="/dashboard/staff" component={protect(StaffDashboardPage, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
-      <Route path="/dashboard/sop" component={protect(SOPKnowledgeBase, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
-      <Route path="/dashboard/repairs" component={protect(EquipmentRepairs, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
-      <Route path="/dashboard/checklist" component={protect(DailyChecklist, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
-      <Route path="/dashboard/inventory" component={protect(OSInventory, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
-      <Route path="/dashboard/scheduling" component={protect(OSScheduling, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
-      <Route path="/dashboard/daily-report" component={protect(OSDailyReport, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
-      <Route path="/dashboard/products" component={protect(OSProducts, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
-      <Route path="/dashboard/delivery" component={protect(OSDelivery, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
-      <Route path="/dashboard/customers" component={protect(ComingSoon, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
-      <Route path="/dashboard/purchasing" component={protect(OSPurchasing, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
-      <Route path="/dashboard/rebate" component={protect(OSRebate, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
-      <Route path="/dashboard/profit-loss" component={protect(OSProfitLoss, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
-      <Route path="/dashboard/franchisee-payments" component={protect(OSFranchiseePayments, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
-      <Route path="/dashboard/ca-menu" component={protect(OSCaMenu, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
-      <Route path="/dashboard/accounting" component={protect(OSAccounting, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
+      <Route path="/dashboard/admin/ecommerce" component={PAdminDashboard} />
+      <Route path="/dashboard/admin/products" component={PAdminProducts} />
+      <Route path="/dashboard/admin/orders" component={PAdminOrders} />
+      <Route path="/dashboard/admin/categories" component={PAdminCategories} />
+      <Route path="/dashboard/admin/users" component={PAdminUsers} />
+      <Route path="/dashboard/admin/permissions" component={PAdminPermissions} />
+      <Route path="/dashboard/admin/sop-permissions" component={PAdminSopPermissions} />
+      <Route path="/dashboard/admin/tenants" component={PAdminTenants} />
+      <Route path="/dashboard/content" component={PContentManagement} />
+      <Route path="/dashboard/content/new" component={PContentEditor} />
+      <Route path="/dashboard/content/edit/:id" component={PContentEditor} />
+      <Route path="/dashboard/ai-writer" component={PAIWriter} />
+      <Route path="/dashboard/franchise-inquiries" component={PFranchiseInquiries} />
+      <Route path="/dashboard/franchisees" component={POSCustomers} />
+      <Route path="/dashboard/franchise" component={PFranchiseDashboard} />
+      <Route path="/dashboard/staff" component={PStaffDashboard} />
+      <Route path="/dashboard/sop" component={PSOPKnowledgeBase} />
+      <Route path="/dashboard/repairs" component={PEquipmentRepairs} />
+      <Route path="/dashboard/checklist" component={PDailyChecklist} />
+      <Route path="/dashboard/inventory" component={POSInventory} />
+      <Route path="/dashboard/scheduling" component={POSScheduling} />
+      <Route path="/dashboard/daily-report" component={POSDailyReport} />
+      <Route path="/dashboard/products" component={POSProducts} />
+      <Route path="/dashboard/delivery" component={POSDelivery} />
+      <Route path="/dashboard/customers" component={PComingSoon} />
+      <Route path="/dashboard/purchasing" component={POSPurchasing} />
+      <Route path="/dashboard/rebate" component={POSRebate} />
+      <Route path="/dashboard/profit-loss" component={POSProfitLoss} />
+      <Route path="/dashboard/franchisee-payments" component={POSFranchiseePayments} />
+      <Route path="/dashboard/ca-menu" component={POSCaMenu} />
+      <Route path="/dashboard/accounting" component={POSAccounting} />
       {/* ── 大永 ERP（需登入 + DY 角色 + tenantId=90004）───────────── */}
       <Route path="/dayone/login" component={DayoneLogin} />
-      <Route path="/dayone" component={protect(DayoneDashboard, { requiredRoles: [...DY_ROLES], requiredTenantId: TENANTS.DAYONE, redirectTo: "/dayone/login" })} />
-      <Route path="/dayone/orders" component={protect(DayoneOrders, { requiredRoles: [...DY_ROLES], requiredTenantId: TENANTS.DAYONE, redirectTo: "/dayone/login" })} />
-      <Route path="/dayone/customers" component={protect(DayoneCustomers, { requiredRoles: [...DY_ROLES], requiredTenantId: TENANTS.DAYONE, redirectTo: "/dayone/login" })} />
-      <Route path="/dayone/drivers" component={protect(DayoneDrivers, { requiredRoles: [...DY_ROLES], requiredTenantId: TENANTS.DAYONE, redirectTo: "/dayone/login" })} />
-      <Route path="/dayone/products" component={protect(DayoneProducts, { requiredRoles: [...DY_ROLES], requiredTenantId: TENANTS.DAYONE, redirectTo: "/dayone/login" })} />
-      <Route path="/dayone/inventory" component={protect(DayoneInventory, { requiredRoles: [...DY_ROLES], requiredTenantId: TENANTS.DAYONE, redirectTo: "/dayone/login" })} />
-      <Route path="/dayone/purchase" component={protect(DayonePurchase, { requiredRoles: [...DY_ROLES], requiredTenantId: TENANTS.DAYONE, redirectTo: "/dayone/login" })} />
-      <Route path="/dayone/districts" component={protect(DayoneDistricts, { requiredRoles: [...DY_ROLES], requiredTenantId: TENANTS.DAYONE, redirectTo: "/dayone/login" })} />
-      <Route path="/dayone/reports" component={protect(DayoneReports, { requiredRoles: [...DY_ROLES], requiredTenantId: TENANTS.DAYONE, redirectTo: "/dayone/login" })} />
-      <Route path="/dayone/suppliers" component={protect(DayonePurchase, { requiredRoles: [...DY_ROLES], requiredTenantId: TENANTS.DAYONE, redirectTo: "/dayone/login" })} />
-      <Route path="/dayone/liff-orders" component={protect(DayoneLiffOrders, { requiredRoles: [...DY_ROLES], requiredTenantId: TENANTS.DAYONE, redirectTo: "/dayone/login" })} />
-      <Route path="/dayone/ar" component={protect(DayoneAR, { requiredRoles: [...DY_ROLES], requiredTenantId: TENANTS.DAYONE, redirectTo: "/dayone/login" })} />
-      <Route path="/dayone/dispatch" component={protect(DayoneDispatch, { requiredRoles: [...DY_ROLES], requiredTenantId: TENANTS.DAYONE, redirectTo: "/dayone/login" })} />
-      <Route path="/dayone/purchase-receipts" component={protect(DayonePurchaseReceipts, { requiredRoles: [...DY_ROLES], requiredTenantId: TENANTS.DAYONE, redirectTo: "/dayone/login" })} />
-      <Route path="/dayone/level-prices" component={protect(DayoneLevelPrices, { requiredRoles: [...DY_ROLES], requiredTenantId: TENANTS.DAYONE, redirectTo: "/dayone/login" })} />
-      <Route path="/dayone/users" component={protect(DayoneUsers, { requiredRoles: [...DY_ROLES], requiredTenantId: TENANTS.DAYONE, redirectTo: "/dayone/login" })} />
+      <Route path="/dayone" component={PDayoneDashboard} />
+      <Route path="/dayone/orders" component={PDayoneOrders} />
+      <Route path="/dayone/customers" component={PDayoneCustomers} />
+      <Route path="/dayone/drivers" component={PDayoneDrivers} />
+      <Route path="/dayone/products" component={PDayoneProducts} />
+      <Route path="/dayone/inventory" component={PDayoneInventory} />
+      <Route path="/dayone/purchase" component={PDayonePurchase} />
+      <Route path="/dayone/districts" component={PDayoneDistricts} />
+      <Route path="/dayone/reports" component={PDayoneReports} />
+      <Route path="/dayone/suppliers" component={PDayonePurchase} />
+      <Route path="/dayone/liff-orders" component={PDayoneLiffOrders} />
+      <Route path="/dayone/ar" component={PDayoneAR} />
+      <Route path="/dayone/dispatch" component={PDayoneDispatch} />
+      <Route path="/dayone/purchase-receipts" component={PDayonePurchaseReceipts} />
+      <Route path="/dayone/level-prices" component={PDayoneLevelPrices} />
+      <Route path="/dayone/users" component={PDayoneUsers} />
       {/* ── 大永客戶 Portal（portal_customer role）──────────────────── */}
       <Route path="/dayone/portal/login" component={DayonePortalLogin} />
       <Route path="/dayone/portal/register" component={DayonePortalRegister} />
-      <Route path="/dayone/portal" component={protect(DayonePortalHome, { requiredRoles: [...PORT_ROLES], redirectTo: "/dayone/portal/login" })} />
-      <Route path="/dayone/portal/orders" component={protect(DayonePortalOrders, { requiredRoles: [...PORT_ROLES], redirectTo: "/dayone/portal/login" })} />
-      <Route path="/dayone/portal/statement" component={protect(DayonePortalStatement, { requiredRoles: [...PORT_ROLES], redirectTo: "/dayone/portal/login" })} />
-      <Route path="/dayone/portal/account" component={protect(DayonePortalAccount, { requiredRoles: [...PORT_ROLES], redirectTo: "/dayone/portal/login" })} />
+      <Route path="/dayone/portal" component={PDayonePortalHome} />
+      <Route path="/dayone/portal/orders" component={PDayonePortalOrders} />
+      <Route path="/dayone/portal/statement" component={PDayonePortalStatement} />
+      <Route path="/dayone/portal/account" component={PDayonePortalAccount} />
       {/* ── 司機端（需登入 + driver 角色）──────────────────────────── */}
       <Route path="/driver/login" component={DayoneLogin} />
-      <Route path="/driver" component={protect(DriverHome, { requiredRoles: [...DRV_ROLES], redirectTo: "/driver/login" })} />
-      <Route path="/driver/today" component={protect(DriverToday, { requiredRoles: [...DRV_ROLES], redirectTo: "/driver/login" })} />
-      <Route path="/driver/orders" component={protect(DriverOrders, { requiredRoles: [...DRV_ROLES], redirectTo: "/driver/login" })} />
-      <Route path="/driver/order/:id" component={protect(DriverOrderDetail, { requiredRoles: [...DRV_ROLES], redirectTo: "/driver/login" })} />
-      <Route path="/driver/pickup" component={protect(DriverPickup, { requiredRoles: [...DRV_ROLES], redirectTo: "/driver/login" })} />
-      <Route path="/driver/done" component={protect(DriverDone, { requiredRoles: [...DRV_ROLES], redirectTo: "/driver/login" })} />
-      <Route path="/driver/worklog" component={protect(DriverWorkLog, { requiredRoles: [...DRV_ROLES], redirectTo: "/driver/login" })} />
-      <Route path="/driver/purchase-receipt" component={protect(DriverPurchaseReceipt, { requiredRoles: [...DRV_ROLES], redirectTo: "/driver/login" })} />
-      <Route path="/driver/profile" component={protect(DriverProfile, { requiredRoles: [...DRV_ROLES], redirectTo: "/driver/login" })} />
+      <Route path="/driver" component={PDriverHome} />
+      <Route path="/driver/today" component={PDriverToday} />
+      <Route path="/driver/orders" component={PDriverOrders} />
+      <Route path="/driver/order/:id" component={PDriverOrderDetail} />
+      <Route path="/driver/pickup" component={PDriverPickup} />
+      <Route path="/driver/done" component={PDriverDone} />
+      <Route path="/driver/worklog" component={PDriverWorkLog} />
+      <Route path="/driver/purchase-receipt" component={PDriverPurchaseReceipt} />
+      <Route path="/driver/profile" component={PDriverProfile} />
       {/* ── LIFF（LINE 登入，不加 role guard，由後端 API 把關）──────── */}
       <Route path="/liff/order" component={LiffOrder} />
       <Route path="/liff/my-orders" component={LiffMyOrders} />
