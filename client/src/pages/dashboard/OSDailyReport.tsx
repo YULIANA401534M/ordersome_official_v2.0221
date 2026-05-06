@@ -623,13 +623,14 @@ function DailyRangeTab() {
   const firstOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
   const [startDate, setStartDate] = useState(firstOfMonth);
   const [endDate, setEndDate] = useState(todayStr());
-  const [filterStore, setFilterStore] = useState("");
+  const ALL_STORES = "__all__";
+  const [filterStore, setFilterStore] = useState(ALL_STORES);
 
   const storesQuery = trpc.dailyReport.getStores.useQuery();
   const stores = storesQuery.data ?? [];
 
   const listQuery = trpc.dailyReport.list.useQuery(
-    { startDate, endDate, storeName: filterStore || undefined },
+    { startDate, endDate, storeName: filterStore === ALL_STORES ? undefined : filterStore },
     { enabled: !!startDate && !!endDate }
   );
   const rows = (listQuery.data ?? []) as any[];
@@ -654,7 +655,7 @@ function DailyRangeTab() {
             <Select value={filterStore} onValueChange={setFilterStore}>
               <SelectTrigger className="h-10"><SelectValue placeholder="全部門市" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">全部門市</SelectItem>
+                <SelectItem value={ALL_STORES}>全部門市</SelectItem>
                 {stores.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
               </SelectContent>
             </Select>
