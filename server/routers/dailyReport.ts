@@ -111,12 +111,12 @@ export const dailyReportRouter = router({
 
   getByDate: protectedProcedure
     .input(z.object({ storeName: z.string(), reportDate: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) return null;
       const [rows] = await (db as any).$client.execute(
-        'SELECT * FROM os_daily_reports WHERE storeName = ? AND reportDate = ? LIMIT 1',
-        [input.storeName, input.reportDate]
+        'SELECT * FROM os_daily_reports WHERE tenantId=? AND storeName = ? AND reportDate = ? LIMIT 1',
+        [ctx.tenantId ?? 1, input.storeName, input.reportDate]
       );
       return (rows as any[])[0] || null;
     }),

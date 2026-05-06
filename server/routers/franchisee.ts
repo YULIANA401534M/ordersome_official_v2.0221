@@ -71,11 +71,11 @@ export const franchiseeRouter = router({
       if (!user) return null;
 
       const [contracts] = await (db as any).$client.execute(
-        `SELECT * FROM os_franchisee_contracts WHERE userId=? ORDER BY createdAt DESC`,
+        `SELECT * FROM os_franchisee_contracts WHERE userId=? AND tenantId=1 ORDER BY createdAt DESC`,
         [input.userId]
       );
       const [payments] = await (db as any).$client.execute(
-        `SELECT * FROM os_franchisee_payments WHERE userId=? ORDER BY paymentDate DESC`,
+        `SELECT * FROM os_franchisee_payments WHERE userId=? AND tenantId=1 ORDER BY paymentDate DESC`,
         [input.userId]
       );
       const [flags] = await (db as any).$client.execute(

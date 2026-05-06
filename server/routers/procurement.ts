@@ -247,8 +247,9 @@ export const procurementRouter = router({
       }
       if (input.status === 'received') {
         try {
+          const conn = (db as any).$client;
           // 取得此叫貨單的 orderDate（用於決定應付帳款月份）
-          const [orderRow] = await (db as any).$client.execute(
+          const [orderRow] = await conn.execute(
             'SELECT orderDate FROM os_procurement_orders WHERE id=? LIMIT 1',
             [input.orderId]
           );
@@ -256,15 +257,14 @@ export const procurementRouter = router({
           const payableMonth = orderDate.slice(0, 7); // YYYY-MM
 
           // 取得品項（含廠商、金額）
-          const [allItems] = await (db as any).$client.execute(
+          const [allItems] = await conn.execute(
             'SELECT supplierName, productName, quantity, unit, amount FROM os_procurement_items WHERE procurementOrderId=?',
             [input.orderId]
           );
           if ((allItems as any[]).length === 0) throw new Error('找不到叫貨單品項');
 
-          // ── 1. 應付帳款自動累加（每個廠商 upsert）────────────────
+          // ── 1. 應付帳款自動累加（transaction 保護）────────────────
           if (payableMonth) {
-            // 按廠商彙總本單金額
             const supplierTotals = new Map<string, number>();
             for (const item of allItems as any[]) {
               const prev = supplierTotals.get(item.supplierName) ?? 0;
@@ -276,25 +276,32 @@ export const procurementRouter = router({
             const periodStart = `${payableMonth}-01`;
             const periodEnd = `${payableMonth}-${String(lastDay).padStart(2, '0')}`;
 
-            for (const [supplierName, addAmount] of Array.from(supplierTotals)) {
-              const [existing] = await (db as any).$client.execute(
-                'SELECT id, totalAmount FROM os_payables WHERE tenantId=? AND supplierName=? AND month=? LIMIT 1',
-                [tenantId, supplierName, payableMonth]
-              );
-              if ((existing as any[]).length > 0) {
-                const rec = (existing as any[])[0];
-                const newTotal = Number(rec.totalAmount) + addAmount;
-                await (db as any).$client.execute(
-                  'UPDATE os_payables SET totalAmount=?, netPayable=GREATEST(0, ?-COALESCE(rebateAmount,0)), updatedAt=NOW() WHERE id=?',
-                  [newTotal, newTotal, rec.id]
+            await conn.execute(`START TRANSACTION`);
+            try {
+              for (const [supplierName, addAmount] of Array.from(supplierTotals)) {
+                const [existing] = await conn.execute(
+                  'SELECT id, totalAmount FROM os_payables WHERE tenantId=? AND supplierName=? AND month=? LIMIT 1',
+                  [tenantId, supplierName, payableMonth]
                 );
-              } else {
-                await (db as any).$client.execute(
-                  `INSERT INTO os_payables (tenantId, supplierName, month, periodStart, periodEnd, totalAmount, netPayable, createdAt, updatedAt)
-                   VALUES (?,?,?,?,?,?,?,NOW(),NOW())`,
-                  [tenantId, supplierName, payableMonth, periodStart, periodEnd, addAmount, addAmount]
-                );
+                if ((existing as any[]).length > 0) {
+                  const rec = (existing as any[])[0];
+                  const newTotal = Number(rec.totalAmount) + addAmount;
+                  await conn.execute(
+                    'UPDATE os_payables SET totalAmount=?, netPayable=GREATEST(0, ?-COALESCE(rebateAmount,0)), updatedAt=NOW() WHERE id=?',
+                    [newTotal, newTotal, rec.id]
+                  );
+                } else {
+                  await conn.execute(
+                    `INSERT INTO os_payables (tenantId, supplierName, month, periodStart, periodEnd, totalAmount, netPayable, createdAt, updatedAt)
+                     VALUES (?,?,?,?,?,?,?,NOW(),NOW())`,
+                    [tenantId, supplierName, payableMonth, periodStart, periodEnd, addAmount, addAmount]
+                  );
+                }
               }
+              await conn.execute(`COMMIT`);
+            } catch (e) {
+              await conn.execute(`ROLLBACK`);
+              throw e;
             }
           }
 
