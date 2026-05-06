@@ -230,6 +230,7 @@ export default function DayoneLayout({ children }: { children: React.ReactNode }
           <button onClick={() => setSidebarOpen(true)} className="rounded-xl p-2 text-gray-600 hover:bg-white hover:text-gray-900">
             <Menu className="h-5 w-5" />
           </button>
+          <img src="/logos/dayong-logo.png" alt="大永蛋品" width={36} height={36} style={{ objectFit: 'contain', flexShrink: 0 }} />
           <div className="min-w-0">
             <span className="block font-ui text-lg font-extrabold leading-none tracking-[-0.04em] text-stone-900">
               {activeItem?.label ?? "大永蛋品 ERP"}
