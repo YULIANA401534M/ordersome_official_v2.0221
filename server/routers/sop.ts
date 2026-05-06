@@ -12,6 +12,7 @@ import {
   dailyChecklists,
   dailyChecklistItems,
   users,
+  stores,
 } from "../../drizzle/schema";
 import { eq, and, desc, asc, or, inArray } from "drizzle-orm";
 
@@ -250,14 +251,33 @@ export const sopRouter = router({
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
     const tenantId = ctx.tenantId ?? 1;
+    const baseQuery = db
+      .select({
+        id: equipmentRepairs.id,
+        tenantId: equipmentRepairs.tenantId,
+        storeId: equipmentRepairs.storeId,
+        storeName: stores.name,
+        reportedBy: equipmentRepairs.reportedBy,
+        reporterName: users.name,
+        equipmentName: equipmentRepairs.equipmentName,
+        category: equipmentRepairs.category,
+        urgency: equipmentRepairs.urgency,
+        issueDescription: equipmentRepairs.issueDescription,
+        imageUrl: equipmentRepairs.imageUrl,
+        status: equipmentRepairs.status,
+        resolvedAt: equipmentRepairs.resolvedAt,
+        createdAt: equipmentRepairs.createdAt,
+      })
+      .from(equipmentRepairs)
+      .leftJoin(stores, eq(stores.id, equipmentRepairs.storeId))
+      .leftJoin(users, eq(users.id, equipmentRepairs.reportedBy));
+
     if (isAdminUser(ctx.user)) {
-      return db.select().from(equipmentRepairs)
+      return baseQuery
         .where(eq(equipmentRepairs.tenantId, tenantId))
         .orderBy(desc(equipmentRepairs.createdAt));
     }
-    return db
-      .select()
-      .from(equipmentRepairs)
+    return baseQuery
       .where(and(eq(equipmentRepairs.tenantId, tenantId), eq(equipmentRepairs.reportedBy, ctx.user.id)))
       .orderBy(desc(equipmentRepairs.createdAt));
   }),

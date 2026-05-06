@@ -29,7 +29,9 @@ export const storageRouter = router({
         const randomString = Math.random().toString(36).substring(2, 8);
         const fileExtension = input.fileName.split(".").pop()?.toLowerCase() || "jpg";
         // Store under products/ folder in R2
-        const folder = input.fileName.startsWith("b2b/") ? "products/b2b" : "products";
+        const folder = input.fileName.startsWith("b2b/") ? "products/b2b"
+          : input.fileName.startsWith("repair/") ? "repairs"
+          : "products";
         const uniqueKey = `${folder}/${timestamp}-${randomString}.${fileExtension}`;
         const result = await r2Put(
           uniqueKey,
