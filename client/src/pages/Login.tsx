@@ -3,6 +3,7 @@ import { trpc } from "../lib/trpc";
 import { Users, Building2, Mail, Lock, ArrowLeft, Chrome } from "lucide-react";
 import { trackEvent } from "../components/Analytics";
 import { toast } from "sonner";
+import { resolveLoginRedirect } from "@/lib/roleRouter";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -29,25 +30,13 @@ export default function Login() {
         });
       }
       
-      // Smart redirect: customer → /shop, internal roles → /dashboard
-      const role = result?.user?.role ?? "customer";
-      const tenantId = (result?.user as any)?.tenantId;
+      // Smart redirect: 集中由 roleRouter 決定落地路由
       const searchParams = new URLSearchParams(window.location.search);
-      const redirectParam = searchParams.get("redirect");
       // Show welcome toast
       toast.success(`歡迎回來，${result?.user?.name || '會員'} 👋`, { duration: 2500 });
+      const target = resolveLoginRedirect(result?.user as any ?? {}, searchParams);
       setTimeout(() => {
-        if (redirectParam) {
-          window.location.href = redirectParam;
-        } else if (role === "customer") {
-          window.location.href = "/shop?welcome=1";
-        } else if (role === "driver") {
-          window.location.href = "/driver?welcome=1";
-        } else if (tenantId === 90004) {
-          window.location.href = "/dayone?welcome=1";
-        } else {
-          window.location.href = "/dashboard?welcome=1";
-        }
+        window.location.href = `${target}?welcome=1`;
       }, 600);
     } catch (err: any) {
       setError(err.message || "登入失敗，請檢查帳號密碼");

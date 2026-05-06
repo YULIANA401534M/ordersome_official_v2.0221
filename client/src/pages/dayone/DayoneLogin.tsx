@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Egg } from "lucide-react";
+import { getDefaultRouteForUser } from "@/lib/roleRouter";
+import { TENANTS } from "@shared/access-control";
 
 export default function DayoneLogin() {
   const [email, setEmail]       = useState("");
@@ -15,7 +17,7 @@ export default function DayoneLogin() {
   const loginMutation = trpc.auth.loginWithPassword.useMutation({
     onSuccess: async (data) => {
       const user = data.user as any;
-      const isTenantUser = user.tenantId === 90004;
+      const isTenantUser = Number(user.tenantId) === TENANTS.DAYONE;
       const isSuperAdmin = user.role === "super_admin";
 
       if (!isTenantUser && !isSuperAdmin) {
@@ -25,12 +27,7 @@ export default function DayoneLogin() {
 
       await utils.auth.me.invalidate();
 
-      // 司機跳到司機 APP，其他角色進管理後台
-      if (user.role === "driver") {
-        navigate("/driver/today");
-      } else {
-        navigate("/dayone");
-      }
+      navigate(getDefaultRouteForUser(user));
     },
     onError: () => {
       toast.error("帳號或密碼錯誤，請重試");

@@ -11,6 +11,14 @@ import Analytics from "./components/Analytics";
 import { useCanonical } from "./hooks/useCanonical";
 import { useBreadcrumbList } from "./hooks/useBreadcrumbList";
 import { useGeoMeta } from "./hooks/useGeoMeta";
+import { protect } from "./components/ProtectedRoute";
+import { TENANTS } from "@shared/access-control";
+
+// ── 路由保護群組常數 ────────────────────────────────────────────────
+const OS_ROLES   = ["super_admin", "manager", "franchisee", "staff", "store_manager"] as const;
+const DY_ROLES   = ["super_admin", "manager"] as const;
+const DRV_ROLES  = ["super_admin", "manager", "driver"] as const;
+const PORT_ROLES = ["portal_customer"] as const;
 
 // 首頁保持 static（首屏最重要）
 import Home from "./pages/Home";
@@ -225,85 +233,78 @@ function Router() {
       <Route path="/member/profile" component={MemberProfile} />
       <Route path="/member/orders" component={MemberOrders} />
       
-      {/* Admin Routes */}
-      <Route path="/dashboard/admin/ecommerce" component={AdminDashboard} />
-      <Route path="/dashboard/admin/products" component={AdminProducts} />
-      <Route path="/dashboard/admin/orders" component={AdminOrders} />
-      <Route path="/dashboard/admin/categories" component={AdminCategories} />
-      <Route path="/dashboard/admin/users" component={AdminUsers} />
-      <Route path="/dashboard/admin/permissions" component={AdminPermissions} />
-      <Route path="/dashboard/admin/sop-permissions" component={AdminSopPermissions} />
-      <Route path="/dashboard/admin/tenants" component={AdminTenants} />
-      <Route path="/dashboard/content" component={ContentManagement} />
-      <Route path="/dashboard/content/new" component={ContentEditor} />
-      <Route path="/dashboard/content/edit/:id" component={ContentEditor} />
-      <Route path="/dashboard/ai-writer" component={AIWriter} />
-      <Route path="/dashboard/franchise-inquiries" component={FranchiseInquiries} />
-      <Route path="/dashboard/franchisees" component={OSCustomers} />
-
-      {/* Franchisee Routes */}
-      <Route path="/dashboard/franchise" component={FranchiseDashboardPage} />
-      
-      {/* Staff Routes */}
-      <Route path="/dashboard/staff" component={StaffDashboardPage} />
-
-      {/* SOP & Operations Routes */}
-      <Route path="/dashboard/sop" component={SOPKnowledgeBase} />
-      <Route path="/dashboard/repairs" component={EquipmentRepairs} />
-      <Route path="/dashboard/checklist" component={DailyChecklist} />
-      {/* 來點什麼 ERP 模組路由 */}
-      <Route path="/dashboard/inventory" component={OSInventory} />
-      <Route path="/dashboard/scheduling" component={OSScheduling} />
-      <Route path="/dashboard/daily-report" component={OSDailyReport} />
-      <Route path="/dashboard/products" component={OSProducts} />
-      <Route path="/dashboard/delivery" component={OSDelivery} />
-      <Route path="/dashboard/customers" component={ComingSoon} />
-      <Route path="/dashboard/purchasing" component={OSPurchasing} />
-      <Route path="/dashboard/rebate" component={OSRebate} />
-      <Route path="/dashboard/profit-loss" component={OSProfitLoss} />
-      <Route path="/dashboard/franchisee-payments" component={OSFranchiseePayments} />
-      <Route path="/dashboard/ca-menu" component={OSCaMenu} />
-      <Route path="/dashboard/accounting" component={OSAccounting} />
-      {/* DaYong ERP Routes */}
+      {/* ── 宇聯後台（需登入 + OS 角色）─────────────────────────────── */}
+      <Route path="/dashboard/admin/ecommerce" component={protect(AdminDashboard, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
+      <Route path="/dashboard/admin/products" component={protect(AdminProducts, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
+      <Route path="/dashboard/admin/orders" component={protect(AdminOrders, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
+      <Route path="/dashboard/admin/categories" component={protect(AdminCategories, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
+      <Route path="/dashboard/admin/users" component={protect(AdminUsers, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
+      <Route path="/dashboard/admin/permissions" component={protect(AdminPermissions, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
+      <Route path="/dashboard/admin/sop-permissions" component={protect(AdminSopPermissions, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
+      <Route path="/dashboard/admin/tenants" component={protect(AdminTenants, { requiredRoles: ["super_admin"], redirectTo: "/login" })} />
+      <Route path="/dashboard/content" component={protect(ContentManagement, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
+      <Route path="/dashboard/content/new" component={protect(ContentEditor, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
+      <Route path="/dashboard/content/edit/:id" component={protect(ContentEditor, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
+      <Route path="/dashboard/ai-writer" component={protect(AIWriter, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
+      <Route path="/dashboard/franchise-inquiries" component={protect(FranchiseInquiries, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
+      <Route path="/dashboard/franchisees" component={protect(OSCustomers, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
+      <Route path="/dashboard/franchise" component={protect(FranchiseDashboardPage, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
+      <Route path="/dashboard/staff" component={protect(StaffDashboardPage, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
+      <Route path="/dashboard/sop" component={protect(SOPKnowledgeBase, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
+      <Route path="/dashboard/repairs" component={protect(EquipmentRepairs, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
+      <Route path="/dashboard/checklist" component={protect(DailyChecklist, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
+      <Route path="/dashboard/inventory" component={protect(OSInventory, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
+      <Route path="/dashboard/scheduling" component={protect(OSScheduling, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
+      <Route path="/dashboard/daily-report" component={protect(OSDailyReport, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
+      <Route path="/dashboard/products" component={protect(OSProducts, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
+      <Route path="/dashboard/delivery" component={protect(OSDelivery, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
+      <Route path="/dashboard/customers" component={protect(ComingSoon, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
+      <Route path="/dashboard/purchasing" component={protect(OSPurchasing, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
+      <Route path="/dashboard/rebate" component={protect(OSRebate, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
+      <Route path="/dashboard/profit-loss" component={protect(OSProfitLoss, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
+      <Route path="/dashboard/franchisee-payments" component={protect(OSFranchiseePayments, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
+      <Route path="/dashboard/ca-menu" component={protect(OSCaMenu, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
+      <Route path="/dashboard/accounting" component={protect(OSAccounting, { requiredRoles: [...OS_ROLES], redirectTo: "/login" })} />
+      {/* ── 大永 ERP（需登入 + DY 角色 + tenantId=90004）───────────── */}
       <Route path="/dayone/login" component={DayoneLogin} />
-      <Route path="/dayone" component={DayoneDashboard} />
-      <Route path="/dayone/orders" component={DayoneOrders} />
-      <Route path="/dayone/customers" component={DayoneCustomers} />
-      <Route path="/dayone/drivers" component={DayoneDrivers} />
-      <Route path="/dayone/products" component={DayoneProducts} />
-      <Route path="/dayone/inventory" component={DayoneInventory} />
-      <Route path="/dayone/purchase" component={DayonePurchase} />
-      <Route path="/dayone/districts" component={DayoneDistricts} />
-      <Route path="/dayone/reports" component={DayoneReports} />
-      <Route path="/dayone/suppliers" component={DayonePurchase} />
-      <Route path="/dayone/liff-orders" component={DayoneLiffOrders} />
-      <Route path="/dayone/ar" component={DayoneAR} />
-      <Route path="/dayone/dispatch" component={DayoneDispatch} />
-      <Route path="/dayone/purchase-receipts" component={DayonePurchaseReceipts} />
-      <Route path="/dayone/level-prices" component={DayoneLevelPrices} />
-      <Route path="/dayone/users" component={DayoneUsers} />
-      {/* DaYone Customer Portal Routes */}
-      <Route path="/dayone/portal" component={DayonePortalHome} />
+      <Route path="/dayone" component={protect(DayoneDashboard, { requiredRoles: [...DY_ROLES], requiredTenantId: TENANTS.DAYONE, redirectTo: "/dayone/login" })} />
+      <Route path="/dayone/orders" component={protect(DayoneOrders, { requiredRoles: [...DY_ROLES], requiredTenantId: TENANTS.DAYONE, redirectTo: "/dayone/login" })} />
+      <Route path="/dayone/customers" component={protect(DayoneCustomers, { requiredRoles: [...DY_ROLES], requiredTenantId: TENANTS.DAYONE, redirectTo: "/dayone/login" })} />
+      <Route path="/dayone/drivers" component={protect(DayoneDrivers, { requiredRoles: [...DY_ROLES], requiredTenantId: TENANTS.DAYONE, redirectTo: "/dayone/login" })} />
+      <Route path="/dayone/products" component={protect(DayoneProducts, { requiredRoles: [...DY_ROLES], requiredTenantId: TENANTS.DAYONE, redirectTo: "/dayone/login" })} />
+      <Route path="/dayone/inventory" component={protect(DayoneInventory, { requiredRoles: [...DY_ROLES], requiredTenantId: TENANTS.DAYONE, redirectTo: "/dayone/login" })} />
+      <Route path="/dayone/purchase" component={protect(DayonePurchase, { requiredRoles: [...DY_ROLES], requiredTenantId: TENANTS.DAYONE, redirectTo: "/dayone/login" })} />
+      <Route path="/dayone/districts" component={protect(DayoneDistricts, { requiredRoles: [...DY_ROLES], requiredTenantId: TENANTS.DAYONE, redirectTo: "/dayone/login" })} />
+      <Route path="/dayone/reports" component={protect(DayoneReports, { requiredRoles: [...DY_ROLES], requiredTenantId: TENANTS.DAYONE, redirectTo: "/dayone/login" })} />
+      <Route path="/dayone/suppliers" component={protect(DayonePurchase, { requiredRoles: [...DY_ROLES], requiredTenantId: TENANTS.DAYONE, redirectTo: "/dayone/login" })} />
+      <Route path="/dayone/liff-orders" component={protect(DayoneLiffOrders, { requiredRoles: [...DY_ROLES], requiredTenantId: TENANTS.DAYONE, redirectTo: "/dayone/login" })} />
+      <Route path="/dayone/ar" component={protect(DayoneAR, { requiredRoles: [...DY_ROLES], requiredTenantId: TENANTS.DAYONE, redirectTo: "/dayone/login" })} />
+      <Route path="/dayone/dispatch" component={protect(DayoneDispatch, { requiredRoles: [...DY_ROLES], requiredTenantId: TENANTS.DAYONE, redirectTo: "/dayone/login" })} />
+      <Route path="/dayone/purchase-receipts" component={protect(DayonePurchaseReceipts, { requiredRoles: [...DY_ROLES], requiredTenantId: TENANTS.DAYONE, redirectTo: "/dayone/login" })} />
+      <Route path="/dayone/level-prices" component={protect(DayoneLevelPrices, { requiredRoles: [...DY_ROLES], requiredTenantId: TENANTS.DAYONE, redirectTo: "/dayone/login" })} />
+      <Route path="/dayone/users" component={protect(DayoneUsers, { requiredRoles: [...DY_ROLES], requiredTenantId: TENANTS.DAYONE, redirectTo: "/dayone/login" })} />
+      {/* ── 大永客戶 Portal（portal_customer role）──────────────────── */}
       <Route path="/dayone/portal/login" component={DayonePortalLogin} />
       <Route path="/dayone/portal/register" component={DayonePortalRegister} />
-      <Route path="/dayone/portal/orders" component={DayonePortalOrders} />
-      <Route path="/dayone/portal/statement" component={DayonePortalStatement} />
-      <Route path="/dayone/portal/account" component={DayonePortalAccount} />
-      {/* Driver Mobile Routes */}
+      <Route path="/dayone/portal" component={protect(DayonePortalHome, { requiredRoles: [...PORT_ROLES], redirectTo: "/dayone/portal/login" })} />
+      <Route path="/dayone/portal/orders" component={protect(DayonePortalOrders, { requiredRoles: [...PORT_ROLES], redirectTo: "/dayone/portal/login" })} />
+      <Route path="/dayone/portal/statement" component={protect(DayonePortalStatement, { requiredRoles: [...PORT_ROLES], redirectTo: "/dayone/portal/login" })} />
+      <Route path="/dayone/portal/account" component={protect(DayonePortalAccount, { requiredRoles: [...PORT_ROLES], redirectTo: "/dayone/portal/login" })} />
+      {/* ── 司機端（需登入 + driver 角色）──────────────────────────── */}
       <Route path="/driver/login" component={DayoneLogin} />
-      <Route path="/driver" component={DriverHome} />
-      <Route path="/driver/today" component={DriverToday} />
-      <Route path="/driver/orders" component={DriverOrders} />
-      <Route path="/driver/order/:id" component={DriverOrderDetail} />
-      <Route path="/driver/pickup" component={DriverPickup} />
-      <Route path="/driver/done" component={DriverDone} />
-      <Route path="/driver/worklog" component={DriverWorkLog} />
-      <Route path="/driver/purchase-receipt" component={DriverPurchaseReceipt} />
-      <Route path="/driver/profile" component={DriverProfile} />
-      {/* LIFF Routes */}
+      <Route path="/driver" component={protect(DriverHome, { requiredRoles: [...DRV_ROLES], redirectTo: "/driver/login" })} />
+      <Route path="/driver/today" component={protect(DriverToday, { requiredRoles: [...DRV_ROLES], redirectTo: "/driver/login" })} />
+      <Route path="/driver/orders" component={protect(DriverOrders, { requiredRoles: [...DRV_ROLES], redirectTo: "/driver/login" })} />
+      <Route path="/driver/order/:id" component={protect(DriverOrderDetail, { requiredRoles: [...DRV_ROLES], redirectTo: "/driver/login" })} />
+      <Route path="/driver/pickup" component={protect(DriverPickup, { requiredRoles: [...DRV_ROLES], redirectTo: "/driver/login" })} />
+      <Route path="/driver/done" component={protect(DriverDone, { requiredRoles: [...DRV_ROLES], redirectTo: "/driver/login" })} />
+      <Route path="/driver/worklog" component={protect(DriverWorkLog, { requiredRoles: [...DRV_ROLES], redirectTo: "/driver/login" })} />
+      <Route path="/driver/purchase-receipt" component={protect(DriverPurchaseReceipt, { requiredRoles: [...DRV_ROLES], redirectTo: "/driver/login" })} />
+      <Route path="/driver/profile" component={protect(DriverProfile, { requiredRoles: [...DRV_ROLES], redirectTo: "/driver/login" })} />
+      {/* ── LIFF（LINE 登入，不加 role guard，由後端 API 把關）──────── */}
       <Route path="/liff/order" component={LiffOrder} />
       <Route path="/liff/my-orders" component={LiffMyOrders} />
-      {/* Super Admin Routes */}
+      {/* ── Super Admin 專區 ──────────────────────────────────────── */}
       <Route path="/super-admin/tenants">
         <AdminDashboardLayout><SuperAdminTenants /></AdminDashboardLayout>
       </Route>

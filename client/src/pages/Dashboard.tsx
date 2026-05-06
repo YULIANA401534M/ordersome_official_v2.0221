@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { getDefaultRouteForUser } from "@/lib/roleRouter";
 import {
   Loader2,
   LayoutDashboard,
@@ -391,9 +392,10 @@ export default function Dashboard() {
     return null;
   }
 
-  // 大永 manager 直接進 ERP，不停留在 /dashboard
-  if (user?.role === "manager" && (user as any)?.tenantId === 90004) {
-    window.location.replace("/dayone");
+  // 非宇聯用戶（如大永 manager、driver）直接導到對應落地路由
+  const defaultRoute = getDefaultRouteForUser(user as any);
+  if (defaultRoute !== "/dashboard") {
+    window.location.replace(defaultRoute);
     return null;
   }
 
